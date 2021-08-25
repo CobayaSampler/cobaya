@@ -150,32 +150,23 @@ class LikelihoodExternalFunction(Likelihood):
         argspec = getfullargspec(self.external_function)
         self.input_params = str_to_list(self.input_params)
         ignore_args = [self._self_arg]
-        # MARKED FOR DEPRECATION IN v3.0
-        ignore_args += ["_derived", "_theory"]
-        # END OF DEPRECATION BLOCK
         if argspec.defaults:
             required_args = argspec.args[:-len(argspec.defaults)]
         else:
             required_args = argspec.args
         self.params = {p: None for p in required_args if p not in ignore_args}
         # MARKED FOR DEPRECATION IN v3.0
-        self._derived_through_arg = "_derived" in argspec.args
+        if "_derived" in argspec.args:
+            raise LoggedError(
+                self.log, "The use of a `_derived` argument to deal with derived "
+                          "parameters has been deprecated. From now on please list your "
+                          "derived parameters in a list as the value of %r in the "
+                          "likelihood info (see documentation) and have your function "
+                          "return a tuple `(logp, {derived_param_1: value_1, ...})`.",
+                "output_params")
         # END OF DEPRECATION BLOCK
-        if self.output_params or not self._derived_through_arg:
+        if self.output_params:
             self.output_params = str_to_list(self.output_params) or []
-        # MARKED FOR DEPRECATION IN v3.0
-        else:
-            self.log.warning(
-                "The use of a `_derived` argument to deal with derived parameters will be"
-                " deprecated in a future version. From now on please list your derived "
-                "parameters in a list as the value of %r in the likelihood info (see "
-                "documentation) and have your function return a tuple "
-                "`(logp, {derived_param_1: value_1, ...})`.", "output_params")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            assert argspec.defaults
-            derived_kw_index = argspec.args[-len(argspec.defaults):].index("_derived")
-            self.output_params = argspec.defaults[derived_kw_index]
-        # END OF DEPRECATION BLOCK
         # Required quantities from other components
         self._uses_self_arg = self._self_arg in argspec.args
         if info.get("requires") and not self._uses_self_arg:
@@ -185,18 +176,13 @@ class LikelihoodExternalFunction(Likelihood):
                 self._self_arg)
         self._requirements = info.get("requires") or {}
         # MARKED FOR DEPRECATION IN v3.0
-        self._uses_old_theory = "_theory" in argspec.args
-        if self._uses_old_theory:
-            self.log.warning(
-                "The use of a `_theory` argument to deal with requirements will be"
-                " deprecated in a future version. From now on please indicate your "
-                "requirements as the value of field %r in the likelihood info (see "
-                "documentation) and have your function take a parameter `_self`.",
-                "requires")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            assert argspec.defaults
-            self._requirements = argspec.defaults[
-                argspec.args[-len(argspec.defaults):].index("_theory")]
+        if "_theory" in argspec.args:
+            raise LoggedError(
+                self.log, "The use of a `_theory` argument to deal with requirements has "
+                          "been deprecated. From now on please indicate your requirements"
+                          " as the value of field %r in the likelihood info (see "
+                          "documentation) and have your function take a parameter "
+                          "`_self`.", "requires")
         # END OF DEPRECATION BLOCK
 
         self._optional_args = \
@@ -224,13 +210,6 @@ class LikelihoodExternalFunction(Likelihood):
                 params_values.pop(p)
         if self._uses_self_arg:
             params_values[self._self_arg] = self
-        # MARKED FOR DEPRECATION IN v3.0
-        # BLOCK TO BE REMOVED
-        if self._derived_through_arg:
-            params_values["_derived"] = _derived
-        if self._uses_old_theory:
-            params_values["_theory"] = self.provider
-        # END OF DEPRECATION BLOCK
         try:
             return_value = self.external_function(**params_values)
         except:
@@ -246,8 +225,7 @@ class LikelihoodExternalFunction(Likelihood):
                         params_values["_derived"] = _derived
                 except:
                     raise LoggedError(self.log, bad_return_msg)
-        # MARKED FOR DEPRECATION IN v3.0 --> just after the `not` below
-        elif self.output_params and not self._derived_through_arg:
+        elif self.output_params:
             raise LoggedError(self.log, bad_return_msg)
         else:  # no return.__len__ and output_params expected
             logp = return_value

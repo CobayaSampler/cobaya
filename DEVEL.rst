@@ -3,6 +3,9 @@ Development notes
 
 This document gathers some notes about the development flow, release checklist, and general design decisions and their motivation. If you intend to heavily modify Cobaya, we recommend you to read it first.
 
+..note::
+
+  This document may not always be up to date
 
 ``git`` development model
 -------------------------
@@ -15,18 +18,29 @@ This document gathers some notes about the development flow, release checklist, 
 Development flow for contributors
 ---------------------------------
 
-.. note::
-
-   WIP!
-
 1. Fork and clone the repo from github.
 2. From its folder, install in editable mode: ``pip install -e .``
 3. Modify stuff.
-4. Test with pytest
-5. Pull requests, etc.
+4. Test with pytest (first "pip install pytest pytest-forked pytest-cov flaky dill")
+5. Make a pull requests and check (about about 15 minutes) if the tests have passed.
+6. Iterate until tests pass, then wait for or request feedback/merge
 
 Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
 
+Before committing check code formatting and spacing are consistent, and run a check (in
+`PyCharm <https://www.jetbrains.com/pycharm/>`_  this is automatic, or can be run on
+all files in the main cobaya source using Code -> Inspect; this finds static errors, generally
+anything at Warning and above should be fixed, but strict PEP8 is not required).
+
+To set Cobaya's line-length convention in PyCharm set
+Pycharm: File -> Settings -> Editor -> Code Style -> Hard wrap to 90.
+Ctrl+Alt+L will then auto-format code consistently, including wrap and spacing etc, though
+some line wrapping may need manual tweaking for nicer formatting.
+
+Using PyCharm is the easiest way to keep things consistent. If you use another editor you
+can check most formatting and static errors on the command line using::
+
+    flake8 cobaya --select=E713,E704,E703,E714,E741,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source
 
 Release checklist
 -----------------
@@ -233,4 +247,3 @@ Notice that if a non trivial reparameterization layer is present, we need to cha
         v: lambda u: 3/2*u
         V:
           derived: lambda v: v
-

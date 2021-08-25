@@ -8,7 +8,6 @@
 
 # Global
 import os
-import logging
 from io import StringIO
 from tempfile import NamedTemporaryFile
 from subprocess import Popen, PIPE
@@ -18,21 +17,21 @@ from textwrap import dedent
 from requests import head
 
 # Local
-from cobaya.log import logger_setup, LoggedError
+from cobaya.log import logger_setup, LoggedError, get_logger
 from cobaya.input import get_used_components, load_input
 from cobaya.yaml import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import products_path, packages_path_env, packages_path_arg, \
-    code_path, data_path
+    code_path, data_path, packages_path_input
 from cobaya.tools import warn_deprecation
 
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 _requirements_file = "requirements.yaml"
 _help_file = "readme.md"
 
-requirements_file_path = os.path.join("packages_path", _requirements_file)
-help_file_path = os.path.join("packages_path", _help_file)
+requirements_file_path = os.path.join(packages_path_input, _requirements_file)
+help_file_path = os.path.join(packages_path_input, _help_file)
 
 base_recipe = r"""
 # OS -------------------------------------------------------------------------
@@ -60,7 +59,7 @@ RUN mkdir $%s && \
 # getdist fork (it will be an automatic requisite in the future)
 RUN cd $%s && git clone https://github.com/JesusTorrado/cobaya.git && \
     cd $%s/cobaya && python -m pip install -e .
-""" % (packages_path_env, "packages_path", products_path,
+""" % (packages_path_env, packages_path_input, products_path,
        packages_path_env, packages_path_env, packages_path_env)
 
 MPI_URL = {
@@ -200,7 +199,7 @@ def create_docker_image(filenames, MPI_version=None):
     %s
     CMD ["cat", "%s"]
     """ % (MPI_version, echos_reqs, requirements_file_path, packages_path_arg,
-           "packages_path", echos_help, help_file_path)
+           packages_path_input, echos_help, help_file_path)
     image_name = "cobaya:" + uuid.uuid4().hex[:6]
     with StringIO(recipe) as stream:
         dc.images.build(fileobj=stream, tag=image_name)
@@ -236,8 +235,8 @@ def create_singularity_image(filenames, MPI_version=None):
         %s
         """ % (requirements_file_path,
                # TODO: this looks wrong?
-               "packages_path",
-               os.path.join(packages_path_arg, "packages_path", data_path),
+               packages_path_input,
+               os.path.join(packages_path_arg, packages_path_input, data_path),
                "\n        ".join(image_help("singularity").split("\n")[1:]))))
     with NamedTemporaryFile(delete=False) as recipe_file:
         recipe_file.write(recipe.encode('utf-8'))
@@ -295,5 +294,5 @@ def prepare_data_script():
     except IOError:
         raise LoggedError(log, "Cannot find the requirements file. "
                                "This should not be happening.")
-    install(info, path="packages_path", force=arguments.force,
+    install(info, path=packages_path_input, force=arguments.force,
             **{code_path: False, data_path: True})

@@ -102,7 +102,8 @@ def test_parameterization():
         j = get_external_function(info["params"]["j"])(b)
         k = get_external_function(info["params"]["k"]["derived"])(f)
         assert np.allclose(
-            point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
+            point[["b", "c", "e", "f", "g", "h", "j", "k"]].to_numpy(np.float64),
+            [b, c, e, f, g, h, j, k])
         # Test for GetDist too (except fixed ones, ignored by GetDist)
         bcefffg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
                            for p in ["b", "c", "e", "f", "g", "j", "k"]]
@@ -169,45 +170,3 @@ def test_parameterization_dependencies():
     with pytest.raises(LoggedError) as e:
         get_model(test_info)
     assert "that are output derived parameters" in str(e.value)
-
-
-# MARKED FOR DEPRECATION IN v3.0 -- Everything below this line
-
-
-DerivedArg = Union[dict, Sequence, None]
-
-
-def loglik_OLD(a, b, c, d, h, i, j, _derived: DerivedArg = ("x", "e")):
-    if isinstance(_derived, dict):
-        _derived.update({"x": x_func(c), "e": e_func(b)})
-    return multivariate_normal.logpdf((a, b, c, d, h, i, j), cov=0.1 * np.eye(7))
-
-
-# MARKED FOR DEPRECATION IN v3.0
-info_OLD = info.copy()
-info_OLD["likelihood"] = {"test_lik": loglik_OLD}
-
-
-# MARKED FOR DEPRECATION IN v3.0
-def test_parameterization_old_derived_specification():
-    updated_info, sampler = run(info_OLD)
-    products = sampler.products()
-    sample = products["sample"]
-    from getdist.mcsamples import MCSamplesFromCobaya
-    gdsample = MCSamplesFromCobaya(updated_info, products["sample"])
-    for i, point in sample:
-        a = info["params"]["a"]
-        b = get_external_function(info["params"]["b"])(a, point["bprime"])
-        c = get_external_function(info["params"]["c"])(a, point["cprime"])
-        e = get_external_function(e_func)(b)
-        f = get_external_function(f_func)(b)
-        g = get_external_function(info["params"]["g"]["derived"])(x_func(point["c"]))
-        h = get_external_function(info["params"]["h"])(info["params"]["i"])
-        j = get_external_function(info["params"]["j"])(b)
-        k = get_external_function(info["params"]["k"]["derived"])(f)
-        assert np.allclose(
-            point[["b", "c", "e", "f", "g", "h", "j", "k"]], [b, c, e, f, g, h, j, k])
-        # Test for GetDist too (except fixed ones, ignored by GetDist)
-        bcefffg_getdist = [gdsample.samples[i][gdsample.paramNames.list().index(p)]
-                           for p in ["b", "c", "e", "f", "g", "j", "k"]]
-        assert np.allclose(bcefffg_getdist, [b, c, e, f, g, j, k])

@@ -749,7 +749,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
     dataset = ini.params
 
     cl_keys = fiducial_Cl.keys()
-    use_CMB = set(cl_keys).intersection(set(CMB_keys))
+    use_CMB = set(cl_keys).intersection(CMB_keys)
     use_lensing = lens_recon_noise
 
     if use_CMB:

@@ -65,14 +65,15 @@ To run **cobaya** from the shell, use the command ``cobaya-run``, followed by yo
       If you notice secondary process not dying by themselves in any other circumstance, please contact us, including as much information on the run as possible.
 
 
-To run **cobaya** from a Python interpreter, simply do
+To run **cobaya** from a Python script or interpreter, simply do
 
 .. code:: python
 
     from cobaya.run import run
     updated_info, sampler = run(your_input)
 
-where ``your_input`` is a Python dictionary (for how to create one, see :ref:`example_quickstart_interactive`).
+where ``your_input`` is a Python dictionary, yaml file name or yaml text (for how to create one, see :ref:`example_quickstart_interactive`).
+For debugging purposes you can also pass in options to override those in the input, e.g. `run(your_input, debug=True, stop_at_error=True)``
 
 To run **cobaya** with MPI in this case, save your script to some file and run ``python your_script.py`` with your MPI run script.
 
@@ -88,6 +89,7 @@ To overwrite previous results (**use with care!**), either:
 
 * Set ``force: True`` in the input.
 * Invoke ``cobaya-run`` with a ``-f`` (or ``--force``) flag.
+* From a script, use ``run(your_input, force=True)``.
 
 .. warning::
 
@@ -97,6 +99,7 @@ If instead you would like to **resume a previous sample**, either:
 
 * Set ``resume: True`` in the input.
 * Invoke ``cobaya-run`` with a ``-r`` (or ``--resume``) flag.
+* From a script, use ``run(your_input, resume=True)``.
 
 In this case, the new input will be compared to the existing one, and an error will be raised if they are not compatible, mentioning the first part of the input that was found to be inconsistent.
 
@@ -174,4 +177,7 @@ Some common YAML *gotchas*
    For the YAML *connoisseur*, notice that the YAML parser used here has been modified to simplify the input/output notation: it now retains the ordering of parameters and likelihoods and prints arrays as lists.
 
 
+``run`` function
+----------------
 
+.. autofunction:: run.run

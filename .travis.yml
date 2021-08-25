@@ -56,19 +56,23 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Latest: gcc-10, Python 3.9 Anaconda (conda-forge)"
+    - name: "Latest: gcc-11, Python 3.9 Anaconda (conda-forge)"
       dist: focal
       addons:
         apt:
+          sources:
+            - sourceline: "ppa:ubuntu-toolchain-r/test"
           packages:
-            - gcc-10
-            - gfortran-10
-            - g++-10
+            - gcc-11
+            - gfortran-11
+            - g++-11
       env:
-        - GCC_VERSION="10"
+        - GCC_VERSION="11"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
       python: "3.9"
+  allow_failures:
+    - name: "Latest: gcc-11, Python 3.9 Anaconda (conda-forge)"
 
 before_install:
   # Configure right compiler versions
@@ -79,8 +83,11 @@ before_install:
     ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++;
     export PATH=$PWD/gcc-symlinks:$PATH;
     fi
-  - if [[ "$GCC_VERSION" == "10" ]]; then
+  - if [[ "$GCC_VERSION" == "11" ]]; then
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.5;
+    fi
+  - if [[ "$GCC_VERSION" == "6" ]]; then
+    export COBAYA_INSTALL_SKIP=$COBAYA_INSTALL_SKIP,polychord;
     fi
   - gfortran --version
   # Install rest of system requisites
@@ -102,8 +109,9 @@ before_install:
   - python --version
 
 script:
-  # Find undeclared references and syntax errors
-  - flake8 cobaya --select=E9,F63,F7,F82 --show-source --statistics
+  # Find undeclared references and syntax errors, plus standardize whitespace etc;
+  # See https://pycodestyle.pycqa.org/en/latest/intro.html#error-codes
+  - flake8 cobaya --select=E713,E704,E703,E714,E741,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
   # General tests:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug

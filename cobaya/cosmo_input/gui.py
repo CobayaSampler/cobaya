@@ -5,7 +5,6 @@ import platform
 import signal
 from pprint import pformat
 import numpy as np
-from matplotlib import cm as cmap
 import io
 
 # Local
@@ -18,7 +17,7 @@ from cobaya.bib import prettyprint_bib, get_bib_info, get_bib_component
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
     cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
 from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds, packages_path_env
+from cobaya.conventions import subfolders, kinds, packages_path_env, packages_path_input
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -45,11 +44,10 @@ try:
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
 
+os.environ['QT_API'] = 'pyside2'
+
 # Quit with C-c
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-# Color map for correlations
-cmap_corr = cmap.get_cmap("coolwarm_r")
 
 
 def text(key, contents):
@@ -251,7 +249,7 @@ class MainWindow(QWidget):
                 "\nIn order to find a covariance matrix, you need to define an external "
                 "packages installation path, e.g. via the env variable %r.\n" %
                 packages_path_env)
-        elif any(not os.path.isdir(d.format(**{"packages_path": packages_path}))
+        elif any(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
                  for d in covmat_folders):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "
@@ -271,6 +269,9 @@ class MainWindow(QWidget):
                 list(self.current_params_in_covmat))
             self.covmat_table.setVerticalHeaderLabels(
                 list(self.current_params_in_covmat))
+            # Color map for correlations
+            from matplotlib import cm as cmap
+            cmap_corr = cmap.get_cmap("coolwarm_r")
             for i, pi in enumerate(self.current_params_in_covmat):
                 for j, pj in enumerate(self.current_params_in_covmat):
                     self.covmat_table.setItem(
@@ -384,9 +385,8 @@ def gui_script():
         # TODO: fix this long logger setup
         from cobaya.log import logger_setup, LoggedError
         logger_setup(0, None)
-        import logging
         raise LoggedError(
-            logging.getLogger("cosmo_generator"),
+            "cosmo_generator",
             "PySide2 is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")

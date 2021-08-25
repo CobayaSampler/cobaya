@@ -9,7 +9,7 @@ native ones. You can find a description of the different likelihoods in the
 
    <br />
 
-The Planck 2018 likelihoods defined here are: (*new in 2.0*)
+The Planck 2018 likelihoods defined here are:
 
 - ``planck_2018_lowl.TT``: low-:math:`\ell` temperature
 - ``planck_2018_lowl.EE``: low-:math:`\ell` EE polarization
@@ -18,9 +18,11 @@ The Planck 2018 likelihoods defined here are: (*new in 2.0*)
 - ``planck_2018_highl_plik.[TT|TTTEEE]_lite``: faster nuisance-marginalized versions of the previous (binned) ones
 - ``planck_2018_highl_plik.[TT|TTTEEE]_lite_native``: Python native versions of the nuisance-marginalizes ones  (more customizable)
 - ``planck_2018_highl_CamSpec.[TT|TTTEEE][_native]``: ``clik`` and native Python versions of the alternative high-:math:`\ell` ``CamSpec`` likelihoods.
+- ``planck_2018_highl_CamSpec2021.[TT|TTTEEE]``: native Python versions of updated high-:math:`\ell` ``CamSpec`` likelihoods (following `arXiv 1910.00483 <https://arxiv.org/abs/1910.00483>`_).
 - ``planck_2018_lensing.clik``: lensing temperature+polarisation-based; official ``clik`` code.
 - ``planck_2018_lensing.native``: lensing temperature+polarisation-based; native Python version (more customizable)
 - ``planck_2018_lensing.CMBMarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
+
 
 .. note::
 
@@ -96,7 +98,7 @@ of this section.
 
    If that did not solve the issue, check out specific instructions for some systems in the
    ``readme.md`` file in the folder ``[packages_path]/code/planck/code/plc_3.0/plc-3.01``.
-   
+
    If you want to re-compile the Planck likelihood to your liking (e.g. with MKL), simply
    go into the chosen external packages installation folder and re-run the ``python waf configure``
    and ``python waf install`` with the desired options,
@@ -162,12 +164,12 @@ Interface for official ``clik`` code
 
 Native ``CamSpec`` version
 --------------------------
-      
+
 .. automodule:: cobaya.likelihoods.base_classes.planck_2018_CamSpec_python
    :noindex:
 
 Native ``lite`` version
 -----------------------
-      
+
 .. automodule:: cobaya.likelihoods.base_classes.planck_pliklite
    :noindex:

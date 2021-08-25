@@ -89,19 +89,22 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
          info["params"]["x"]["prior"]["min"]) *
         (info["params"]["y"]["prior"]["max"] -
          info["params"]["y"]["prior"]["min"]))
-    logps = {name: logpdf(**{arg: products["sample"][arg].values for arg in
-                             getfullargspec(logpdf)[0]}) for name, logpdf in
-             {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()}
+    logps = {
+        name: logpdf(**{arg: products["sample"][arg].to_numpy(dtype=np.float64) for arg in
+                        getfullargspec(logpdf)[0]}) for name, logpdf in
+        {"half_ring": half_ring_func, "gaussian_y": gaussian_func}.items()}
     # Test #1: values of logpdfs
     if kind == "prior":
         columns_priors = [c for c in products["sample"].data.columns
                           if c.startswith("minuslogprior")]
         assert np.allclose(
-            products["sample"][columns_priors[0]].values,
-            np.sum(products["sample"][columns_priors[1:]].values, axis=-1)), (
+            products["sample"][columns_priors[0]].to_numpy(dtype=np.float64),
+            np.sum(products["sample"][columns_priors[1:]].to_numpy(dtype=np.float64),
+                   axis=-1)), (
             "The single prior values do not add up to the total one.")
         assert np.allclose(logprior_base + sum(logps[p] for p in info_logpdf),
-                           -products["sample"]["minuslogprior"].values), (
+                           -products["sample"]["minuslogprior"].to_numpy(
+                               dtype=np.float64)), (
             "The value of the total prior is not reproduced correctly.")
         assert np.isclose(sampler.model.logprior({'x': products["sample"]["x"][0],
                                                   'y': products["sample"]["y"][0]}),
@@ -110,17 +113,19 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     elif kind == "likelihood":
         for lik in info["likelihood"]:
             assert np.allclose(-2 * logps[lik],
-                               products["sample"][get_chi2_name(lik)].values), (
+                               products["sample"][get_chi2_name(lik)].to_numpy(
+                                   dtype=np.float64)), (
                     "The value of the likelihood '%s' is not reproduced correctly." % lik)
     assert np.allclose(logprior_base + sum(logps[p] for p in info_logpdf),
-                       -products["sample"]["minuslogpost"].values), (
+                       -products["sample"]["minuslogpost"].to_numpy(dtype=np.float64)), (
         "The value of the posterior is not reproduced correctly.")
     # Test derived parameters, if present -- for now just for "r"
     if derived:
-        derived_values = {param: func(**{arg: products["sample"][arg].values
-                                         for arg in ["x", "y"]})
-                          for param, func in derived_funcs.items()}
-        assert all(np.allclose(v, products["sample"][p].values)
+        derived_values = {
+            param: func(**{arg: products["sample"][arg].to_numpy(dtype=np.float64)
+                           for arg in ["x", "y"]})
+            for param, func in derived_funcs.items()}
+        assert all(np.allclose(v, products["sample"][p].to_numpy(dtype=np.float64))
                    for p, v in derived_values.items()), (
             "The value of the derived parameters is not reproduced correctly.")
     # Test updated info -- scripted

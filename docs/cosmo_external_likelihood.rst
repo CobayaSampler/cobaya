@@ -51,7 +51,7 @@ We will define a model, use our likelihood's plotter, and also plot a slice of t
    - Set ``debug: True`` in the input, which will cause **cobaya** to print much more information, e.g. the parameter values are passed to the prior, the theory code and the likelihood.
    - If the likelihood evaluates to ``-inf`` (but the prior is finite) it probably means that either the theory code or the likelihood are failing; to display the error information of the theory code, add to it the ``stop_at_error: True`` option, as shown in the example input above, and the same for the likelihood, if it is likely to throw errors.
 
-Now we can sample from this model's posterior as explained in :ref:`cosmo_model_sampler`.
+Now we can sample from this model's posterior as explained in :ref:`model_sampler_interaction`.
 
 Alternatively, specially if you are planning to share your likelihood, you can put its definition (including the fiducial spectrum, maybe saved as a table separately) in a separate file, say ``my_like_file.py``. In this case, to use it, use ``import_module([your_file_without_extension]).your_function``, here
 

@@ -5,7 +5,7 @@ In the last section we have seen how to run basic samples. Before we get to crea
 
 You can use it to test your modifications, to evaluate the cosmological observables and likelihoods at particular points, and also to interface cosmological codes and likelihoods with external tools, such as a different sampler, a machine-learning framework...
 
-Models are created from the same input as the :func:`~run.run` function: a dictionary containing the same blocks, except for the ``sampler`` block (it can be included, but will be ignored).
+The basics of :class:`model.Model` are explained in :doc:`this short section <models>`. We recommend you to take a look at it before going on.
 
 So let us create a simple one using the :doc:`input generator <cosmo_basic_runs>`: Planck 2018 polarized CMB and lensing with CLASS as a theory code. Let us copy the ``python`` version (you can also copy the ``yaml`` version and load it with :func:`~yaml.yaml_load`).
 
@@ -21,7 +21,7 @@ To get (log) probabilities and derived parameters for particular parameter value
 
 .. note::
 
-   Notice that we can only fix **sampled** parameters: in the example above, the primordial log-amplitude ``logA`` is sampled (has a prior) but the amplitude defined from it ``A_s`` it not (it just acts as an interface between the sampler and ``CLASS``), so we can not pass it as an argument to the methods of :class:`model.Model`.
+   Notice that we can only fix **sampled** parameters: in the example above, the primordial log-amplitude ``logA`` is sampled (has a prior) but the amplitude defined from it ``A_s`` is not (it just acts as an interface between the sampler and ``CLASS``), so we can not pass it as an argument to the methods of :class:`model.Model`.
 
    To get a list of the sampled parameters in use:
 
@@ -50,7 +50,7 @@ And this will print something like
 
 .. note::
 
-   ``0`` is the name of the 1-dimensional prior specified in the ``params`` block.
+   ``0`` is the name of the combination of 1-dimensional priors specified in the ``params`` block.
 
 .. note::
 
@@ -80,7 +80,7 @@ Which will print something like
 
    {classy: [{'Cl': {'pp': 2048, 'bb': 29, 'ee': 2508, 'tt': 2508, 'eb': 0, 'te': 2508, 'tb': 0}}]}
 
-If we take a look at the documentation of :meth:`~.theories._cosmo.BoltzmannBase.must_provide`, we will see that to request the power spectrum we would use the method ``get_Cl``:
+If we take a look at the documentation of :meth:`~.theories.cosmo.BoltzmannBase.must_provide`, we will see that to request the power spectrum we would use the method ``get_Cl``:
 
 .. literalinclude:: ./src_examples/cosmo_model/4.py
    :language: python
@@ -93,7 +93,7 @@ If we take a look at the documentation of :meth:`~.theories._cosmo.BoltzmannBase
    Cosmological observables requested this way **always correspond to the last set of parameters with which the likelihood was evaluated**.
 
 
-If we want to request additional observables not already requested by the likelihoods, we can use the method :meth:`~.theories._cosmo.BoltzmannBase.must_provide` of the theory code (check out its documentation for the syntax).
+If we want to request additional observables not already requested by the likelihoods, we can use the method :meth:`~.theories.cosmo.BoltzmannBase.must_provide` of the theory code (check out its documentation for the syntax).
 
 As a final example, let us request the Hubble parameter for a number of redshifts and plot both it and the power spectrum for a range of values of :math:`\Omega_\mathrm{CDM}h^2`:
 
@@ -117,28 +117,10 @@ If you had set ``timing=True`` in the input info, :func:`~model.Model.dump_timin
 
    Unfortunately, not all likelihoods and cosmological codes are *instance-safe*, e.g. you can't define two models using each the unbinned TT and TTTEEE likelihoods at the same time.
 
+To sample from your newly-create model's posterior, it is preferable to pass it directly to a sampler, as opposed to calling :func:`~run.run`, which would create yet another instance of the same model, taking additional time and memory. To do that, check out :ref:`this section <model_sampler_interaction>`.
+
 
 Low-level access to the theory code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can access the imported CAMB module or CLASS 'classy' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
-
-
-.. _cosmo_model_sampler:
-
-Manually passing this model to a sampler
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Once you have created a model, you can pass it to a sampler without needing to go through ``cobaya.run``, which would create yet another instance of the same model.
-
-You can define a sampler and an optional output driver in the following way:
-
-.. literalinclude:: ./src_examples/cosmo_model/6.py
-   :language: python
-
-
-Model wrapper class
--------------------
-
-.. autoclass:: model.Model
-   :members:

@@ -11,7 +11,6 @@ import sys
 import datetime
 import re
 import shutil
-import logging
 from packaging import version
 from typing import Optional, Any
 # Local
@@ -19,7 +18,7 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
     OutputError, InputImportError
 from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
-from cobaya.log import LoggedError, HasLogger, get_traceback_text
+from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
 from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
 from cobaya.input import get_info_path
 from cobaya.collection import SampleCollection
@@ -50,7 +49,7 @@ class FileLock:
             os.remove(self.lock_error_file)
         except OSError:
             pass
-        self.log = log or logging.getLogger("file_lock")
+        self.log = log or get_logger("file_lock")
         try:
             h: Any = None
             try:
@@ -143,10 +142,8 @@ class Output(HasLogger):
         # MARKED FOR DEPRECATION IN v3.0
         # -- also remove output_prefix kwarg above
         if output_prefix is not None:
-            self.log.warning("*DEPRECATION*: `output_prefix` will be deprecated in the "
-                             "next version. Please use `prefix` instead.")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            prefix = output_prefix
+            raise LoggedError(self.log, "`output_prefix` has been deprecated. "
+                                        "Please use `prefix` instead.")
         # END OF DEPRECATION BLOCK
         self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
@@ -570,7 +567,8 @@ def get_output(*args, **kwargs) -> Output:
     """
     # MARKED FOR DEPRECATION IN v3.0
     if kwargs.get("output_prefix") is not None:
-        kwargs["prefix"] = kwargs["output_prefix"]
+        raise ValueError("DEPRECATION: `output_prefix` has been deprecated. "
+                         "Please use `prefix` instead.")
     # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
         return Output(*args, **kwargs)

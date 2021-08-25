@@ -250,9 +250,8 @@ def body_of_test_speeds(info_sampler, manual_blocking=False,
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("drag"):
         assert test_func(n_evals, dim0, speed0, dim1, 2 * speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
-    elif sampler_name == "mcmc" and (
-            info["sampler"][sampler_name].get("oversample") or
-            info["sampler"][sampler_name].get("oversample_power", 0) > 0):
+    elif sampler_name == "mcmc" and \
+         info["sampler"][sampler_name].get("oversample_power", 0) > 0:
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
             ("%g > %g" % (test_func(n_evals, dim0, speed0, dim1, speed1), tolerance)))
     elif sampler_name == "mcmc":  # just blocking
@@ -276,7 +275,8 @@ def body_of_test_speeds(info_sampler, manual_blocking=False,
                 "Chain has %r but should be %r. " % (
                     [chi2_0_chain, chi2_1_chain], [chi2_0_good, chi2_1_good]) +
                 "Full chain point: %r" % products["sample"][i])
-        derived_chain = products["sample"][["sum_like0", "sum_like1"]].values[i]
+        derived_chain = \
+            products["sample"][["sum_like0", "sum_like1"]].to_numpy(dtype=np.float64)[i]
         derived_good = np.array([
             sum(products["sample"][params0].values[i]),
             sum(products["sample"][params1].values[i])])

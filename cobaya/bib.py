@@ -25,19 +25,22 @@ _default_length = 80
 
 # Cobaya's own bib info
 cobaya_desc = cleandoc(r"""
-The posterior has been explored/maximised/reweighted using Cobaya \cite{torrado:2020xyz}.
+The posterior has been explored/maximized/reweighted using Cobaya \cite{torrado:2020xyz}.
 """)
 
 cobaya_bib = r"""
-@article{Torrado:2020xyz,
+@article{Torrado:2020dgo,
     author = "Torrado, Jesus and Lewis, Antony",
     title = "{Cobaya: Code for Bayesian Analysis of hierarchical physical models}",
     eprint = "2005.05290",
     archivePrefix = "arXiv",
     primaryClass = "astro-ph.IM",
     reportNumber = "TTK-20-15",
-    month = "5",
-    year = "2020"
+    doi = "10.1088/1475-7516/2021/05/057",
+    journal = "JCAP",
+    volume = "05",
+    pages = "057",
+    year = "2021"
 }
 """.lstrip("\n")
 

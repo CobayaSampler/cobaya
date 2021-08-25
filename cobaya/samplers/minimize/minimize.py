@@ -87,7 +87,6 @@ from typing import Optional, Union
 import re
 import pybobyqa
 from pybobyqa import controller
-import logging
 from itertools import chain
 
 # Local
@@ -254,7 +253,7 @@ class Minimize(Minimizer, CovmatSampler):
                         "bounds": np.array(list(zip(*bounds))),
                         "maxfun": self.max_iter,
                         "rhobeg": 1.,
-                        "do_logging": (self.log.getEffectiveLevel() == logging.DEBUG)}
+                        "do_logging": self.is_debug()}
                     self.kwargs = recursive_update(self.kwargs,
                                                    self.override_bobyqa or {})
                     self.log.debug("Arguments for pybobyqa.solve:\n%r",
@@ -272,7 +271,7 @@ class Minimize(Minimizer, CovmatSampler):
                         "bounds": bounds,
                         "options": {
                             "maxiter": self.max_iter,
-                            "disp": (self.log.getEffectiveLevel() == logging.DEBUG)}}
+                            "disp": self.is_debug()}}
                     self.kwargs = recursive_update(self.kwargs, self.override_scipy or {})
                     self.log.debug("Arguments for scipy.optimize.Minimize:\n%r",
                                    {k: v for k, v in self.kwargs.items() if k != "fun"})
@@ -334,7 +333,7 @@ class Minimize(Minimizer, CovmatSampler):
         self.log.info("-log(%s) minimized to %g",
                       "likelihood" if self.ignore_prior else "posterior", -logp_min)
         recomputed_post_min = self.model.logposterior(x_min, cached=False)
-        recomputed_logp_min = (sum(recomputed_post_min.loglikes) if self.ignore_prior
+        recomputed_logp_min = (recomputed_post_min.loglike if self.ignore_prior
                                else recomputed_post_min.logpost)
         if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
             raise LoggedError(

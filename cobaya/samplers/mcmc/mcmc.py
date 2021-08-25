@@ -21,7 +21,7 @@ from cobaya.collection import SampleCollection, OneSamplePoint
 from cobaya.conventions import OutPar, Extension, line_width, get_version
 from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.yaml import yaml_dump_file
 from cobaya.model import LogPosterior
@@ -81,16 +81,14 @@ class MCMC(CovmatSampler):
         self.log.debug("Initializing")
         # MARKED FOR DEPRECATION IN v3.0
         if getattr(self, "oversample", None) is not None:
-            self.log.warning("*DEPRECATION*: `oversample` will be deprecated in the "
-                             "next version. Oversampling is now requested by setting "
-                             "`oversample_power` > 0.")
+            raise LoggedError(self.log, "`oversample` has been deprecated. "
+                                        "Oversampling is now requested by setting "
+                                        "`oversample_power` > 0.")
         # END OF DEPRECATION BLOCK
         # MARKED FOR DEPRECATION IN v3.0
         if getattr(self, "check_every", None) is not None:
-            self.log.warning("*DEPRECATION*: `check_every` will be deprecated in the "
-                             "next version. Please use `learn_every` instead.")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            self.learn_every = getattr(self, "check_every")
+            raise LoggedError(self.log, "`check_every` has been deprecated. "
+                                        "Please use `learn_every` instead.")
         # END OF DEPRECATION BLOCK
         if self.callback_every is None:
             self.callback_every = self.learn_every
@@ -141,15 +139,15 @@ class MCMC(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[last]).to_numpy(copy=True)
+                .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
                 logpost=-self.collection[OutPar.minuslogpost].iloc[last],
                 logpriors=-(self.collection[self.collection.minuslogprior_names]
-                            .iloc[last].to_numpy(copy=True)),
+                            .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 loglikes=-0.5 * (self.collection[self.collection.chi2_names]
-                                 .iloc[last].to_numpy(copy=True)),
+                                 .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 derived=(self.collection[self.collection.derived_params].iloc[last]
-                         .to_numpy(copy=True)))
+                         .to_numpy(dtype=np.float64, copy=True)))
         else:
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
@@ -239,8 +237,7 @@ class MCMC(CovmatSampler):
                     "Dragging disabled: not possible if there is only one block.")
             if max(self.oversampling_factors) / min(self.oversampling_factors) < 2:
                 self.drag = False
-                self.log.warning(
-                    "Dragging disabled: speed ratios < 2.")
+                self.log.warning("Dragging disabled: speed ratios < 2.")
         if self.drag:
             # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
@@ -251,16 +248,15 @@ class MCMC(CovmatSampler):
                          self.n_fast / self.n_slow))
             if self.drag_interp_steps < 2:
                 self.drag = False
-                self.log.warning(
-                    "Dragging disabled: "
-                    "speed ratio and fast-to-slow ratio not large enough.")
+                self.log.warning("Dragging disabled: "
+                                 "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
             # MARKED FOR DEPRECATION IN v3.0
             if getattr(self, "drag_limits", None) is not None:
-                self.log.warning("*DEPRECATION*: 'drag_limits' has been deprecated. "
-                                 "Use 'oversample_power' to control the amount of "
-                                 "dragging steps.")
+                raise LoggedError(self.log, "`drag_limits` has been deprecated. "
+                                            "Use 'oversample_power' to control the amount"
+                                            " of dragging steps.")
             # END OF DEPRECATION BLOCK
             if self.temperature:
                 raise LoggedError(
@@ -560,16 +556,23 @@ class MCMC(CovmatSampler):
         else:  # not accepted
             self.current_point.weight += 1
             # Failure criterion: chain stuck! (but be more permissive during burn_in)
-            max_tries_now = self.max_tries.value * \
-                            (1 + (10 - 1) * np.sign(self.burn_in_left))
+            max_tries_now = self.max_tries.value * (
+                    1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
                 self.collection.out_update()
                 raise LoggedError(
                     self.log,
-                    "The chain has been stuck for %d attempts. Stopping sampling. "
-                    "If this has happened often, try improving your "
-                    "reference point/distribution. Alternatively (though not advisable) "
-                    "make 'max_tries: np.inf' (or 'max_tries: .inf' in yaml).\n"
+                    "The chain has been stuck for %d attempts, stopping sampling. "
+                    "Make sure the reference point is semsible and initial covmat."
+                    "For parameters not included in an initial covmat, the 'proposal' "
+                    "width set for each parameter should be of order of the expected "
+                    "conditional posterior width, which may be much smaller than the "
+                    "marginalized posterior width - choose a smaller "
+                    "rather than larger value if in doubt. You can also decrease the "
+                    "'proposal_scale' option for mcmc, though small values will sample "
+                    "less efficiently once things converge.\n"
+                    "Alternatively (though not advisable) make 'max_tries: np.inf' "
+                    "(or 'max_tries: .inf' in yaml).\n"
                     "Current point: %s", max_tries_now, self.current_point)
 
     # Functions to check convergence and learn the covariance of the proposal distribution
@@ -626,7 +629,9 @@ class MCMC(CovmatSampler):
                     [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1,
                                          ignore_temperature=True)
                      for i in range(1, m)])
-            except:
+            except always_stop_exceptions:
+                raise
+            except Exception:
                 self.log.info("Not enough points in chain to check convergence. "
                               "Waiting for next checkpoint.")
                 return
@@ -716,6 +721,8 @@ class MCMC(CovmatSampler):
                         self.collection.sampled_to_getdist_mcsamples(
                             first=i * cut, last=(i + 1) * cut - 1)
                         for i in range(1, m)]
+                except always_stop_exceptions:
+                    raise
                 except:
                     self.log.info("Not enough points in chain to check c.l. convergence. "
                                   "Waiting for next checkpoint.")

@@ -22,18 +22,18 @@ import tqdm
 from typing import List
 
 # Local
-from cobaya.log import logger_setup, LoggedError, NoLogging
+from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
 from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
     write_packages_path_in_config_file, get_config_path, get_kind
 from cobaya.input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
-    packages_path_config_file
+    packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import resolve_packages_path
 from cobaya.typing import InputDict
 
-log = logging.getLogger("install")
+log = get_logger("install")
 
 _banner_symbol = "="
 _banner_length = 80
@@ -50,7 +50,7 @@ def install(*infos, **kwargs):
     debug = kwargs.get("debug")
     # noinspection PyUnresolvedReferences
     if not log.root.handlers:
-        logger_setup()
+        logger_setup(debug=debug)
     path = kwargs.get("path")
     if not path:
         path = resolve_packages_path(infos)
@@ -59,7 +59,7 @@ def install(*infos, **kwargs):
             log, "No 'path' argument given, and none could be found in input infos "
                  "(as %r), the %r env variable or the config file. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
-            "packages_path", packages_path_env, packages_path_arg[0])
+            packages_path_input, packages_path_env, packages_path_arg[0])
     abspath = os.path.abspath(path)
     log.info("Installing external packages at '%s'", abspath)
     kwargs_install = {"force": kwargs.get("force", False),
@@ -140,7 +140,7 @@ def install(*infos, **kwargs):
                     log.info("Doing nothing.")
                     continue
             else:
-                log.info("Installation check failed!")
+                log.info("Check found no existing installation")
                 if not debug:
                     log.info(
                         "(If you expected this to be already installed, re-run "
@@ -170,7 +170,8 @@ def install(*infos, **kwargs):
                 continue
             # test installation
             with NoLogging(None if debug else logging.ERROR):
-                successfully_installed = is_installed(path=install_path, **kwargs_install)
+                successfully_installed = is_installed(path=install_path, check=False,
+                                                      **kwargs_install)
             if not successfully_installed:
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
@@ -215,7 +216,7 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
 
 
 def download_file(url, path, no_progress_bars=False, decompress=False, logger=None):
-    logger = logger or logging.getLogger(__name__)
+    logger = logger or get_logger("install")
     with tempfile.TemporaryDirectory() as tmp_path:
         try:
             req = requests.get(url, allow_redirects=True, stream=True)
@@ -267,7 +268,7 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
                             no_progress_bars=False, logger=None):
-    logger = logger or logging.getLogger(__name__)
+    logger = logger or get_logger("install")
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
         repo_name = repo_name[repo_name.find("/") + 1:]
@@ -349,9 +350,7 @@ def install_script(args=None):
     parser.add_argument("-" + modules[0], "--" + modules,
                         action="store", required=False,
                         metavar="/packages/path", default=None,
-                        help="To be deprecated! "
-                             "Alias for %s, which should be used instead." %
-                             packages_path_arg_posix)
+                        help="Deprecated! Use %s instead." % packages_path_arg_posix)
     # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     output_show_packages_path = resolve_packages_path()
     if output_show_packages_path and os.environ.get(packages_path_env):
@@ -393,7 +392,7 @@ def install_script(args=None):
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
-    logger = logging.getLogger(__name__.split(".")[-1])
+    logger = get_logger("install")
     # Gather requests
     infos: List[InputDict] = []
     for f in arguments.files_or_components:
@@ -417,24 +416,18 @@ def install_script(args=None):
     if not infos:
         logger.info("Nothing to install.")
         return
-    # MARKED FOR DEPRECATION IN v3.0
+    # List of deprecation warnings, to be printed *after* installation
     deprecation_warnings = []
+    # MARKED FOR DEPRECATION IN v3.0
     if getattr(arguments, modules) is not None:
-        deprecation_warnings.append(
-            "*DEPRECATION*: -m/--modules will be deprecated in favor of "
-            "-%s/--%s in the next version. Please, use that one instead." %
-            (packages_path_arg[0], packages_path_arg_posix))
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if getattr(arguments, packages_path_arg) is None:
-            setattr(arguments, packages_path_arg, getattr(arguments, modules))
+        raise LoggedError(logger, "-m/--modules has been deprecated in favor of "
+                                  "-%s/--%s",
+                          packages_path_arg[0], packages_path_arg_posix)
     # END OF DEPRECATION BLOCK
     # MARKED FOR DEPRECATION IN v3.0
     if arguments.just_check is True:
-        deprecation_warnings.append(
-            "*DEPRECATION*: --just-check will be deprecated in favor of "
-            "--%s in the next version. Please, use that one instead." % "test")
-    # BEHAVIOUR TO BE REPLACED BY ERROR:
-    setattr(arguments, "test", getattr(arguments, "test") or arguments.just_check)
+        raise LoggedError(logger, "--just-check has been deprecated in favor of --%s",
+                          "test")
     # END OF DEPRECATION BLOCK
     # Launch installer
     install(*infos, path=getattr(arguments, packages_path_arg),

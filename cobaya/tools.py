@@ -9,7 +9,6 @@
 # Global
 import os
 import sys
-import logging
 import platform
 import warnings
 import inspect
@@ -31,12 +30,13 @@ import traceback
 
 # Local
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
-    packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic
-from cobaya.log import LoggedError, HasLogger
+    packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic, \
+    packages_path_input
+from cobaya.log import LoggedError, HasLogger, get_logger
 from cobaya.typing import Kind
 
 # Set up logger
-log = logging.getLogger(__name__.split(".")[-1])
+log = get_logger(__name__)
 
 
 def str_to_list(x) -> List:
@@ -576,8 +576,9 @@ def get_scipy_1d_pdf(info):
             isinstance(n, numbers.Real) for n in info2):
         info2 = {"min": info2[0], "max": info2[1]}
     elif not isinstance(info2, Mapping):
-        raise LoggedError(log, "Prior format not recognized. "
-                               "Check documentation for prior specification.")
+        raise LoggedError(log, "Prior format not recognized for %s: %r "
+                               "Check documentation for prior specification.",
+                          param, info2)
     # What distribution?
     try:
         dist = info2.pop("dist").lower()
@@ -611,6 +612,10 @@ def get_scipy_1d_pdf(info):
                 raise LoggedError(
                     log, "Invalid value '%s: %r' in param '%s' (it must be a number)",
                     limit, value, param)
+        if minmaxvalues["max"] < minmaxvalues["min"]:
+            raise LoggedError(
+                log, "Minimum larger than maximum: '%s, %s' for param '%s'",
+                minmaxvalues["min"], minmaxvalues["max"], param)
         info2["loc"] = minmaxvalues["min"]
         info2["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
 
@@ -994,7 +999,7 @@ def load_packages_path_from_config_file():
     Returns the external packages path stored in the config file,
     or `None` if it can't be found.
     """
-    return load_config_file().get("packages_path")
+    return load_config_file().get(packages_path_input)
 
 
 def write_packages_path_in_config_file(packages_path):
@@ -1003,31 +1008,34 @@ def write_packages_path_in_config_file(packages_path):
 
     Relative paths are converted into absolute ones.
     """
-    write_config_file({"packages_path": os.path.abspath(packages_path)})
+    write_config_file({packages_path_input: os.path.abspath(packages_path)})
 
 
 def resolve_packages_path(infos=None):
     # noinspection PyStatementEffect
     """
-        Gets the external packages installation path given some infos.
-        If more than one occurrence of the external packages path in the infos,
-        raises an error.
-    
-        If there is no external packages path defined in the given infos,
-        defaults to the env variable `%s`, and in its absence to that stored
-        in the config file.
-    
-        If no path at all could be found, returns `None`.
-        """ % packages_path_env
+    Gets the external packages installation path given some infos.
+    If more than one occurrence of the external packages path in the infos,
+    raises an error.
+
+    If there is no external packages path defined in the given infos,
+    defaults to the env variable `%s`, and in its absence to that stored
+    in the config file.
+
+    If no path at all could be found, returns `None`.
+    """ % packages_path_env
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
         infos = [infos]
     # MARKED FOR DEPRECATION IN v3.0
-    # BEHAVIOUR TO BE REPLACED BY ERROR:
-    [check_deprecated_modules_path(info) for info in infos]
+    for info in infos:
+        if info.get("modules"):
+            raise LoggedError(log, "The input field 'modules' has been deprecated."
+                                   "Please use instead %r", packages_path_input)
     # END OF DEPRECATION BLOCK
-    paths = set(p for p in [info.get("packages_path") for info in infos] if p)
+    paths = set(os.path.realpath(p) for p in
+                [info.get(packages_path_input) for info in infos] if p)
     if len(paths) == 1:
         return list(paths)[0]
     elif len(paths) > 1:
@@ -1041,12 +1049,9 @@ def resolve_packages_path(infos=None):
     old_env = "COBAYA_MODULES"
     path_old_env = os.environ.get(old_env)
     if path_old_env and not path_env:
-        log.warning("*DEPRECATION*: The env var %r will be deprecated in favor of %r in "
-                    "the next version. Please, use that one instead.",
-                    old_env, packages_path_env)
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        path_env = path_old_env
-    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
+        raise LoggedError(log, "The env var %r has been deprecated in favor of %r",
+                          old_env, packages_path_env)
+    # END OF DEPRECATION BLOCK
     if path_env:
         return path_env
     return load_packages_path_from_config_file()
@@ -1055,24 +1060,12 @@ def resolve_packages_path(infos=None):
 def sort_cosmetic(info):
     # noinspection PyStatementEffect
     """
-        Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-        rest of the blocks/options.
-        """ % dump_sort_cosmetic
+    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
+    rest of the blocks/options.
+    """ % dump_sort_cosmetic
     sorted_info = dict()
     for k in dump_sort_cosmetic:
         if k in info:
             sorted_info[k] = info[k]
     sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
     return sorted_info
-
-
-# MARKED FOR DEPRECATION IN v3.0
-def check_deprecated_modules_path(info):
-    if info.get("modules"):
-        log.warning("*DEPRECATION*: The input field 'modules' will be deprecated in "
-                    "favor of %r in the next version. Please, use that one instead.",
-                    "packages_path")
-        # BEHAVIOUR TO BE REPLACED BY ERROR:
-        if not info.get("packages_path"):
-            info["packages_path"] = info["modules"]
-# END OF DEPRECATION BLOCK

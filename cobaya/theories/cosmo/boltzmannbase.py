@@ -405,13 +405,12 @@ class BoltzmannBase(Theory):
     @abstract
     def get_sigma8_z(self, z):
         r"""
-        Present day linear theory root-mean-square amplitude of the matter 
+        Present day linear theory root-mean-square amplitude of the matter
         fluctuation spectrum averaged in spheres of radius 8 h^{−1} Mpc.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
-        pass
 
     @abstract
     def get_fsigma8(self, z):

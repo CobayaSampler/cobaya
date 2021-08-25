@@ -18,6 +18,7 @@ Table of contents
    input
    output
    params_prior
+   models
    likelihoods
    likelihood_one
    likelihood_gaussian_mixture
@@ -59,11 +60,13 @@ Table of contents
    likelihood_des
    likelihood_bao
    likelihood_sn
+   likelihood_external
 
 .. toctree::
    :caption: Running on clusters
    :maxdepth: 1
 
+   run_job
    cluster_amazon
 
 .. toctree::

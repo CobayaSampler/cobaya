@@ -34,15 +34,15 @@ def test_mcmc(tmpdir, packages_path=None):
         "covmat": cov, "learn_proposal_Rminus1_max": 30}}
 
     def check_gaussian(sampler_instance):
-        KL_proposer = KL_norm(
+        proposer = KL_norm(
             S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
             S2=sampler_instance.proposer.get_covariance())
-        KL_sample = KL_norm(
+        sample = KL_norm(
             m1=sampler_instance.model.likelihood["gaussian_mixture"].means[0],
             S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
             m2=sampler_instance.collection.mean(first=int(sampler_instance.n() / 2)),
             S2=sampler_instance.collection.cov(first=int(sampler_instance.n() / 2)))
-        print("KL proposer: %g ; KL sample: %g" % (KL_proposer, KL_sample))
+        print("KL proposer: %g ; KL sample: %g" % (proposer, sample))
 
     if mpi.rank() == 0:
         info_sampler["mcmc"].update({
@@ -70,7 +70,7 @@ sampler:
   mcmc:
    drag: True
    measure_speeds: False
-   Rminus1_stop: 0.001   
+   Rminus1_stop: 0.001
    Rminus1_cl_stop: 0.04
    seed: 1
 """
@@ -121,17 +121,17 @@ params:
       min: -0.5
       max: 3
     latex: \alpha
+    proposal: 0.3
   b:
     prior:
       dist: norm
       loc: 0
       scale: 1
     ref: 0
-    proposal: 0.5
     latex: \beta
 sampler:
-  mcmc:
-    """
+  mcmc: 
+"""
 
 logger = logging.getLogger('test')
 
@@ -146,14 +146,13 @@ def test_mcmc_sync():
     else:
         max_samples = 600
     # simulate asynchronous ending sampling loop
-    info['sampler']['mcmc'] = {'max_samples': max_samples}
-
-    updated_info, sampler = run(info)
+    info['sampler']['mcmc'] = {'max_samples': max_samples, 'seed': 1}
+    updated_info, sampler = run(info, stop_at_error=True)
     assert len(sampler.products()["sample"]) == max_samples
 
     logger.info('Test error synchronization')
     if mpi.rank() == 0:
-        info['sampler']['mcmc'] = {'max_samples': 'none'}  # 'none' not valid
+        info['sampler']['mcmc'] = {'max_samples': 'bad_val'}
         with NoLogging(logging.ERROR), pytest.raises(TypeError):
             run(info)
     else:
@@ -170,7 +169,7 @@ def test_mcmc_sync():
 
     # test error converted into MPI_ABORT after timeout
     # noinspection PyTypeChecker
-    with pytest.raises((LoggedError, mpi.OtherProcessError)), NoLogging(logging.ERROR):
+    with pytest.raises((LoggedError, mpi.OtherProcessError)), NoLogging(logging.CRITICAL):
         with mpi.ProcessState('test', time_out_seconds=0.5,
                               timeout_abort_proc=test_abort):
             if mpi.rank() != 1:
@@ -195,8 +194,7 @@ def test_mcmc_oversampling():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_mcmc_oversampling_manual():
-    # TODO - update ('oversample')
-    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample": True}}
+    info_mcmc = {"mcmc": {"burn_in": 0, "learn_proposal": False, "oversample_power": 0.4}}
     body_of_test_speeds(info_mcmc, manual_blocking=True)
 
 
@@ -231,8 +229,8 @@ def _test_overhead_timing(dim=15):
     # noinspection PyUnresolvedReferences
     from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
 
-    LikeTest = _make_gaussian_like(dim)
-    info: InputDict = {'likelihood': {'like': LikeTest}, 'debug': False,
+    like_test = _make_gaussian_like(dim)
+    info: InputDict = {'likelihood': {'like': like_test}, 'debug': False,
                        'sampler': {'mcmc': {'max_samples': 1000, 'burn_in': 0,
                                             "learn_proposal": False,
                                             "Rminus1_stop": 0.0001}}}

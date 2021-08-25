@@ -123,12 +123,11 @@ import os
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 import pandas as pd
-import logging
 from typing import Optional, Sequence
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.conventions import Const
+from cobaya.conventions import Const, packages_path_input
 from cobaya.typing import InfoDict
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 
@@ -151,10 +150,11 @@ class BAO(InstallableLikelihood):
 
     def initialize(self):
         self.log.info("Initialising.")
-        if not getattr(self, "path", None) and not getattr(self, "packages_path", None):
+        if not getattr(self, "path", None) and \
+           not getattr(self, packages_path_input, None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
-                          "'path' or the common property '%s'.", "packages_path")
+                          "'path' or the common property '%s'.", packages_path_input)
         # If no path specified, use the external packages path
         data_file_path = os.path.normpath(getattr(self, "path", None) or
                                           os.path.join(self.packages_path, "data"))
@@ -259,7 +259,7 @@ class BAO(InstallableLikelihood):
                 "rdrag": None},
             "f_sigma8": {
                 "fsigma8": {"z": zs.get("f_sigma8", None)},
-                "Hubble": {"z": zs.get("Hz_rs", None)}},
+                },
             "F_AP": {
                 "angular_diameter_distance": {"z": zs.get("F_AP", None)},
                 "Hubble": {"z": zs.get("F_AP", None)}}}
@@ -317,7 +317,7 @@ class BAO(InstallableLikelihood):
     def logp(self, **params_values):
         theory = np.array([self.theory_fun(z, obs) for z, obs
                            in zip(self.data["z"], self.data["observable"])]).T[0]
-        if self.log.getEffectiveLevel() == logging.DEBUG:
+        if self.is_debug():
             for i, (z, obs, theo) in enumerate(
                     zip(self.data["z"], self.data["observable"], theory)):
                 self.log.debug("%s at z=%g : %g (theo) ; %g (data)",

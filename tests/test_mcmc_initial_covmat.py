@@ -10,6 +10,7 @@ from itertools import chain
 from cobaya.likelihoods.gaussian_mixture import random_cov
 from cobaya.typing import InputDict
 from cobaya.run import run
+from cobaya.sampler import CovmatSampler
 from cobaya import mpi
 
 
@@ -55,6 +56,7 @@ def body_of_test(dim, tmpdir=None, random_state=None):
         input_order = None
     input_order = mpi.share(input_order)
     info: InputDict = {"likelihood": {"one": None}, "params": {}}
+    fallback_scale = np.sqrt(CovmatSampler.fallback_covmat_scale)
     for i in input_order:
         p = prefix + str(i)
         info["params"][p] = {"prior": {"dist": "norm", "loc": 0, "scale": 1000}}
@@ -63,9 +65,9 @@ def body_of_test(dim, tmpdir=None, random_state=None):
             info["params"][p]["proposal"] = sigma
         elif i in i_ref:
             info["params"][prefix + str(i)]["ref"] = {"dist": "norm",
-                                                      "scale": sigma}
+                                                      "scale": sigma * fallback_scale}
         elif i in i_prior:
-            info["params"][prefix + str(i)]["prior"]["scale"] = sigma
+            info["params"][prefix + str(i)]["prior"]["scale"] = sigma * fallback_scale
     reduced_covmat = initial_random_covmat[np.ix_(i_covmat, i_covmat)]
     reduced_covmat_params = [prefix + str(i) for i in i_covmat]
     info["sampler"] = {"mcmc": {}}

@@ -169,7 +169,6 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 # Global
 import sys
 import os
-import logging
 import numbers
 import ctypes
 from copy import deepcopy
@@ -178,7 +177,7 @@ import numpy as np
 from itertools import chain
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
-from cobaya.log import LoggedError
+from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list
@@ -219,7 +218,8 @@ class CAMB(BoltzmannBase):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.camb = self.is_installed(path=self.path, allow_global=allow_global)
+        self.camb = self.is_installed(path=self.path, allow_global=allow_global,
+                                      check=False)
         if not self.camb:
             raise NotInstalledError(
                 self.log, "Could not find CAMB. Check error message above.")
@@ -803,21 +803,23 @@ class CAMB(BoltzmannBase):
 
     @classmethod
     def is_installed(cls, **kwargs):
-        log = logging.getLogger(cls.__name__)
-        import platform
         if not kwargs.get("code", True):
             return True
+        log = get_logger(cls.__name__)
+        import platform
+        check = kwargs.get("check", True)
+        func = log.info if check else log.error
         path = kwargs["path"]
         if path is not None and path.lower() == "global":
             path = None
         if isinstance(path, str) and not kwargs.get("allow_global"):
             log.info("Importing *local* CAMB from " + path)
             if not os.path.exists(path):
-                log.error("The given folder does not exist: '%s'", path)
+                func("The given folder does not exist: '%s'", path)
                 return False
             if not os.path.exists(os.path.join(path, "setup.py")):
-                log.error("Either CAMB is not in the given folder, '%s', or you are using"
-                          " a very old version without the Python interface.", path)
+                func("Either CAMB is not in the given folder, '%s', or you are using"
+                     " a very old version without the Python interface.", path)
                 return False
             if not os.path.isfile(os.path.realpath(
                     os.path.join(path, "camb", "cambdll.dll" if (
@@ -833,9 +835,9 @@ class CAMB(BoltzmannBase):
             return load_module("camb", path=path, min_version=cls._min_camb_version)
         except ImportError:
             if path is not None and path.lower() != "global":
-                log.error("Couldn't find the CAMB python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            else:
+                func("Couldn't find the CAMB python interface at '%s'. "
+                     "Are you sure it has been installed there?", path)
+            elif not check:
                 log.error("Could not import global CAMB installation. "
                           "Specify a Cobaya or CAMB installation path, "
                           "or install the 'camb' Python package globally.")
@@ -846,7 +848,7 @@ class CAMB(BoltzmannBase):
 
     @classmethod
     def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
-        log = logging.getLogger(cls.__name__)
+        log = get_logger(cls.__name__)
         if not code:
             log.info("Code not requested. Nothing to do.")
             return True

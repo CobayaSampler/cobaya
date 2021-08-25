@@ -9,5 +9,7 @@ dataset_params:
   # field: value
 # Aliases for automatic covariance matrix
 aliases: [Pantheon, Pantheon18]
+# Use absolute magnitude
+use_abs_mag: False
 # Speed in evaluations/second
 speed: 100
