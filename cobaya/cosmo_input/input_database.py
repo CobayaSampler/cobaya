@@ -479,6 +479,14 @@ for name, m in like_cmb.items():
 
 like_bao = {none: {},
             'BAO_planck_2018': {
+                'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF '
+                        '(Planck 2018 papers)',
+                'theory': theory,
+                'likelihood': {'bao.sixdf_2011_bao': None, 'bao.sdss_dr7_mgs': None,
+                               'bao.sdss_dr12_consensus_bao': None}}}
+
+like_bao_latest = {none: {},
+            'BAO_planck_latest': {
                 'desc': 'Baryon acoustic oscillation data from BOSS DR12, eBOSS DR16, '
                         'MGS and 6DF',
                 'theory': theory,
@@ -600,6 +608,17 @@ preset: InfoDict = dict([
         "theory": "classy",
         "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018"}),
+    ("planck_BAO_latest_camb", {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao_latest": "BAO_planck_latest"}),
+    ("planck_BAO_latest_classy", {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao_latest": "BAO_planck_latest"}),
+
     # CMB+BAO+SN ###################################################
     ("planck_2018_BAO_SN_camb", {
         "desc": "Planck 2018 + BAO + SN with CAMB",
