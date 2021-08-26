@@ -353,7 +353,7 @@ class CAMB(BoltzmannBase):
                     self.extra_args["lens_potential_accuracy"] = 1
                 self.non_linear_sources = self.extra_args.get("lens_potential_accuracy",
                                                               1) >= 1
-                if set(cls).intersection({"pt", "pe", "tp", "ep"}): 
+                if set(cls).intersection({"pt", "pe", "tp", "ep"}):
                     self._needs_lensing_cross = True
             elif k == "unlensed_Cl":
                 self.set_cl_reqs(v)
@@ -608,9 +608,9 @@ class CAMB(BoltzmannBase):
     def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True,
                 scalar=False):
         if scalar:
-            assert( lensed == True ), "Only Implemented for lensed" 
-            which_key = "lensed_scal_Cl" 
-            which_result = "lensed_scalar" 
+            assert(lensed == True), "Only Implemented for lensed" 
+            which_key = "lensed_scalar"
+            which_result = "lensed_scalar"
         else:
             which_key = "Cl" if lensed else "unlensed_Cl"
             which_result = "total" if lensed else "unlensed_total"

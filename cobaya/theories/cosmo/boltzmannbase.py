@@ -284,7 +284,7 @@ class BoltzmannBase(Theory):
         potential ``pp`` power spectrum.
 
         For ``units`` options, see :func:`~BoltzmannBase.get_Cl`.
-        
+
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)`.
         """
