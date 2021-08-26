@@ -3,7 +3,6 @@
 
 path: null
 grid_file: bao_data/sdss_DR16_LYxQSO_BAO_DMDHgrid.txt
-# Fiducial sound horizon with which data have been stored
 # The measurements used
 observable_1: DM_over_rs
 observable_2: DH_over_rs
