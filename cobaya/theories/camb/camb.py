@@ -317,36 +317,18 @@ class CAMB(BoltzmannBase):
 
         for k, v in self._must_provide.items():
             # Products and other computations
-            if k == "Cl":
+            if k == "Cl" or k == "lensed_scal_Cl":
                 self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
+                cambresultkey = "total" if k == "Cl" else "lensed_scalar"
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_cmb_power_spectra,
                     kwargs={
                         "spectra": list(set(
                             (self.collectors[k].kwargs.get("spectra", [])
                              if k in self.collectors else []) +
-                            ["total"] + (["lens_potential"] if needs_lensing else []))),
-                        "raw_cl": False})
-                if "pp" in cls and self.extra_args.get(
-                        "lens_potential_accuracy") is None:
-                    self.extra_args["lens_potential_accuracy"] = 1
-                self.non_linear_sources = self.extra_args.get("lens_potential_accuracy",
-                                                              1) >= 1
-                if set(cls).intersection({"pt", "pe", "tp", "ep"}):
-                    self._needs_lensing_cross = True
-            elif k == "lensed_scal_Cl":
-                self.set_cl_reqs(v)
-                cls = [a.lower() for a in v]
-                needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
-                self.collectors[k] = Collector(
-                    method=CAMBdata.get_cmb_power_spectra,
-                    kwargs={
-                        "spectra": list(set(
-                            (self.collectors[k].kwargs.get("spectra", [])
-                             if k in self.collectors else []) +
-                            ["lensed_scalar"] + (["lens_potential"] if needs_lensing else []))),
+                            [cambresultkey] + (["lens_potential"] if needs_lensing else []))),
                         "raw_cl": False})
                 if "pp" in cls and self.extra_args.get(
                         "lens_potential_accuracy") is None:

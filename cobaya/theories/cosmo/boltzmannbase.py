@@ -141,19 +141,9 @@ class BoltzmannBase(Theory):
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
             # Products and other computations
-            if k == "Cl":
+            if k == "Cl" or k == "lensed_scal_Cl" or k == "unlensed_Cl":
                 current = self._must_provide.get(k, {})
                 v = {cl.lower(): v[cl] for cl in v}  # to lowercase
-                self._must_provide[k] = {
-                    cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
-                    for cl in set(current).union(v)}
-            elif k == "lensed_scal_Cl":
-                current = self._must_provide.get(k, {})
-                self._must_provide[k] = {
-                    cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
-                    for cl in set(current).union(v)}
-            elif k == "unlensed_Cl":
-                current = self._must_provide.get(k, {})
                 self._must_provide[k] = {
                     cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
                     for cl in set(current).union(v)}
