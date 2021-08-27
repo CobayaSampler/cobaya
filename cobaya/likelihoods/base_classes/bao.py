@@ -45,6 +45,7 @@ The datasets implemented at this moment are:
    `The clustering of galaxies in the completed SDSS-III Baryon Oscillation Spectroscopic
    Survey: cosmological analysis of the DR12 galaxy sample`
    `(arXiv:1607.03155) <https://arxiv.org/abs/1607.03155>`_
+   |br| |br|
    If you use any of the likelihoods ``sdss_dr16_*``, please cite:
    |br|
    S. Alam et al,
