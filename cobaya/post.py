@@ -458,7 +458,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if -np.inf in logpriors_new:
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
-            loglikes_add, output_derived = model_add.logps(all_params)
+            loglikes_add, output_derived = model_add._loglikes_input_params(
+                all_params, return_output_params=True)
             loglikes_add = dict(zip(chi2_names_add, loglikes_add))
             output_derived = dict(zip(model_add.output_params, output_derived))
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))

@@ -1,3 +1,8 @@
+## 3.X.Y – YYYY-MM-DD
+
+- Documented uses of `Model` class in general contexts (previously only cosmo)
+- `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
+
 ## 3.1.1 – 2021-07-22
 
 - Changes for compatibility with Pandas 1.3 (which broke convergence testing amongst other things).
