@@ -624,27 +624,27 @@ preset: InfoDict = dict([
         "desc": "Planck 2018 + BAO + SN with CAMB",
         "theory": "camb",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao_latest": "BAO_planck_latest",
         "like_sn": "Pantheon"}),
     ("planck_2018_BAO_SN_classy", {
         "desc": "Planck 2018 + BAO + SN with CLASS",
         "theory": "classy",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao_latest": "BAO_planck_latest",
         "like_sn": "Pantheon"}),
     # CMB+DES+BAO+SN ###################################################
     ("planck_2018_DES_BAO_SN_camb", {
         "desc": "Planck 2018 + DESjoint + BAO + SN with CAMB",
         "theory": "camb",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao_latest": "BAO_planck_latest",
         "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}),
     ("planck_2018_DES_BAO_SN_classy", {
         "desc": "Planck 2018 + DESjoint + BAO + SN with CLASS",
         "theory": "classy",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao_latest": "BAO_planck_latest",
         "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}),
 ])
