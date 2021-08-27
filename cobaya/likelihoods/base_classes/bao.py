@@ -49,7 +49,7 @@ The datasets implemented at this moment are:
    If you use any of the likelihoods ``sdss_dr16_*``, please cite:
    |br|
    S. Alam et al,
-   `The Completed SDSS-IV extended Baryon Oscillation Spectroscopic Survey: Cosmological 
+   `The Completed SDSS-IV extended Baryon Oscillation Spectroscopic Survey: Cosmological
    Implications from two Decades of Spectroscopic Surveys at the Apache Point observatory`
    `(arXiv:2007.08991) <https://arxiv.org/abs/2007.08991>`_
 
