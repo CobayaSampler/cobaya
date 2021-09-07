@@ -94,6 +94,10 @@ class SampleCollection(BaseCollection):
     but slicing can be done on the ``SampleCollection`` itself
     (returns a copy, not a view).
 
+    When ``temperature`` is different from 1, weights and log-posterior (but not priors
+    or likelihoods' chi squared's) are those of the tempered sample, obtained assuming a
+    posterior raised to the power of ``1/temperature``.
+
     Note for developers: when expanding this class or inheriting from it, always access
     the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
     been dumped. If you really need to access the actual attribute `self._data` in a
@@ -102,7 +106,7 @@ class SampleCollection(BaseCollection):
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
                  extension=None, file_name=None, resuming=False, load=False,
-                 weight_temperature=None, onload_skip=0, onload_thin=1):
+                 temperature=1, onload_skip=0, onload_thin=1):
         super().__init__(model, name)
         self.cache_size = cache_size
         # Create/load the main data frame and the tracking indices
@@ -167,7 +171,7 @@ class SampleCollection(BaseCollection):
             self._out_delete()
         if not resuming and not load:
             self.reset()
-        self.weight_temperature = weight_temperature
+        self.temperature = temperature
         # Prepare fast numpy cache
         self._icol = {col: i for i, col in enumerate(self.columns)}
         self._cache_reset()
@@ -184,6 +188,7 @@ class SampleCollection(BaseCollection):
             logpriors: Optional[Sequence[float]] = None,
             loglikes: Optional[Sequence[float]] = None,
             derived: Optional[Sequence[float]] = None,
+            temperature: Optional[float] = None,
             weight: float = 1):
         """
         Adds a point to the collection.
@@ -192,8 +197,8 @@ class SampleCollection(BaseCollection):
         `logpriors`, `loglikes` are both required).
         """
         logposterior = self._check_before_adding(
-            values, logpost=logpost, logpriors=logpriors,
-            loglikes=loglikes, derived=derived, weight=weight)
+            values, logpost=logpost, logpriors=logpriors, loglikes=loglikes,
+            derived=derived, temperature=temperature, weight=weight)
         self._cache_add(values, logposterior=logposterior, weight=weight)
 
     def _check_before_adding(self, values: Union[Sequence[float], np.ndarray],
@@ -201,6 +206,7 @@ class SampleCollection(BaseCollection):
                              logpriors: Optional[Sequence[float]] = None,
                              loglikes: Optional[Sequence[float]] = None,
                              derived: Optional[Sequence[float]] = None,
+                             temperature: Optional[float] = None,
                              weight: float = 1
                              ) -> LogPosterior:
         """
@@ -239,11 +245,26 @@ class SampleCollection(BaseCollection):
                         self.log,
                         "derived params not consistent with those of LogPosterior object "
                         "passed.")
+            if temperature is not None:
+                if not np.isclose(temperature, logpost.temperature):
+                    raise LoggedError(
+                        self.log,
+                        "temperature not consistent with that of LogPosterior object "
+                        "passed.")
+            if not np.isclose(self.temperature, logpost.temperature):
+                raise LoggedError(
+                    self.log,
+                    "temperature of added point not consistent with that of sample.")
             return_logpost = logpost
         elif isinstance(logpost, float) or logpost is None:
+            if temperature is not None:
+                if not np.isclose(temperature, self.temperature):
+                    raise LoggedError(
+                        self.log, "temperature not consistent with that of sample.")
             try:
                 return_logpost = LogPosterior(
-                    logpriors=logpriors, loglikes=loglikes, derived=derived)
+                    logpost=logpost, logpriors=logpriors, loglikes=loglikes,
+                    derived=derived, temperature=temperature)
             except ValueError as valerr:
                 # missing logpriors/loglikes if logpost is None,
                 # or inconsistent sum if logpost given
@@ -457,18 +478,46 @@ class SampleCollection(BaseCollection):
                 dtype=np.float64).T,
             **weights_kwarg))
 
-    def tempered_weights(self, first=None, last=None):
+    def reweight(self, importance_weights):
+        self._cache_dump()
+        self._data[OutPar.weight] *= importance_weights
+        self._data = self.data[self._data.weight > 0].reset_index(drop=True)
+        self._n = self._data.last_valid_index() + 1
+
+    def detempering_reweight_factor(self, first=None, last=None):
         """
-        Returns the weights after applying the sampling temperature.
+        Returns the reweighting factor necessary to remove the effect of the sampling
+        temperature.
         """
-        if self.weight_temperature:
+        if self.temperature != 1:
+            minuslogpost = self[OutPar.minuslogpost][first:last].to_numpy()
             maxlogpost = -self.MAP()[OutPar.minuslogpost]
-            reweighting = np.exp(
-                (-self[OutPar.minuslogpost][first:last].to_numpy() - maxlogpost) *
-                (1 - 1 / self.weight_temperature))
+            return np.exp((-minuslogpost - maxlogpost) * (1 - 1 / self.temperature))
         else:
-            reweighting = 1
-        return self[OutPar.weight][first:last].to_numpy() * reweighting
+            return 1
+
+    def detempered_minuslogpost(self, first=None, last=None):
+        """
+        Returns the minus log-posterior of the original (temperature 1) pdf at the
+        samples, as a numpy array.
+        """
+        if self.temperature != 1:
+            return (self.data[OutPar.minuslogprior][first:last].to_numpy() +
+                    self.data[OutPar.chi2][first:last].to_numpy() / 2)
+        else:
+            return self[OutPar.minuslogpost][first:last].to_numpy()
+
+    def detemper(self):
+        """
+        Removes the effect of sampling temperature.
+
+        This cannot be fully undone (e.g. recovering the original integer weights).
+        You may want to call this method on a copy (see :func:`~SampleCollection.copy`).
+        """
+        self._cache_dump()
+        self._data[OutPar.minuslogpost] = self.detempered_minuslogpost()
+        self.reweight(self.detempering_reweight_factor())
+        self.temperature = 1
 
     def filtered_copy(self, where) -> 'SampleCollection':
         return self._copy(self.data[where].reset_index(drop=True))
@@ -527,12 +576,6 @@ class SampleCollection(BaseCollection):
                     dtype=np.float64)[first:last],
                 names=names)
         return mcsamples
-
-    def reweight(self, importance_weights):
-        self._cache_dump()
-        self._data[OutPar.weight] *= importance_weights
-        self._data = self.data[self._data.weight > 0].reset_index(drop=True)
-        self._n = self._data.last_valid_index() + 1
 
     # Saving and updating
     def _get_driver(self, method):
@@ -647,8 +690,17 @@ class OneSamplePoint:
     def logpost(self):
         return self.results.logpost
 
+    @property
+    def temperature(self):
+        return self.results.temperature
+
     def add_to_collection(self, collection: SampleCollection):
-        """Adds this point at the end of a given collection."""
+        """
+        Adds this point at the end of a given collection.
+
+        It is assumed that both this instance and the collection passed were
+        initialised with the same :class:`model.Model` (no checks are performed).
+        """
         if self.output_thin > 1:
             self._added_weight += self.weight
             if self._added_weight >= self.output_thin:

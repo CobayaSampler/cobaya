@@ -58,12 +58,16 @@ class LogPosterior:
 
     If ``finite=True`` (default: False), it will try to represent infinities as the
     largest real numbers allowed by machine precision.
+
+    If ``temperature`` is different from 1, the log-posterior (but not priors
+    or likelihoods' chi squared's) is stored to the power of ``1/temperature``.
     """
 
     logpost: Optional[float] = None
     logpriors: Optional[Sequence[float]] = None
     loglikes: Optional[Sequence[float]] = None
     derived: Optional[Sequence[float]] = None
+    temperature: float = 1
     finite: Optional[bool] = False
     logprior: float = dataclasses.field(init=False, repr=False)
     loglike: float = dataclasses.field(init=False, repr=False)
@@ -100,9 +104,11 @@ class LogPosterior:
         """
         if self.finite:
             return np.isclose(np.nan_to_num(self.logpost),
-                              np.nan_to_num(self.logprior + self.loglike))
+                              np.nan_to_num(
+                                  (self.logprior + self.loglike) / self.temperature))
         else:
-            return np.isclose(self.logpost, self.logprior + self.loglike)
+            return np.isclose(self.logpost,
+                              (self.logprior + self.loglike) / self.temperature)
 
     def make_finite(self):
         """
@@ -483,8 +489,8 @@ class Model(HasLogger):
     def logposterior(self,
                      params_values: Union[Dict[str, float], Sequence[float]],
                      as_dict: bool = False, make_finite: bool = False,
-                     return_derived: bool = True, cached: bool = True,
-                     _no_check: bool = False
+                     return_derived: bool = True, temperature: float = 1,
+                     cached: bool = True, _no_check: bool = False
                      ) -> Union[LogPosterior, dict]:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -516,6 +522,9 @@ class Model(HasLogger):
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
+
+        If ``temperature`` is different from 1, the log-posterior (but not priors
+        or likelihoods' chi squared's) is returned to the power of ``1/temperature``.
 
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
@@ -554,8 +563,9 @@ class Model(HasLogger):
         else:
             loglikes = []
             derived_sampler = []
-        logposterior = LogPosterior(logpriors=logpriors, loglikes=loglikes,
-                                    derived=derived_sampler, finite=make_finite)
+        logposterior = LogPosterior(
+            logpriors=logpriors, loglikes=loglikes, temperature=temperature,
+            derived=derived_sampler, finite=make_finite)
         if as_dict:
             return logposterior.as_dict(self)
         else:
@@ -563,7 +573,8 @@ class Model(HasLogger):
 
     def logpost(self,
                 params_values: Union[Dict[str, float], Sequence[float]],
-                make_finite: bool = False, cached: bool = True) -> float:
+                make_finite: bool = False, temperature: float = 1, cached: bool = True
+                ) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -575,11 +586,15 @@ class Model(HasLogger):
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
 
+        If ``temperature`` is different from 1, the log-posterior is returned to the
+        power of ``1/temperature``.
+
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
         """
-        return self.logposterior(params_values, make_finite=make_finite,
-                                 return_derived=False, cached=cached).logpost
+        return self.logposterior(
+            params_values, make_finite=make_finite, return_derived=False,
+            temperature=temperature, cached=cached).logpost
 
     def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
                         logposterior_as_dict: bool = False, random_state=None,
@@ -596,6 +611,9 @@ class Model(HasLogger):
 
         Returns (point, LogPosterior(logpost, logpriors, loglikes, derived))
 
+        If ``temperature`` is different from 1, the log-posterior (but not priors
+        or likelihoods' chi squared's) is returned to the power of ``1/temperature``.
+
         If ``logposterior_as_dict=True`` (default: False), returns for the log-posterior
         a dictionary containing prior names, likelihoods names and, if applicable, derived
         parameters names as keys, instead of a :class:`~model.LogPosterior` object.
@@ -605,7 +623,7 @@ class Model(HasLogger):
                                                  ignore_fixed=ignore_fixed_ref,
                                                  warn_if_no_ref=not loop,
                                                  random_state=random_state)
-            results = self.logposterior(initial_point)
+            results = self.logposterior(initial_point, temperature=temperature)
             if results.logpost != -np.inf:
                 break
         else:

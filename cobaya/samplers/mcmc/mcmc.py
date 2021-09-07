@@ -110,7 +110,7 @@ class MCMC(CovmatSampler):
         name = str(1 + mpi.rank())
         self.collection = SampleCollection(
             self.model, self.output, name=name, resuming=self.output.is_resuming(),
-            weight_temperature=self.temperature)
+            temperature=self.temperature)
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
@@ -147,14 +147,16 @@ class MCMC(CovmatSampler):
                 loglikes=-0.5 * (self.collection[self.collection.chi2_names]
                                  .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 derived=(self.collection[self.collection.derived_params].iloc[last]
-                         .to_numpy(dtype=np.float64, copy=True)))
+                         .to_numpy(dtype=np.float64, copy=True)),
+                temperature=self.temperature)
         else:
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
             self.log.info("Getting initial point... (this may take a few seconds)")
             initial_point, results = \
-                self.model.get_valid_point(max_tries=self.max_tries.value,
-                                           random_state=self._rng)
+                self.model.get_valid_point(
+                    max_tries=self.max_tries.value, random_state=self._rng,
+                    temperature=self.temperature)
             # If resuming but no existing chain, assume failed run and ignore blocking
             # if speeds measurement requested
             if self.output.is_resuming() and not len(self.collection) \
@@ -258,10 +260,6 @@ class MCMC(CovmatSampler):
                                             "Use 'oversample_power' to control the amount"
                                             " of dragging steps.")
             # END OF DEPRECATION BLOCK
-            if self.temperature:
-                raise LoggedError(
-                    self.log,
-                    "Temperature != 1 and dragging are not compatible at the moment.")
             self.get_new_sample = self.get_new_sample_dragging
             self.mpi_info("Dragging with number of interpolating steps:")
             max_width = len(str(self.drag_interp_steps))
@@ -418,7 +416,7 @@ class MCMC(CovmatSampler):
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
-        trial_results = self.model.logposterior(trial)
+        trial_results = self.model.logposterior(trial, temperature=self.temperature)
         accept = self.metropolis_accept(trial_results.logpost, self.current_point.logpost)
         self.process_accept_or_reject(accept, trial, trial_results)
         return accept
@@ -444,7 +442,8 @@ class MCMC(CovmatSampler):
         self.log.debug("Proposed slow end-point: %r", current_end_point)
         # Save derived parameters of delta_slow jump, in case I reject all the dragging
         # steps but accept the move in the slow direction only
-        current_end = self.model.logposterior(current_end_point)
+        current_end = self.model.logposterior(
+            current_end_point, temperature=self.temperature)
         if current_end.logpost == -np.inf:
             self.current_point.weight += 1
             return False
@@ -471,13 +470,13 @@ class MCMC(CovmatSampler):
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.model.logposterior(
-                proposal_start_point, return_derived=derived, _no_check=True).logpost
-
+                proposal_start_point, return_derived=derived,
+                temperature=self.temperature, _no_check=True).logpost
             if proposal_start_logpost != -np.inf:
                 proposal_end_point = current_end_point + delta_fast
                 proposal_end = self.model.logposterior(
-                    proposal_end_point, return_derived=derived, _no_check=True)
-
+                    proposal_end_point, return_derived=derived,
+                    temperature=self.temperature, _no_check=True)
                 if proposal_end.logpost != -np.inf:
                     # create the interpolated probability and do a Metropolis test
 
@@ -510,8 +509,8 @@ class MCMC(CovmatSampler):
                                         start_drag_logpost_acc / n_average)
         if accept and not derived:
             # recompute with derived parameters (slow parameter ones should be cached)
-            current_end = self.model.logposterior(current_end_point)
-
+            current_end = self.model.logposterior(
+                current_end_point, temperature=self.temperature)
         self.process_accept_or_reject(accept, current_end_point, current_end)
         self.log.debug("TOTAL step: %s", ("accepted" if accept else "rejected"))
         return accept
@@ -529,8 +528,6 @@ class MCMC(CovmatSampler):
             return True
         else:
             posterior_ratio = logp_current - logp_trial
-            if self.temperature:
-                posterior_ratio /= self.temperature
             return self._rng.standard_exponential() > posterior_ratio
 
     def process_accept_or_reject(self, accept_state, trial, trial_results):
@@ -557,7 +554,7 @@ class MCMC(CovmatSampler):
             self.current_point.weight += 1
             # Failure criterion: chain stuck! (but be more permissive during burn_in)
             max_tries_now = self.max_tries.value * (
-                    1 + (10 - 1) * np.sign(self.burn_in_left))
+                1 + (10 - 1) * np.sign(self.burn_in_left))
             if self.current_point.weight > max_tries_now:
                 self.collection.out_update()
                 raise LoggedError(
