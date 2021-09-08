@@ -83,13 +83,15 @@ class LogPosterior:
         object.__setattr__(
             self, 'loglike',
             sum(self.loglikes) if self.loglikes is not None else None)
+        if self.temperature is None:
+            object.__setattr__(self, 'temperature', 1)
         if self.finite:
             self.make_finite()
         if self.logpost is None:
             if self.logpriors is None or self.loglikes is None:
                 raise ValueError("If `logpost` not passed, both `logpriors` and "
                                  "`loglikes` must be passed.")
-            object.__setattr__(self, 'logpost', self.logprior + self.loglike)
+            object.__setattr__(self, 'logpost', self._logpost())
         elif self.logpriors is not None and self.loglikes is not None:
             if not self._logpost_is_consistent():
                 raise ValueError("The given log-posterior is not equal to the "
@@ -97,18 +99,19 @@ class LogPosterior:
                                  "%g != sum(%r) + sum(%r)" %
                                  (self.logpost, self.logpriors, self.loglikes))
 
+    def _logpost(self):
+        """Computes logpost from prior and likelihood product."""
+        return (self.logprior + self.loglike) / self.temperature
+
     def _logpost_is_consistent(self):
         """
         Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
         passed.
         """
         if self.finite:
-            return np.isclose(np.nan_to_num(self.logpost),
-                              np.nan_to_num(
-                                  (self.logprior + self.loglike) / self.temperature))
+            return np.isclose(np.nan_to_num(self.logpost), np.nan_to_num(self._logpost()))
         else:
-            return np.isclose(self.logpost,
-                              (self.logprior + self.loglike) / self.temperature)
+            return np.isclose(self.logpost, self._logpost())
 
     def make_finite(self):
         """
@@ -598,6 +601,7 @@ class Model(HasLogger):
 
     def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
                         logposterior_as_dict: bool = False, random_state=None,
+                        temperature: Optional[float] = None,
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
                                    Tuple[np.ndarray, dict]]:
         """

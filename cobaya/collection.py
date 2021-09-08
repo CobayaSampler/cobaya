@@ -171,7 +171,7 @@ class SampleCollection(BaseCollection):
             self._out_delete()
         if not resuming and not load:
             self.reset()
-        self.temperature = temperature
+        self.temperature = temperature if temperature is not None else 1
         # Prepare fast numpy cache
         self._icol = {col: i for i, col in enumerate(self.columns)}
         self._cache_reset()
