@@ -183,7 +183,7 @@ class bicep_keck_2015(CMBlikes):
         # for a cross-spectrum between two different frequencies.
 
         # Decorrelation scales as log^2(nu0/nu1). rat is l/l_pivot
-        scl_nu = (np.log(nu0 / nu1) ** 2) / (np.log(nupivot(1) / nupivot(2)) ** 2)
+        scl_nu = (np.log(nu0 / nu1) ** 2) / (np.log(nupivot[0] / nupivot[1]) ** 2)
         # Functional form for ell scaling is specified in .dataset file.
         if lform == "flat":
             scl_ell = 1.0
