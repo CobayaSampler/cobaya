@@ -424,8 +424,8 @@ class SampleCollection(BaseCollection):
         """
         return self._copy()
 
-    def mean(self, first=None, last=None, derived=False, pweight=False,
-             ignore_temperature=False):
+    def mean(self, first: Optional[int] = None, last: Optional[int] = None,
+             derived=False, pweight=False, ignore_temperature=False):
         """
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
@@ -449,8 +449,8 @@ class SampleCollection(BaseCollection):
                           [first:last].to_numpy(dtype=np.float64).T, weights=weights,
                           axis=-1)
 
-    def cov(self, first=None, last=None, derived=False, pweight=False,
-            ignore_temperature=False):
+    def cov(self, first: Optional[int] = None, last: Optional[int] = None,
+            derived=False, pweight=False, ignore_temperature=False):
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
@@ -484,7 +484,8 @@ class SampleCollection(BaseCollection):
         self._data = self.data[self._data.weight > 0].reset_index(drop=True)
         self._n = self._data.last_valid_index() + 1
 
-    def detempering_reweight_factor(self, first=None, last=None):
+    def detempering_reweight_factor(self, first: Optional[int] = None,
+                                    last: Optional[int] = None):
         """
         Returns the reweighting factor necessary to remove the effect of the sampling
         temperature.
@@ -496,7 +497,8 @@ class SampleCollection(BaseCollection):
         else:
             return 1
 
-    def detempered_minuslogpost(self, first=None, last=None):
+    def detempered_minuslogpost(self, first: Optional[int] = None,
+                                last: Optional[int] = None):
         """
         Returns the minus log-posterior of the original (temperature 1) pdf at the
         samples, as a numpy array.
@@ -558,7 +560,8 @@ class SampleCollection(BaseCollection):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
 
-    def sampled_to_getdist_mcsamples(self, first=None, last=None):
+    def sampled_to_getdist_mcsamples(self, first: Optional[int] = None,
+                                     last: Optional[int] = None):
         """
         Basic interface with getdist -- internal use only!
         (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
