@@ -590,8 +590,9 @@ class SampleCollection(BaseCollection):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
 
-    def sampled_to_getdist_mcsamples(self, first: Optional[int] = None,
-                                     last: Optional[int] = None):
+    def sampled_to_getdist_mcsamples(
+            self, first: Optional[int] = None, last: Optional[int] = None,
+            ignore_temperature: bool = False) -> MCSamples:
         """
         Basic interface with getdist -- internal use only!
         (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
@@ -608,6 +609,8 @@ class SampleCollection(BaseCollection):
                 loglikes=self.data[OutPar.minuslogpost].to_numpy(
                     dtype=np.float64)[first:last],
                 names=names)
+            if not ignore_temperature:
+                mcsamples.cool(self.temperature)
         return mcsamples
 
     # Saving and updating
