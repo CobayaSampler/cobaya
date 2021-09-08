@@ -336,7 +336,7 @@ class SampleCollection(BaseCollection):
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self._data = pd.concat([self.data[:len(self)], collection.data],
+        self._data = pd.concat([self.data, collection.data],
                                ignore_index=True)
 
     def __len__(self):
@@ -352,11 +352,11 @@ class SampleCollection(BaseCollection):
 
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
-        return self.data[:len(self)].__repr__()
+        return self.data.__repr__()
 
     # Make the dataframe iterable over rows
     def __iter__(self):
-        return self.data[:len(self)].iterrows()
+        return self.data.iterrows()
 
     # Accessing the dataframe
     def __getitem__(self, *args):
@@ -601,11 +601,11 @@ class SampleCollection(BaseCollection):
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         with NoLogging():
             mcsamples = MCSamples(
-                samples=self.data[:len(self)][names].to_numpy(dtype=np.float64)[
+                samples=self.data[names].to_numpy(dtype=np.float64)[
                         first:last],
-                weights=self.data[:len(self)][OutPar.weight].to_numpy(dtype=np.float64)[
+                weights=self.data[OutPar.weight].to_numpy(dtype=np.float64)[
                         first:last],
-                loglikes=self.data[:len(self)][OutPar.minuslogpost].to_numpy(
+                loglikes=self.data[OutPar.minuslogpost].to_numpy(
                     dtype=np.float64)[first:last],
                 names=names)
         return mcsamples
