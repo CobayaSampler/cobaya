@@ -413,7 +413,7 @@ class SampleCollection(BaseCollection):
         delattr(self, "_data")
         self_copy = deepcopy(self)
         setattr(self, "_data", current_data)
-        setattr(self_copy, "_data", data)
+        setattr(self_copy, "_data", data.copy())
         setattr(self_copy, "_n", data.last_valid_index() + 1)
         return self_copy
 
@@ -424,59 +424,88 @@ class SampleCollection(BaseCollection):
         """
         return self._copy()
 
+    def _weights_for_stats(self, first: Optional[int] = None, last: Optional[int] = None,
+                           pweight: bool = False, ignore_temperature: bool = False
+                           ) -> np.ndarray:
+        """
+        Returns weights for computation of statistical quantities such as mean and
+        covariance.
+
+        If ``ignore_temperature=True``, (default ``False``), the sample is weighted as
+        if the tempered logposterior were the real one (e.g. variances would be larger
+        for hot samples).
+
+        If ``pweight=True`` (default ``False``) every point is weighted with its
+        probability, and sample weights are ignored (may lead to very inaccurate
+        estimates!).
+        """
+        if pweight:
+            if ignore_temperature:
+                logps = -self[OutPar.minuslogpost][first:last]\
+                    .to_numpy(dtype=np.float64, copy=True)
+            else:
+                logps = -self.detempered_minuslogpost(first, last)
+            logps -= max(logps)
+            weights = np.exp(logps)
+        else:
+            weights = self[OutPar.weight][first:last]\
+                .to_numpy(dtype=np.float64, copy=True)
+            if not ignore_temperature:
+                weights *= self.detempering_reweight_factor(first, last)
+        return weights
+
     def mean(self, first: Optional[int] = None, last: Optional[int] = None,
-             derived=False, pweight=False, ignore_temperature=False):
+             pweight: bool = False, ignore_temperature: bool = False,
+             derived: bool = False) -> np.ndarray:
         """
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If `pweight=True` (default `False`) weights every point with its probability.
-        The estimate of the mean in this case is unstable; use carefully.
+        If ``ignore_temperature=True``, (default ``False``), the sample is weighted as
+        if the tempered logposterior were the real one (e.g. variances would be larger
+        for hot samples).
+
+        If ``pweight=True`` (default ``False``) every point is weighted with its
+        probability, and sample weights are ignored (may lead to very inaccurate
+        estimates!).
         """
-        if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64,
-                                                                    copy=True)
-            logps -= max(logps)
-            weights = np.exp(logps)
-        else:
-            if ignore_temperature:
-                weights = self[OutPar.weight][first:last].to_numpy(dtype=np.float64)
-            else:
-                weights = self.tempered_weights(first, last)
+        weights = self._weights_for_stats(first, last, pweight=pweight,
+                                          ignore_temperature=ignore_temperature)
         return np.average(self[list(self.sampled_params) +
                                (list(self.derived_params) if derived else [])]
                           [first:last].to_numpy(dtype=np.float64).T, weights=weights,
                           axis=-1)
 
     def cov(self, first: Optional[int] = None, last: Optional[int] = None,
-            derived=False, pweight=False, ignore_temperature=False):
+            pweight: bool = False, ignore_temperature: bool = False,
+            derived: bool = False) -> np.ndarray:
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If `pweight=True` (default `False`) weights every point with its probability.
-        The estimate of the covariance matrix in this case is unstable; use carefully.
+        If ``ignore_temperature=True``, (default ``False``), the sample is weighted as
+        if the tempered logposterior were the real one (e.g. variances would be larger
+        for hot samples).
+
+        If ``pweight=True`` (default ``False``) every point is weighted with its
+        probability, and sample weights are ignored (may lead to very inaccurate
+        estimates!).
         """
+        weights = self._weights_for_stats(first, last, pweight=pweight,
+                                          ignore_temperature=ignore_temperature)
         if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64,
-                                                                    copy=True)
-            logps -= max(logps)
-            weights = np.exp(logps)
-            kwarg = "aweights"
+            weight_type_kwarg = "aweights"
+        elif np.allclose(np.round(weights), weights):
+            weight_type_kwarg = "fweights"
         else:
-            if ignore_temperature:
-                weights = self[OutPar.weight][first:last].to_numpy(dtype=np.float64)
-            else:
-                weights = self.tempered_weights(first, last)
-            kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
-        weights_kwarg = {kwarg: weights}
+            weight_type_kwarg = "aweights"
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
                 dtype=np.float64).T,
-            **weights_kwarg))
+            **{weight_type_kwarg: weights}))
 
     def reweight(self, importance_weights):
         self._cache_dump()
@@ -492,8 +521,8 @@ class SampleCollection(BaseCollection):
         """
         if self.temperature != 1:
             minuslogpost = self[OutPar.minuslogpost][first:last].to_numpy()
-            maxlogpost = -self.MAP()[OutPar.minuslogpost]
-            return np.exp((-minuslogpost - maxlogpost) * (1 - 1 / self.temperature))
+            return np.exp((-minuslogpost - -np.min(minuslogpost)) *
+                          (1 - 1 / self.temperature))
         else:
             return 1
 
@@ -507,7 +536,7 @@ class SampleCollection(BaseCollection):
             return (self.data[OutPar.minuslogprior][first:last].to_numpy() +
                     self.data[OutPar.chi2][first:last].to_numpy() / 2)
         else:
-            return self[OutPar.minuslogpost][first:last].to_numpy()
+            return self[OutPar.minuslogpost][first:last].to_numpy(copy=True)
 
     def detemper(self):
         """
@@ -517,8 +546,9 @@ class SampleCollection(BaseCollection):
         You may want to call this method on a copy (see :func:`~SampleCollection.copy`).
         """
         self._cache_dump()
-        self._data[OutPar.minuslogpost] = self.detempered_minuslogpost()
         self.reweight(self.detempering_reweight_factor())
+        # log-post and temperature must be changed *after* computing reweighting factors!
+        self._data[OutPar.minuslogpost] = self.detempered_minuslogpost()
         self.temperature = 1
 
     def filtered_copy(self, where) -> 'SampleCollection':
