@@ -431,7 +431,7 @@ class SampleCollection(BaseCollection):
         Returns weights for computation of statistical quantities such as mean and
         covariance.
 
-        If ``ignore_temperature=True``, (default ``False``), the sample is weighted as
+        If ``ignore_temperature=True`` (default ``False``), the sample is weighted as
         if the tempered logposterior were the real one (e.g. variances would be larger
         for hot samples).
 
@@ -462,7 +462,7 @@ class SampleCollection(BaseCollection):
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If ``ignore_temperature=True``, (default ``False``), the sample is weighted as
+        If ``ignore_temperature=True`` (default ``False``), the sample is weighted as
         if the tempered logposterior were the real one (e.g. variances would be larger
         for hot samples).
 
@@ -485,7 +485,7 @@ class SampleCollection(BaseCollection):
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If ``ignore_temperature=True``, (default ``False``), the sample is weighted as
+        If ``ignore_temperature=True`` (default ``False``), the sample is weighted as
         if the tempered logposterior were the real one (e.g. variances would be larger
         for hot samples).
 
@@ -586,11 +586,21 @@ class SampleCollection(BaseCollection):
 
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
-        return self.data.loc[self.data[OutPar.chi2].idxmin()].copy()
+        return self.data.loc[self.data[OutPar.chi2].astype(np.float64).idxmin()].copy()
 
-    def MAP(self):
-        """Maximum-a-posteriori (MAP) sample. Returns a copy."""
-        return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
+    def MAP(self, ignore_temperature: bool = False):
+        """
+        Maximum-a-posteriori (MAP) sample. Returns a copy.
+
+        If ``ignore_temperature=True`` (default ``False``), it returns the maximum
+        tempered posterior, instead of the original one.
+        """
+        i_max_logpost = self.data[OutPar.minuslogpost].astype(np.float64).idxmin()
+        MAP = self.data.loc[i_max_logpost].copy()
+        if not ignore_temperature:
+            MAP[OutPar.minuslogpost] = self.detempered_minuslogpost(
+                first=i_max_logpost, last=i_max_logpost + 1)[0]
+        return MAP
 
     def sampled_to_getdist_mcsamples(
             self, first: Optional[int] = None, last: Optional[int] = None,
