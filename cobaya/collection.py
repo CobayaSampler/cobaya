@@ -307,7 +307,7 @@ class SampleCollection(BaseCollection):
             for name, value in zip(self.chi2_names, logposterior.loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
             self._cache[pos, self._icol[OutPar.chi2]] = -2 * logposterior.loglike
-        if logposterior.derived != []:
+        if len(logposterior.derived):
             for name, value in zip(self.derived_params, logposterior.derived):
                 self._cache[pos, self._icol[name]] = value
 
