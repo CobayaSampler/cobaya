@@ -182,6 +182,23 @@ E.g. if a likelihood depends of parameters ``a``, ``b`` and ``c`` and the cost o
 
    If automatic learning of the proposal covariance is enabled, after some checkpoint the proposed steps will mix parameters from different blocks, but *always towards faster ones*. Thus, it is important to specify your blocking in **ascending order of speed**, when not prevented by the architecture of your likelihood (e.g. due to internal caching of intermediate results that require some particular order of parameter variation).
 
+
+.. _mcmc_tempered:
+
+Tempered MCMC
+-------------
+
+Some times it is convenient to sample from a power-reduced (or softened), *tempered* version of the posterior. This produces a Monte Carlo sample with more points towards the tails of the distribution, which is useful when e.g. estimating a quantity by weighting with samples with their probability, or to be able to do more robust :doc:`importance reweighting <post>`.
+
+By setting a value greater than 1 for the ``temperature`` option, the ``mcmc`` sampler will produce a chain sampled from :math:`p^{1/t}`, where :math:`p` is the posterior and :math:`t` is the temperature. The resulting :class:`~collection.SampleCollection` and output file will contain as weights and log-posterior those of the tempered posterior :math:`p^{1/t}` (this is done like this because it is advantageous to retain integer weights). The original prior- and likelihood-related values in the sample/output are preserved.
+
+To recover the corresponding weights of the original posterior, multiply the weight column by the output of the :func:`~collection.SampleCollection.detempering_reweight_factor()` method, and the original posterior values are recovered with the :func:`~collection.SampleCollection.detempered_minuslogpost()` method. To remove the temperature from a tempered :class:`~collection.SampleCollection` (i.e. have weights and log-posterior of the original posterior), call the :func:`~collection.SampleCollection.detempered_minuslogpost()` method, possibly on a copy produced with the :func:`~collection.SampleCollection.detempered_copy()` method.
+
+Despite storing the tempered log-posterior, methods producing statistics such as :func:`~collection.SampleCollection.mean()`, :func:`~collection.SampleCollection.cov()` and :func:`~collection.SampleCollection.MAP()` return the results corresponding to the original posterior, unless they are called with ``ignore_temperature=True``.
+
+[TODO] Interaction with GetDist.
+
+
 .. _mcmc_convergence:
 
 Convergence checks
@@ -334,4 +351,3 @@ Proposal
    :members:
 .. autoclass:: samplers.mcmc.proposal.BlockedProposer
    :members:
-
