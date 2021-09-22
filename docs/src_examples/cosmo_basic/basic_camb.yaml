@@ -103,7 +103,7 @@ params:
       scale: 0.006
     proposal: 0.003
     latex: \tau_\mathrm{reio}
-  zre:
+  zrei:
     latex: z_\mathrm{re}
   sigma8:
     latex: \sigma_8
