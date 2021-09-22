@@ -5,9 +5,17 @@
 
 ### Cosmological likelihoods and theory codes
 
+#### CAMB
+
+- Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
+
 #### BAO
 
-- Added Boss DR16 likelihood (by @Pablo-Lemos)
+- Added Boss DR16 likelihood (#185, by @Pablo-Lemos)
+
+#### BICEP-Keck
+
+- Bugfix bug in decorrelation (#196, by @umilta)
 
 ## 3.1.1 – 2021-07-22
 
