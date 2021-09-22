@@ -99,9 +99,9 @@ class SampleCollection(BaseCollection):
     posterior raised to the power of ``1/temperature``.
 
     Note for developers: when expanding this class or inheriting from it, always access
-    the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
-    been dumped. If you really need to access the actual attribute `self._data` in a
-    method, make sure to decorate it with `@ensure_cache_dumped`.
+    the underlying DataFrame as ``self.data`` and not ``self._data``, to ensure the cache
+    has been dumped. If you really need to access the actual attribute ``self._data`` in a
+    method, make sure to decorate it with ``@ensure_cache_dumped``.
     """
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
@@ -520,9 +520,9 @@ class SampleCollection(BaseCollection):
         temperature.
         """
         if self.temperature != 1:
-            minuslogpost = self[OutPar.minuslogpost][first:last].to_numpy()
-            return np.exp((-minuslogpost - -np.min(minuslogpost)) *
-                          (1 - 1 / self.temperature))
+            logp_temp = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64)
+            log_ratio = logp_temp * (self.temperature - 1)
+            return np.exp(log_ratio - np.max(log_ratio))
         else:
             return 1
 
@@ -533,10 +533,12 @@ class SampleCollection(BaseCollection):
         samples, as a numpy array.
         """
         if self.temperature != 1:
-            return (self.data[OutPar.minuslogprior][first:last].to_numpy() +
-                    self.data[OutPar.chi2][first:last].to_numpy() / 2)
+            return (
+                self.data[OutPar.minuslogprior][first:last].to_numpy(dtype=np.float64) +
+                self.data[OutPar.chi2][first:last].to_numpy(dtype=np.float64) / 2)
         else:
-            return self[OutPar.minuslogpost][first:last].to_numpy(copy=True)
+            return self[OutPar.minuslogpost][first:last].to_numpy(
+                dtype=np.float64, copy=True)
 
     def detemper(self):
         """

@@ -98,6 +98,8 @@ class MCMC(CovmatSampler):
             self._quants_d_units.append(number)
             setattr(self, q, number)
         self.output_every = NumberWithUnits(self.output_every, "s", dtype=int)
+        if self.temperature is None:
+            self.temperature = 1
         if is_main_process():
             if self.output.is_resuming() and (
                     max(self.mpi_size or 0, 1) != mpi.size()):
@@ -169,7 +171,7 @@ class MCMC(CovmatSampler):
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
         self.set_proposer_blocking()
-        self.set_proposer_covmat(load=True)
+        self.set_proposer_initial_covmat(load=True)
 
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
@@ -296,10 +298,10 @@ class MCMC(CovmatSampler):
         for number in self._quants_d_units:
             number.set_scale(self.cycle_length // self.current_point.output_thin)
 
-    def set_proposer_covmat(self, load=False):
+    def set_proposer_initial_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(
+            self._intial_covmat, where_nan = self._load_covmat(
                 prefer_load_old=self.output.is_resuming())
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
@@ -312,11 +314,11 @@ class MCMC(CovmatSampler):
                 self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
             self.log.debug(
                 "Sampling with covmat:\n%s",
-                DataFrame(self._covmat,
+                DataFrame(self._intial_covmat,
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
                     line_width=line_width))
-        self.proposer.set_covariance(self._covmat)
+        self.proposer.set_covariance(self._temper_covmat(self._intial_covmat))
 
     def _get_last_nondragging_block(self, blocks, speeds):
         # blocks and speeds are already sorted
@@ -772,6 +774,7 @@ class MCMC(CovmatSampler):
                     return
                 mean_of_covs = mpi.share(mean_of_covs)
                 try:
+                    # No need to temper this covmat: already computed from tempered post
                     self.proposer.set_covariance(mean_of_covs)
                     self.mpi_info(" - Updated covariance matrix of proposal pdf.")
                     self.mpi_debug("%r", mean_of_covs)
@@ -780,6 +783,18 @@ class MCMC(CovmatSampler):
                                    "waiting until next covmat learning attempt.")
         # Save checkpoint info
         self.write_checkpoint()
+
+    def _temper_covmat(self, covmat):
+        """
+        Convert covmat to that of ``probability^(1/temperature)`` posterior.
+        """
+        return covmat * self.temperature
+
+    def _detemper_covmat(self, covmat):
+        """
+        Convert covmat of ``probability^(1/temperature)`` posterior to original one.
+        """
+        return covmat / self.temperature
 
     def do_output(self, date_time):
         self.collection.out_update()
@@ -794,7 +809,7 @@ class MCMC(CovmatSampler):
     def write_checkpoint(self):
         if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
-            self.dump_covmat(self.proposer.get_covariance())
+            self.dump_covmat(self._detemper_covmat(self.proposer.get_covariance()))
             checkpoint_info = {"sampler": {self.get_name(): dict([
                 ("converged", self.converged),
                 ("Rminus1_last", self.Rminus1_last),
