@@ -15,7 +15,7 @@ cache:
     - /home/travis/build/CosmoPars/packages/code
     - /home/travis/build/CosmoPars/packages/data/planck_supp_data_and_covmats
     - /home/travis/build/CosmoPars/packages/data/planck_2018/baseline
-    - /home/travis/build/CosmoPars/packages/data/bicep_keck_2015
+    - /home/travis/build/CosmoPars/packages/data/bicep_keck_2018
     - /home/travis/build/CosmoPars/packages/data/bao_data
     - /home/travis/build/CosmoPars/packages/data/sn_data
     - /home/travis/build/CosmoPars/packages/data/des_data

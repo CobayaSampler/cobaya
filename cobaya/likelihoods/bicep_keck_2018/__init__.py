@@ -1,73 +1,53 @@
 """
-.. module:: bicep_keck_2015
-
-:Synopsis: Likelihood of BICEP2/Keck-Array, October 2018 (2015 data)
-:Author: BICEP2/Keck team and Antony Lewis
-
+.. module:: bicep_keck_2018
+:Synopsis: Likelihood of BICEP/Keck, October 2021 (2018 data)
+:Author: BICEP/Keck Collaboration and Antony Lewis
 .. |br| raw:: html
-
    <br />
-
 .. note::
-
    **If you use this likelihood, please cite it as:**
    |br|
    Keck Array and BICEP2 Collaborations,
-   `BICEP2 / Keck Array x: Constraints on Primordial Gravitational Waves
-   using Planck, WMAP, and New BICEP2/Keck Observations through the 2015 Season`
-   `(arXiv:1810.05216) <https://arxiv.org/abs/1810.05216>`_
-
+   `BICEP / Keck XIII: Improved Constraints on Primordial Gravitational Waves 
+   using Planck, WMAP, and BICEP/Keck Observations through the 2018 Observing Season`
+   `(arXiv:2110.00483v1) <https://arxiv.org/abs/2110.00483>`_
 Usage
 -----
-
-To use this likelihood, ``bicep_keck_2015``, you simply need to mention it in the
+To use this likelihood, ``bicep_keck_2018``, you simply need to mention it in the
 ``likelihood`` block, or add them using the :doc:`input generator <cosmo_basic_runs>`.
-
 The corresponding nuisance parameters will be added automatically,
 so you don't have to care about listing them in the ``params`` block.
-
-The nuisance parameters and their default priors are reproduced below, in the *defaults*
+The nuisance parameters and their baseline priors are reproduced below, in the *defaults*
 ``yaml`` file.
-
 You shouldn't need to modify any of the options of this simple likelihood,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
 file and modify whatever options you want (you can delete the rest).
-
-.. literalinclude:: ../cobaya/likelihoods/bicep_keck_2015/bicep_keck_2015.yaml
+.. literalinclude:: ../cobaya/likelihoods/bicep_keck_2018/bicep_keck_2018.yaml
    :language: yaml
-
-
 Installation
 ------------
-
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
 If are following the instructions there (you should!), you don't need to read the rest
 of this section.
-
 Manual installation of the BICEP2/Keck-Array likelihood
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 Assuming you are installing all your
 likelihoods under ``/path/to/likelihoods``, simply do
-
 .. code:: bash
-
    $ cd /path/to/likelihoods
-   $ mkdir bicep_keck_2015
-   $ cd bicep_keck_2015
-   $ wget http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz
-   $ tar xvf BK15_cosmomc.tgz
-   $ rm BK15_cosmomc.tgz
-
+   $ mkdir bicep_keck_2018
+   $ cd bicep_keck_2018
+   $ wget http://bicepkeck.org/BK18_datarelease/BK18_cosmomc.tgz
+   $ tar xvf BK18_cosmomc.tgz
+   $ rm BK18_cosmomc.tgz
 After this, mention the path to this likelihood when you include it in an input file as
-
 .. code-block:: yaml
-
    likelihood:
-     bicep_keck_2015:
-       path: /path/to/likelihoods/bicep_keck_2015
-
+     bicep_keck_2018:
+       path: /path/to/likelihoods/bicep_keck_2018
 """
+
+__version__ = "1.0.0"
 
 import numpy as np
 from typing import Any
@@ -81,12 +61,12 @@ Ghz_Kelvin = Const.h_J_s / Const.kB_J_K * 1e9
 T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
-class bicep_keck_2015(CMBlikes):
+class bicep_keck_2018(CMBlikes):
     r"""
-    CMB power spectrum likelihood of Bicep2/Keck Array X \cite{Ade:2018gkx}.
+    CMB power spectrum likelihood of BICEP/Keck XIII, \cite{BK18}.
     """
     install_options = {
-        "download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
+        "download_url": r"http://bicepkeck.org/BK18_datarelease/BK18_cosmomc.tgz"}
 
     def init_params(self, ini):
         super().init_params(ini)
@@ -101,8 +81,6 @@ class bicep_keck_2015(CMBlikes):
                                    i, default in zip([1, 2], [217., 353.])]
         self.fpivot_sync_decorr = [ini.array_float('fpivot_sync_decorr', i, default) for
                                    i, default in zip([1, 2], [22., 33.])]
-        self.lform_dust_decorr = ini.string('lform_dust_decorr', 'flat')
-        self.lform_sync_decorr = ini.string('lform_sync_decorr', 'flat')
 
     def read_bandpass(self, fname):
         bandpass: Any = Bandpass()
@@ -125,7 +103,7 @@ class bicep_keck_2015(CMBlikes):
         bandpass.th_sync = th_int / th0
         # Calculate bandpass center-of-mass (i.e. mean frequency).
         bandpass.nu_bar = np.dot(bandpass.dnu,
-                                 bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(
+            bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(
             bandpass.dnu,
             bandpass.R[:, 1])
 

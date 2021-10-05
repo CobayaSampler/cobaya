@@ -19,7 +19,7 @@ log = get_logger(__name__)
 
 covmat_folders = [
     "{%s}/data/planck_supp_data_and_covmats/covmats/" % packages_path_input,
-    "{%s}/data/bicep_keck_2015/BK15_cosmomc/planck_covmats/" % packages_path_input]
+    "{%s}/data/bicep_keck_2018/BK18_cosmomc/planck_covmats/" % packages_path_input]
 
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
 _loaded_covmats_database: Optional[List[Dict]] = None

@@ -253,7 +253,7 @@ For example :class:`~likelihoods.planck_2018_lensing.native` (which is installed
     params: !defaults [../planck_2018_highl_plik/params_calib]
 
 The description of the data files and default settings are in the `dataset file <https://github.com/CobayaSampler/planck_supp_data_and_covmats/blob/master/lensing/2018/smicadx12_Dec5_ftl_mv2_ndclpp_p_teb_consext8.dataset>`_.
-The :class:`bicep_keck_2015` likelihood provides a more complicated model that adds methods to implement the foreground model.
+The :class:`bicep_keck_2018` likelihood provides a more complicated model that adds methods to implement the foreground model.
 
 This example also demonstrates how to share nuisance parameter settings between likelihoods: in this example all the
 Planck likelihoods depend on the calibration parameter, where here the default settings for that are loaded from the
@@ -264,7 +264,7 @@ Real-world examples
 
 The simplest example are the :class:`H0` likelihoods, which are just implemented as simple Gaussians.
 
-For an examples of more complex real-world CMB likelihoods, see :class:`bicep_keck_2015` and the lensing likelihood shown above (both using CMBlikes format), or :class:`Planck2018CamSpecPython` for a full Python implementation of the
+For an examples of more complex real-world CMB likelihoods, see :class:`bicep_keck_2018` and the lensing likelihood shown above (both using CMBlikes format), or :class:`Planck2018CamSpecPython` for a full Python implementation of the
 multi-frequency Planck likelihood (based from :class:`DataSetLikelihood`). The :class:`PlanckPlikLite`
 likelihood implements the plik-lite foreground-marginalized likelihood. Both the plik-like and CamSpec likelihoods
 support doing general multipole and spectrum cuts on the fly by setting override dataset parameters in the input .yaml.
