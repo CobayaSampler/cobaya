@@ -13,7 +13,7 @@
    **If you use this likelihood, please cite it as:**
    |br|
    Keck Array and BICEP2 Collaborations,
-   `BICEP / Keck XIII: Improved Constraints on Primordial Gravitational Waves 
+   `BICEP / Keck XIII: Improved Constraints on Primordial Gravitational Waves
    using Planck, WMAP, and BICEP/Keck Observations through the 2018 Observing Season`
    `(arXiv:2110.00483v1) <https://arxiv.org/abs/2110.00483>`_
 
