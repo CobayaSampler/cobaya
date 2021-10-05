@@ -37,7 +37,7 @@ map_separator: x
 # Actually computed l_max (takes into account the lensing window function)
 l_max: 2700
 # Aliases for automatic covariance matrix
-aliases: [BK18]
+aliases: [BK15]
 # Speed in evaluations/second
 speed: 90
 # Functional form of ell scaling for foreground decorrelation model.
