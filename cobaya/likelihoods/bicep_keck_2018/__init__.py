@@ -69,8 +69,6 @@ After this, mention the path to this likelihood when you include it in an input 
 
 """
 
-__version__ = "1.0.0"
-
 import numpy as np
 from typing import Any
 
