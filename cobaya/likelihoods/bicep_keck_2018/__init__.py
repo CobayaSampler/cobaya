@@ -1,50 +1,72 @@
 """
 .. module:: bicep_keck_2018
+
 :Synopsis: Likelihood of BICEP/Keck, October 2021 (2018 data)
 :Author: BICEP/Keck Collaboration and Antony Lewis
+
 .. |br| raw:: html
+
    <br />
+
 .. note::
+
    **If you use this likelihood, please cite it as:**
    |br|
    Keck Array and BICEP2 Collaborations,
    `BICEP / Keck XIII: Improved Constraints on Primordial Gravitational Waves 
    using Planck, WMAP, and BICEP/Keck Observations through the 2018 Observing Season`
    `(arXiv:2110.00483v1) <https://arxiv.org/abs/2110.00483>`_
+
 Usage
 -----
+
 To use this likelihood, ``bicep_keck_2018``, you simply need to mention it in the
 ``likelihood`` block, or add them using the :doc:`input generator <cosmo_basic_runs>`.
+
 The corresponding nuisance parameters will be added automatically,
 so you don't have to care about listing them in the ``params`` block.
-The nuisance parameters and their baseline priors are reproduced below, in the *defaults*
+
+The nuisance parameters and their default priors are reproduced below, in the *defaults*
 ``yaml`` file.
+
 You shouldn't need to modify any of the options of this simple likelihood,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
 file and modify whatever options you want (you can delete the rest).
+
 .. literalinclude:: ../cobaya/likelihoods/bicep_keck_2018/bicep_keck_2018.yaml
    :language: yaml
+
+
 Installation
 ------------
+
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
 If are following the instructions there (you should!), you don't need to read the rest
 of this section.
-Manual installation of the BICEP2/Keck-Array likelihood
+
+Manual installation of the BICEP/Keck likelihood
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Assuming you are installing all your
 likelihoods under ``/path/to/likelihoods``, simply do
+
 .. code:: bash
+
    $ cd /path/to/likelihoods
    $ mkdir bicep_keck_2018
    $ cd bicep_keck_2018
    $ wget http://bicepkeck.org/BK18_datarelease/BK18_cosmomc.tgz
    $ tar xvf BK18_cosmomc.tgz
    $ rm BK18_cosmomc.tgz
+
 After this, mention the path to this likelihood when you include it in an input file as
+
 .. code-block:: yaml
+
    likelihood:
      bicep_keck_2018:
        path: /path/to/likelihoods/bicep_keck_2018
+
 """
 
 __version__ = "1.0.0"
