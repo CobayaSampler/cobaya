@@ -517,8 +517,6 @@ class CAMB(BoltzmannBase):
                     args.update(self.nonlin_args)
                     results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
-            else:
-                results = None
             for product, collector in self.collectors.items():
                 if collector:
                     state[product] = \
