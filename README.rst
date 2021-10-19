@@ -80,7 +80,7 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
 
 ===================
 
-.. image:: https://raw.githubusercontent.com/CobayaSampler/cobaya/devel/img/Sussex_white.svg
+.. image:: https://raw.githubusercontent.com/CobayaSampler/cobaya/master/img/Sussex_white.svg
    :alt: University of Sussex
    :target: https://www.sussex.ac.uk/astronomy/
    :height: 150px
@@ -91,7 +91,7 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
    :target: https://www.particle-theory.rwth-aachen.de/
    :height: 150px
 
-.. image:: https://raw.githubusercontent.com/CobayaSampler/cobaya/devel/img/ERC_white.svg
+.. image:: https://raw.githubusercontent.com/CobayaSampler/cobaya/master/img/ERC_white.svg
    :alt: European Research Council
    :target: https://erc.europa.eu/
    :height: 150px
