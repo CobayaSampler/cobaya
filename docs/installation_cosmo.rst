@@ -77,7 +77,7 @@ Within ``/path/to/packages``, the following file structure will be created, cont
             │   └── [...]
             └── data
                 ├── planck_2018
-                ├── bicep_keck_2015
+                ├── bicep_keck_2018
                 └── [...]
 
 .. note::

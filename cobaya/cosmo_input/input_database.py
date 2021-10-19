@@ -421,8 +421,8 @@ like_cmb: InfoDict = {
             "planck_2018_lowl.EE": None,
             "planck_2018_highl_plik.TTTEEE": None,
             "planck_2018_lensing.clik": None}},
-    "planck_2018_bk15": {
-        "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
+    "planck_2018_bk18": {
+        "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2018",
         "sampler": cmb_sampler_recommended,
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
@@ -431,7 +431,7 @@ like_cmb: InfoDict = {
             "planck_2018_lowl.EE": None,
             "planck_2018_highl_plik.TTTEEE": None,
             "planck_2018_lensing.clik": None,
-            "bicep_keck_2015": None}},
+            "bicep_keck_2018": None}},
     "planck_2018_CMBmarged_lensing": {
         "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
@@ -588,15 +588,15 @@ preset: InfoDict = dict([
         "theory": "classy",
         "like_cmb": "planck_2018"}),
     ("planck_2018_bicep_camb", {
-        "desc": "Planck 2018 + BK15 (with tensor modes) with CAMB",
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CAMB",
         "theory": "camb",
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2018_bk15"}),
+        "like_cmb": "planck_2018_bk18"}),
     ("planck_2018_bicep_classy", {
-        "desc": "Planck 2018 + BK15 (with tensor modes) with CLASS",
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CLASS",
         "theory": "classy",
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2018_bk15"}),
+        "like_cmb": "planck_2018_bk18"}),
     # CMB+BAO ######################################################
     ("planck_2018_BAO_camb", {
         "desc": "Planck 2018 + BAO with CAMB",
@@ -709,7 +709,7 @@ install_basic: InputDict = {
     "likelihood": {
         "planck_2018_lowl.TT": None,
         "planck_2018_lensing.native": None,
-        "bicep_keck_2015": None,
+        "bicep_keck_2018": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}

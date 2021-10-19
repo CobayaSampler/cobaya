@@ -1,18 +1,21 @@
-# BICEP2/Keck Array September 2018 Data Products
-# BICEP2/Keck Array X: Constraints On Primordial Gravitational Waves using Planck, WMAP, and New BICEP2/Keck Observations through the 2015 Season
+# BICEP/Keck October 2021 Data Products
+# BICEP/Keck XIII: Constraints on Primordial Gravitational Waves using Planck, WMAP, and BICEP/Keck Observations through the 2018 Observing Season
 # http://bicepkeck.org/
 #
-# File: BK15.ini
-# Date: 2018-08-30
+# File: BK18lf.ini
+# Date: 2021-10-03
 #
-# BICEP2/Keck Array likelihood, including external data from Planck and WMAP.
+# BICEP/Keck likelihood, including external data from Planck and WMAP.
 #
-# Default settings for data selection and foreground nuisance parameters from
-# the baseline analysis described in BICEP2/Keck VI.
+# Default settings for data selection and foreground nuisance parameters from 
+# the baseline analysis described in BICEP/Keck XIII.
 #
-#   * Includes BICEP2+KECK 95, 150, and 220 GHz maps
-#   * Additional maps are: Planck 30, 44, 70, 100, 143, 217, and 353 GHz;
-#                          WMAP 23 GHz (K-band) and 33 GHz (Ka-band)
+#   * Includes BICEP2+KECK+BICEP3 95, 150, and 220 GHz maps
+#   * Additional maps are: Planck 30, 44, 143, 217, and 353 GHz; 
+#                          WMAP 23 GHz (K-band) and 33 GHz (Ka-band), 
+#                          apodized to BICEP3 map size
+#   * Maps apodized to BICEP3 map size are denoted with letter 'e', 
+#     otherwise they are apodized to BICEP2/Keck map size instead.
 #   * By default uses B-modes only.
 #   * Uses all nine ell bins.
 #   * Gaussian priors on beta_dust and beta_sync.
@@ -23,11 +26,11 @@
 #     with B modes only)
 #   * Band center errors turned off by default.
 
-# Path to the BK15_cosmomc folder under the official data distribution
+# Path to the BK18_cosmomc folder under the official data distribution
 path: null
-dataset_file: BK15_cosmomc/data/BK15/BK15_dust.dataset
+dataset_file: BK18_cosmomc/data/BK18lf_dust/BK18lf_dust.dataset
 dataset_params:
-  maps_use: [BK15_95_B, BK15_150_B, BK15_220_B, W023_B, P030_B, W033_B, P044_B, P070_B, P100_B, P143_B, P217_B, P353_B]
+  maps_use: [BK18_K95_B, BK18_150_B, BK18_220_B, BK18_B95e_B, W023e_B, P030e_B, W033e_B, P044e_B, P143e_B, P217e_B, P353e_B]
   use_min: 1
   use_max: 9
 map_separator: x
@@ -37,6 +40,9 @@ l_max: 2700
 aliases: [BK15]
 # Speed in evaluations/second
 speed: 90
+# Functional form of ell scaling for foreground decorrelation model.
+lform_dust_decorr: lin
+lform_sync_decorr: lin
 
 params:
   # dust power at ell=80, nu=353 GHz [uK^2]
@@ -84,11 +90,11 @@ params:
     proposal: 0.01
     latex: \alpha_{B,\mathrm{sync}}
   # dust SED power law index
+  # relax beta_d prior - use flat prior on range [0.80, 2.40]
   BBbetadust:
     prior:
-      dist: norm
-      loc: 1.59
-      scale: 0.11
+      min: 0.80
+      max: 2.40
     ref:
       dist: norm
       loc: 1.59

@@ -1,4 +1,4 @@
-# Tries to evaluate the BK15 likelihood at a reference point
+# Tries to evaluate the BK18 likelihood at a reference point
 
 from copy import deepcopy
 from .common_cosmo import body_of_test
@@ -11,14 +11,14 @@ classy_extra.update({"non linear": "halofit"})
 classy_extra.update({"halofit_min_k_max": 20})
 
 
-def test_bicep_keck_2015_camb(packages_path, skip_not_installed):
+def test_bicep_keck_2018_camb(packages_path, skip_not_installed):
     info_theory = {"camb": {"extra_args": camb_extra}}
     body_of_test(packages_path, test_point, lik_info, info_theory, chi2,
                  extra_model={"primordial": "SFSR_t"},
                  skip_not_installed=skip_not_installed)
 
 
-def test_bicep_keck_2015_classy(packages_path, skip_not_installed):
+def test_bicep_keck_2018_classy(packages_path, skip_not_installed):
     info_theory = {"classy": {"extra_args": classy_extra}}
     # extra tolerance for CLASS
     chi2_classy = deepcopy(chi2)
@@ -28,10 +28,10 @@ def test_bicep_keck_2015_classy(packages_path, skip_not_installed):
                  skip_not_installed=skip_not_installed)
 
 
-lik_info = {"bicep_keck_2015": {}}
+lik_info = {"bicep_keck_2018": {}}
 
 # NB: chi2 obtained using CAMB w HMcode
-chi2 = {"bicep_keck_2015": 735.187, "tolerance": 0.16}
+chi2 = {"bicep_keck_2018": 543.25, "tolerance": 0.16}
 
 test_point = {
     "omegabh2": 0.2235620E-01,
