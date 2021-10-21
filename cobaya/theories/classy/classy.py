@@ -251,7 +251,6 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-
                 if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 pair = k[2:]
@@ -265,6 +264,14 @@ class classy(BoltzmannBase):
                     method="get_pk_and_k_and_z",
                     kwargs=v,
                     post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+            elif k == "sigma8_z":
+                self.add_z_for_matter_power(v["z"])
+                self.collectors[k] = Collector(
+                    method="sigma",
+                    args_names=["R", "z"],
+                    args=[8, np.atleast_1d(v["z"])],
+                    arg_array=1,
+                    kwargs={"h_units": True})
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 raise LoggedError(
                     self.log, "Classy sigma_R not implemented as yet - use CAMB only")
@@ -275,7 +282,7 @@ class classy(BoltzmannBase):
             else:
                 raise LoggedError(self.log, "Requested product not known: %r", {k: v})
         # Derived parameters (if some need some additional computations)
-        if any(("sigma8" in s) for s in self.output_params or requirements):
+        if any(("sigma8" in s) for s in set(self.output_params).union(requirements)):
             self.extra_args["output"] += " mPk"
             self.add_P_k_max(1, units="1/Mpc")
         # Adding tensor modes if requested

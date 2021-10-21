@@ -638,9 +638,6 @@ class CAMB(BoltzmannBase):
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
-    def get_sigma8_z(self, z):
-        return self._get_z_dependent("sigma8_z", z)
-
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 

@@ -402,7 +402,6 @@ class BoltzmannBase(Theory):
         multipoles.
         """
 
-    @abstract
     def get_sigma8_z(self, z):
         r"""
         Present day linear theory root-mean-square amplitude of the matter
@@ -411,6 +410,7 @@ class BoltzmannBase(Theory):
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
+        return self._get_z_dependent("sigma8_z", z)
 
     @abstract
     def get_fsigma8(self, z):
