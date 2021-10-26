@@ -19,7 +19,7 @@ from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
 from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
     packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
-    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params, ParamDict
+    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -1163,8 +1163,8 @@ class Model(HasLogger):
             blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
                                        list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
-                [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
-                [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
+                    [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
+                    [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
             footprints_split = np.clip(np.array(footprints_split), 0, 1)  # type: ignore
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
@@ -1182,8 +1182,8 @@ class Model(HasLogger):
             # NB: the int() below forces the copy of the factors.
             #     Otherwise the yaml_representer prints references to a single object.
             oversample_factors = (
-                [int(oversample_factors[0])] * (1 + i_last_slow) +
-                [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
+                    [int(oversample_factors[0])] * (1 + i_last_slow) +
+                    [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
             self.log.debug("Doing slow/fast split. The oversampling factors for the fast "
                            "blocks should be interpreted as a global one for all of them")
         self.log.debug(

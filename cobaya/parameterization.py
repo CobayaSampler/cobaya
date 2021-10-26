@@ -72,6 +72,7 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict
     value = info_param.get("value")
     if isinstance(value, str) or callable(value):
         info_param["derived"] = info_param.get("derived", True)
+    # noinspection PyTypeChecker
     return info_param
 
 
@@ -326,7 +327,7 @@ class Parameterization(HasLogger):
             if len(sampled_params) != len(self._sampled):
                 raise LoggedError(self.log, "Wrong number of sampled parameters passed: "
                                   "%d given vs %d expected", len(sampled_params),
-                                  len(self.sampled_params))
+                                  len(self._sampled))
             return sampled_params
 
     def check_sampled_dict(self, **sampled_params) -> ParamValuesDict:

@@ -88,6 +88,9 @@ class bicep_keck_2018(CMBlikes):
     install_options = {
         "download_url": r"http://bicepkeck.org/BK18_datarelease/BK18_cosmomc.tgz"}
 
+    lform_dust_decorr: str
+    lform_sync_decorr: str
+
     def init_params(self, ini):
         super().init_params(ini)
         self.fpivot_dust = ini.float('fpivot_dust', 353.0)
@@ -123,7 +126,7 @@ class bicep_keck_2018(CMBlikes):
         bandpass.th_sync = th_int / th0
         # Calculate bandpass center-of-mass (i.e. mean frequency).
         bandpass.nu_bar = np.dot(bandpass.dnu,
-            bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(
+                                 bandpass.R[:, 0] * bandpass.R[:, 1]) / np.dot(
             bandpass.dnu,
             bandpass.R[:, 1])
 

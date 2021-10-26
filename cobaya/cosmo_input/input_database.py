@@ -9,7 +9,7 @@
 
 # Global
 from copy import deepcopy
-from cobaya.typing import InfoDict, InputDict
+from cobaya.typing import InfoDict
 
 none = "(None)"
 error_msg = "error_msg"
@@ -704,7 +704,7 @@ for name, pre in preset.items():
         pre.update(default_sampler)
 
 # BASIC INSTALLATION #####################################################################
-install_basic: InputDict = {
+install_basic: InfoDict = {
     "theory": theory,
     "likelihood": {
         "planck_2018_lowl.TT": None,

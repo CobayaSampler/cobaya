@@ -292,7 +292,7 @@ class CAMB(BoltzmannBase):
 
     def set_cl_reqs(self, reqs):
         """
-        Sets some common settings for both lensend and unlensed Cl's.
+        Sets some common settings for both lensed and unlensed Cl's.
         """
         self.extra_args["lmax"] = max(
             max(reqs.values()), self.extra_args.get("lmax", 0))

@@ -7,7 +7,6 @@ parameter names) gaussian likelihood.
 import pytest
 from scipy.stats import multivariate_normal
 import numpy as np
-from typing import Sequence, Union
 # Local
 from cobaya.yaml import yaml_load
 from cobaya.run import run
