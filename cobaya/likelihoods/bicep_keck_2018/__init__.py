@@ -253,11 +253,11 @@ class bicep_keck_2018(CMBlikes):
         need_dust_decorr = np.abs(delta_dust - 1) > 1e-5
         for i in range(self.nmaps_required):
             for j in range(i + 1):
+                CL = cls[i, j]
                 EE = CL.theory_ij[0] == 1 and CL.theory_ij[1] == 1
                 BB = CL.theory_ij[0] == 2 and CL.theory_ij[1] == 2
 
                 if EE or BB:
-                    CL = cls[i, j]
                     dust = fdust[i] * fdust[j]
                     sync = fsync[i] * fsync[j]
                     dustsync = fdust[i] * fsync[j] + fsync[i] * fdust[j]
