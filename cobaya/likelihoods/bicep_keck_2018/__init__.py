@@ -254,41 +254,45 @@ class bicep_keck_2018(CMBlikes):
         for i in range(self.nmaps_required):
             for j in range(i + 1):
                 CL = cls[i, j]
-                dust = fdust[i] * fdust[j]
-                sync = fsync[i] * fsync[j]
-                dustsync = fdust[i] * fsync[j] + fsync[i] * fdust[j]
                 EE = CL.theory_ij[0] == 1 and CL.theory_ij[1] == 1
-                if EE:
-                    # EE spectrum: multiply foregrounds by EE/BB ratio
-                    dust *= EEtoBB_dust
-                    sync *= EEtoBB_sync
-                    dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
+                BB = CL.theory_ij[0] == 2 and CL.theory_ij[1] == 2
 
-                if need_dust_decorr and i != j:
-                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar *
-                                                   bandcenter_err[i],
-                                                   self.bandpasses[j].nu_bar *
-                                                   bandcenter_err[j],
-                                                   self.fpivot_dust_decorr, rat,
-                                                   self.lform_dust_decorr)
-                else:
-                    corr_dust = 1
-                if need_sync_decorr and i != j:
-                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar *
-                                                   bandcenter_err[i],
-                                                   self.bandpasses[j].nu_bar *
-                                                   bandcenter_err[j],
-                                                   self.fpivot_sync_decorr, rat,
-                                                   self.lform_sync_decorr)
-                else:
-                    corr_sync = 1
-                #  Add foreground model to theory spectrum.
-                # NOTE: Decorrelation is not implemented for the dust/sync
-                # correlated component.
-                # In BK15, we never turned on correlation and decorrelation parameters
-                # simultaneously.
-                CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync \
-                         + dustsync * dustsyncpow
+                if EE or BB:
+                    dust = fdust[i] * fdust[j]
+                    sync = fsync[i] * fsync[j]
+                    dustsync = fdust[i] * fsync[j] + fsync[i] * fdust[j]
+
+                    if EE:
+                        # EE spectrum: multiply foregrounds by EE/BB ratio
+                        dust *= EEtoBB_dust
+                        sync *= EEtoBB_sync
+                        dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
+
+                    if need_dust_decorr and i != j:
+                        corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar *
+                                                    bandcenter_err[i],
+                                                    self.bandpasses[j].nu_bar *
+                                                    bandcenter_err[j],
+                                                    self.fpivot_dust_decorr, rat,
+                                                    self.lform_dust_decorr)
+                    else:
+                        corr_dust = 1
+                    if need_sync_decorr and i != j:
+                        corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar *
+                                                    bandcenter_err[i],
+                                                    self.bandpasses[j].nu_bar *
+                                                    bandcenter_err[j],
+                                                    self.fpivot_sync_decorr, rat,
+                                                    self.lform_sync_decorr)
+                    else:
+                        corr_sync = 1
+                    #  Add foreground model to theory spectrum.
+                    # NOTE: Decorrelation is not implemented for the dust/sync
+                    # correlated component.
+                    # In BK15, we never turned on correlation and decorrelation parameters
+                    # simultaneously.
+                    CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync \
+                            + dustsync * dustsyncpow
 
 
 class Bandpass:
