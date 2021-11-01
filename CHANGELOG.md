@@ -15,7 +15,8 @@
 
 #### BICEP-Keck
 
-- Bugfix bug in decorrelation (#196, by @umilta)
+- Bugfix in decorrelation function #196 (by Caterina Umilta, @umilta)
+- Updated to 2021 data release (2018 data) and bugfix, #204 and #209 (by Dominic Beck, @doicbek)
 
 ## 3.1.1 – 2021-07-22
 
