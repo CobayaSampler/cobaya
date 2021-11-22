@@ -9,6 +9,11 @@
 
 - Added Boss DR16 likelihood (by @Pablo-Lemos)
 
+#### BICEP/Keck
+
+- Bugfix in decorrelation function #196 (by Caterina Umilta, @umilta)
+- Updated to 2021 data release (2018 data) (by Dominic Beck, @doicbek)
+
 ## 3.1.1 – 2021-07-22
 
 - Changes for compatibility with Pandas 1.3 (which broke convergence testing amongst other things).
