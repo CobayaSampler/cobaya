@@ -314,9 +314,9 @@ class BoltzmannBase(Theory):
         Get a :math:`P(z,k)` bicubic interpolation object
         (:class:`PowerSpectrumInterpolator`).
 
-        In the interpolator returned, both the input :math:`k` and resulting
-        :math:`P(z,k)` values are in units of :math:`1/\mathrm{Mpc}` (not :math:`h^{-1}`
-        units).
+        In the interpolator returned, the input :math:`k` and resulting
+        :math:`P(z,k)` are in units of :math:`1/\mathrm{Mpc}` and
+        :math:`\mathrm{Mpc}^3` respectively (not in :math:`h^{-1}` units).
 
         :param var_pair: variable pair for power spectrum
         :param nonlinear: non-linear spectrum (default True)
@@ -353,9 +353,10 @@ class BoltzmannBase(Theory):
         Returned arrays may be bigger or more densely sampled than requested, but will
         include required values.
 
-        In the grid returned, both :math:`k` and :math:`P(z,k)` values are in units of
-        :math:`1/\mathrm{Mpc}` (not :math:`h^{-1}` units), and :math:`z` and :math:`k`
-        are in **ascending** order.
+        In the grid returned, :math:`k` and :math:`P(z,k)` are in units of
+        :math:`1/\mathrm{Mpc}` and :math:`\mathrm{Mpc}^3` respectively
+        (not in :math:`h^{-1}` units), and :math:`z` and :math:`k` are in
+        **ascending** order.
 
         :param nonlinear: whether the linear or non-linear spectrum
         :param var_pair: which power spectrum

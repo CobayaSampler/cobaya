@@ -251,7 +251,6 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-
                 if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 pair = k[2:]
@@ -484,8 +483,8 @@ class classy(BoltzmannBase):
         return names
 
     def get_can_support_params(self):
-        # non-exhaustive list of supported input parameters that will be assigne do classy
-        # if they are varied
+        # non-exhaustive list of supported input parameters that will be assigned to
+        # classy if they are varied
         return ['H0']
 
     def get_version(self):
