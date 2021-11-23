@@ -71,7 +71,7 @@ To install **cobaya** or upgrade it to the latest release, simply type in a term
 
 .. code:: bash
 
-   $ python -m pip install cobaya--upgrade
+   $ python -m pip install cobaya --upgrade
 
 To go on installing **cosmological requisites**, see :doc:`installation_cosmo`.
 
