@@ -63,12 +63,19 @@ class LogPosterior:
     or likelihoods' chi squared's) is stored to the power of ``1/temperature``.
     """
 
-    logpost: Optional[float] = None
-    logpriors: Optional[Sequence[float]] = None
-    loglikes: Optional[Sequence[float]] = None
-    derived: Optional[Sequence[float]] = None
+    # A note on typing:
+    # Though None is allowed for some arguments, after initialisation everything should
+    # be not None. So we can either (a) use Optional, and then get A LOT of typing errors
+    # or (b) not use it (use dataclasses.field(default=None) instead) and get fewer errors
+    # (only wherever LogPosterior is initialised).
+    # Let's opt for (b) and suppress errors there.
+
+    logpost: float = dataclasses.field(default=None)  # type: ignore
+    logpriors: Sequence[float] = dataclasses.field(default=None)  # type: ignore
+    loglikes: Sequence[float] = dataclasses.field(default=None)  # type: ignore
+    derived: Sequence[float] = dataclasses.field(default=None)  # type: ignore
     temperature: float = 1
-    finite: Optional[bool] = False
+    finite: bool = dataclasses.field(default=False)
     logprior: float = dataclasses.field(init=False, repr=False)
     loglike: float = dataclasses.field(init=False, repr=False)
 
@@ -128,7 +135,7 @@ class LogPosterior:
             object.__setattr__(self, 'loglikes', np.nan_to_num(self.loglikes))
             object.__setattr__(self, 'loglike', np.nan_to_num(self.loglike))
 
-    def as_dict(self, model: "Model") -> Dict[str, float]:
+    def as_dict(self, model: "Model") -> Dict[str, Union[float, Dict[str, float]]]:
         """
         Given a :class:`~model.Model`, returns a more informative version of itself,
         containing the names of priors, likelihoods and derived parameters.

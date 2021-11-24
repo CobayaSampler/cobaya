@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from typing import Union, Sequence, Optional
-from getdist import MCSamples, chains
+from getdist import MCSamples, chains  # type: ignore
 
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
@@ -562,7 +562,7 @@ class SampleCollection(BaseCollection):
         if thin != int(thin) or thin < 1:
             raise LoggedError(self.log, "Thin factor must be an positive integer, got %s",
                               thin)
-        from getdist.chains import WeightedSamples, WeightedSampleError
+        from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
         thin = int(thin)
         try:
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
