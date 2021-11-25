@@ -498,13 +498,14 @@ class SampleCollection(BaseCollection):
         if pweight:
             weight_type_kwarg = "aweights"
         elif np.allclose(np.round(weights), weights):
+            weights = np.round(weights).astype(int)
             weight_type_kwarg = "fweights"
         else:
             weight_type_kwarg = "aweights"
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
-                dtype=np.float64).T,
+                     dtype=np.float64).T,
             **{weight_type_kwarg: weights}))
 
     def reweight(self, importance_weights):
