@@ -1,7 +1,10 @@
 ## 3.X.Y – YYYY-MM-DD
 
-- Documented uses of `Model` class in general contexts (previously only cosmo)
+### General
+
+- Documented uses of `Model` class in general contexts (previously only cosmo).
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
+- `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware, documented).
 
 ### Cosmological likelihoods and theory codes
 

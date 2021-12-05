@@ -638,7 +638,7 @@ class Model(HasLogger):
             if results.logpost != -np.inf:
                 break
         else:
-            if self.prior.reference_is_pointlike():
+            if self.prior.reference_is_pointlike:
                 raise LoggedError(self.log, "The reference point provided has null "
                                             "likelihood. Set 'ref' to a different point "
                                             "or a pdf.")
