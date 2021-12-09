@@ -203,7 +203,7 @@ from the logarithm of an **input** parameter of the likelihood, we would do:
       logx:
         prior: [...]
         drop: True
-      x: "lambda logx: np.exp(x)"
+      x: "lambda logx: np.exp(logx)"
       y:
         derived: "lambda x: x**2"
 
