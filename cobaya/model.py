@@ -725,7 +725,9 @@ class Model(HasLogger):
             requirements_are_params.update(provide_params)
             # Invert to get the provider(s) of each available product/parameter
             for k in chain(can_provide, provide_params):
-                providers[k] = providers.get(k, []) + [component]
+                providers[k] = providers.get(k, [])
+                if component not in providers[k]:
+                    providers[k].append(component)
         # Add requirements requested by hand
         manual_theory = Theory(name='_manual')
         if manual_requirements:
