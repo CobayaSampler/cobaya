@@ -200,7 +200,8 @@ class BoltzmannBase(Theory):
                 #                 "%r vs %r.", window, self.sources[source])
                 self._must_provide[k].update(v)
             elif k in ["Hubble", "angular_diameter_distance",
-                       "comoving_radial_distance", "sigma8_z", "fsigma8"]:
+                       "comoving_radial_distance", "sigma8_z", "fsigma8",
+                       "Omega_b", "Omega_cdm", "Omega_nu_massive", "Omega_m"]:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
                 self._must_provide[k]["z"] = np.unique(np.concatenate(

@@ -349,6 +349,28 @@ class CAMB(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
                     kwargs={"z": self._combine_z(k, v)})
+            elif k == "Omega_b":
+                self.collectors["Omega_b"] = Collector(
+                    method=CAMBdata.get_Omega,
+                    kwargs={"z": self._combine_z(k, v), "var": "baryon"})
+            elif k == "Omega_cdm":
+                self.collectors["Omega_cdm"] = Collector(
+                    method=CAMBdata.get_Omega,
+                    kwargs={"z": self._combine_z(k, v), "var": "cdm"})
+            elif k == "Omega_nu_massive":
+                self.collectors["Omega_nu_massive"] = Collector(
+                    method=CAMBdata.get_Omega,
+                    kwargs={"z": self._combine_z(k, v), "var": "nu"})
+            elif k == "Omega_m":
+                self.collectors["Omega_b"] = Collector(
+                    method=CAMBdata.get_Omega,
+                    kwargs={"z": self._combine_z(k, v), "var": "baryon"})
+                self.collectors["Omega_cdm"] = Collector(
+                    method=CAMBdata.get_Omega,
+                    kwargs={"z": self._combine_z(k, v), "var": "cdm"})
+                self.collectors["Omega_nu_massive"] = Collector(
+                    method=CAMBdata.get_Omega,
+                    kwargs={"z": self._combine_z(k, v), "var": "nu"})
             elif k == "sigma8_z":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
