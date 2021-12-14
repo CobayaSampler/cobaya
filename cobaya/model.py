@@ -752,6 +752,11 @@ class Model(HasLogger):
                 for requirement in requires:
                     suppliers = providers.get(requirement.name)
                     if not suppliers:
+                        # If failed requirement was manually added,
+                        # remove from list, or it will still fail in the next call too
+                        requirements[manual_theory] = [
+                            req for req in requirements[manual_theory]
+                            if req.name != requirement.name]
                         raise LoggedError(self.log,
                                           "Requirement %s of %r is not provided by any "
                                           "component, nor sampled directly",
