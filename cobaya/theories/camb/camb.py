@@ -345,23 +345,23 @@ class CAMB(BoltzmannBase):
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
-                    kwargs={"z": self._combine_z(k, v)})
+                    kwargs={"z": self._combine_z_for_collector(k, v)})
             elif k == "Omega_b":
                 self.collectors["Omega_b"] = Collector(
                     method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z(k, v), "var": "baryon"})
+                    kwargs={"z": self._combine_z_for_collector(k, v), "var": "baryon"})
             elif k == "Omega_cdm":
                 self.collectors["Omega_cdm"] = Collector(
                     method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z(k, v), "var": "cdm"})
+                    kwargs={"z": self._combine_z_for_collector(k, v), "var": "cdm"})
             elif k == "Omega_nu_massive":
                 self.collectors["Omega_nu_massive"] = Collector(
                     method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z(k, v), "var": "nu"})
+                    kwargs={"z": self._combine_z_for_collector(k, v), "var": "nu"})
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
-                    kwargs={"z": self._combine_z(k, v)})
+                    kwargs={"z": self._combine_z_for_collector(k, v)})
             elif k == "sigma8_z":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
@@ -482,16 +482,15 @@ class CAMB(BoltzmannBase):
         return must_provide
 
     def add_to_redshifts(self, z):
-        self.extra_args["redshifts"] = np.sort(np.unique(np.concatenate(
-            (np.atleast_1d(z), self.extra_args.get("redshifts", [])))))[::-1]
+        """
+        Adds redshifts to the list of them for which CAMB computes perturbations.
+        """
+        self.extra_args["redshifts"] = np.flip(self._combine_1d(
+            z, self.extra_args.get("redshifts", [])))
 
-    def _combine_z(self, k, v):
+    def _combine_z_for_collector(self, k, v):
         c = self.collectors.get(k, None)
-        if c:
-            return np.sort(
-                np.unique(np.concatenate((c.kwargs['z'], np.atleast_1d(v['z'])))))
-        else:
-            return np.sort(np.atleast_1d(v['z']))
+        return self._combine_1d(v["z"], c.kwargs.get('z') if c is not None else None)
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         try:

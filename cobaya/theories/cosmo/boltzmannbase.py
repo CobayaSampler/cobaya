@@ -165,10 +165,8 @@ class BoltzmannBase(Theory):
                     k = ("sigma_R",) + pair
                     current = self._must_provide.get(k, {})
                     self._must_provide[k] = {
-                        "R": np.sort(np.unique(np.concatenate(
-                            (current.get("R", []), np.atleast_1d(v["R"]))))),
-                        "z": np.unique(np.concatenate(
-                            (current.get("z", []), np.atleast_1d(v["z"])))),
+                        "R": self._combine_1d(v["R"], current.get("R")),
+                        "z": self._combine_1d(v["z"], current.get("z")),
                         "k_max": max(current.get("k_max", 0),
                                      v.get("k_max", 2 / np.min(v["R"])))}
             elif k in ("Pk_interpolator", "Pk_grid"):
@@ -185,8 +183,7 @@ class BoltzmannBase(Theory):
                         current = self._must_provide.get(k, {})
                         self._must_provide[k] = dict(
                             nonlinear=nonlinear,
-                            z=np.unique(np.concatenate((current.get("z", []),
-                                                        np.atleast_1d(redshifts)))),
+                            z=self._combine_1d(redshifts, current.get("z")),
                             k_max=max(current.get("k_max", 0), k_max), **v)
             elif k == "source_Cl":
                 if k not in self._must_provide:
@@ -211,8 +208,8 @@ class BoltzmannBase(Theory):
                        "sigma8_z", "fsigma8"]:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
-                self._must_provide[k]["z"] = np.unique(np.concatenate(
-                    (self._must_provide[k].get("z", []), v["z"])))
+                self._must_provide[k]["z"] = self._combine_1d(
+                    v["z"], self._must_provide[k].get("z"))
             # Extra derived parameters and other unknown stuff (keep capitalization)
             elif v is None:
                 self._must_provide[k] = None
@@ -237,6 +234,17 @@ class BoltzmannBase(Theory):
                 self.log, "The following parameters appear both as input parameters and "
                           "as extra arguments: %s. Please, remove one of the definitions "
                           "of each.", common)
+
+    def _combine_1d(self, new_list, old_list=None):
+        """
+        Combines+sorts+uniquifies two lists of values. Sorting is in ascending order.
+
+        If `old_list` given, it is assumed to be a sorted and uniquified array.
+        """
+        new_list = np.atleast_1d(new_list)
+        if old_list is not None:
+            new_list = np.concatenate((old_list, new_list))
+        return np.unique(np.sort(new_list))
 
     def _cmb_unit_factor(self, units, T_cmb):
         units_factors = {"1": 1,
