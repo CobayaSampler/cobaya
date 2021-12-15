@@ -13,7 +13,7 @@ from typing import Mapping, Iterable, Callable
 # Local
 from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible
-from cobaya.log import LoggedError, abstract
+from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.conventions import Const
 from cobaya.typing import empty_dict, InfoDict
 
@@ -496,9 +496,9 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
-            return self.logsign * np.exp(self(z, np.log(k), grid=grid))
+            return self.logsign * np.exp(self(z, np.log(k), grid=grid, warn=False))
         else:
-            return self(z, np.log(k), grid=grid)
+            return self(z, np.log(k), grid=grid, warn=False)
 
     def logP(self, z, k, grid=None):
         """
@@ -508,6 +508,14 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
-            return self(z, np.log(k), grid=grid)
+            return self(z, np.log(k), grid=grid, warn=False)
         else:
-            return np.log(self(z, np.log(k), grid=grid))
+            return np.log(self(z, np.log(k), grid=grid, warn=False))
+
+    def __call__(self, *args, warn=True, **kwargs):
+        if warn:
+            get_logger(self.__class__.__name__).warning(
+                "Do not call the instance directly. Use instead methods P(z, k) or "
+                "logP(z, k) to get the (log)power spectrum. (If you know what you are "
+                "doing, pass warn=False)")
+        return super().__call__(*args, **kwargs)
