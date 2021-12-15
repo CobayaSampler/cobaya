@@ -310,7 +310,7 @@ class BoltzmannBase(Theory):
         return self._get_z_dependent("comoving_radial_distance", z)
 
     def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
-                            extrap_kmax=None):
+                            extrap_kmin=None, extrap_kmax=None):
         r"""
         Get a :math:`P(z,k)` bicubic interpolation object
         (:class:`PowerSpectrumInterpolator`).
@@ -321,12 +321,15 @@ class BoltzmannBase(Theory):
 
         :param var_pair: variable pair for power spectrum
         :param nonlinear: non-linear spectrum (default True)
+        :param extrap_kmin: use log linear extrapolation from ``extrap_kmin`` up to min
+                            :math:`k`.
         :param extrap_kmax: use log linear extrapolation beyond max :math:`k` computed up
                             to ``extrap_kmax``.
         :return: :class:`PowerSpectrumInterpolator` instance.
         """
         nonlinear = bool(nonlinear)
-        key = ("Pk_interpolator", nonlinear, extrap_kmax) + tuple(sorted(var_pair))
+        key = (("Pk_interpolator", nonlinear, extrap_kmin, extrap_kmax) +
+               tuple(sorted(var_pair)))
         if key in self.current_state:
             return self.current_state[key]
         k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)
@@ -337,14 +340,17 @@ class BoltzmannBase(Theory):
                 sign = -1
             else:
                 log_p = False
+        extrapolating = ((extrap_kmax and extrap_kmax > k[-1]) or
+                         (extrap_kmin and extrap_kmin < k[0]))
         if log_p:
             pk = np.log(sign * pk)
-        elif extrap_kmax > k[-1]:
+        elif extrapolating:
             raise LoggedError(self.log,
                               'Cannot do log extrapolation with zero-crossing pk '
                               'for %s, %s' % var_pair)
-        result = PowerSpectrumInterpolator(z, k, pk, logP=log_p, logsign=sign,
-                                           extrap_kmax=extrap_kmax)
+        result = PowerSpectrumInterpolator(
+            z, k, pk, logP=log_p, logsign=sign,
+            extrap_kmin=extrap_kmin, extrap_kmax=extrap_kmax)
         self.current_state[key] = result
         return result
 
@@ -455,7 +461,8 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         extrap_kmax; useful for tails of integrals.
     """
 
-    def __init__(self, z, k, P_or_logP, extrap_kmax=None, logP=False, logsign=1):
+    def __init__(self, z, k, P_or_logP, extrap_kmin=None, extrap_kmax=None, logP=False,
+                 logsign=1):
         self.islog = logP
         #  Check order
         z, k = (np.atleast_1d(x) for x in [z, k])
@@ -463,19 +470,34 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             raise ValueError('Require at least four redshifts for Pk interpolation.'
                              'Consider using Pk_grid if you just need a a small number'
                              'of specific redshifts (doing 1D splines in k yourself).')
+        z, k, P_or_logP = np.array(z), np.array(k), np.array(P_or_logP)
         i_z = np.argsort(z)
         i_k = np.argsort(k)
         self.logsign = logsign
         self.z, self.k, P_or_logP = z[i_z], k[i_k], P_or_logP[i_z, :][:, i_k]
         self.zmin, self.zmax = self.z[0], self.z[-1]
-        self.kmin, self.kmax = self.k[0], self.k[-1]
+        self.extrap_kmin, self.extrap_kmax = extrap_kmin, extrap_kmax
         logk = np.log(self.k)
+        # Start from extrap_kmin using a (log,log)-linear extrapolation
+        if extrap_kmin and extrap_kmin < self.input_kmin:
+            if not logP:
+                raise ValueError('extrap_kmin must use logP')
+            logk = np.hstack(
+                [np.log(extrap_kmin),
+                 np.log(self.input_kmin) * 0.1 + np.log(extrap_kmin) * 0.9, logk])
+            logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 2))
+            logPnew[:, 2:] = P_or_logP
+            diff = (logPnew[:, 3] - logPnew[:, 2]) / (logk[3] - logk[2])
+            delta = diff * (logk[2] - logk[0])
+            logPnew[:, 0] = logPnew[:, 2] - delta
+            logPnew[:, 1] = logPnew[:, 2] - delta * 0.9
+            P_or_logP = logPnew
         # Continue until extrap_kmax using a (log,log)-linear extrapolation
-        if extrap_kmax and extrap_kmax > self.kmax:
+        if extrap_kmax and extrap_kmax > self.input_kmax:
             if not logP:
                 raise ValueError('extrap_kmax must use logP')
             logk = np.hstack(
-                [logk, np.log(self.kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
+                [logk, np.log(self.input_kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
                  np.log(extrap_kmax)])
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 2))
             logPnew[:, :-2] = P_or_logP
@@ -483,16 +505,59 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             delta = diff * (logk[-1] - logk[-3])
             logPnew[:, -1] = logPnew[:, -3] + delta
             logPnew[:, -2] = logPnew[:, -3] + delta * 0.9
-            self.kmax = extrap_kmax  # Added for consistency with CAMB
-
             P_or_logP = logPnew
-
         super().__init__(self.z, logk, P_or_logP)
+
+    @property
+    def input_kmin(self):
+        """Minimum k for the interpolation (not incl. extrapolation range)."""
+        return self.k[0]
+
+    @property
+    def input_kmax(self):
+        """Maximum k for the interpolation (not incl. extrapolation range)."""
+        return self.k[-1]
+
+    @property
+    def kmin(self):
+        """Minimum k of the interpolator (incl. extrapolation range)."""
+        if self.extrap_kmin is None:
+            return self.input_kmin
+        return self.extrap_kmin
+
+    @property
+    def kmax(self):
+        """Maximum k of the interpolator (incl. extrapolation range)."""
+        if self.extrap_kmax is None:
+            return self.input_kmax
+        return self.extrap_kmax
+
+    def check_ranges(self, z, k):
+        """Checks that we are not trying to extrapolate beyond the interpolator limits."""
+        z = np.atleast_1d(z)
+        if min(z) < self.zmin:
+            raise LoggedError(get_logger(self.__class__.__name__),
+                              f"Not possible to extrapolate to z={min(z)} "
+                              f"(minimum z computed is {self.zmin}).")
+        if max(z) > self.zmax:
+            raise LoggedError(get_logger(self.__class__.__name__),
+                              f"Not possible to extrapolate to z={max(z)} "
+                              f"(maximum z computed is {self.zmax}).")
+        k = np.atleast_1d(k)
+        if min(k) < self.kmin:
+            raise LoggedError(get_logger(self.__class__.__name__),
+                              f"Not possible to extrapolate to k={min(k)} 1/Mpc "
+                              f"(minimum k possible is {self.kmin} 1/Mpc).")
+        if max(k) > self.kmax:
+            raise LoggedError(get_logger(self.__class__.__name__),
+                              f"Not possible to extrapolate to k={max(k)} 1/Mpc "
+                              f"(maximum k possible is {self.kmax} 1/Mpc).")
 
     def P(self, z, k, grid=None):
         """
         Get the power spectrum at (z,k).
         """
+        self.check_ranges(z, k)
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
@@ -505,6 +570,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         Get the log power spectrum at (z,k). (or minus log power spectrum if
         islog and logsign=-1)
         """
+        self.check_ranges(z, k)
         if grid is None:
             grid = not np.isscalar(z) and not np.isscalar(k)
         if self.islog:
