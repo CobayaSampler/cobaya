@@ -228,20 +228,20 @@ class classy(BoltzmannBase):
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method="Hubble",
-                    args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
+                    args=[self._combine_z_for_collector(k, v)],
                     arg_array=0)
             elif k == "angular_diameter_distance":
                 self.collectors[k] = Collector(
                     method="angular_distance",
-                    args=[np.atleast_1d(v["z"])],
                     args_names=["z"],
+                    args=[self._combine_z_for_collector(k, v)],
                     arg_array=0)
             elif k == "comoving_radial_distance":
                 self.collectors[k] = Collector(
                     method="z_of_r",
                     args_names=["z"],
-                    args=[np.atleast_1d(v["z"])])
+                    args=[self._combine_z_for_collector(k, v)])
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
@@ -251,7 +251,6 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-
                 if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 pair = k[2:]
@@ -298,8 +297,7 @@ class classy(BoltzmannBase):
     def add_z_for_matter_power(self, z):
         if getattr(self, "z_for_matter_power", None) is None:
             self.z_for_matter_power = np.empty(0)
-        self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
-            [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
+        self.z_for_matter_power = np.flip(self._combine_1d(z, self.z_for_matter_power))
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
     def add_P_k_max(self, k_max, units):
@@ -331,6 +329,15 @@ class classy(BoltzmannBase):
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         self.classy.set(**args)
+
+    def _combine_z_for_collector(self, k, v, arg_name="z"):
+        c = self.collectors.get(k, None)
+        if c is None:
+            old_zs = None
+        if c is not None:
+            i_arg = c.args_names.index(arg_name)
+            old_zs = c.args[i_arg]
+        return self._combine_1d(v["z"], old_zs)
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         # Set parameters
