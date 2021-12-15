@@ -345,10 +345,6 @@ class CAMB(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
                     kwargs={"z": self._combine_z(k, v)})
-            elif k in ("angular_diameter_distance", "comoving_radial_distance"):
-                self.collectors[k] = Collector(
-                    method=getattr(CAMBdata, k),
-                    kwargs={"z": self._combine_z(k, v)})
             elif k == "Omega_b":
                 self.collectors["Omega_b"] = Collector(
                     method=CAMBdata.get_Omega,
@@ -361,16 +357,10 @@ class CAMB(BoltzmannBase):
                 self.collectors["Omega_nu_massive"] = Collector(
                     method=CAMBdata.get_Omega,
                     kwargs={"z": self._combine_z(k, v), "var": "nu"})
-            elif k == "Omega_m":
-                self.collectors["Omega_b"] = Collector(
-                    method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z(k, v), "var": "baryon"})
-                self.collectors["Omega_cdm"] = Collector(
-                    method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z(k, v), "var": "cdm"})
-                self.collectors["Omega_nu_massive"] = Collector(
-                    method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z(k, v), "var": "nu"})
+            elif k in ("angular_diameter_distance", "comoving_radial_distance"):
+                self.collectors[k] = Collector(
+                    method=getattr(CAMBdata, k),
+                    kwargs={"z": self._combine_z(k, v)})
             elif k == "sigma8_z":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
@@ -659,6 +649,15 @@ class CAMB(BoltzmannBase):
             computed_redshifts = self.collectors[quantity].kwargs["z"]
             i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
+
+    def get_Omega_b(self, z):
+        return self._get_z_dependent("Omega_b", z)
+
+    def get_Omega_cdm(self, z):
+        return self._get_z_dependent("Omega_cdm", z)
+
+    def get_Omega_nu_massive(self, z):
+        return self._get_z_dependent("Omega_nu_massive", z)
 
     def get_sigma8_z(self, z):
         return self._get_z_dependent("sigma8_z", z)
