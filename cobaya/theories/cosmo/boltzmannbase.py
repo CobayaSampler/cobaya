@@ -568,7 +568,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
 
     def check_ranges(self, z, k):
         """Checks that we are not trying to extrapolate beyond the interpolator limits."""
-        z = np.atleast_1d(z)
+        z = np.atleast_1d(z).flatten()
         if min(z) < self.zmin:
             raise LoggedError(get_logger(self.__class__.__name__),
                               f"Not possible to extrapolate to z={min(z)} "
@@ -577,7 +577,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             raise LoggedError(get_logger(self.__class__.__name__),
                               f"Not possible to extrapolate to z={max(z)} "
                               f"(maximum z computed is {self.zmax}).")
-        k = np.atleast_1d(k)
+        k = np.atleast_1d(k).flatten()
         if min(k) < self.kmin:
             raise LoggedError(get_logger(self.__class__.__name__),
                               f"Not possible to extrapolate to k={min(k)} 1/Mpc "
