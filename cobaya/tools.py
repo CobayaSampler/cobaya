@@ -1081,8 +1081,19 @@ def find_indices(pool, target, rtol=1e-05, atol=1e-08):
 
     TODO: right now, it does not use the fact that pool is usually sorted.
     """
+
+    def pick_only_one(pool, x, rtol, atol):
+        """Reduces tolerances if more than one in pool coincides."""
+        global current_rtol, current_atol
+        i = np.where(pool == x)[0]
+        if len(i) > 1:
+            rtol /= 10
+            atol /= 10
+            return pick_only_one(pool, x, rtol, atol)
+        return i
+
     indices = np.concatenate(
-        [np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0] for x in target])
+        [pick_only_one(pool, x, rtol, atol) for x in target])
     if len(indices) < len(target):
         raise ValueError(f"Could not find some of {target} in pool {pool}.")
     return indices
