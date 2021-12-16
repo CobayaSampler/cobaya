@@ -144,7 +144,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError
+from cobaya.tools import load_module, VersionCheckError, find_indices
 
 
 # Result collector
@@ -472,9 +472,13 @@ class classy(BoltzmannBase):
         except StopIteration:
             computed_redshifts = self.collectors[quantity].args[
                 self.collectors[quantity].args_names.index("z")]
-        i_kwarg_z = np.concatenate(
-            [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
-        values = np.array(deepcopy(self.current_state[quantity]))
+        try:
+            i_kwarg_z = find_indices(computed_redshifts, np.atleast_1d(z))
+        except ValueError:
+            raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
+                                        f"Requested z are {z}, but computed ones are "
+                                        f"{computed_redshifts}.")
+        values = np.array(self.current_state[quantity], copy=True)
         if quantity == "comoving_radial_distance":
             values = values[0]
         return values[i_kwarg_z]
