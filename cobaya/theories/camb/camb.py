@@ -180,7 +180,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, str_to_list
+    VersionCheckError, str_to_list, find_indices
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict
 
@@ -643,11 +643,14 @@ class CAMB(BoltzmannBase):
     def _get_z_dependent(self, quantity, z):
         if quantity in ["sigma8_z", "fsigma8"]:
             computed_redshifts = self.extra_args["redshifts"]
-            i_kwarg_z = np.concatenate(
-                [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
         else:
             computed_redshifts = self.collectors[quantity].kwargs["z"]
-            i_kwarg_z = np.searchsorted(computed_redshifts, np.atleast_1d(z))
+        try:
+            i_kwarg_z = find_indices(computed_redshifts, np.atleast_1d(z))
+        except ValueError:
+            raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
+                                        f"Requested z are {z}, but computed ones are "
+                                        f"{computed_redshifts}.")
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
     def get_Omega_b(self, z):

@@ -1069,3 +1069,20 @@ def sort_cosmetic(info):
             sorted_info[k] = info[k]
     sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
     return sorted_info
+
+
+def find_indices(pool, target, rtol=1e-05, atol=1e-08):
+    """
+    Finds the indices of elements in array ``target`` into array ``pool``.
+
+    Calls ``numpy.isclose`` for robust comparison, using ``rtol``, ``atol`` provided.
+
+    Raises ValueError if not all elements were found.
+
+    TODO: right now, it does not use the fact that pool is usually sorted.
+    """
+    indices = np.concatenate(
+        [np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0] for x in target])
+    if len(indices) < len(target):
+        raise ValueError(f"Could not find some of {target} in pool {pool}.")
+    return indices
