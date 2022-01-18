@@ -31,6 +31,17 @@ _kind = "txt"
 _ext = "txt"
 
 
+def use_portalocker():
+    if os.getenv('COBAYA_USE_FILE_LOCKING', 't').lower() in ('true', '1', 't'):
+        try:
+            import portalocker
+        except ModuleNotFoundError:
+            return None
+        else:
+            return True
+    return False
+
+
 class FileLock:
     _file_handle: Any
 
@@ -52,12 +63,8 @@ class FileLock:
         self.log = log or get_logger("file_lock")
         try:
             h: Any = None
-            try:
+            if use_portalocker():
                 import portalocker
-            except ModuleNotFoundError:
-                # will work, but crashes will leave .lock files that will raise error
-                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
-            else:
                 try:
                     h = open(self.lock_file, 'wb')
                     portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
@@ -66,6 +73,9 @@ class FileLock:
                     if h:
                         h.close()
                     self.lock_error()
+            else:
+                # will work, but crashes will leave .lock files that will raise error
+                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
         except OSError:
             self.lock_error()
 
@@ -83,11 +93,8 @@ class FileLock:
             import mpi4py
         else:
             mpi4py = None
-        if mpi.is_main_process():
-            try:
-                import portalocker
-            except ModuleNotFoundError:
-                self.log.warning('install "portalocker" for better file lock control.')
+        if mpi.is_main_process() and use_portalocker() is None:
+            self.log.warning('install "portalocker" for better file lock control.')
         raise LoggedError(self.log,
                           "File %s is locked.\nYou may be running multiple jobs with "
                           "the same output when you intended to run with MPI. "
