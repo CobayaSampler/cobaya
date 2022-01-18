@@ -725,8 +725,16 @@ class CAMB(BoltzmannBase):
                     self.log.debug("Setting attributes of CAMBparams: %r",
                                    self.extra_attrs)
                 for attr, value in self.extra_attrs.items():
-                    if hasattr(params, attr):
-                        setattr(params, attr, value)
+                    obj = params
+                    if '.' in attr:
+                        parts = attr.split('.')
+                        for p in parts[:-1]:
+                            obj = getattr(obj, p)
+                        par = parts[-1]
+                    else:
+                        par = attr
+                    if hasattr(obj, par):
+                        setattr(obj, par, value)
                     else:
                         raise LoggedError(
                             self.log,
