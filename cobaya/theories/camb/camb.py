@@ -283,6 +283,7 @@ class CAMB(BoltzmannBase):
         if not self.external_primordial_pk \
                 and set(self.input_params).intersection({'r', 'At'}):
             self.extra_attrs["WantTensors"] = True
+            self.extra_attrs["Accuracy.AccurateBB"] = True
 
     def get_can_support_params(self):
         return self.power_params + self.nonlin_params
