@@ -733,7 +733,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
     :param noise_muK_arcmin_P: polarization noise in muK-arcmin
     :param NoiseVar: alternatively if noise_muK_arcmin_T is None, effective
         isotropic noise variance for the temperature (N_L=NoiseVar with no beam)
-    :param ENoiseFac: factor by which polarization noise variance is higher thab
+    :param ENoiseFac: factor by which polarization noise variance is higher than
                 NoiseVar (usually 2, for Planck about 4
                         as only half the detectors polarized)
     :param fwhm_arcmin: beam fwhm in arcminutes
