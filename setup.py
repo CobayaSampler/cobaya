@@ -39,7 +39,7 @@ def extract_docs_requirements():
     return ["sphinx"] + reqs
 
 
-install_requires = ['numpy>=1.17.0', 'scipy>=1.5', 'pandas>=1.0.1',
+install_requires = ['numpy>=1.17.0', 'scipy>=1.5', 'pandas>=1.0.1,!=1.4.0',
                     'PyYAML>=5.1', 'requests>=2.18', 'py-bobyqa>=1.2',
                     'GetDist>=1.3.1', 'fuzzywuzzy>=0.17', 'packaging', 'tqdm',
                     'portalocker>=2.3.0', 'dill>=0.3.3']
