@@ -345,23 +345,23 @@ class CAMB(BoltzmannBase):
             elif k == "Hubble":
                 self.collectors[k] = Collector(
                     method=CAMBdata.h_of_z,
-                    kwargs={"z": self._combine_z_for_collector(k, v)})
+                    kwargs={"z": self._combine_z_for_collector(k, v["z"])})
             elif k == "Omega_b":
                 self.collectors["Omega_b"] = Collector(
                     method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z_for_collector(k, v), "var": "baryon"})
+                    kwargs={"z": self._combine_z_for_collector(k, v["z"]), "var": "baryon"})
             elif k == "Omega_cdm":
                 self.collectors["Omega_cdm"] = Collector(
                     method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z_for_collector(k, v), "var": "cdm"})
+                    kwargs={"z": self._combine_z_for_collector(k, v["z"]), "var": "cdm"})
             elif k == "Omega_nu_massive":
                 self.collectors["Omega_nu_massive"] = Collector(
                     method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z_for_collector(k, v), "var": "nu"})
+                    kwargs={"z": self._combine_z_for_collector(k, v["z"]), "var": "nu"})
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
-                    kwargs={"z": self._combine_z_for_collector(k, v)})
+                    kwargs={"z": self._combine_z_for_collector(k, v["z"])})
             elif k == "sigma8_z":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
@@ -488,7 +488,9 @@ class CAMB(BoltzmannBase):
         self.extra_args["redshifts"] = np.flip(self._combine_1d(
             z, self.extra_args.get("redshifts", [])))
 
-    def _combine_z_for_collector(self, k, v):
+    def _combine_z_for_collector(self, k, zs):
+        c = self.collectors.get(k, None)
+        return self._combine_1d(zs, c.kwargs.get('z') if c is not None else None)
         c = self.collectors.get(k, None)
         return self._combine_1d(v["z"], c.kwargs.get('z') if c is not None else None)
 

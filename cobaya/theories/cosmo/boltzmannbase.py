@@ -239,7 +239,8 @@ class BoltzmannBase(Theory):
         """
         Combines+sorts+uniquifies two lists of values. Sorting is in ascending order.
 
-        If `old_list` given, it is assumed to be a sorted and uniquified array.
+        If `old_list` given, it is assumed to be a sorted and uniquified array (e.g. the
+        output of this function when passed as first argument).
         """
         new_list = np.atleast_1d(new_list)
         if old_list is not None:
