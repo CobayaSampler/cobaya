@@ -1071,102 +1071,123 @@ def sort_cosmetic(info):
     return sorted_info
 
 
-def find_indices(pool, target,
-                 rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6):
     """
     Finds the indices of elements in array ``target`` into array ``pool``.
 
-    Calls ``numpy.isclose`` for robust comparison, using ``rtol``, ``atol`` limits.
 
-    Both tolerances are adapted to the minimal differences between values.
+def combine_1d(new_list, old_list=None):
+    """
+    Combines+sorts+uniquifies two lists of values. Sorting is in ascending order.
 
-    Raises ValueError if not all elements were found, each only once.
+    If `old_list` given, it is assumed to be a sorted and uniquified array (e.g. the
+    output of this function when passed as first argument).
+
+    Uses `np.unique`, which distinguishes numbers up to machine precision.
+    """
+    new_list = np.atleast_1d(new_list)
+    if old_list is not None:
+        new_list = np.concatenate((old_list, new_list))
+    return np.unique(np.sort(new_list))
+
+
+class Pool1D(object):
+    r"""
+    Stores a list of pairs ``(x, y)`` for later retrieval given some ``x``.
+
+    ``x`` values are uniquified internally up to machine precision, and an adaptive
+    tolerance (relative to min absolute and relative differences in the list) is
+    applied at retrieving.
+
+    Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
     """
 
-    def pick_at_most_one(pool, x, rtol, atol, rtol_min, rtol_max, atol_min, atol_max):
+    def __init__(self, values=[],
+                 rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6):
+        assert rtol_min <= rtol_max, \
+            f"{rtol_min=} must be smaller or equal to {rtol_max=}"
+        assert atol_min <= atol_max, \
+            f"{atol_min=} must be smaller or equal to {atol_max=}"
+        self.atol_min, self.atol_max = atol_min, atol_max
+        self.rtol_min, self.rtol_max = rtol_min, rtol_max
+        self.update(values)
+
+    def __len__(self):
+        return len(self.values)
+
+    def update(self, values):
+        """Adds a set of values, uniquifies and sorts."""
+        self.values = combine_1d(values, getattr(self, "values", None))
+        self._update_tolerances()
+
+    def _update_tolerances(self):
+        """Adapts tolerance to the differences in the list."""
+        # Assumes that the pool is sorted!
+        if len(self.values) > 1:
+            differences = self.values[1:] - self.values[:-1]
+            min_difference = np.min(differences)
+            self._adapt_atol_min = self.atol_min * min_difference
+            self._adapt_atol_max = self.atol_max * min_difference
+            min_rel_difference = np.min(differences / self.values[1:])
+            self._adapt_rtol_min = self.rtol_min * min_rel_difference
+            self._adapt_rtol_max = self.rtol_max *min_rel_difference
+        else:  # single-element list
+            self._adapt_atol_min = self.atol_min * self.values[0]
+            self._adapt_atol_max = self.atol_max * self.values[0]
+            self._adapt_rtol_min = self.rtol_min
+            self._adapt_rtol_max = self.rtol_max
+
+    def find_indices(self, values):
+        """
+        Finds the indices of elements in array ``values`` in the pool.
+
+        Calls ``numpy.isclose`` for robust comparison, using adaptive ``rtol``, ``atol``
+        limits.
+
+        Raises ValueError if not all elements were found, each only once.
+        """
+        values = np.atleast_1d(values)
+        # TODO: since the pool is sorted already, we could take advantage of the sorting,
+        #       sort the target values (and save the indices to recover original order),
+        #       and iterate only over the part of the pool starting where the last value
+        #       was found.
+        indices = np.concatenate([self._pick_at_most_one(x, None, None) for x in values])
+        if len(indices) < len(values):
+            raise ValueError(
+                f"Could not find some of {list(values)} in pool {list(pool)}. "
+                "If there appear to be a values close to the values in the pool,"
+                " increase max tolerances.")
+        return indices
+
+    def _pick_at_most_one(self, x, pool=None, rtol=None, atol=None):
         """Increases or reduces tolerance until only one element is found."""
+        if pool is None:
+            pool = self.values
         # Start with min tolerance for safety
         if rtol is None:
-            rtol = rtol_min
+            rtol = self._adapt_rtol_min
         if atol is None:
-           atol = atol_min
+           atol = self._adapt_atol_min
         i = np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0]
         if not len(i):  # none found
             # Increase tolerance (if allowed) until one found
-            if rtol > rtol_max and atol > atol_max:
+            if rtol > self._adapt_rtol_max and atol > self._adapt_atol_max:
                 # Nothing was found despite high tolerance
                 return []
-            if rtol <= rtol_max:
+            if rtol <= self._adapt_rtol_max:
                 rtol *= 10
-            if atol <= atol_max:
+            if atol <= self._adapt_atol_max:
                 atol *= 10
-            return pick_at_most_one(
-                pool, x, rtol, atol, rtol_min, rtol_max, atol_min, atol_max)
+            return self._pick_at_most_one(x, pool, rtol, atol)
         elif len(i) > 1:  # more than one found
             # Decrease tolerance (if allowed!) until only one found
-            if rtol < rtol_min and atol < atol_min:
+            if rtol < self._adapt_rtol_min and atol < self._adapt_atol_min:
                 # No way to find only one element despite low tolerance
                 return []
             # Factor not a divisor of the one above, to avoid infinite loops
-            if rtol >= rtol_min:
+            if rtol >= self._adapt_rtol_min:
                 rtol /= 3
-            if atol >= atol_min:
+            if atol >= self._adapt_atol_min:
                 atol /= 3
-            return pick_at_most_one(
-                pool, x, rtol, atol, rtol_min, rtol_max, atol_min, atol_max)
+            return pick_at_most_one(x, pool, rtol, atol)
         else:
             return i
-
-    # Let us renormalize the tolerance to the size of the numbers in the list
-    assert rtol_min <= rtol_max, f"{rtol_min=} must be smaller or equal to {rtol_max=}"
-    assert atol_min <= atol_max, f"{atol_min=} must be smaller or equal to {atol_max=}"
-    # TODO: move the adaptation of tolerance somewhere else (class) for smaller overhead
-    # TODO: right now, it does not use the fact that pool is usually passed sorted.
-    pool_sorted = np.sort(pool)
-    if len(pool) > 1:
-        differences = pool_sorted[1:] - pool_sorted[:-1]
-        min_difference = np.min(differences)
-        atol_min *= min_difference
-        atol_max *= min_difference
-        min_rel_difference = np.min(differences / pool_sorted[1:])
-        rtol_min *= min_rel_difference
-        rtol_max *= min_rel_difference
-    else:  # single-element list
-        atol_min *= pool[0]
-        atol_max *= pool[0]
-    target = np.atleast_1d(target)
-    # TODO: since we need the pool sorted anyway for atol above, we could take advantage
-    #       of the sorting in the loop, so avoid going over the pool every time.
-    indices = np.concatenate(
-        [pick_at_most_one(pool, x, None, None, rtol_min, rtol_max, atol_min, atol_max)
-         for x in target])
-    if len(indices) < len(target):
-        raise ValueError(f"Could not find some of {list(target)} in pool {list(pool)}. "
-                         "If there appear to be a values close to the target in the pool,"
-                         " increase max tolerances.")
-    return indices
-    """
-    Finds the indices of elements in array ``target`` into array ``pool``.
-
-    Calls ``numpy.isclose`` for robust comparison, using ``rtol``, ``atol`` provided.
-
-    Raises ValueError if not all elements were found.
-
-    TODO: right now, it does not use the fact that pool is usually sorted.
-    """
-
-    def pick_only_one(pool, x, rtol, atol):
-        """Reduces tolerances if more than one in pool coincides."""
-        global current_rtol, current_atol
-        i = np.where(pool == x)[0]
-        if len(i) > 1:
-            rtol /= 10
-            atol /= 10
-            return pick_only_one(pool, x, rtol, atol)
-        return i
-
-    indices = np.concatenate(
-        [pick_only_one(pool, x, rtol, atol) for x in target])
-    if len(indices) < len(target):
-        raise ValueError(f"Could not find some of {target} in pool {pool}.")
-    return indices

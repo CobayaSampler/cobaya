@@ -12,7 +12,7 @@ from typing import Mapping, Iterable, Callable
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible
+from cobaya.tools import deepcopy_where_possible, combine_1d
 from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.conventions import Const
 from cobaya.typing import empty_dict, InfoDict
@@ -165,8 +165,8 @@ class BoltzmannBase(Theory):
                     k = ("sigma_R",) + pair
                     current = self._must_provide.get(k, {})
                     self._must_provide[k] = {
-                        "R": self._combine_1d(v["R"], current.get("R")),
-                        "z": self._combine_1d(v["z"], current.get("z")),
+                        "R": combine_1d(v["R"], current.get("R")),
+                        "z": combine_1d(v["z"], current.get("z")),
                         "k_max": max(current.get("k_max", 0),
                                      v.get("k_max", 2 / np.min(v["R"])))}
             elif k in ("Pk_interpolator", "Pk_grid"):
@@ -183,7 +183,7 @@ class BoltzmannBase(Theory):
                         current = self._must_provide.get(k, {})
                         self._must_provide[k] = dict(
                             nonlinear=nonlinear,
-                            z=self._combine_1d(redshifts, current.get("z")),
+                            z=combine_1d(redshifts, current.get("z")),
                             k_max=max(current.get("k_max", 0), k_max), **v)
             elif k == "source_Cl":
                 if k not in self._must_provide:
@@ -208,7 +208,7 @@ class BoltzmannBase(Theory):
                        "sigma8_z", "fsigma8"]:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
-                self._must_provide[k]["z"] = self._combine_1d(
+                self._must_provide[k]["z"] = combine_1d(
                     v["z"], self._must_provide[k].get("z"))
             # Extra derived parameters and other unknown stuff (keep capitalization)
             elif v is None:
@@ -235,17 +235,10 @@ class BoltzmannBase(Theory):
                           "as extra arguments: %s. Please, remove one of the definitions "
                           "of each.", common)
 
-    def _combine_1d(self, new_list, old_list=None):
         """
-        Combines+sorts+uniquifies two lists of values. Sorting is in ascending order.
 
-        If `old_list` given, it is assumed to be a sorted and uniquified array (e.g. the
         output of this function when passed as first argument).
         """
-        new_list = np.atleast_1d(new_list)
-        if old_list is not None:
-            new_list = np.concatenate((old_list, new_list))
-        return np.unique(np.sort(new_list))
 
     def _cmb_unit_factor(self, units, T_cmb):
         units_factors = {"1": 1,
