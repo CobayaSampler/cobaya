@@ -180,7 +180,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, str_to_list, find_indices
+    VersionCheckError, str_to_list, Pool1D, combine_1d
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict
 
@@ -190,6 +190,7 @@ class Collector(NamedTuple):
     method: Callable
     args: list = []
     kwargs: dict = {}
+    z_pool: Optional[Pool1D] = None
 
 
 class CAMBOutputs(NamedTuple):
@@ -342,22 +343,14 @@ class CAMB(BoltzmannBase):
                     method=CAMBdata.get_cmb_power_spectra,
                     kwargs={"spectra": ["unlensed_total"], "raw_cl": False})
             elif k == "Hubble":
-                self.collectors[k] = Collector(
-                    method=CAMBdata.h_of_z,
-                    kwargs={"z": self._combine_z_for_collector(k, v["z"])})
-            elif k == "Omega_b":
-                self.collectors["Omega_b"] = Collector(
-                    method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z_for_collector(k, v["z"]), "var": "baryon"})
-            elif k == "Omega_cdm":
-                self.collectors["Omega_cdm"] = Collector(
-                    method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z_for_collector(k, v["z"]), "var": "cdm"})
-            elif k == "Omega_nu_massive":
-                self.collectors["Omega_nu_massive"] = Collector(
-                    method=CAMBdata.get_Omega,
-                    kwargs={"z": self._combine_z_for_collector(k, v["z"]), "var": "nu"})
+                self.set_collector_with_z_pool(k, v["z"], CAMBdata.h_of_z)
+            elif k in ["Omega_b", "Omega_cdm", "Omega_nu_massive"]:
+                varnames = {
+                    "Omega_b": "baryon", "Omega_cdm": "cdm", "Omega_nu_massive": "nu"}
+                self.set_collector_with_z_pool(
+                    k, v["z"], CAMBdata.get_Omega, kwargs={"var": varnames[k]})
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
+                self.set_collector_with_z_pool(k, v["z"], getattr(CAMBdata, k))
                 self.collectors[k] = Collector(
                     method=getattr(CAMBdata, k),
                     kwargs={"z": self._combine_z_for_collector(k, v["z"])})
@@ -484,12 +477,25 @@ class CAMB(BoltzmannBase):
         """
         Adds redshifts to the list of them for which CAMB computes perturbations.
         """
-        self.extra_args["redshifts"] = np.flip(self._combine_1d(
-            z, self.extra_args.get("redshifts", [])))
+        if not hasattr(self, "z_pool_for_perturbations"):
+            self.z_pool_for_perturbations = Pool1D(z)
+        else:
+            self.z_pool_for_perturbations.update(z)
+        self.extra_args["redshifts"] = np.flip(self.z_pool_for_perturbations.values)
 
-    def _combine_z_for_collector(self, k, zs):
-        c = self.collectors.get(k, None)
-        return self._combine_1d(zs, c.kwargs.get('z') if c is not None else None)
+    def set_collector_with_z_pool(self, k, zs, method, args=[], kwargs={}):
+        """
+        Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
+        """
+        if k in self.collectors:
+            z_pool = self.collectors[k].z_pool
+            z_pool.update(zs)
+        else:
+            z_pool = Pool1D(zs)
+        kwargs_with_z = {"z": z_pool.values}
+        kwargs_with_z.update(kwargs)
+        self.collectors[k] = Collector(
+            method=method, z_pool=z_pool, kwargs=kwargs_with_z, args=args)
         c = self.collectors.get(k, None)
         return self._combine_1d(v["z"], c.kwargs.get('z') if c is not None else None)
 
@@ -642,16 +648,19 @@ class CAMB(BoltzmannBase):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
     def _get_z_dependent(self, quantity, z):
-        if quantity in ["sigma8_z", "fsigma8"]:
-            computed_redshifts = self.extra_args["redshifts"]
-        else:
-            computed_redshifts = self.collectors[quantity].kwargs["z"]
         try:
-            i_kwarg_z = find_indices(computed_redshifts, np.atleast_1d(z))
+            if quantity in ["sigma8_z", "fsigma8"]:
+                pool = self.z_pool_for_perturbations
+                # Mind that CAMB stores redshifts for perturbations in inv order
+                i_kwarg_z_inv = pool.find_indices(z)
+                i_kwarg_z = len(pool) - 1 - i_kwarg_z_inv
+            else:
+                pool = self.collectors[quantity].z_pool
+                i_kwarg_z = pool.find_indices(z)
         except ValueError:
             raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
                                         f"Requested z are {z}, but computed ones are "
-                                        f"{computed_redshifts}.")
+                                        f"{pool.values}.")
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
     def get_Omega_b(self, z):
