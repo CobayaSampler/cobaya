@@ -144,7 +144,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, Pool1D
+from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND
 
 
 # Result collector
@@ -156,7 +156,7 @@ class Collector(NamedTuple):
     args_names: Sequence = []
     kwargs: dict = {}
     arg_array: Union[int, Sequence, None] = None
-    z_pool: Optional[Pool1D] = None
+    z_pool: Optional[PoolND] = None
     post: Optional[Callable] = None
 
 

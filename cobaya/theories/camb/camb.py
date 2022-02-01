@@ -180,7 +180,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, str_to_list, Pool1D, combine_1d
+    VersionCheckError, str_to_list, Pool1D, Pool2D, PoolND, check_2d
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict
 
@@ -190,7 +190,7 @@ class Collector(NamedTuple):
     method: Callable
     args: list = []
     kwargs: dict = {}
-    z_pool: Optional[Pool1D] = None
+    z_pool: Optional[PoolND] = None
 
 
 class CAMBOutputs(NamedTuple):
@@ -352,9 +352,9 @@ class CAMB(BoltzmannBase):
                     k, v["z"], CAMBdata.get_Omega, kwargs={"var": varnames[k]})
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.set_collector_with_z_pool(k, v["z"], getattr(CAMBdata, k))
-                self.collectors[k] = Collector(
-                    method=getattr(CAMBdata, k),
-                    kwargs={"z": self._combine_z_for_collector(k, v["z"])})
+            elif k == "angular_diameter_distance_2":
+                self.set_collector_with_z_pool(
+                    k, v["z_pairs"], CAMBdata.angular_diameter_distance2, d=2)
             elif k == "sigma8_z":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
@@ -484,7 +484,7 @@ class CAMB(BoltzmannBase):
             self.z_pool_for_perturbations.update(z)
         self.extra_args["redshifts"] = np.flip(self.z_pool_for_perturbations.values)
 
-    def set_collector_with_z_pool(self, k, zs, method, args=[], kwargs={}):
+    def set_collector_with_z_pool(self, k, zs, method, args=[], kwargs={}, d=1):
         """
         Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
         """
@@ -492,13 +492,12 @@ class CAMB(BoltzmannBase):
             z_pool = self.collectors[k].z_pool
             z_pool.update(zs)
         else:
-            z_pool = Pool1D(zs)
+            Pool = {1: Pool1D, 2: Pool2D}[d]
+            z_pool = Pool(zs)
         kwargs_with_z = {"z": z_pool.values}
         kwargs_with_z.update(kwargs)
         self.collectors[k] = Collector(
             method=method, z_pool=z_pool, kwargs=kwargs_with_z, args=args)
-        c = self.collectors.get(k, None)
-        return self._combine_1d(v["z"], c.kwargs.get('z') if c is not None else None)
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         try:
@@ -663,6 +662,20 @@ class CAMB(BoltzmannBase):
                                         f"Requested z are {z}, but computed ones are "
                                         f"{pool.values}.")
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
+
+    def _get_z_pair_dependent(self, quantity, z_pairs):
+        try:
+            z_pairs_sorted = check_2d(z_pairs)
+        except ValueError:
+            raise LoggedError(self.log, f"{z_pairs=} not correctly formatted for "
+                                        f"{quantity}. It should be a list of pairs.")
+        # Identify inverted pairs to add the sign later
+        i_flipped = (z_pairs == z_pairs_sorted)
+        pool = self.collectors[quantity].z_pool
+        i_z_pair = pool.find_indices(z_pairs_sorted)
+        results = np.array(self.current_state[quantity], copy=True)[i_z_pair]
+        results[i_flipped] *= -1
+        return results
 
     def get_Omega_b(self, z):
         return self._get_z_dependent("Omega_b", z)

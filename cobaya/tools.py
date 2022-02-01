@@ -1129,7 +1129,9 @@ class PoolND(object):
             # Assumes that the pool is sorted!
             values = self.values
         else:
-            values = combine_1d(np.flatten(self.values))
+            values = np.copy(self.values)
+            values.flatten()
+            values = combine_1d(values)
         if len(values) > 1:
             differences = values[1:] - values[:-1]
             min_difference = np.min(differences)
@@ -1266,7 +1268,7 @@ def check_2d(pairs):
     """
     Checks that the input is a pair (x1, x2) or a list of them.
 
-    Returns a list of pairs as a 2d array.
+    Returns a list of pairs as a 2d array with tuples sorted internally.
 
     Raises ``ValueError`` if the argument is badly formatted.
     """
@@ -1276,7 +1278,7 @@ def check_2d(pairs):
     return pairs
 
 
-def combine_2d(new_list, old_list=None):
+def combine_2d(new_pairs, old_pairs=None):
     """
     Combines+sorts+uniquifies two lists of pairs of values.
 
@@ -1289,12 +1291,10 @@ def combine_2d(new_list, old_list=None):
     Raises ``ValueError`` if the first argument is badly formatted (e.g. not a list
     of pairs of values).
     """
-    new_pairs = self.check_2d(new_pairs)
-    for i, pair in enumerate(new_pairs):
-        new_pairs[i] = np.sort(pair)
+    new_pairs = check_2d(new_pairs)
     if old_pairs is not None:
         new_pairs = np.concatenate((old_pairs, new_pairs))
-    return np.unique(np.sort(new_pairs))
+    return np.unique(np.sort(new_pairs), axis=0)
 
 
 class Pool2D(PoolND):
