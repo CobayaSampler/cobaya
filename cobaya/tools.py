@@ -32,7 +32,7 @@ import traceback
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
     packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic, \
     packages_path_input
-from cobaya.log import LoggedError, HasLogger, get_logger
+from cobaya.log import LoggedError, HasLogger, get_logger, abstract
 from cobaya.typing import Kind
 
 # Set up logger
@@ -1071,10 +1071,6 @@ def sort_cosmetic(info):
     return sorted_info
 
 
-    """
-    Finds the indices of elements in array ``target`` into array ``pool``.
-
-
 def combine_1d(new_list, old_list=None):
     """
     Combines+sorts+uniquifies two lists of values. Sorting is in ascending order.
@@ -1090,62 +1086,97 @@ def combine_1d(new_list, old_list=None):
     return np.unique(np.sort(new_list))
 
 
-class Pool1D(object):
+class PoolND(object):
     r"""
-    Stores a list of pairs ``(x, y)`` for later retrieval given some ``x``.
+    Stores a list of ``N``-tuples ``[x_1, x_2...]`` for later retrieval given some
+    ``N``-tuple ``x``.
 
-    ``x`` values are uniquified internally up to machine precision, and an adaptive
+    Tuples are sorted internally, and then by ascending order of their values.
+
+    Tuples are uniquified internally up to machine precision, and an adaptive
     tolerance (relative to min absolute and relative differences in the list) is
     applied at retrieving.
 
     Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
     """
 
+    values: np.ndarray
+
     def __init__(self, values=[],
-                 rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6):
+                 rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6, logger=None):
         assert rtol_min <= rtol_max, \
             f"{rtol_min=} must be smaller or equal to {rtol_max=}"
         assert atol_min <= atol_max, \
             f"{atol_min=} must be smaller or equal to {atol_max=}"
         self.atol_min, self.atol_max = atol_min, atol_max
         self.rtol_min, self.rtol_max = rtol_min, rtol_max
+        if logger is None:
+            self.log = get_logger(self.__class__.__name__)
+        else:
+            self.log = logger
         self.update(values)
+
+    @property
+    def d(self):
+        return len(self.values.shape)
 
     def __len__(self):
         return len(self.values)
 
-    def update(self, values):
-        """Adds a set of values, uniquifies and sorts."""
-        self.values = combine_1d(values, getattr(self, "values", None))
-        self._update_tolerances()
-
     def _update_tolerances(self):
         """Adapts tolerance to the differences in the list."""
-        # Assumes that the pool is sorted!
-        if len(self.values) > 1:
-            differences = self.values[1:] - self.values[:-1]
+        if self.d == 1:
+            # Assumes that the pool is sorted!
+            values = self.values
+        else:
+            values = combine_1d(np.flatten(self.values))
+        if len(values) > 1:
+            differences = values[1:] - values[:-1]
             min_difference = np.min(differences)
             self._adapt_atol_min = self.atol_min * min_difference
             self._adapt_atol_max = self.atol_max * min_difference
-            min_rel_difference = np.min(differences / self.values[1:])
+            min_rel_difference = np.min(differences / values[1:])
             self._adapt_rtol_min = self.rtol_min * min_rel_difference
             self._adapt_rtol_max = self.rtol_max *min_rel_difference
         else:  # single-element list
-            self._adapt_atol_min = self.atol_min * self.values[0]
-            self._adapt_atol_max = self.atol_max * self.values[0]
+            self._adapt_atol_min = self.atol_min * values[0]
+            self._adapt_atol_max = self.atol_max * values[0]
             self._adapt_rtol_min = self.rtol_min
             self._adapt_rtol_max = self.rtol_max
+
+    def update(self, values):
+        """Adds a set of values, uniquifies and sorts."""
+        values = self._check_values(values)
+        self._update_values(values)
+        self._update_tolerances()
+
+    @abstract
+    def _check_values(self, values):
+        """
+        Checks that the input values are correctly formatted and re-formats them if
+        necessary.
+
+        Returns a correctly formatted array.
+
+        Internal sorting is enforced, but external is is ignored.
+        """
+
+    @abstract
+    def _update_values(self, values):
+        """Combines given and existing pool. Should assign ``self.values``."""
 
     def find_indices(self, values):
         """
         Finds the indices of elements in array ``values`` in the pool.
+
+        For ``dim > 1`` it expects internally ascending-sorted pairs.
 
         Calls ``numpy.isclose`` for robust comparison, using adaptive ``rtol``, ``atol``
         limits.
 
         Raises ValueError if not all elements were found, each only once.
         """
-        values = np.atleast_1d(values)
+        values = self._check_values(values)
         # TODO: since the pool is sorted already, we could take advantage of the sorting,
         #       sort the target values (and save the indices to recover original order),
         #       and iterate only over the part of the pool starting where the last value
@@ -1159,7 +1190,16 @@ class Pool1D(object):
         return indices
 
     def _pick_at_most_one(self, x, pool=None, rtol=None, atol=None):
-        """Increases or reduces tolerance until only one element is found."""
+        """
+        Iterates over the pool (full pool if ``pool`` is ``None``) to find the index of a
+        single element ``x``, using the provided tolerances.
+
+        It uses the test function ``self._where_isclose(pool, x, rtol, atol)``, returning
+        an array of indices of matches.
+
+        Tolerances start at the minimum one, and, until an element is found, are
+        progressively increased until the maximum tolerance is reached.
+        """
         if pool is None:
             pool = self.values
         # Start with min tolerance for safety
@@ -1167,7 +1207,7 @@ class Pool1D(object):
             rtol = self._adapt_rtol_min
         if atol is None:
            atol = self._adapt_atol_min
-        i = np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0]
+        i = self._where_isclose(pool, x, rtol=rtol, atol=atol)
         if not len(i):  # none found
             # Increase tolerance (if allowed) until one found
             if rtol > self._adapt_rtol_max and atol > self._adapt_atol_max:
@@ -1191,3 +1231,89 @@ class Pool1D(object):
             return pick_at_most_one(x, pool, rtol, atol)
         else:
             return i
+
+    @abstract
+    def _where_isclose(self, pool, x, rtol, atol):
+        """
+        Returns an array of indices of matches.
+
+        E.g. in 1D it works as ``np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0]``.
+        """
+
+
+class Pool1D(PoolND):
+    r"""
+    Stores a list of values ``[x_1, x_2...]`` for later retrieval given some ``x``.
+
+    ``x`` values are uniquified internally up to machine precision, and an adaptive
+    tolerance (relative to min absolute and relative differences in the list) is
+    applied at retrieving.
+
+    Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
+    """
+
+    def _check_values(self, values):
+        return np.atleast_1d(values)
+
+    def _update_values(self, values):
+        self.values = combine_1d(values, getattr(self, "values", None))
+
+    def _where_isclose(self, pool, x, rtol, atol):
+        return np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0]
+
+
+def check_2d(pairs):
+    """
+    Checks that the input is a pair (x1, x2) or a list of them.
+
+    Returns a list of pairs as a 2d array.
+
+    Raises ``ValueError`` if the argument is badly formatted.
+    """
+    pairs = np.sort(np.atleast_2d(pairs), axis=-1)
+    if pairs.shape[1] != 2:
+        raise ValueError()  # more informative exception raised by caller
+    return pairs
+
+
+def combine_2d(new_list, old_list=None):
+    """
+    Combines+sorts+uniquifies two lists of pairs of values.
+
+    Pairs are internally sorted in ascending order, and with respect to each other in
+    ascending order of the first value.
+
+    If `old_pairs` given, it is assumed to be a sorted and uniquified array (e.g. the
+    output of this function when passed as first argument).
+
+    Raises ``ValueError`` if the first argument is badly formatted (e.g. not a list
+    of pairs of values).
+    """
+    new_pairs = self.check_2d(new_pairs)
+    for i, pair in enumerate(new_pairs):
+        new_pairs[i] = np.sort(pair)
+    if old_pairs is not None:
+        new_pairs = np.concatenate((old_pairs, new_pairs))
+    return np.unique(np.sort(new_pairs))
+
+
+class Pool2D(PoolND):
+    r"""
+    Stores a list of pairs ``[(x_1, y_1), (x_2, y_2)...]`` for later retrieval given some
+    ``(x, y)``.
+
+    Pairs are uniquified internally up to machine precision, and an adaptive
+    tolerance (relative to min absolute and relative differences in the list) is
+    applied at retrieving.
+
+    Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
+    """
+
+    def _update_values(self, values):
+        self.values = combine_2d(values, getattr(self, "values", None))
+
+    def _check_values(self, values):
+        return check_2d(values)
+
+    def _where_isclose(self, pool, x, rtol, atol):
+        return np.where(np.all(np.isclose(pool, x, rtol=rtol, atol=atol), axis=-1))[0]
