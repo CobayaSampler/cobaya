@@ -144,16 +144,19 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, find_indices
+from cobaya.tools import load_module, VersionCheckError, Pool1D
 
 
 # Result collector
+# NB: cannot use kwargs for the args, because the CLASS Python interface
+#     is C-based, so args without default values are not named.
 class Collector(NamedTuple):
     method: str
     args: Sequence = []
     args_names: Sequence = []
     kwargs: dict = {}
     arg_array: Union[int, Sequence, None] = None
+    z_pool: Optional[Pool1D] = None
     post: Optional[Callable] = None
 
 
@@ -226,22 +229,15 @@ class classy(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method="raw_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
             elif k == "Hubble":
-                self.collectors[k] = Collector(
-                    method="Hubble",
-                    args_names=["z"],
-                    args=[self._combine_z_for_collector(k, v)],
-                    arg_array=0)
+                self.set_collector_with_z_pool(
+                    k, v["z"], "Hubble", args_names=["z"], arg_array=0)
             elif k == "angular_diameter_distance":
-                self.collectors[k] = Collector(
-                    method="angular_distance",
-                    args_names=["z"],
-                    args=[self._combine_z_for_collector(k, v)],
-                    arg_array=0)
+                self.set_collector_with_z_pool(
+                    k, v["z"], "angular_distance", args_names=["z"], arg_array=0)
             elif k == "comoving_radial_distance":
-                self.collectors[k] = Collector(
-                    method="z_of_r",
-                    args_names=["z"],
-                    args=[self._combine_z_for_collector(k, v)])
+                self.set_collector_with_z_pool(k, v["z"], "z_of_r", args_names=["z"],
+                                               # returns r and dzdr!
+                                               post=(lambda r, dzdr: r))
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
@@ -300,6 +296,37 @@ class classy(BoltzmannBase):
         self.z_for_matter_power = np.flip(self._combine_1d(z, self.z_for_matter_power))
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
+    def set_collector_with_z_pool(self, k, zs, method, args=[], args_names=[], kwargs={},
+                                  arg_array=None, post=None):
+        """
+        Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
+
+        If ``z`` is an arg, i.e. it is in ``args_names``, then omit it in the ``args``,
+        e.g. ``args_names=["a", "z", "b"]`` should be passed together with
+        ``args=[a_value, b_value]``.
+        """
+        if k in self.collectors:
+            z_pool = self.collectors[k].z_pool
+            z_pool.update(zs)
+        else:
+            z_pool = Pool1D(zs)
+        # Insert z as arg or kwarg
+        if "z" in kwargs:
+            kwargs = deepcopy(kwargs)
+            kwargs["z"] = z_pool.values
+        elif "z" in args_names:
+            args = deepcopy(args)
+            i_z = args_names.index("z")
+            args = args[:i_z] + [z_pool.values] + args[i_z:]
+        else:
+            raise LoggedError(
+                self.logger,
+                f"I do not know how to insert the redshift for collector method {method} "
+                f"of requisite {k}")
+        self.collectors[k] = Collector(
+            method=method, z_pool=z_pool, args=args, args_names=args_names, kwargs=kwargs,
+            arg_array=arg_array, post=post)
+
     def add_P_k_max(self, k_max, units):
         r"""
         Unifies treatment of :math:`k_\mathrm{max}` for matter power spectrum:
@@ -329,15 +356,6 @@ class classy(BoltzmannBase):
         # Generate and save
         self.log.debug("Setting parameters: %r", args)
         self.classy.set(**args)
-
-    def _combine_z_for_collector(self, k, v, arg_name="z"):
-        c = self.collectors.get(k, None)
-        if c is None:
-            old_zs = None
-        if c is not None:
-            i_arg = c.args_names.index(arg_name)
-            old_zs = c.args[i_arg]
-        return self._combine_1d(v["z"], old_zs)
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         # Set parameters
@@ -392,6 +410,9 @@ class classy(BoltzmannBase):
                     kwargs[arg_array] = v
                     state[product][i] = method(
                         *self.collectors[product].args, **kwargs)
+            else:
+                raise LoggedError(self.logger, "Variable over which to do an array call "
+                                               f"not known: {arg_array=}")
             if collector.post:
                 state[product] = collector.post(*state[product])
         # Prepare derived parameters
@@ -465,23 +486,14 @@ class classy(BoltzmannBase):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
     def _get_z_dependent(self, quantity, z):
+        pool = self.collectors[quantity].z_pool
         try:
-            z_name = next(k for k in ["redshifts", "z"]
-                          if k in self.collectors[quantity].kwargs)
-            computed_redshifts = self.collectors[quantity].kwargs[z_name]
-        except StopIteration:
-            computed_redshifts = self.collectors[quantity].args[
-                self.collectors[quantity].args_names.index("z")]
-        try:
-            i_kwarg_z = find_indices(computed_redshifts, np.atleast_1d(z))
+            i_kwarg_z = pool.find_indices(z)
         except ValueError:
             raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
                                         f"Requested z are {z}, but computed ones are "
-                                        f"{computed_redshifts}.")
-        values = np.array(self.current_state[quantity], copy=True)
-        if quantity == "comoving_radial_distance":
-            values = values[0]
-        return values[i_kwarg_z]
+                                        f"{pool.values}.")
+        return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
     def close(self):
         self.classy.empty()
