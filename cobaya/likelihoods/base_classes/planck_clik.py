@@ -115,6 +115,11 @@ class PlanckClik(Likelihood):
     def logp(self, **params_values):
         # get Cl's from the theory code
         cl = self.provider.get_Cl(units="FIRASmuK2")
+        for cl_key, cl_array in cl.items():
+            if cl_key != 'ell':
+                if np.any(np.isnan(cl_array)):
+                    self.log.error("nans in cl['%s']: returning logzero and carrying on." % cl_key)
+                    return -np.inf
         return self.log_likelihood(cl, **params_values)
 
     def log_likelihood(self, cl, **params_values):
