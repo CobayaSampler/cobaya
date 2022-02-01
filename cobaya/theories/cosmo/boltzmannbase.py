@@ -9,10 +9,11 @@
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 from typing import Mapping, Iterable, Callable
+from itertools import chain
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible, combine_1d
+from cobaya.tools import deepcopy_where_possible, combine_1d, combine_2d
 from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.conventions import Const
 from cobaya.typing import empty_dict, InfoDict
@@ -23,6 +24,7 @@ H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 class BoltzmannBase(Theory):
     _is_abstract = True
     _get_z_dependent: Callable  # defined by inheriting classes
+    _get_z_pair_dependent: Callable  # defined by inheriting classes
     renames: Mapping[str, str] = empty_dict
     extra_args: InfoDict
     _must_provide: dict
@@ -128,6 +130,11 @@ class BoltzmannBase(Theory):
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
           diameter distance to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_angular_diameter_distance`.
+        - ``angular_diameter_distance_2={'z_pairs': [(z_1a, z_1b), (z_2a, z_2b)...]}``:
+          Physical angular diameter distance between the pairs of redshifts requested.
+          If a 1d array of redshifts is passed as `z_pairs`, all possible combinations
+          of two are computed an stored (not recommended if only a subset is needed).
+          Get it with :func:`~BoltzmannBase.get_angular_diameter_distance_2`.
         - ``comoving_radial_distance={'z': [z_1, ...]}``: Comoving radial distance
           from us to the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_comoving_radial_distance`.
@@ -210,6 +217,30 @@ class BoltzmannBase(Theory):
                     self._must_provide[k] = {}
                 self._must_provide[k]["z"] = combine_1d(
                     v["z"], self._must_provide[k].get("z"))
+            elif k == "angular_diameter_distance_2":
+                if k not in self._must_provide:
+                    self._must_provide[k] = {}
+                zs = np.array(v.pop("z_pairs"))
+                # If 1d array, add all possible combinations
+                if len(zs.shape) == 1:
+                    pairs = list(chain(*[[[z_i, z_j] for z_j in zs[i + 1:]]
+                                         for i, z_i in enumerate(zs)]))
+                elif len(zs.shape) == 2:
+                    pairs = zs
+                else:
+                    raise LoggedError(
+                        self.log, "Requisite `angular_diameter_distance_2` must include "
+                                  "a `z_pairs` property, containing a list of redshifts "
+                                  "or redshift pairs.")
+                # Combine pairs with previous ones and uniquify
+                try:
+                    self._must_provide[k]["z_pairs"] = combine_2d(
+                        pairs, self._must_provide[k].get("z_pairs"))
+                except ValueError:
+                    raise LoggedError(
+                        self.log, "For requisite `angular_diameter_distance2`, `z_pairs` "
+                                  "must be a list of pairs (z1, z2), but is "
+                                  f"{v['z_pairs']}")
             # Extra derived parameters and other unknown stuff (keep capitalization)
             elif v is None:
                 self._must_provide[k] = None
@@ -329,6 +360,17 @@ class BoltzmannBase(Theory):
         :func:`~BoltzmannBase.must_provide` was called.
         """
         return self._get_z_dependent("angular_diameter_distance", z)
+
+    @abstract
+    def get_angular_diameter_distance_2(self, z_pairs):
+        r"""
+        Returns the physical angular diameter distance between pairs of redshifts
+        `z_pairs` in :math:`\mathrm{Mpc}`.
+
+        The redshifts pairs must be a subset of those requested when
+        :func:`~BoltzmannBase.must_provide` was called.
+        """
+        return self._get_z_pair_dependent("angular_diameter_distance_2", z_pairs)
 
     def get_comoving_radial_distance(self, z):
         r"""
