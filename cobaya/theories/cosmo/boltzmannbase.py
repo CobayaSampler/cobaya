@@ -361,7 +361,6 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("angular_diameter_distance", z)
 
-    @abstract
     def get_angular_diameter_distance_2(self, z_pairs):
         r"""
         Returns the physical angular diameter distance between pairs of redshifts

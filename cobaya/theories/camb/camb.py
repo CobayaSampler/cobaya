@@ -494,7 +494,11 @@ class CAMB(BoltzmannBase):
         else:
             Pool = {1: Pool1D, 2: Pool2D}[d]
             z_pool = Pool(zs)
-        kwargs_with_z = {"z": z_pool.values}
+        if d == 1:
+            kwargs_with_z = {"z": z_pool.values}
+        else:
+            kwargs_with_z = {"z1": np.array(z_pool.values[:, 0]),
+                             "z2": np.array(z_pool.values[:, 1])}
         kwargs_with_z.update(kwargs)
         self.collectors[k] = Collector(
             method=method, z_pool=z_pool, kwargs=kwargs_with_z, args=args)
@@ -670,11 +674,12 @@ class CAMB(BoltzmannBase):
             raise LoggedError(self.log, f"{z_pairs=} not correctly formatted for "
                                         f"{quantity}. It should be a list of pairs.")
         # Identify inverted pairs to add the sign later
-        i_flipped = (z_pairs == z_pairs_sorted)
+        # (since outer sorting not changed, it is enough to look at the 1st element)
+        i_flip = (np.array(z_pairs)[:, 0] != z_pairs_sorted[:, 0])
         pool = self.collectors[quantity].z_pool
         i_z_pair = pool.find_indices(z_pairs_sorted)
         results = np.array(self.current_state[quantity], copy=True)[i_z_pair]
-        results[i_flipped] *= -1
+        results[i_flip] *= -1
         return results
 
     def get_Omega_b(self, z):
@@ -856,7 +861,7 @@ class CAMB(BoltzmannBase):
     def is_installed(cls, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = get_logger(cls.__name__)
+        log = get_logger(cls.__name__, color=cls._logger_color)
         import platform
         check = kwargs.get("check", True)
         func = log.info if check else log.error
