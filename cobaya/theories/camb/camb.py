@@ -686,9 +686,6 @@ class CAMB(BoltzmannBase):
     def get_Omega_nu_massive(self, z):
         return self._get_z_dependent("Omega_nu_massive", z)
 
-    def get_sigma8_z(self, z):
-        return self._get_z_dependent("sigma8_z", z)
-
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 

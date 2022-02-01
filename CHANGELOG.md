@@ -9,6 +9,10 @@
 
 - Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
 
+#### CLASS
+
+- Added support for `sigma8(z)`.
+
 #### BAO
 
 - Added Boss DR16 likelihood (#185, by @Pablo-Lemos)
