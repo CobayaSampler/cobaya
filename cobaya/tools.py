@@ -1139,7 +1139,7 @@ class PoolND(object):
             self._adapt_atol_max = self.atol_max * min_difference
             min_rel_difference = np.min(differences / values[1:])
             self._adapt_rtol_min = self.rtol_min * min_rel_difference
-            self._adapt_rtol_max = self.rtol_max *min_rel_difference
+            self._adapt_rtol_max = self.rtol_max * min_rel_difference
         else:  # single-element list
             self._adapt_atol_min = self.atol_min * values[0]
             self._adapt_atol_max = self.atol_max * values[0]
@@ -1186,7 +1186,7 @@ class PoolND(object):
         indices = np.concatenate([self._pick_at_most_one(x, None, None) for x in values])
         if len(indices) < len(values):
             raise ValueError(
-                f"Could not find some of {list(values)} in pool {list(pool)}. "
+                f"Could not find some of {list(values)} in pool {list(self.values)}. "
                 "If there appear to be a values close to the values in the pool,"
                 " increase max tolerances.")
         return indices
@@ -1208,7 +1208,7 @@ class PoolND(object):
         if rtol is None:
             rtol = self._adapt_rtol_min
         if atol is None:
-           atol = self._adapt_atol_min
+            atol = self._adapt_atol_min
         i = self._where_isclose(pool, x, rtol=rtol, atol=atol)
         if not len(i):  # none found
             # Increase tolerance (if allowed) until one found
@@ -1230,7 +1230,7 @@ class PoolND(object):
                 rtol /= 3
             if atol >= self._adapt_atol_min:
                 atol /= 3
-            return pick_at_most_one(x, pool, rtol, atol)
+            return self._pick_at_most_one(x, pool, rtol, atol)
         else:
             return i
 
