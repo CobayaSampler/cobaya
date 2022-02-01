@@ -235,11 +235,6 @@ class BoltzmannBase(Theory):
                           "as extra arguments: %s. Please, remove one of the definitions "
                           "of each.", common)
 
-        """
-
-        output of this function when passed as first argument).
-        """
-
     def _cmb_unit_factor(self, units, T_cmb):
         units_factors = {"1": 1,
                          "muK2": T_cmb * 1.e6,
