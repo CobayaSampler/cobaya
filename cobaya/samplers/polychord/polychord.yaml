@@ -16,8 +16,6 @@ num_repeats: 2d
 # Number of prior samples drawn before starting compression
 # Can be in units of nlive (but not dimension) as Xnlive
 nprior: 10nlive
-# Number of failed spawns before stopping nested sampling.
-nfail : nlive
 # Whether to check for and explore multi-modality on the posterior
 do_clustering: True
 # Stopping criterion: fraction of the total evidence contained in the live points
@@ -29,36 +27,20 @@ max_ndead: .inf
 compression_factor: 0.36787944117144233  # = exp(-1)
 # Callback function -- see documentation
 callback_function:
-# The loglikelihood value at which PolyChord considers points
-# 'invalid', and excludes them at the prior level.
+# Numerical value of log(0) sent to PolyChord's Fortran code
 # If null: `numpy.nan_to_num(-numpy.inf)`
+# NB: smaller values tend to produce errors when using `ifort`
 logzero: -1e30
-# The loglikelihood value at which PolyChord considers points
-# 'unphysical', but will still rejection sample from the prior to
-# generate nprior points larger than this value.
-# If null: `numpy.nan_to_num(-numpy.inf)`
-logalmostzero: -1e30
 # Increase number of posterior samples
 boost_posterior: 0  # increase up to `num_repeats`
 # Verbosity during the sampling process. Set to one of [0,1,2,3]
 feedback:  # default: Same as global `verbosity`
-# Parallelise with synchronous workers, rather than asynchronous ones.
-# This can be set to False if the likelihood speed is known to be
-# approximately constant across the parameter space. Synchronous
-# parallelisation is less effective than asynchronous by a factor ~O(1)
-# for large parallelisation.
-synchronous : True
-# Variable number of live points option. This dictionary is a mapping
-# between loglike contours and nlive.
-# You should still set nlive to be a sensible number, as this indicates
-# how often to update the clustering, and to define the default value.
-nlives : {}
 # Exploiting speed hierarchy
 # --------------------------
 # whether to measure actual speeds for your machine/threading at starting rather
 # than using stored values
 measure_speeds: True
-# #Amount of oversampling of each parameter block, relative to their speeds
+# Amount of oversampling of each parameter block, relative to their speeds
 # Value from 0 (no oversampling) to 1 (spend the same amount of time in all blocks)
 # Can be larger than 1 if extra oversampling of fast blocks required.
 oversample_power: 0.4
@@ -75,7 +57,7 @@ blocking:
 confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
 # Seeding runs
 # ------------
-seed:  # positive integer
+seed:  # postitive integer
 # Raw output of PolyChord (no need to change them, normally)
 # ----------------------------------------------------------
 file_root:

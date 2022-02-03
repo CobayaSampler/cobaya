@@ -136,15 +136,13 @@ class polychord(Sampler):
             int(o * read_dnumber(self.num_repeats, dim_block))
             for o, dim_block in zip(oversampling_factors, self.grade_dims)]
         # Assign settings
-        pc_args = ["nlive", "num_repeats", "nprior", "nfail", "do_clustering",
-                   "feedback", "precision_criterion", "logzero",
-                   "logalmostzero", "max_ndead", "boost_posterior",
-                   "posteriors", "equals", "cluster_posteriors",
-                   "write_resume", "write_paramnames", "read_resume",
-                   "write_stats", "write_live", "write_dead", "write_prior",
-                   "maximise", "compression_factor", "synchronous", "base_dir",
-                   "file_root", "seed", "grade_dims", "grade_frac", "nlives"]
-
+        pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
+                   "precision_criterion", "max_ndead", "boost_posterior", "feedback",
+                   "logzero", "posteriors", "equals", "compression_factor",
+                   "cluster_posteriors", "write_resume", "read_resume", "write_stats",
+                   "write_live", "write_dead", "base_dir", "grade_frac", "grade_dims",
+                   "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
+                   "grade_dims"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
         settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
