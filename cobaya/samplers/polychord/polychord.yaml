@@ -16,6 +16,8 @@ num_repeats: 2d
 # Number of prior samples drawn before starting compression
 # Can be in units of nlive (but not dimension) as Xnlive
 nprior: 10nlive
+# Number of failed spawns before stopping nested sampling.
+nfail : nlive
 # Whether to check for and explore multi-modality on the posterior
 do_clustering: True
 # Stopping criterion: fraction of the total evidence contained in the live points
@@ -71,7 +73,7 @@ blocking:
 confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
 # Seeding runs
 # ------------
-seed:  # postitive integer
+seed:  # positive integer
 # Raw output of PolyChord (no need to change them, normally)
 # ----------------------------------------------------------
 file_root:
