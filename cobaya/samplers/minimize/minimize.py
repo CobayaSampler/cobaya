@@ -6,12 +6,10 @@ r"""
 
 This is a **maximizer** for posteriors or likelihoods, based on
 `scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
-and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_
-(added in 2.0).
+and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_.
 
-.. note::
-
-   BOBYQA tends to work better on Cosmological problems with the default settings.
+The default is BOBYQA, which tends to work better on Cosmological problems with default
+settings.
 
 .. |br| raw:: html
 
@@ -36,23 +34,29 @@ and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/i
    **If you use scipy**, you can find `the appropriate references here
    <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
-It works more effectively when run on top of a Monte Carlo sample: just change the sampler
-for ``Minimize`` with the desired options, and it will use as a starting point the
-*maximum a posteriori* (MAP) or best fit (maximum likelihood, or minimal :math:`\chi^2`)
-found so far, as well as the covariance matrix of the sample for rescaling of the
-parameter jumps.
+It works more effectively when run on top of a Monte Carlo sample: it will use the maximum
+a posteriori as a starting point (or the best fit, depending on whether the prior is
+ignored, :ref:`see below <minimize_like>`), and the recovered covariance matrix of the
+posterior to rescale the variables.
 
-As text output, it produces two different files:
+To take advantage of a previous run with a Monte Carlo sampler, either:
+
+- change the ``sampler`` to ``minimize`` in the input file,
+
+- or, if running from the shell, repeat the ``cobaya-run`` command used for the original
+  run, adding the ``--minimize`` flag.
+
+When called from a Python script, Cobaya's ``run`` function returns the updated info
+and the products described below in the method
+:func:`samplers.minimize.Minimize.products` (see below).
+
+If text output is requested, it produces two different files:
 
 - ``[output prefix].minimum.txt``, in
   :ref:`the same format as Cobaya samples <output_format>`,
   but containing a single line.
 
 - ``[output prefix].minimum``, the equivalent **GetDist-formatted** file.
-
-If ``ignore_prior: True``, those files are named ``.bestfit[.txt]`` instead of ``minimum``,
-and contain the best-fit (maximum of the likelihood) instead of the MAP
-(maximum of the posterior).
 
 .. warning::
 
@@ -61,10 +65,6 @@ and contain the best-fit (maximum of the likelihood) instead of the MAP
    :math:`-2` times the log-**posterior**. The actual log-likelihood can be obtained as
    :math:`-2` times the sum of the individual :math:`\chi^2` (``chi2__``, with double
    underscore) in the table that follows these first lines.
-
-When called from a Python script, Cobaya's ``run`` function returns the updated info
-and the products described below in the method
-:func:`products <samplers.Minimize.Minimize.products>`.
 
 It is recommended to run a couple of parallel MPI processes:
 it will finally pick the best among the results.
@@ -76,6 +76,18 @@ it will finally pick the best among the results.
    converge in a limited amount of time. If your posterior is fast to evaluate, you may
    want to refine the convergence parameters (see ``override`` options in the ``yaml``
    below).
+
+
+.. _minimize_like:
+
+Maximizing the likelihood instead of the posterior
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To maximize the likelihood, add ``ignore_prior: True`` in the ``minimize`` input block.
+
+When producing text output, the generated files are named ``.bestfit[.txt]`` instead of
+``minimum``, and contain the best-fit (maximum of the likelihood) instead of the MAP
+(maximum of the posterior).
 
 """
 

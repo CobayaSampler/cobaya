@@ -58,6 +58,12 @@ The third file, ending in ``.txt``, contains the MCMC sample, and its first line
        10.0      4.232834  0.705346 -0.314669   1.598046  -1.356208       2.221210          2.221210  4.023248        4.023248
         2.0      4.829217 -0.121871  0.693151  -1.017847   2.041657       2.411930          2.411930  4.834574        4.834574
 
+You can run a posterior maximization process on top of the Monte Carlo sample (using its maximum as starting point) by repeating the shell command with a ``--minimize`` flag:
+
+.. code:: bash
+
+   $ cobaya-run gaussian.yaml --minimize
+
 You can use `GetDist <https://getdist.readthedocs.io/en/latest/index.html>`_ to analyse the results of this sample: get marginalized statistics, convergence diagnostics and some plots. We recommend using the `graphical user interface <https://getdist.readthedocs.io/en/latest/gui.html>`_. Simply run ``getdist-gui`` from anywhere, press the green ``+`` button, navigate in the pop-up window into the folder containing the chains (here ``chains``) and click ``choose``. Now you can get some result statistics from the ``Data`` menu, or generate some plots like this one (just mark the the options in the red boxes and hit ``Make plot``):
 
 .. image:: img/example_quickstart_getdistgui.png
@@ -125,6 +131,13 @@ The ``run`` function returns two variables:
 
 - An information dictionary updated with the defaults, equivalent to the ``updated`` yaml file produced by the shell invocation.
 - A sampler object, with a ``sampler.products()`` being a dictionary of results. For the ``mcmc`` sampler, the dictionary contains only one chain under the key ``sample``.
+
+.. note::
+
+   To run a posterior maximization process after the Monte Carlo run, the simplest way is to repeat the ``run`` call with a ``minimize=True`` flag, saving the return values with a different name:
+
+   .. literalinclude:: ./src_examples/quickstart/run_min.py
+      :language: python
 
 Let's now analyse the chain and get some plots, using the interactive interface to GetDist instead of the GUI used above:
 

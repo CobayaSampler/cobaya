@@ -2,6 +2,7 @@
 
 - Documented uses of `Model` class in general contexts (previously only cosmo)
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
+- Added ``--minimize`` flag to ``cobaya-run`` for quick minimization (replaces sampler, uses previous output).
 
 ### Cosmological likelihoods and theory codes
 

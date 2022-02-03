@@ -36,6 +36,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         debug: Union[bool, int, None] = None,
         stop_at_error: Optional[bool] = None,
         resume: bool = False, force: bool = False,
+        minimize: Optional[bool] = None,
         no_mpi: bool = False, test: bool = False,
         override: Optional[InputDict] = None,
         ) -> Union[InfoSamplerTuple, PostTuple]:
@@ -77,6 +78,9 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             info["resume"] = bool(resume)
             info["force"] = bool(force)
         if info.get("post"):
+            if minimize:
+                raise ValueError(
+                    "``minimize`` option is incompatible with post-processing.")
             if isinstance(output, str) or output is False:
                 info["post"]["output"] = output or None
             return post(info)
@@ -94,6 +98,11 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         # GetDist needs to know the original sampler, so don't overwrite if minimizer
         try:
             which_sampler = list(info["sampler"])[0]
+            if minimize:
+                # Preserve options if "minimize" was already the sampler
+                if which_sampler.lower() != "minimize":
+                    info["sampler"] = {"minimize": None}
+                    which_sampler = "minimize"
         except (KeyError, TypeError):
             raise LoggedError(
                 logger_run, "You need to specify a sampler using the 'sampler' key "
@@ -192,6 +201,9 @@ def run_script(args=None):
                                    "(use with care!)")
     parser.add_argument("--%s" % "test", action="store_true",
                         help="Initialize model and sampler, and exit.")
+    parser.add_argument("--minimize", action="store_true",
+                        help=("Replaces the sampler in the input and runs a minimization "
+                              "process (incompatible with post-processing)."))
     parser.add_argument("--version", action="version", version=get_version())
     parser.add_argument("--no-mpi", action='store_true',
                         help="disable MPI when mpi4py installed but MPI does "
