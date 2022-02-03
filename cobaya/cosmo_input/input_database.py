@@ -9,7 +9,7 @@
 
 # Global
 from copy import deepcopy
-from cobaya.typing import InfoDict, InputDict
+from cobaya.typing import InfoDict
 
 none = "(None)"
 error_msg = "error_msg"
@@ -421,8 +421,8 @@ like_cmb: InfoDict = {
             "planck_2018_lowl.EE": None,
             "planck_2018_highl_plik.TTTEEE": None,
             "planck_2018_lensing.clik": None}},
-    "planck_2018_bk15": {
-        "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
+    "planck_2018_bk18": {
+        "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2018",
         "sampler": cmb_sampler_recommended,
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
@@ -431,7 +431,7 @@ like_cmb: InfoDict = {
             "planck_2018_lowl.EE": None,
             "planck_2018_highl_plik.TTTEEE": None,
             "planck_2018_lensing.clik": None,
-            "bicep_keck_2015": None}},
+            "bicep_keck_2018": None}},
     "planck_2018_CMBmarged_lensing": {
         "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
@@ -479,10 +479,22 @@ for name, m in like_cmb.items():
 
 like_bao = {none: {},
             'BAO_planck_2018': {
-                'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF',
+                'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF '
+                        '(Planck 2018 papers)',
                 'theory': theory,
                 'likelihood': {'bao.sixdf_2011_bao': None, 'bao.sdss_dr7_mgs': None,
-                               'bao.sdss_dr12_consensus_bao': None}}}
+                               'bao.sdss_dr12_consensus_bao': None}},
+            'BAO_planck_latest': {
+                'desc': 'Baryon acoustic oscillation data from BOSS DR12, eBOSS DR16, '
+                        'MGS and 6DF',
+                'theory': theory,
+                'likelihood': {'bao.sixdf_2011_bao': None, 'bao.sdss_dr7_mgs': None,
+                               'bao.sdss_dr16_baoplus_lrg': None,
+                               'bao.sdss_dr16_baoplus_elg': None,
+                               'bao.sdss_dr16_baoplus_qso': None,
+                               'bao.sdss_dr16_baoplus_lyauto': None,
+                               'bao.sdss_dr16_baoplus_lyxqso': None,
+                               }}}
 
 like_des: InfoDict = \
     {none: {},
@@ -574,15 +586,15 @@ preset: InfoDict = dict([
         "theory": "classy",
         "like_cmb": "planck_2018"}),
     ("planck_2018_bicep_camb", {
-        "desc": "Planck 2018 + BK15 (with tensor modes) with CAMB",
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CAMB",
         "theory": "camb",
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2018_bk15"}),
+        "like_cmb": "planck_2018_bk18"}),
     ("planck_2018_bicep_classy", {
-        "desc": "Planck 2018 + BK15 (with tensor modes) with CLASS",
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CLASS",
         "theory": "classy",
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2018_bk15"}),
+        "like_cmb": "planck_2018_bk18"}),
     # CMB+BAO ######################################################
     ("planck_2018_BAO_camb", {
         "desc": "Planck 2018 + BAO with CAMB",
@@ -594,32 +606,43 @@ preset: InfoDict = dict([
         "theory": "classy",
         "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018"}),
+    ("planck_BAO_latest_camb", {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest"}),
+    ("planck_BAO_latest_classy", {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest"}),
+
     # CMB+BAO+SN ###################################################
     ("planck_2018_BAO_SN_camb", {
         "desc": "Planck 2018 + BAO + SN with CAMB",
         "theory": "camb",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_sn": "Pantheon"}),
     ("planck_2018_BAO_SN_classy", {
         "desc": "Planck 2018 + BAO + SN with CLASS",
         "theory": "classy",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_sn": "Pantheon"}),
     # CMB+DES+BAO+SN ###################################################
     ("planck_2018_DES_BAO_SN_camb", {
         "desc": "Planck 2018 + DESjoint + BAO + SN with CAMB",
         "theory": "camb",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}),
     ("planck_2018_DES_BAO_SN_classy", {
         "desc": "Planck 2018 + DESjoint + BAO + SN with CLASS",
         "theory": "classy",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}),
 ])
@@ -679,12 +702,12 @@ for name, pre in preset.items():
         pre.update(default_sampler)
 
 # BASIC INSTALLATION #####################################################################
-install_basic: InputDict = {
+install_basic: InfoDict = {
     "theory": theory,
     "likelihood": {
         "planck_2018_lowl.TT": None,
         "planck_2018_lensing.native": None,
-        "bicep_keck_2015": None,
+        "bicep_keck_2018": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}

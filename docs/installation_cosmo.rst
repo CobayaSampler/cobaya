@@ -12,7 +12,7 @@ To install a comprehensive set of cosmology requisites (CAMB, CLASS, Planck, BIC
 
 .. code:: bash
 
-   $ cobaya-install cosmo -m /path/to/packages
+   $ cobaya-install cosmo -p /path/to/packages
 
 If this fails (see last printed message), keep on reading this section. Otherwise, you can go straight to :doc:`cosmo_basic_runs`.
 
@@ -77,7 +77,7 @@ Within ``/path/to/packages``, the following file structure will be created, cont
             │   └── [...]
             └── data
                 ├── planck_2018
-                ├── bicep_keck_2015
+                ├── bicep_keck_2018
                 └── [...]
 
 .. note::

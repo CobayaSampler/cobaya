@@ -1,3 +1,23 @@
+## 3.X.Y – YYYY-MM-DD
+
+- Documented uses of `Model` class in general contexts (previously only cosmo)
+- `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
+
+### Cosmological likelihoods and theory codes
+
+#### CAMB
+
+- Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
+
+#### BAO
+
+- Added Boss DR16 likelihood (#185, by @Pablo-Lemos)
+
+#### BICEP-Keck
+
+- Bugfix in decorrelation function #196 (by Caterina Umilta, @umilta)
+- Updated to 2021 data release (2018 data) and bugfix, #204 and #209 (by Dominic Beck, @doicbek)
+
 ## 3.1.1 – 2021-07-22
 
 - Changes for compatibility with Pandas 1.3 (which broke convergence testing amongst other things).

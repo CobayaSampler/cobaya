@@ -1,0 +1,15 @@
+[model] *WARNING* Ignored blocks/options: ['sampler', 'output']
+[prior] *WARNING* External prior 'Jacobian' loaded. Mind that it might not be normalized!
+[prior] *WARNING* External prior 'x_eq_y_band' loaded. Mind that it might not be normalized!
+[ring] Initialized external likelihood.
+
+Our random point is: {'r': 0.9575006006293434, 'theta': 0.6806752574101642}
+The log-priors are: {'0': -1.1448595398334294, 'Jacobian': -0.04342893063840127, 'x_eq_y_band': 0.1737251456633886}
+The log-likelihood and derived parameters are: ({'ring': 0.7353357886402638}, {'x': 0.7441196235009879, 'y': 0.6025723077990734})
+The log-posterior is: -0.2792275361681782
+
+You can also get all that information at once!
+logpost : -0.2792275361681782
+logpriors : {'0': -1.1448595398334294, 'Jacobian': -0.04342893063840127, 'x_eq_y_band': 0.1737251456633886}
+loglikes : {'ring': 0.7353357886402638}
+derived : {'x': 0.7441196235009879, 'y': 0.6025723077990734}

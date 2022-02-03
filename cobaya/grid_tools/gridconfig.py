@@ -14,7 +14,7 @@ import argparse
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
-from cobaya.conventions import Extension
+from cobaya.conventions import Extension, packages_path_input
 from cobaya.input import get_used_components, merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.tools import sort_cosmetic, warn_deprecation
@@ -116,7 +116,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         # Requisites
         components_used = get_used_components(components_used, combined_info)
         if install_reqs_at:
-            combined_info["packages_path"] = os.path.abspath(install_reqs_at)
+            combined_info[packages_path_input] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
         # we need to install to add auto covmats
         if jobItem.param_set not in infos:
@@ -138,7 +138,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         except KeyError:
             raise ValueError("No sampler has been chosen")
         if sampler == "mcmc" and info["sampler"][sampler].get("covmat", "auto"):
-            packages_path = install_reqs_at or info.get("packages_path", None)
+            packages_path = install_reqs_at or info.get(packages_path_input, None)
             if not packages_path:
                 raise ValueError("Cannot assign automatic covariance matrices because no "
                                  "external packages path has been defined.")

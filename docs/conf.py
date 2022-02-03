@@ -33,6 +33,7 @@ sys.path.insert(-1, os.path.abspath('../cobaya'))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'sphinx_autodoc_typehints',  # must be loaded *after* napoleon
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',

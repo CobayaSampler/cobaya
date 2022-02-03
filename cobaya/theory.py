@@ -103,11 +103,9 @@ class Theory(CobayaComponent):
         # MARKED FOR DEPRECATION IN v3.0
         # This code will only run if needs() is defined but not must_provide()
         if hasattr(self, "needs"):
-            self.log.warning(
-                "The .needs() method has been deprecated in favour of must_provide(). "
-                "Please rename your method.")
-            # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            return getattr(self, "needs")(**requirements)
+            raise LoggedError(
+                self.log,
+                "The .needs() method has been deprecated in favour of .must_provide()")
         # END OF DEPRECATION BLOCK
         return None
 
