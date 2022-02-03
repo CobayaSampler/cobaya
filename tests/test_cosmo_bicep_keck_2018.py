@@ -21,9 +21,7 @@ def test_bicep_keck_2018_camb(packages_path, skip_not_installed):
 def test_bicep_keck_2018_classy(packages_path, skip_not_installed):
     info_theory = {"classy": {"extra_args": classy_extra}}
     # extra tolerance for CLASS
-    chi2_classy = deepcopy(chi2)
-    chi2_classy["tolerance"] *= 2
-    body_of_test(packages_path, test_point, lik_info, info_theory, chi2_classy,
+    body_of_test(packages_path, test_point, lik_info, info_theory, chi2,
                  extra_model={"primordial": "SFSR_t"},
                  skip_not_installed=skip_not_installed)
 

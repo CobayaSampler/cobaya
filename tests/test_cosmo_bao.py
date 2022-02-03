@@ -29,7 +29,7 @@ def test_sdss_dr16_consensus_bao_lrg_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_lrg, skip_not_installed=skip_not_installed)
 
-    
+
 @pytest.mark.skip
 def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lrg"
@@ -38,7 +38,7 @@ def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_lrg, skip_not_installed=skip_not_installed)
 
-    
+
 def test_sdss_dr16_consensus_bao_elg_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_elg"
     info_likelihood = {like: {}}
@@ -46,7 +46,7 @@ def test_sdss_dr16_consensus_bao_elg_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_elg, skip_not_installed=skip_not_installed)
 
-    
+
 @pytest.mark.skip
 def test_sdss_dr16_consensus_bao_elg_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_elg"
@@ -55,7 +55,7 @@ def test_sdss_dr16_consensus_bao_elg_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_elg, skip_not_installed=skip_not_installed)
 
-    
+
 def test_sdss_dr16_consensus_bao_qso_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_qso"
     info_likelihood = {like: {}}
@@ -63,7 +63,7 @@ def test_sdss_dr16_consensus_bao_qso_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_qso, skip_not_installed=skip_not_installed)
 
-    
+
 @pytest.mark.skip
 def test_sdss_dr16_consensus_bao_qso_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_qso"
@@ -72,7 +72,7 @@ def test_sdss_dr16_consensus_bao_qso_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_qso, skip_not_installed=skip_not_installed)
 
-    
+
 def test_sdss_dr16_consensus_bao_lyauto_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lyauto"
     info_likelihood = {like: {}}
@@ -80,7 +80,7 @@ def test_sdss_dr16_consensus_bao_lyauto_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_lyauto, skip_not_installed=skip_not_installed)
 
-    
+
 @pytest.mark.skip
 def test_sdss_dr16_consensus_bao_lyauto_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lyauto"
@@ -89,7 +89,7 @@ def test_sdss_dr16_consensus_bao_lyauto_classy(packages_path, skip_not_installed
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_lyauto, skip_not_installed=skip_not_installed)
 
-    
+
 def test_sdss_dr16_consensus_bao_lyxqso_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lyxqso"
     info_likelihood = {like: {}}
@@ -97,7 +97,7 @@ def test_sdss_dr16_consensus_bao_lyxqso_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_lyxqso, skip_not_installed=skip_not_installed)
 
-    
+
 @pytest.mark.skip
 def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lrg"
@@ -106,7 +106,7 @@ def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_sdss_dr16_baoplus_lrg, skip_not_installed=skip_not_installed)
 
-    
+
 def test_sdss_dr12_consensus_bao_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr12_consensus_bao"
     info_likelihood = {like: {}}

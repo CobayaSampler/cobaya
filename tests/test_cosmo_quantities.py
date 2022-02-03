@@ -2,6 +2,7 @@
 Testing some quantities not used yet by any internal likelihood.
 """
 
+import pytest
 import numpy as np
 from copy import deepcopy
 
@@ -38,5 +39,6 @@ def test_cosmo_sigma8_camb(packages_path, skip_not_installed):
     _test_cosmo_sigma8("camb", packages_path, skip_not_installed)
 
 
+@pytest.mark.skip
 def test_cosmo_sigma8_classy(packages_path, skip_not_installed):
     _test_cosmo_sigma8("classy", packages_path, skip_not_installed)

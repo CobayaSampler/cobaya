@@ -144,7 +144,8 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND
+from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND, \
+    combine_1d
 
 
 # Result collector
@@ -170,7 +171,7 @@ class classy(BoltzmannBase):
     """
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v2.9.3"
+    _min_classy_version = "v3.1.1"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
@@ -231,6 +232,8 @@ class classy(BoltzmannBase):
             elif k == "Hubble":
                 self.set_collector_with_z_pool(
                     k, v["z"], "Hubble", args_names=["z"], arg_array=0)
+            elif k in ["Omega_b", "Omega_cdm", "Omega_nu_massive"]:
+                raise NotImplementedError(f"`{k}` not implemented yet for CLASS")
             elif k == "angular_diameter_distance":
                 self.set_collector_with_z_pool(
                     k, v["z"], "angular_distance", args_names=["z"], arg_array=0)
@@ -238,10 +241,16 @@ class classy(BoltzmannBase):
                 self.set_collector_with_z_pool(k, v["z"], "z_of_r", args_names=["z"],
                                                # returns r and dzdr!
                                                post=(lambda r, dzdr: r))
+            elif k == "angular_diameter_distance_2":
+                raise NotImplementedError(f"`{k}` not implemented yet for CLASS")
+            #     self.set_collector_with_z_pool(k, v["z"], "z_of_r", args_names=["z"],
+            #                                    # returns r and dzdr!
+            #                                    post=(lambda r, dzdr: r))
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
-                self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
+                # TODO: remove arbitrary factor below
+                self.add_P_k_max(v.pop("k_max") * 1.5, units="1/Mpc")
                 # NB: Actually, only the max z is used, and the actual sampling in z
                 # for computing P(k,z) is controlled by `perturb_sampling_stepsize`
                 # (default: 0.1). But let's leave it like this in case this changes
@@ -261,13 +270,14 @@ class classy(BoltzmannBase):
                     kwargs=v,
                     post=(lambda P, kk, z: (kk, z, np.array(P).T)))
             elif k == "sigma8_z":
-                self.add_z_for_matter_power(v["z"])
-                self.collectors[k] = Collector(
-                    method="sigma",
-                    args_names=["R", "z"],
-                    args=[8, np.atleast_1d(v["z"])],
-                    arg_array=1,
-                    kwargs={"h_units": True})
+                raise NotImplementedError(f"`{k}` not implemented yet for CLASS")
+                # self.add_z_for_matter_power(v["z"])
+                # self.collectors[k] = Collector(
+                #     method="sigma",
+                #     args_names=["R", "z"],
+                #     args=[8, np.atleast_1d(v["z"])],
+                #     arg_array=1,
+                #     kwargs={"h_units": True})
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 raise LoggedError(
                     self.log, "Classy sigma_R not implemented as yet - use CAMB only")
@@ -301,7 +311,7 @@ class classy(BoltzmannBase):
     def add_z_for_matter_power(self, z):
         if getattr(self, "z_for_matter_power", None) is None:
             self.z_for_matter_power = np.empty(0)
-        self.z_for_matter_power = np.flip(self._combine_1d(z, self.z_for_matter_power))
+        self.z_for_matter_power = np.flip(combine_1d(z, self.z_for_matter_power))
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
     def set_collector_with_z_pool(self, k, zs, method, args=[], args_names=[], kwargs={},

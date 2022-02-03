@@ -6,13 +6,16 @@
 
 ### Cosmological likelihoods and theory codes
 
+- `Pk_interpolator`: added extrapolation up to `extrap_kmin` and improved robustness
+
 #### CAMB
 
 - Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
+- Added `Omega_b|cdm|nu_massive(z)` and `angular_diameter_distance_2`
 
 #### CLASS
 
-- Added support for `sigma8(z)`.
+- Updated to v3.1.1
 
 #### BAO
 
