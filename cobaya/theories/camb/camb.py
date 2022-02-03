@@ -667,20 +667,23 @@ class CAMB(BoltzmannBase):
                                         f"{pool.values}.")
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
-    def _get_z_pair_dependent(self, quantity, z_pairs):
+    def _get_z_pair_dependent(self, quantity, z_pairs, inv_value=0):
+        """
+        ``inv_value`` (default=0) is assigned to pairs for which ``z1 > z2``.
+        """
         try:
-            z_pairs_sorted = check_2d(z_pairs)
+            check_2d(z_pairs)
         except ValueError:
             raise LoggedError(self.log, f"{z_pairs=} not correctly formatted for "
                                         f"{quantity}. It should be a list of pairs.")
-        # Identify inverted pairs to add the sign later
-        # (since outer sorting not changed, it is enough to look at the 1st element)
-        i_flip = (np.array(z_pairs)[:, 0] != z_pairs_sorted[:, 0])
+        # Only recover for correctly sorted pairs
+        z_pairs_arr = np.array(z_pairs)
+        i_right = (z_pairs_arr[:, 0] <= z_pairs_arr[:, 1])
         pool = self.collectors[quantity].z_pool
-        i_z_pair = pool.find_indices(z_pairs_sorted)
-        results = np.array(self.current_state[quantity], copy=True)[i_z_pair]
-        results[i_flip] *= -1
-        return results
+        i_z_pair = pool.find_indices(z_pairs_arr[i_right])
+        result = np.full(len(z_pairs), inv_value, dtype=float)
+        result[i_right] = np.array(self.current_state[quantity], copy=True)[i_z_pair]
+        return result
 
     def get_Omega_b(self, z):
         return self._get_z_dependent("Omega_b", z)

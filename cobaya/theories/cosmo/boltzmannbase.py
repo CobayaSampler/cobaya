@@ -368,8 +368,11 @@ class BoltzmannBase(Theory):
 
         The redshifts pairs must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
+
+        Return zero for pairs in which ``z1 > z2``.
         """
-        return self._get_z_pair_dependent("angular_diameter_distance_2", z_pairs)
+        return self._get_z_pair_dependent(
+            "angular_diameter_distance_2", z_pairs, inv_value=0)
 
     def get_comoving_radial_distance(self, z):
         r"""
