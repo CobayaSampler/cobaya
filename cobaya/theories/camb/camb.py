@@ -181,7 +181,7 @@ from cobaya.install import download_github_release, check_gcc_version, NotInstal
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
     VersionCheckError, str_to_list, Pool1D, Pool2D, PoolND, check_2d
 from cobaya.theory import HelperTheory
-from cobaya.typing import InfoDict
+from cobaya.typing import InfoDict, empty_dict
 
 
 # Result collector
@@ -483,7 +483,7 @@ class CAMB(BoltzmannBase):
             self.z_pool_for_perturbations.update(z)
         self.extra_args["redshifts"] = np.flip(self.z_pool_for_perturbations.values)
 
-    def set_collector_with_z_pool(self, k, zs, method, args=[], kwargs={}, d=1):
+    def set_collector_with_z_pool(self, k, zs, method, args=(), kwargs=empty_dict, d=1):
         """
         Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
         """
@@ -673,7 +673,7 @@ class CAMB(BoltzmannBase):
         try:
             check_2d(z_pairs)
         except ValueError:
-            raise LoggedError(self.log, f"{z_pairs=} not correctly formatted for "
+            raise LoggedError(self.log, f"z_pairs={z_pairs} not correctly formatted for "
                                         f"{quantity}. It should be a list of pairs.")
         # Only recover for correctly sorted pairs
         z_pairs_arr = np.array(z_pairs)
@@ -863,7 +863,7 @@ class CAMB(BoltzmannBase):
     def is_installed(cls, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = get_logger(cls.__name__, color=cls._logger_color)
+        log = get_logger(cls.__name__)
         import platform
         check = kwargs.get("check", True)
         func = log.info if check else log.error

@@ -144,8 +144,8 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND, \
-    combine_1d
+from cobaya.tools import load_module, VersionCheckError, Pool1D, PoolND, combine_1d
+from cobaya.typing import empty_dict
 
 
 # Result collector
@@ -314,8 +314,8 @@ class classy(BoltzmannBase):
         self.z_for_matter_power = np.flip(combine_1d(z, self.z_for_matter_power))
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
-    def set_collector_with_z_pool(self, k, zs, method, args=[], args_names=[], kwargs={},
-                                  arg_array=None, post=None):
+    def set_collector_with_z_pool(self, k, zs, method, args=(), args_names=(),
+                                  kwargs=empty_dict, arg_array=None, post=None):
         """
         Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
 
@@ -335,10 +335,10 @@ class classy(BoltzmannBase):
         elif "z" in args_names:
             args = deepcopy(args)
             i_z = args_names.index("z")
-            args = args[:i_z] + [z_pool.values] + args[i_z:]
+            args = list(args[:i_z]) + [z_pool.values] + list(args[i_z:])
         else:
             raise LoggedError(
-                self.logger,
+                self.log,
                 f"I do not know how to insert the redshift for collector method {method} "
                 f"of requisite {k}")
         self.collectors[k] = Collector(
@@ -429,8 +429,8 @@ class classy(BoltzmannBase):
                     state[product][i] = method(
                         *self.collectors[product].args, **kwargs)
             else:
-                raise LoggedError(self.logger, "Variable over which to do an array call "
-                                               f"not known: {arg_array=}")
+                raise LoggedError(self.log, "Variable over which to do an array call "
+                                            f"not known: arg_array={arg_array}")
             if collector.post:
                 state[product] = collector.post(*state[product])
         # Prepare derived parameters

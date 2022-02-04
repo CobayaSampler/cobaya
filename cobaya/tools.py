@@ -1083,10 +1083,10 @@ def combine_1d(new_list, old_list=None):
     new_list = np.atleast_1d(new_list)
     if old_list is not None:
         new_list = np.concatenate((old_list, new_list))
-    return np.unique(np.sort(new_list))
+    return np.unique(new_list)
 
 
-class PoolND(object):
+class PoolND:
     r"""
     Stores a list of ``N``-tuples ``[x_1, x_2...]`` for later retrieval given some
     ``N``-tuple ``x``.
@@ -1104,10 +1104,12 @@ class PoolND(object):
 
     def __init__(self, values=[],
                  rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6, logger=None):
+        assert values is not None and len(values) != 0, \
+            "Pool needs to be initialised with at least one value."
         assert rtol_min <= rtol_max, \
-            f"{rtol_min=} must be smaller or equal to {rtol_max=}"
+            f"rtol_min={rtol_min} must be smaller or equal to rtol_max={rtol_max}"
         assert atol_min <= atol_max, \
-            f"{atol_min=} must be smaller or equal to {atol_max=}"
+            f"atol_min={atol_min} must be smaller or equal to ato_max={atol_max}"
         self.atol_min, self.atol_max = atol_min, atol_max
         self.rtol_min, self.rtol_max = rtol_min, rtol_max
         if logger is None:
@@ -1294,7 +1296,7 @@ def combine_2d(new_pairs, old_pairs=None):
     new_pairs = check_2d(new_pairs)
     if old_pairs is not None:
         new_pairs = np.concatenate((old_pairs, new_pairs))
-    return np.unique(np.sort(new_pairs), axis=0)
+    return np.unique(new_pairs, axis=0)
 
 
 class Pool2D(PoolND):
