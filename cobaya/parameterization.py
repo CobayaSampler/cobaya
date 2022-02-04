@@ -44,7 +44,7 @@ def is_derived_param(info_param: ParamInput) -> bool:
 
 def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict:
     """
-    Expands the info of a parameter, from the user friendly, shorter format
+    Expands the info of a parameter, from the user-friendly, shorter format
     to a more unambiguous one.
     """
     info_param = deepcopy_where_possible(info_param)

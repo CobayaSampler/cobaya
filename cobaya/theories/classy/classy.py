@@ -348,7 +348,7 @@ class classy(BoltzmannBase):
     def add_P_k_max(self, k_max, units):
         r"""
         Unifies treatment of :math:`k_\mathrm{max}` for matter power spectrum:
-        ``P_k_max_[1|h]/Mpc]``.
+        ``P_k_max_[1|h]/Mpc``.
 
         Make ``units="1/Mpc"|"h/Mpc"``.
         """

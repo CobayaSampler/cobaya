@@ -60,7 +60,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     """
 
     # This function reproduces the model-->output-->sampler pipeline one would follow
-    # when instantiating by hand, but alters the order to performs checks and dump info
+    # when instantiating by hand, but alters the order to perform checks and dump info
     # as early as possible, e.g. to check if resuming possible or `force` needed.
     if no_mpi or test:
         mpi.set_mpi_disabled()

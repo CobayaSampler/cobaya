@@ -457,7 +457,7 @@ class NumberWithUnits:
     def __init__(self, n_with_unit: Any, unit: str, dtype=float, scale=None):
         """
         Reads number possibly with some `unit`, e.g. 10s, 4d.
-        Loaded from a a case-insensitive string of a number followed by a unit,
+        Loaded from a case-insensitive string of a number followed by a unit,
         or just a number in which case the unit is set to None.
 
         :param n_with_unit: number string or number
@@ -1160,7 +1160,7 @@ class PoolND(object):
 
         Returns a correctly formatted array.
 
-        Internal sorting is enforced, but external is is ignored.
+        Internal sorting is enforced, but external is ignored.
         """
 
     @abstract

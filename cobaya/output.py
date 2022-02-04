@@ -364,7 +364,7 @@ class Output(HasLogger):
                                               "%s:%s, but you are trying to resume a "
                                               "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
-        # If resuming, we don't want to to *partial* dumps
+        # If resuming, we don't want to do *partial* dumps
         if ignore_blocks and self.is_resuming():
             return
         # Work on a copy of the input info, since we are updating the prefix

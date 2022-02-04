@@ -118,7 +118,7 @@ best adapts to your needs:
 
 * [**Recommended for staying up-to-date**]
   To install CAMB locally and keep it up-to-date, clone the
-  `CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+  `CAMB repository in GitHub <https://github.com/cmbant/CAMB>`_
   in some folder of your choice, say ``/path/to/theories/CAMB``:
 
   .. code:: bash
@@ -138,7 +138,7 @@ best adapts to your needs:
      $ python -m pip install -e /path/to/CAMB
 
 * [**Recommended for modifying CAMB**]
-  First, `fork the CAMB repository in Github <https://github.com/cmbant/CAMB>`_
+  First, `fork the CAMB repository in GitHub <https://github.com/cmbant/CAMB>`_
   (follow `these instructions <https://help.github.com/articles/fork-a-repo/>`_) and then
   follow the same steps as above, substituting the second one with:
 
@@ -147,8 +147,7 @@ best adapts to your needs:
       $ git clone --recursive https://[YourGithubUser]@github.com/[YourGithubUser]/CAMB.git
 
 * To use your own version, assuming it's placed under ``/path/to/theories/CAMB``,
-  just make sure it is compiled (and that the version on top of which you based your
-  modifications is old enough to have the Python interface implemented.
+  just make sure it is compiled.
 
 In the cases above, you **must** specify the path to your CAMB installation in
 the input block for CAMB (otherwise a system-wide CAMB may be used instead):
@@ -161,7 +160,7 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
 .. note::
 
-   In any of these methods, if you intent to switch between different versions or
+   In any of these methods, if you intend to switch between different versions or
    modifications of CAMB you should not install CAMB as python package using
    ``python setup.py install``, as the official instructions suggest.
 """

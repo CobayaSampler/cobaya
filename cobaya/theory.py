@@ -78,10 +78,10 @@ class Theory(CobayaComponent):
                                         Sequence[Tuple[str, InfoDict]]]:
         """
         Get a dictionary of requirements (or a list of requirement name, option tuples)
-        that are always needed (e.g. must be calculated by a another component
+        that are always needed (e.g. must be calculated by another component
         or provided as input parameters).
 
-        :return: dictionary or list of tuples of of requirement names and options
+        :return: dictionary or list of tuples of requirement names and options
                 (or iterable of requirement names if no optional parameters are needed)
         """
         return str_to_list(getattr(self, "requires", []))
@@ -292,7 +292,7 @@ class Theory(CobayaComponent):
     @property
     def type_list(self) -> List[str]:
         # list of labels that classify this component
-        # not usually used for Theory, can used for aggregated chi2 in likelihoods
+        # not usually used for Theory, can be used for aggregated chi2 in likelihoods
         return str_to_list(getattr(self, "type", []) or [])
 
     # MARKED FOR DEPRECATION IN v3.1

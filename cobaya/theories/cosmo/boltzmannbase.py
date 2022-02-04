@@ -123,16 +123,16 @@ class BoltzmannBase(Theory):
           a ``(k, z, P(z,k))`` set of arrays. Get with :func:`~BoltzmannBase.get_Pk_grid`.
         - ``sigma_R={...}``: RMS linear fluctuation in spheres of radius :math:`R` at
           redshifts :math:`z`. Takes ``"z": [list_of_evaluated_redshifts]``,
-          ``"k_max": [k_max]``, ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]}``,
+          ``"k_max": [k_max]``, ``"vars_pairs": [["delta_tot", "delta_tot"],  [...]]``,
           ``"R": [list_of_evaluated_R]``. Note that :math:`R` is in :math:`\mathrm{Mpc}`,
           not :math:`h^{-1}\,\mathrm{Mpc}`. Get with :func:`~BoltzmannBase.get_sigma_R`.
-        - ``Hubble={'z': [z_1, ...]}``: Hubble rate at the requested redshifts.
+        - ``Hubble={'z': [z_1, ...]}``: Hubble rates at the requested redshifts.
           Get it with :func:`~BoltzmannBase.get_Hubble`.
         - ``Omega_b={'z': [z_1, ...]}``: Baryon density parameter at the requested
           redshifts. Get it with :func:`~BoltzmannBase.get_Omega_b`.
         - ``Omega_cdm={'z': [z_1, ...]}``: Cold dark matter density parameter at the
           requested redshifts. Get it with :func:`~BoltzmannBase.get_Omega_cdm`.
-        - ``Omega_nu_massive={'z': [z_1, ...]}``: Massive neutrinos density parameter at
+        - ``Omega_nu_massive={'z': [z_1, ...]}``: Massive neutrinos' density parameter at
           the requested redshifts. Get it with
           :func:`~BoltzmannBase.get_Omega_nu_massive`.
         - ``angular_diameter_distance={'z': [z_1, ...]}``: Physical angular
@@ -141,7 +141,7 @@ class BoltzmannBase(Theory):
         - ``angular_diameter_distance_2={'z_pairs': [(z_1a, z_1b), (z_2a, z_2b)...]}``:
           Physical angular diameter distance between the pairs of redshifts requested.
           If a 1d array of redshifts is passed as `z_pairs`, all possible combinations
-          of two are computed an stored (not recommended if only a subset is needed).
+          of two are computed and stored (not recommended if only a subset is needed).
           Get it with :func:`~BoltzmannBase.get_angular_diameter_distance_2`.
         - ``comoving_radial_distance={'z': [z_1, ...]}``: Comoving radial distance
           from us to the redshifts requested. Get it with
@@ -353,7 +353,7 @@ class BoltzmannBase(Theory):
     @abstract
     def get_Omega_nu_massive(self, z):
         r"""
-        Returns the Massive neutrinos density parameter at the given redshift(s) ``z``.
+        Returns the Massive neutrinos' density parameter at the given redshift(s) ``z``.
 
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
@@ -465,7 +465,7 @@ class BoltzmannBase(Theory):
 
     def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
         r"""
-        Get :math:`\sigma_R(z)`, the RMS power in an sphere of radius :math:`R` at
+        Get :math:`\sigma_R(z)`, the RMS power in a sphere of radius :math:`R` at
         redshift :math:`z`.
 
         Note that :math:`R` is in :math:`\mathrm{Mpc}`, not :math:`h^{-1}\,\mathrm{Mpc}`,
