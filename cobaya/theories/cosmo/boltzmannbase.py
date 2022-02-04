@@ -102,14 +102,22 @@ class BoltzmannBase(Theory):
           Get with :func:`~BoltzmannBase.get_source_Cl`.
         - ``Pk_interpolator={...}``: Matter power spectrum interpolator in :math:`(z, k)`.
           Takes ``"z": [list_of_evaluated_redshifts]``, ``"k_max": [k_max]``,
-          ``"extrap_kmax": [max_k_max_extrapolated]``, ``"nonlinear": [True|False]``,
+          ``"nonlinear": [True|False]``,
           ``"vars_pairs": [["delta_tot", "delta_tot"], ["Weyl", "Weyl"], [...]]}``.
+          Notice that ``k_min`` cannot be specified. To reach a lower one, use
+          ``extra_args`` in CAMB to increase ``accuracyboost`` and ``TimeStepBoost``, or
+          in CLASS to decrease ``k_min_tau0``. The method :func:`~get_Pk_interpolator` to
+          retrieve the interpolator admits extrapolation limits ``extrap_[kmax|kmin]``.
+          It is recommended to use ``extrap_kmin`` to reach the desired ``k_min``, and
+          increase precision parameters only as much as necessary to improve over the
+          interpolation. All :math:`k` values should be in units of :math:`1/\mathrm{Mpc}`.
+
           Non-linear contributions are included by default. Note that the non-linear
           setting determines whether non-linear corrections are calculated; the
           :func:`~get_Pk_interpolator` method also has a non-linear argument to specify if
           you want the linear or non-linear spectrum returned (to have both linear and
           non-linear spectra available request a tuple ``(False,True)`` for the non-linear
-          argument). All :math:`k` values should be in units of :math:`1/\mathrm{Mpc}`.
+          argument).
         - ``Pk_grid={...}``: similar to ``Pk_interpolator`` except that rather than
           returning a bicubic spline object it returns the raw power spectrum grid as
           a ``(k, z, P(z,k))`` set of arrays. Get with :func:`~BoltzmannBase.get_Pk_grid`.
