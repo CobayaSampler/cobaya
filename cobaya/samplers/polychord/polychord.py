@@ -35,7 +35,7 @@ class polychord(Sampler):
     """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.18.2"
+    _pc_repo_version = "1.20.0"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
