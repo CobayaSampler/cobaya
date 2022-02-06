@@ -225,6 +225,8 @@ class polychord(Sampler):
                 theta[i] = self.model.prior.pdf[i].ppf(xi)
             return theta
 
+        if is_main_process():
+            self.dump_paramnames(self.raw_prefix)
         sync_processes()
         self.mpi_info("Calling PolyChord...")
         self.pc.run_polychord(loglikelihood, self.nDims, self.nDerived, self.pc_settings,
