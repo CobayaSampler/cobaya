@@ -1125,6 +1125,9 @@ class PoolND:
     def __len__(self):
         return len(self.values)
 
+    def __getitem__(self, *args, **kwargs):
+        return self.values.__getitem__(*args, **kwargs)
+
     def _update_tolerances(self):
         """Adapts tolerance to the differences in the list."""
         if self.d == 1:
@@ -1181,17 +1184,33 @@ class PoolND:
         Raises ValueError if not all elements were found, each only once.
         """
         values = self._check_values(values)
-        # TODO: since the pool is sorted already, we could take advantage of the sorting,
-        #       sort the target values (and save the indices to recover original order),
-        #       and iterate only over the part of the pool starting where the last value
-        #       was found.
-        indices = np.concatenate([self._pick_at_most_one(x, None, None) for x in values])
-        if len(indices) < len(values):
-            raise ValueError(
-                f"Could not find some of {list(values)} in pool {list(self.values)}. "
-                "If there appear to be a values close to the values in the pool,"
-                " increase max tolerances.")
+        # Fast search first if possible
+        indices = self._fast_find_indices(values)
+        i_not_found = np.where(indices == -1)[0]
+        if len(i_not_found):
+            # TODO: since the pool is sorted already, we could take advantage of that,
+            #       sort the target values (and save indices to recover original order),
+            #       and iterate only over the part of the pool starting where the last
+            #       value was found. But since running rapid test first, prob not needed.
+            indices_i_prev_not_found = np.concatenate(
+                [self._pick_at_most_one(x, None, None) for x in values[i_not_found]])
+            if len(indices_i_prev_not_found) < len(i_not_found):
+                raise ValueError(
+                    f"Could not find some of {list(values)} in pool {list(self.values)}. "
+                    "If there appear to be a values close to the values in the pool,"
+                    " increase max tolerances.")
+            indices[i_not_found] = indices_i_prev_not_found
         return indices
+
+    def _fast_find_indices(self, values):
+        """
+        Fast way to find indices, possibly ignoring tolerance, e.g. using np.where(a==b).
+
+        It should check that the right elements have been found, and return an array
+        of length ``values.shape[0]`` with ``-1`` for elements that where not found.
+        """
+        # if no dimensionality-specific implementation: none found
+        return np.full(shape=len(values), fill_value=-1)
 
     def _pick_at_most_one(self, x, pool=None, rtol=None, atol=None):
         """
@@ -1216,7 +1235,7 @@ class PoolND:
             # Increase tolerance (if allowed) until one found
             if rtol > self._adapt_rtol_max and atol > self._adapt_atol_max:
                 # Nothing was found despite high tolerance
-                return []
+                return np.empty(shape=0, dtype=int)
             if rtol <= self._adapt_rtol_max:
                 rtol *= 10
             if atol <= self._adapt_atol_max:
@@ -1226,7 +1245,7 @@ class PoolND:
             # Decrease tolerance (if allowed!) until only one found
             if rtol < self._adapt_rtol_min and atol < self._adapt_atol_min:
                 # No way to find only one element despite low tolerance
-                return []
+                return np.empty(shape=0, dtype=int)
             # Factor not a divisor of the one above, to avoid infinite loops
             if rtol >= self._adapt_rtol_min:
                 rtol /= 3
@@ -1262,8 +1281,20 @@ class Pool1D(PoolND):
     def _update_values(self, values):
         self.values = combine_1d(values, getattr(self, "values", None))
 
+    def _fast_find_indices(self, values):
+        i_insert_left = np.clip(
+            np.searchsorted(self.values, values), a_min=None, a_max=len(self) - 1)
+        return np.where(
+            self._cond_isclose(
+                self.values[i_insert_left], values, rtol=self._adapt_rtol_min,
+                atol=self._adapt_atol_min),
+            i_insert_left, -1)
+
+    def _cond_isclose(self, pool, x, rtol, atol):
+        return np.isclose(pool, x, rtol=rtol, atol=atol)
+
     def _where_isclose(self, pool, x, rtol, atol):
-        return np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0]
+        return np.where(self._cond_isclose(pool, x, rtol=rtol, atol=atol))[0]
 
 
 def check_2d(pairs):
