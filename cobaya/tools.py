@@ -26,13 +26,14 @@ from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, \
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
+from abc import ABC, abstractmethod
 import traceback
 
 # Local
 from cobaya.conventions import cobaya_package, subfolders, kinds, \
     packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic, \
     packages_path_input
-from cobaya.log import LoggedError, HasLogger, get_logger, abstract
+from cobaya.log import LoggedError, HasLogger, get_logger
 from cobaya.typing import Kind
 
 # Set up logger
@@ -1086,7 +1087,7 @@ def combine_1d(new_list, old_list=None):
     return np.unique(new_list)
 
 
-class PoolND:
+class PoolND(ABC):
     r"""
     Stores a list of ``N``-tuples ``[x_1, x_2...]`` for later retrieval given some
     ``N``-tuple ``x``.
@@ -1157,7 +1158,7 @@ class PoolND:
         self._update_values(values)
         self._update_tolerances()
 
-    @abstract
+    @abstractmethod
     def _check_values(self, values):
         """
         Checks that the input values are correctly formatted and re-formats them if
@@ -1168,7 +1169,7 @@ class PoolND:
         Internal sorting is enforced, but external is ignored.
         """
 
-    @abstract
+    @abstractmethod
     def _update_values(self, values):
         """Combines given and existing pool. Should assign ``self.values``."""
 
@@ -1255,7 +1256,7 @@ class PoolND:
         else:
             return i
 
-    @abstract
+    @abstractmethod
     def _where_isclose(self, pool, x, rtol, atol):
         """
         Returns an array of indices of matches.
@@ -1303,20 +1304,36 @@ def check_2d(pairs):
 
     Returns a list of pairs as a 2d array with tuples sorted internally.
 
+    Does not sort the pairs with respect to each other or checks for duplicates.
+
+    Alternatively, a list of more than 2 single values can be passed, and will be
+    converted into an internally-sorted list of all possible pairs, as a 2d array.
+
     Raises ``ValueError`` if the argument is badly formatted.
     """
-    pairs = np.sort(np.atleast_2d(pairs), axis=-1)
-    if pairs.shape[1] != 2:
-        raise ValueError()  # more informative exception raised by caller
-    return pairs
+    pairs = np.array(pairs)
+    if len(pairs.shape) == 1:
+        if len(pairs) < 2:  # Single element or just a number
+            raise ValueError(f"Needs at least a pair of values. Got {list(pairs)}.")
+        elif len(pairs) == 2:  # Single pair
+            pairs = np.atleast_2d(pairs)
+        elif len(pairs) > 2:  # list -> generate combinations
+            pairs = np.array(list(chain(*[[[x_i, x_j] for x_j in pairs[i + 1:]]
+                                          for i, x_i in enumerate(pairs)])))
+    elif (len(pairs.shape) == 2 and pairs.shape[1] != 2) or len(pairs.shape) != 2:
+        raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
+    return np.sort(pairs, axis=-1)  # internal sorting
 
 
 def combine_2d(new_pairs, old_pairs=None):
     """
     Combines+sorts+uniquifies two lists of pairs of values.
 
-    Pairs are internally sorted in ascending order, and with respect to each other in
+    Pairs will be internally sorted in ascending order, and with respect to each other in
     ascending order of the first value.
+
+    `new_pairs` can be a list of more than 2 elements, from which all possible
+    internally-sorted combinations will be generated.
 
     If `old_pairs` given, it is assumed to be a sorted and uniquified array (e.g. the
     output of this function when passed as first argument).
@@ -1348,5 +1365,26 @@ class Pool2D(PoolND):
     def _check_values(self, values):
         return check_2d(values)
 
+    def _fast_find_indices(self, values):
+        # first, locate 1st component
+        i_insert_left = np.clip(np.searchsorted(self.values[:, 0], values[:, 0]),
+                                a_min=None, a_max=len(self) - 1)
+        # we do not need to clip the "right" index, because we will use it as an endpoint
+        # for a slice, which is safe
+        i_insert_right = np.searchsorted(self.values[:, 0], values[:, 0], side="right")
+        slices = np.array([i_insert_left, i_insert_right]).T
+        i_maybe_found = [
+            slices[i][0] + np.searchsorted(
+                self.values[slices[i][0]:slices[i][1], 1], values[i][1])
+            for i in range(len(values))]
+        return np.where(
+            self._cond_isclose(
+                self.values[i_maybe_found], values, rtol=self._adapt_rtol_min,
+                atol=self._adapt_atol_min),
+            i_maybe_found, -1)
+
+    def _cond_isclose(self, pool, x, rtol, atol):
+        return np.all(np.isclose(pool, x, rtol=rtol, atol=atol), axis=-1)
+
     def _where_isclose(self, pool, x, rtol, atol):
-        return np.where(np.all(np.isclose(pool, x, rtol=rtol, atol=atol), axis=-1))[0]
+        return np.where(self._cond_isclose(pool, x, rtol=rtol, atol=atol))[0]

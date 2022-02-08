@@ -228,18 +228,7 @@ class BoltzmannBase(Theory):
             elif k == "angular_diameter_distance_2":
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
-                zs = np.array(v.pop("z_pairs"))
-                # If 1d array, add all possible combinations
-                if len(zs.shape) == 1:
-                    pairs = list(chain(*[[[z_i, z_j] for z_j in zs[i + 1:]]
-                                         for i, z_i in enumerate(zs)]))
-                elif len(zs.shape) == 2:
-                    pairs = zs
-                else:
-                    raise LoggedError(
-                        self.log, "Requisite `angular_diameter_distance_2` must include "
-                                  "a `z_pairs` property, containing a list of redshifts "
-                                  "or redshift pairs.")
+                zs = v.pop("z_pairs", None)
                 # Combine pairs with previous ones and uniquify
                 try:
                     self._must_provide[k]["z_pairs"] = combine_2d(
