@@ -33,25 +33,30 @@ def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_in
     return model
 
 
-# sigma8(z) ##############################################################################
+# sigma8(z), fsgima8(z) ##################################################################
 
 sigma8_values = [0.01072007, 0.0964498, 0.50446177, 0.83063667]
+fsigma8_values = [0.01063036, 0.09638032, 0.44306551, 0.43904513]
 
 
-def _test_cosmo_sigma8(theo, packages_path, skip_not_installed):
-    reqs = {"sigma8_z": {"z": redshifts}}
+def _test_cosmo_sigma8_fsigma8(theo, packages_path, skip_not_installed):
+    reqs = {"sigma8_z": {"z": redshifts}, "fsigma8": {"z": redshifts}}
     model = _get_model_with_requirements_and_eval(
         theo, reqs, packages_path, skip_not_installed)
     assert np.allclose(model.theory[theo].get_sigma8_z(redshifts),
                        sigma8_values, rtol=1e-5 if theo.lower() == "camb" else 5e-4)
+    # NB: classy tolerance quite high for fsigma8!
+    # (see also test of bao.sdss_dr16_baoplus_qso)
+    assert np.allclose(model.theory[theo].get_fsigma8(redshifts),
+                       fsigma8_values, rtol=1e-5 if theo.lower() == "camb" else 1e-2)
 
 
-def test_cosmo_sigma8_camb(packages_path, skip_not_installed):
-    _test_cosmo_sigma8("camb", packages_path, skip_not_installed)
+def test_cosmo_sigma8_fsigma8_camb(packages_path, skip_not_installed):
+    _test_cosmo_sigma8_fsigma8("camb", packages_path, skip_not_installed)
 
 
-def test_cosmo_sigma8_classy(packages_path, skip_not_installed):
-    _test_cosmo_sigma8("classy", packages_path, skip_not_installed)
+def test_cosmo_sigma8_fsigma8_classy(packages_path, skip_not_installed):
+    _test_cosmo_sigma8_fsigma8("classy", packages_path, skip_not_installed)
 
 
 # Omega_X(z) #############################################################################

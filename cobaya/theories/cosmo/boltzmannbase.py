@@ -524,7 +524,6 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("sigma8_z", z)
 
-    @abstract
     def get_fsigma8(self, z):
         r"""
         Structure growth rate :math:`f\sigma_8`, as defined in eq. 33 of
@@ -535,6 +534,7 @@ class BoltzmannBase(Theory):
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
+        return self._get_z_dependent("fsigma8", z)
 
     def get_auto_covmat(self, params_info, likes_info, random_state=None):
         r"""

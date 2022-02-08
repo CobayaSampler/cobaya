@@ -277,6 +277,12 @@ class classy(BoltzmannBase):
                 self.set_collector_with_z_pool(
                     k, v["z"], "sigma", args=[8], args_names=["R", "z"],
                     kwargs={"h_units": True}, arg_array=1)
+            elif k == "fsigma8":
+                self.add_z_for_matter_power(v["z"])
+                z_step = 0.1  # left to CLASS default; increasing does not appear to help
+                self.set_collector_with_z_pool(
+                    k, v["z"], "effective_f_sigma8", args=[z_step],
+                    args_names=["z", "z_step"], arg_array=0)
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 raise LoggedError(
                     self.log, "Classy sigma_R not implemented as yet - use CAMB only")

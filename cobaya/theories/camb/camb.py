@@ -662,9 +662,6 @@ class CAMB(BoltzmannBase):
             pool = self.z_pool_for_perturbations
         return super()._get_z_dependent(quantity, z, pool=pool)
 
-    def get_fsigma8(self, z):
-        return self._get_z_dependent("fsigma8", z)
-
     def get_source_Cl(self):
         # get C_l^XX from the cosmological code
         try:
