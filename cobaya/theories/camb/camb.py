@@ -684,15 +684,6 @@ class CAMB(BoltzmannBase):
         result[i_right] = np.array(self.current_state[quantity], copy=True)[i_z_pair]
         return result
 
-    def get_Omega_b(self, z):
-        return self._get_z_dependent("Omega_b", z)
-
-    def get_Omega_cdm(self, z):
-        return self._get_z_dependent("Omega_cdm", z)
-
-    def get_Omega_nu_massive(self, z):
-        return self._get_z_dependent("Omega_nu_massive", z)
-
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)
 

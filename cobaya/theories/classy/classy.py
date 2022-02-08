@@ -233,7 +233,10 @@ class classy(BoltzmannBase):
                 self.set_collector_with_z_pool(
                     k, v["z"], "Hubble", args_names=["z"], arg_array=0)
             elif k in ["Omega_b", "Omega_cdm", "Omega_nu_massive"]:
-                raise NotImplementedError(f"`{k}` not implemented yet for CLASS")
+                func_name = {"Omega_b": "Om_b", "Omega_cdm": "Om_cdm",
+                             "Omega_nu_massive": "Om_ncdm"}[k]
+                self.set_collector_with_z_pool(
+                    k, v["z"], func_name, args_names=["z"], arg_array=0)
             elif k == "angular_diameter_distance":
                 self.set_collector_with_z_pool(
                     k, v["z"], "angular_distance", args_names=["z"], arg_array=0)
@@ -270,14 +273,10 @@ class classy(BoltzmannBase):
                     kwargs=v,
                     post=(lambda P, kk, z: (kk, z, np.array(P).T)))
             elif k == "sigma8_z":
-                raise NotImplementedError(f"`{k}` not implemented yet for CLASS")
-                # self.add_z_for_matter_power(v["z"])
-                # self.collectors[k] = Collector(
-                #     method="sigma",
-                #     args_names=["R", "z"],
-                #     args=[8, np.atleast_1d(v["z"])],
-                #     arg_array=1,
-                #     kwargs={"h_units": True})
+                self.add_z_for_matter_power(v["z"])
+                self.set_collector_with_z_pool(
+                    k, v["z"], "sigma", args=[8], args_names=["R", "z"],
+                    kwargs={"h_units": True}, arg_array=1)
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 raise LoggedError(
                     self.log, "Classy sigma_R not implemented as yet - use CAMB only")

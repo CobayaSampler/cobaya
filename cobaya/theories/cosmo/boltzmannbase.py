@@ -321,7 +321,6 @@ class BoltzmannBase(Theory):
                 self.log, "Units not known for H: '%s'. Try instead one of %r.",
                 units, list(H_units_conv_factor))
 
-    @abstract
     def get_Omega_b(self, z):
         r"""
         Returns the Baryon density parameter at the given redshift(s) ``z``.
@@ -329,8 +328,8 @@ class BoltzmannBase(Theory):
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
+        return self._get_z_dependent("Omega_b", z)
 
-    @abstract
     def get_Omega_cdm(self, z):
         r"""
         Returns the Cold Dark Matter density parameter at the given redshift(s) ``z``.
@@ -338,8 +337,8 @@ class BoltzmannBase(Theory):
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
+        return self._get_z_dependent("Omega_cdm", z)
 
-    @abstract
     def get_Omega_nu_massive(self, z):
         r"""
         Returns the Massive neutrinos' density parameter at the given redshift(s) ``z``.
@@ -347,6 +346,7 @@ class BoltzmannBase(Theory):
         The redshifts must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
         """
+        return self._get_z_dependent("Omega_nu_massive", z)
 
     def get_angular_diameter_distance(self, z):
         r"""
