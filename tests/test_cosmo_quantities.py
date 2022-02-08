@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from cobaya.cosmo_input import base_precision, planck_base_model, create_input
 from cobaya.model import get_model
-from cobaya.tools import recursive_update
+from cobaya.tools import recursive_update, check_2d
 
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .conftest import install_test_wrapper
@@ -62,11 +62,10 @@ Omega_nu_massive_values = [0.00608926, 0.00452621, 0.00355468, 0.00142649]
 
 
 def _test_cosmo_omega(theo, packages_path, skip_not_installed):
-    reqs = {"Omega_b": {'z': redshifts}, "Omega_cdm": {'z': redshifts},
-            "Omega_nu_massive": {'z': redshifts}}
+    reqs = {"Omega_b": {"z": redshifts}, "Omega_cdm": {"z": redshifts},
+            "Omega_nu_massive": {"z": redshifts}}
     model = _get_model_with_requirements_and_eval(
         theo, reqs, packages_path, skip_not_installed)
-# ojo con las precisiones CLASS
     assert np.allclose(model.theory[theo].get_Omega_b(redshifts),
                        Omega_b_values, rtol=1e-5 if theo.lower() == "camb" else 5e-4)
     assert np.allclose(model.theory[theo].get_Omega_cdm(redshifts),
@@ -82,3 +81,26 @@ def test_cosmo_omega_camb(packages_path, skip_not_installed):
 
 def test_cosmo_omega_classy(packages_path, skip_not_installed):
     _test_cosmo_omega("classy", packages_path, skip_not_installed)
+
+
+# angular_diameter_distance_2 ############################################################
+
+ang_diam_dist_2_values = [
+    31.59567987, 93.34513188, 127.08027199, 566.97224099, 876.72216398, 1703.62457558]
+
+
+def _test_cosmo_ang_diam_dist_2(theo, packages_path, skip_not_installed):
+    reqs = {"angular_diameter_distance_2": {"z_pairs": redshifts}}
+    model = _get_model_with_requirements_and_eval(
+        theo, reqs, packages_path, skip_not_installed)
+    redshift_pairs = check_2d(redshifts)
+    assert np.allclose(model.theory[theo].get_angular_diameter_distance_2(redshift_pairs),
+                       ang_diam_dist_2_values, rtol=1e-5)
+
+
+def test_cosmo_ang_diam_dist_2_camb(packages_path, skip_not_installed):
+    _test_cosmo_ang_diam_dist_2("camb", packages_path, skip_not_installed)
+
+
+def test_cosmo_ang_diam_dist_2_classy(packages_path, skip_not_installed):
+    _test_cosmo_ang_diam_dist_2("classy", packages_path, skip_not_installed)

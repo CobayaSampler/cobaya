@@ -13,7 +13,7 @@ from itertools import chain
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible, combine_1d, combine_2d
+from cobaya.tools import deepcopy_where_possible, combine_1d, combine_2d, check_2d
 from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.conventions import Const
 from cobaya.typing import empty_dict, InfoDict
@@ -23,8 +23,6 @@ H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 
 class BoltzmannBase(Theory):
     _is_abstract = True
-    _get_z_dependent: Callable  # defined by inheriting classes
-    _get_z_pair_dependent: Callable  # defined by inheriting classes
     renames: Mapping[str, str] = empty_dict
     extra_args: InfoDict
     _must_provide: dict
@@ -232,7 +230,7 @@ class BoltzmannBase(Theory):
                 # Combine pairs with previous ones and uniquify
                 try:
                     self._must_provide[k]["z_pairs"] = combine_2d(
-                        pairs, self._must_provide[k].get("z_pairs"))
+                        zs, self._must_provide[k].get("z_pairs"))
                 except ValueError:
                     raise LoggedError(
                         self.log, "For requisite `angular_diameter_distance2`, `z_pairs` "
@@ -262,6 +260,41 @@ class BoltzmannBase(Theory):
                 self.log, "The following parameters appear both as input parameters and "
                           "as extra arguments: %s. Please, remove one of the definitions "
                           "of each.", common)
+
+    def _get_z_dependent(self, quantity, z, pool=None):
+        if pool is None:
+            pool = self.collectors[quantity].z_pool
+        try:
+            i_kwarg_z = pool.find_indices(z)
+        except ValueError:
+            raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
+                                        f"Requested z are {z}, but computed ones are "
+                                        f"{pool.values}.")
+        return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
+
+    def _get_z_pair_dependent(self, quantity, z_pairs, inv_value=0):
+        """
+        ``inv_value`` (default=0) is assigned to pairs for which ``z1 > z2``.
+        """
+        try:
+            check_2d(z_pairs)
+        except ValueError:
+            raise LoggedError(self.log, f"z_pairs={z_pairs} not correctly formatted for "
+                                        f"{quantity}. It should be a list of pairs.")
+        # Only recover for correctly sorted pairs
+        z_pairs_arr = np.array(z_pairs)
+        i_right = (z_pairs_arr[:, 0] <= z_pairs_arr[:, 1])
+        pool = self.collectors[quantity].z_pool
+        try:
+            i_z_pair = pool.find_indices(z_pairs_arr[i_right])
+        except ValueError:
+            raise LoggedError(
+                self.log, f"{quantity} not computed for all z pairs requested. "
+                          f"Requested z are {z_pairs}, but computed ones are "
+                          f"{pool.values}.")
+        result = np.full(len(z_pairs), inv_value, dtype=float)
+        result[i_right] = np.array(self.current_state[quantity], copy=True)[i_z_pair]
+        return result
 
     def _cmb_unit_factor(self, units, T_cmb):
         units_factors = {"1": 1,

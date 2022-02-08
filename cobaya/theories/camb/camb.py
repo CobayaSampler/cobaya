@@ -190,6 +190,7 @@ class Collector(NamedTuple):
     args: list = []
     kwargs: dict = {}
     z_pool: Optional[PoolND] = None
+    post: Optional[Callable] = None
 
 
 class CAMBOutputs(NamedTuple):
@@ -358,13 +359,15 @@ class CAMB(BoltzmannBase):
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_sigma8,
-                    kwargs={})
+                    kwargs={},
+                    post=(lambda *x: x[::-1]))  # returned in inverse order
                 self.needs_perts = True
             elif k == "fsigma8":
                 self.add_to_redshifts(v["z"])
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_fsigma8,
-                    kwargs={})
+                    kwargs={},
+                    post=(lambda* x: x[::-1]))  # returned in inverse order
                 self.needs_perts = True
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 kwargs = v.copy()
@@ -543,6 +546,8 @@ class CAMB(BoltzmannBase):
                 if collector:
                     state[product] = \
                         collector.method(results, *collector.args, **collector.kwargs)
+                    if collector.post:
+                        state[product] = collector.post(*state[product])
                 else:
                     state[product] = results
         except self.camb.baseconfig.CAMBError as e:
@@ -651,38 +656,11 @@ class CAMB(BoltzmannBase):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
     def _get_z_dependent(self, quantity, z):
-        try:
-            if quantity in ["sigma8_z", "fsigma8"]:
-                pool = self.z_pool_for_perturbations
-                # Mind that CAMB stores redshifts for perturbations in inv order
-                i_kwarg_z_inv = pool.find_indices(z)
-                i_kwarg_z = len(pool) - 1 - i_kwarg_z_inv
-            else:
-                pool = self.collectors[quantity].z_pool
-                i_kwarg_z = pool.find_indices(z)
-        except ValueError:
-            raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
-                                        f"Requested z are {z}, but computed ones are "
-                                        f"{pool.values}.")
-        return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
-
-    def _get_z_pair_dependent(self, quantity, z_pairs, inv_value=0):
-        """
-        ``inv_value`` (default=0) is assigned to pairs for which ``z1 > z2``.
-        """
-        try:
-            check_2d(z_pairs)
-        except ValueError:
-            raise LoggedError(self.log, f"z_pairs={z_pairs} not correctly formatted for "
-                                        f"{quantity}. It should be a list of pairs.")
-        # Only recover for correctly sorted pairs
-        z_pairs_arr = np.array(z_pairs)
-        i_right = (z_pairs_arr[:, 0] <= z_pairs_arr[:, 1])
-        pool = self.collectors[quantity].z_pool
-        i_z_pair = pool.find_indices(z_pairs_arr[i_right])
-        result = np.full(len(z_pairs), inv_value, dtype=float)
-        result[i_right] = np.array(self.current_state[quantity], copy=True)[i_z_pair]
-        return result
+        # Partially reimplemented because of sigma8_z, etc, use different pool
+        pool = None
+        if quantity in ["sigma8_z", "fsigma8"]:
+            pool = self.z_pool_for_perturbations
+        return super()._get_z_dependent(quantity, z, pool=pool)
 
     def get_fsigma8(self, z):
         return self._get_z_dependent("fsigma8", z)

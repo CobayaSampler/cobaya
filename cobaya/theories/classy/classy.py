@@ -144,7 +144,8 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, Pool1D, PoolND, combine_1d
+from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND, \
+    combine_1d
 from cobaya.typing import empty_dict
 
 
@@ -245,10 +246,9 @@ class classy(BoltzmannBase):
                                                # returns r and dzdr!
                                                post=(lambda r, dzdr: r))
             elif k == "angular_diameter_distance_2":
-                raise NotImplementedError(f"`{k}` not implemented yet for CLASS")
-            #     self.set_collector_with_z_pool(k, v["z"], "z_of_r", args_names=["z"],
-            #                                    # returns r and dzdr!
-            #                                    post=(lambda r, dzdr: r))
+                self.set_collector_with_z_pool(
+                    k, v["z_pairs"], "angular_distance_between_pair",
+                    args_names=["z1", "z2"], arg_array=[0, 1], d=2)
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
@@ -314,7 +314,7 @@ class classy(BoltzmannBase):
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
     def set_collector_with_z_pool(self, k, zs, method, args=(), args_names=(),
-                                  kwargs=empty_dict, arg_array=None, post=None):
+                                  kwargs=empty_dict, arg_array=None, post=None, d=1):
         """
         Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
 
@@ -326,15 +326,23 @@ class classy(BoltzmannBase):
             z_pool = self.collectors[k].z_pool
             z_pool.update(zs)
         else:
-            z_pool = Pool1D(zs)
+            Pool = {1: Pool1D, 2: Pool2D}[d]
+            z_pool = Pool(zs)
         # Insert z as arg or kwarg
-        if "z" in kwargs:
+        if d == 1 and "z" in kwargs:
             kwargs = deepcopy(kwargs)
             kwargs["z"] = z_pool.values
-        elif "z" in args_names:
+        elif d == 1 and "z" in args_names:
             args = deepcopy(args)
             i_z = args_names.index("z")
             args = list(args[:i_z]) + [z_pool.values] + list(args[i_z:])
+        elif d == 2 and "z1" in args_names and "z2" in args_names:
+            # z1 assumed appearing before z2!
+            args = deepcopy(args)
+            i_z1 = args_names.index("z1")
+            i_z2 = args_names.index("z2")
+            args = (list(args[:i_z1]) + [z_pool.values[:, 0]] + list(args[i_z1:i_z2]) +
+                    [z_pool.values[:, 1]] + list(args[i_z2:]))
         else:
             raise LoggedError(
                 self.log,
@@ -408,15 +416,20 @@ class classy(BoltzmannBase):
                 self.collectors["sigma8"].args[0] = 8 / self.classy.h()
             method = getattr(self.classy, collector.method)
             arg_array = self.collectors[product].arg_array
+            if isinstance(arg_array, int):
+                arg_array = [arg_array]
             if arg_array is None:
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
-            elif isinstance(arg_array, int):
-                state[product] = np.zeros(
-                    len(self.collectors[product].args[arg_array]))
-                for i, v in enumerate(self.collectors[product].args[arg_array]):
-                    args = (list(self.collectors[product].args[:arg_array]) + [v] +
-                            list(self.collectors[product].args[arg_array + 1:]))
+            elif isinstance(arg_array, Sequence):
+                # if more than one vectorised arg, assume all vectorised in parallel
+                n_values = len(self.collectors[product].args[arg_array[0]])
+                state[product] = np.zeros(n_values)
+                args = deepcopy(list(self.collectors[product].args))
+                for i in range(n_values):
+                    for arg_arr_index in arg_array:
+                        args[arg_arr_index] = \
+                            self.collectors[product].args[arg_arr_index][i]
                     state[product][i] = method(
                         *args, **self.collectors[product].kwargs)
             elif arg_array in self.collectors[product].kwargs:
@@ -501,16 +514,6 @@ class classy(BoltzmannBase):
 
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
-
-    def _get_z_dependent(self, quantity, z):
-        pool = self.collectors[quantity].z_pool
-        try:
-            i_kwarg_z = pool.find_indices(z)
-        except ValueError:
-            raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
-                                        f"Requested z are {z}, but computed ones are "
-                                        f"{pool.values}.")
-        return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
     def close(self):
         self.classy.empty()
