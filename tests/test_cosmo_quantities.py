@@ -25,6 +25,7 @@ def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_in
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     info = recursive_update(info, {"theory": info_theory, "likelihood": {"one": None}})
     info["packages_path"] = process_packages_path(packages_path)
+    info["debug"] = True
     model = install_test_wrapper(skip_not_installed, get_model, info)
     eval_parameters = {p: v for p, v in fiducial_parameters.items()
                        if p in model.parameterization.sampled_params()}
@@ -109,3 +110,35 @@ def test_cosmo_ang_diam_dist_2_camb(packages_path, skip_not_installed):
 
 def test_cosmo_ang_diam_dist_2_classy(packages_path, skip_not_installed):
     _test_cosmo_ang_diam_dist_2("classy", packages_path, skip_not_installed)
+
+
+# Weyl power spectrum ####################################################################
+
+var_pair = ("Weyl", "Weyl")
+zs = [0, 0.5, 1, 1.5, 2, 3.5]
+ks = np.logspace(-4, np.log10(15), 5)
+Pkz_values = [[-27.43930416, -24.66947574, -24.57497701, -28.00145562, -33.24503304],
+              [-27.15442457, -24.38434986, -24.28560236, -28.05638781, -33.27063402],
+              [-27.05300137, -24.28274865, -24.18057448, -28.25209712, -33.31536626],
+              [-27.01121008, -24.24081427, -24.13606913, -28.46637302, -33.37454288],
+              [-26.99148444, -24.22096153, -24.11426728, -28.65883515, -33.44109139],
+              [-26.97141437, -24.20053966, -24.09009681, -29.05111258, -33.70130814]]
+
+
+def _test_cosmo_weyl_pkz(theo, packages_path, skip_not_installed):
+    # Similar to what"s requested by DES (but not used by default)
+    reqs = {"Pk_interpolator": {"z": zs, "k_max": max(ks), "nonlinear": (False, True),
+                                "vars_pairs": var_pair}}
+    model = _get_model_with_requirements_and_eval(
+        theo, reqs, packages_path, skip_not_installed)
+    interp = model.theory[theo].get_Pk_interpolator(var_pair=var_pair, nonlinear=True)
+    assert np.allclose(Pkz_values, interp.logP(zs, ks),
+                       rtol=1e-5 if theo.lower() == "camb" else 5e-4)
+
+
+def test_cosmo_weyl_pkz_camb(packages_path, skip_not_installed):
+    _test_cosmo_weyl_pkz("camb", packages_path, skip_not_installed)
+
+
+def test_cosmo_weyl_pkz_classy(packages_path, skip_not_installed):
+    _test_cosmo_weyl_pkz("classy", packages_path, skip_not_installed)

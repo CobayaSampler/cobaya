@@ -264,14 +264,22 @@ class classy(BoltzmannBase):
                 pair = k[2:]
                 if pair == ("delta_tot", "delta_tot"):
                     v["only_clustering_species"] = False
+                    self.collectors[k] = Collector(
+                        method="get_pk_and_k_and_z",
+                        kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
                 elif pair == ("delta_nonu", "delta_nonu"):
                     v["only_clustering_species"] = True
+                    self.collectors[k] = Collector(
+                        method="get_pk_and_k_and_z", kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+                elif pair == ("Weyl", "Weyl"):
+                    self.extra_args["output"] += " mTk"
+                    self.collectors[k] = Collector(
+                        method="get_Weyl_pk_and_k_and_z", kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
                 else:
                     raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
-                self.collectors[k] = Collector(
-                    method="get_pk_and_k_and_z",
-                    kwargs=v,
-                    post=(lambda P, kk, z: (kk, z, np.array(P).T)))
             elif k == "sigma8_z":
                 self.add_z_for_matter_power(v["z"])
                 self.set_collector_with_z_pool(
