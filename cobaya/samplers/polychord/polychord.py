@@ -82,7 +82,7 @@ class polychord(Sampler):
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
                     getattr(self, p), "d", scale=self.nDims, dtype=int).value)
-        self._quants_nlive_units = ["nprior","nfail"]
+        self._quants_nlive_units = ["nprior", "nfail"]
         for p in self._quants_nlive_units:
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
