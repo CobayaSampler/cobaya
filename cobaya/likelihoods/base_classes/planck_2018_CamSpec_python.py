@@ -270,6 +270,11 @@ class Planck2018CamSpecPython(DataSetLikelihood):
 
     def logp(self, **data_params):
         Cls = self.provider.get_Cl(ell_factor=True)
+        for Cl_key, Cl_array in Cls.items():
+            if Cl_key != 'ell':
+                if np.any(np.isnan(Cl_array)):
+                    self.log.error("nans in Cls['%s']: returning logzero and carrying on." % Cl_key)
+                    return -np.inf
         return -0.5 * self.chi_squared(Cls.get('tt'), Cls.get('te'), Cls.get('ee'),
                                        data_params)
 
