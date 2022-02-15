@@ -1298,7 +1298,7 @@ class Pool1D(PoolND):
         return np.where(self._cond_isclose(pool, x, rtol=rtol, atol=atol))[0]
 
 
-def check_2d(pairs):
+def check_2d(pairs, allow_1d=True):
     """
     Checks that the input is a pair (x1, x2) or a list of them.
 
@@ -1306,8 +1306,9 @@ def check_2d(pairs):
 
     Does not sort the pairs with respect to each other or checks for duplicates.
 
-    Alternatively, a list of more than 2 single values can be passed, and will be
-    converted into an internally-sorted list of all possible pairs, as a 2d array.
+    If `allow_1d=True` (default) a list of more than 2 single values can be passed,
+    and will be converted into an internally-sorted list of all possible pairs,
+    as a 2d array.
 
     Raises ``ValueError`` if the argument is badly formatted.
     """
@@ -1318,8 +1319,11 @@ def check_2d(pairs):
         elif len(pairs) == 2:  # Single pair
             pairs = np.atleast_2d(pairs)
         elif len(pairs) > 2:  # list -> generate combinations
-            pairs = np.array(list(chain(*[[[x_i, x_j] for x_j in pairs[i + 1:]]
-                                          for i, x_i in enumerate(pairs)])))
+            if allow_1d:
+                pairs = np.array(list(chain(*[[[x_i, x_j] for x_j in pairs[i + 1:]]
+                                              for i, x_i in enumerate(pairs)])))
+            else:
+                raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
     elif (len(pairs.shape) == 2 and pairs.shape[1] != 2) or len(pairs.shape) != 2:
         raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
     return np.sort(pairs, axis=-1)  # internal sorting

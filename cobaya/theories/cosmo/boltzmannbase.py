@@ -277,7 +277,7 @@ class BoltzmannBase(Theory):
         ``inv_value`` (default=0) is assigned to pairs for which ``z1 > z2``.
         """
         try:
-            check_2d(z_pairs)
+            check_2d(z_pairs, allow_1d=False)
         except ValueError:
             raise LoggedError(self.log, f"z_pairs={z_pairs} not correctly formatted for "
                                         f"{quantity}. It should be a list of pairs.")
