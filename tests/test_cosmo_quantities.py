@@ -60,6 +60,61 @@ def test_cosmo_sigma8_fsigma8_classy(packages_path, skip_not_installed):
     _test_cosmo_sigma8_fsigma8("classy", packages_path, skip_not_installed)
 
 
+# sigma(R, z) ############################################################################
+
+z_sigma_R = [0, 2, 5]
+R_sigma_R = np.arange(1, 20, 1)
+sigma_R_values = {
+    ("delta_tot", "delta_tot"): [
+        [2.91601056, 2.2108047, 1.83763103, 1.59277133, 1.41525858, 1.27819406,
+         1.16797698, 1.07694361, 1.000067, 0.93400161, 0.87649166, 0.8259037,
+         0.7809405, 0.74068264, 0.70437064, 0.67138275, 0.641286, 0.61370782,
+         0.58833036],
+        [1.2189716, 0.92415734, 0.7681488, 0.66578225, 0.59157052, 0.53426856,
+         0.48819049, 0.45013247, 0.41799292, 0.39037322, 0.36633031, 0.34518131,
+         0.32638387, 0.30955364, 0.29437308, 0.28058226, 0.26800016, 0.25647104,
+         0.24586199],
+        [0.61849435, 0.46890459, 0.38974492, 0.3378033, 0.30014754, 0.27107188,
+         0.2476913, 0.22838016, 0.21207212, 0.19805749, 0.18585777, 0.17512646,
+         0.16558837, 0.15704846, 0.14934564, 0.14234799, 0.13596367, 0.13011365,
+         0.12473049]],
+    ("delta_nonu", "delta_nonu"): [
+        [2.91601056, 2.2108047, 1.83763103, 1.59277133, 1.41525858, 1.27819406,
+         1.16797698, 1.07694361, 1.000067, 0.93400161, 0.87649166, 0.8259037,
+         0.7809405, 0.74068264, 0.70437064, 0.67138275, 0.641286, 0.61370782,
+         0.58833036],
+        [1.2189716, 0.92415734, 0.7681488, 0.66578225, 0.59157052, 0.53426856,
+         0.48819049, 0.45013247, 0.41799292, 0.39037322, 0.36633031, 0.34518131,
+         0.32638387, 0.30955364, 0.29437308, 0.28058226, 0.26800016, 0.25647104,
+         0.24586199],
+        [0.61849435, 0.46890459, 0.38974492, 0.3378033, 0.30014754, 0.27107188,
+         0.2476913, 0.22838016, 0.21207212, 0.19805749, 0.18585777, 0.17512646,
+         0.16558837, 0.15704846, 0.14934564, 0.14234799, 0.13596367, 0.13011365,
+         0.12473049]]}
+
+
+def _test_cosmo_sigma_R(theo, packages_path, skip_not_installed):
+    vars_pairs = (("delta_tot", "delta_tot"), ("delta_nonu", "delta_nonu"))
+    reqs = {"sigma_R": {"z": z_sigma_R, "R": R_sigma_R, "vars_pairs": vars_pairs}}
+    model = _get_model_with_requirements_and_eval(
+        theo, reqs, packages_path, skip_not_installed)
+    for pair in vars_pairs:
+        R_out, z_out, sigma_R_out = model.theory[theo].get_sigma_R()
+        print(sigma_R_out)
+        assert np.allclose(R_out, R_sigma_R)
+        assert np.allclose(z_out, z_sigma_R)
+        assert np.allclose(sigma_R_out, sigma_R_values[pair],
+                           rtol=1e-5 if theo.lower() == "camb" else 2e-3)
+
+
+def test_cosmo_sigma_R_camb(packages_path, skip_not_installed):
+    _test_cosmo_sigma_R("camb", packages_path, skip_not_installed)
+
+
+def test_cosmo_sigma_R_classy(packages_path, skip_not_installed):
+    _test_cosmo_sigma_R("classy", packages_path, skip_not_installed)
+
+
 # Omega_X(z) #############################################################################
 
 Omega_b_values = [0.15172485, 0.15517809, 0.12258897, 0.04920226]

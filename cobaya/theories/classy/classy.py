@@ -252,8 +252,7 @@ class classy(BoltzmannBase):
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
-                # TODO: remove arbitrary factor below
-                self.add_P_k_max(v.pop("k_max") * 1.5, units="1/Mpc")
+                self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
                 # NB: Actually, only the max z is used, and the actual sampling in z
                 # for computing P(k,z) is controlled by `perturb_sampling_stepsize`
                 # (default: 0.1). But let's leave it like this in case this changes
@@ -292,8 +291,20 @@ class classy(BoltzmannBase):
                     k, v["z"], "effective_f_sigma8", args=[z_step],
                     args_names=["z", "z_step"], arg_array=0)
             elif isinstance(k, tuple) and k[0] == "sigma_R":
-                raise LoggedError(
-                    self.log, "Classy sigma_R not implemented as yet - use CAMB only")
+                self.extra_args["output"] += " mPk"
+                self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
+                # NB: See note about redshifts in Pk_grid
+                self.add_z_for_matter_power(v["z"])
+                pair = k[1:]
+                try:
+                    method = {("delta_tot", "delta_tot"): "sigma",
+                              ("delta_nonu", "delta_nonu"): "sigma_cb"}[pair]
+                except KeyError:
+                    raise LoggedError(self.log, f"sigma(R,z) not implemented for {pair}")
+                self.collectors[k] = Collector(
+                    method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
+                    args_names=["R", "z"], arg_array=[[0], [1]],
+                    post=(lambda R, z, sigma: (R, z, sigma.T)))
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -431,21 +442,43 @@ class classy(BoltzmannBase):
             method = getattr(self.classy, collector.method)
             arg_array = self.collectors[product].arg_array
             if isinstance(arg_array, int):
-                arg_array = [arg_array]
+                arg_array = np.atleast_1d(arg_array)
             if arg_array is None:
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
-            elif isinstance(arg_array, Sequence):
-                # if more than one vectorised arg, assume all vectorised in parallel
-                n_values = len(self.collectors[product].args[arg_array[0]])
-                state[product] = np.zeros(n_values)
-                args = deepcopy(list(self.collectors[product].args))
-                for i in range(n_values):
-                    for arg_arr_index in arg_array:
-                        args[arg_arr_index] = \
-                            self.collectors[product].args[arg_arr_index][i]
-                    state[product][i] = method(
-                        *args, **self.collectors[product].kwargs)
+            elif isinstance(arg_array, Sequence) or isinstance(arg_array, np.ndarray):
+                arg_array = np.array(arg_array)
+                if len(arg_array.shape) == 1:
+                    # if more than one vectorised arg, assume all vectorised in parallel
+                    n_values = len(self.collectors[product].args[arg_array[0]])
+                    state[product] = np.zeros(n_values)
+                    args = deepcopy(list(self.collectors[product].args))
+                    for i in range(n_values):
+                        for arg_arr_index in arg_array:
+                            args[arg_arr_index] = \
+                                self.collectors[product].args[arg_arr_index][i]
+                        state[product][i] = method(
+                            *args, **self.collectors[product].kwargs)
+                elif len(arg_array.shape) == 2:
+                    if len(arg_array) > 2:
+                        raise NotImplementedError("Only 2 array expanded vars so far.")
+                    # Create outer combinations
+                    x_and_y = np.array(np.meshgrid(
+                        self.collectors[product].args[arg_array[0, 0]],
+                        self.collectors[product].args[arg_array[1, 0]])).T
+                    args = deepcopy(list(self.collectors[product].args))
+                    result = np.empty(shape=x_and_y.shape[:2])
+                    for i, row in enumerate(x_and_y):
+                        for j, column_element in enumerate(x_and_y[i]):
+                            args[arg_array[0, 0]] = column_element[0]
+                            args[arg_array[1, 0]] = column_element[1]
+                            result[i, j] = method(
+                                *args, **self.collectors[product].kwargs)
+                    state[product] = (
+                        self.collectors[product].args[arg_array[0, 0]],
+                        self.collectors[product].args[arg_array[1, 0]], result)
+                else:
+                    raise ValueError("arg_array not correctly formatted.")
             elif arg_array in self.collectors[product].kwargs:
                 value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
                 state[product] = np.zeros(value.shape)
