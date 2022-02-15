@@ -8,7 +8,7 @@ camb_extra = deepcopy(cmb_precision["camb"])
 camb_extra.update({"halofit_version": "takahashi"})
 classy_extra = deepcopy(cmb_precision["classy"])
 classy_extra.update({"non linear": "halofit"})
-classy_extra.update({"halofit_min_k_max": 20})
+classy_extra.update({"nonlinear_min_k_max": 20})
 
 
 def test_bicep_keck_2018_camb(packages_path, skip_not_installed):

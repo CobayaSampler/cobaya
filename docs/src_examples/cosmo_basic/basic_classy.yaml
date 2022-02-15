@@ -2,7 +2,7 @@ theory:
   classy:
     extra_args:
       non linear: hmcode
-      hmcode_min_k_max: 20
+      nonlinear_min_k_max: 20
       N_ncdm: 1
       N_ur: 2.0328
 likelihood:
