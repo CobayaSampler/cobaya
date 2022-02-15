@@ -4,8 +4,6 @@
 path: null
 measurements_file: bao_data/sdss_DR16_BAOplus_QSO_FSBAO_DMDHfs8.dat
 cov_file: bao_data/sdss_DR16_BAOplus_QSO_FSBAO_DMDHfs8_covtot.txt
-# Fiducial sound horizon with which data have been stored
-rs_fid: 1  # Mpc
 # Redshift
 redshift: 2.334
 # Aliases for automatic covariance matrix

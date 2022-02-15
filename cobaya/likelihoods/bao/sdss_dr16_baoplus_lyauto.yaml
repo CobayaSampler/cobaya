@@ -6,8 +6,7 @@ grid_file: bao_data/sdss_DR16_LYAUTO_BAO_DMDHgrid.txt
 # The measurements used
 observable_1: DM_over_rs
 observable_2: DH_over_rs
-rs_rescale: 1
-# Redshift 
+# Redshift
 redshift: 2.334
 # Aliases for automatic covariance matrix
 aliases: [BAO]

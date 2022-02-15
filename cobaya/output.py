@@ -89,6 +89,11 @@ class FileLock:
                     pass
             except OSError:
                 pass
+        if mpi.is_disabled():
+            raise LoggedError(self.log,
+                              "File %s is locked by another process, you are running "
+                              "with MPI disabled but may have more than one process. "
+                              "Note that --test should not be used with MPI.")
         if mpi.get_mpi():
             import mpi4py
         else:
