@@ -1,6 +1,6 @@
 # eBOSS LRG results, measurements from eBOSS DR12
-# as described in, Alam et al. 2020
-# https://arxiv.org/pdf/2007.08991.pdf
+# as described in, Alam et al. 2016
+# https://arxiv.org/pdf/1607.03155.pdf
 
 path: null
 measurements_file: bao_data/sdss_DR12_LRG_BAO_DMDH.dat
