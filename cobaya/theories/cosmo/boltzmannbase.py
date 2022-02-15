@@ -95,7 +95,7 @@ class BoltzmannBase(Theory):
           ``source_name: {"function": "spline"|"gaussian", [source_args]``;
           for now, ``[source_args]`` follows the notation of `CAMBSources
           <https://camb.readthedocs.io/en/latest/sources.html>`_.
-          If can also take ``"lmax": [int]``, ``"limber": True`` if Limber approximation
+          It can also take ``"lmax": [int]``, ``"limber": True`` if Limber approximation
           desired, and ``"non_linear": True`` if non-linear contributions requested.
           Get with :func:`~BoltzmannBase.get_source_Cl`.
         - ``Pk_interpolator={...}``: Matter power spectrum interpolator in :math:`(z, k)`.
@@ -396,7 +396,7 @@ class BoltzmannBase(Theory):
         Returns the physical angular diameter distance between pairs of redshifts
         `z_pairs` in :math:`\mathrm{Mpc}`.
 
-        The redshifts pairs must be a subset of those requested when
+        The redshift pairs must be a subset of those requested when
         :func:`~BoltzmannBase.must_provide` was called.
 
         Return zero for pairs in which ``z1 > z2``.
