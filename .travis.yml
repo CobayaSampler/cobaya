@@ -106,6 +106,7 @@ before_install:
     else
     pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
     fi
+  - python -m pip install --upgrade pip
   - python --version
 
 script:
