@@ -255,7 +255,7 @@ class BlockedProposer(HasLogger):
         """
         Take covariance of sampled parameters (propose_matrix), and construct orthonormal
         parameters where orthonormal parameters are grouped in blocks by speed, so changes
-        in slowest block changes slow and fast parameters, but changes in the fastest
+        in the slowest block changes slow and fast parameters, but changes in the fastest
         block only changes fast parameters
 
         :param propose_matrix: covariance matrix for the sampled parameters.

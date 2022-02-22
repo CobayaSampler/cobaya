@@ -26,6 +26,7 @@ from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, \
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
+from abc import ABC, abstractmethod
 import traceback
 
 # Local
@@ -457,7 +458,7 @@ class NumberWithUnits:
     def __init__(self, n_with_unit: Any, unit: str, dtype=float, scale=None):
         """
         Reads number possibly with some `unit`, e.g. 10s, 4d.
-        Loaded from a a case-insensitive string of a number followed by a unit,
+        Loaded from a case-insensitive string of a number followed by a unit,
         or just a number in which case the unit is set to None.
 
         :param n_with_unit: number string or number
@@ -1069,3 +1070,325 @@ def sort_cosmetic(info):
             sorted_info[k] = info[k]
     sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
     return sorted_info
+
+
+def combine_1d(new_list, old_list=None):
+    """
+    Combines+sorts+uniquifies two lists of values. Sorting is in ascending order.
+
+    If `old_list` given, it is assumed to be a sorted and uniquified array (e.g. the
+    output of this function when passed as first argument).
+
+    Uses `np.unique`, which distinguishes numbers up to machine precision.
+    """
+    new_list = np.atleast_1d(new_list)
+    if old_list is not None:
+        new_list = np.concatenate((old_list, new_list))
+    return np.unique(new_list)
+
+
+class PoolND(ABC):
+    r"""
+    Stores a list of ``N``-tuples ``[x_1, x_2...]`` for later retrieval given some
+    ``N``-tuple ``x``.
+
+    Tuples are sorted internally, and then by ascending order of their values.
+
+    Tuples are uniquified internally up to machine precision, and an adaptive
+    tolerance (relative to min absolute and relative differences in the list) is
+    applied at retrieving.
+
+    Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
+    """
+
+    values: np.ndarray
+
+    def __init__(self, values=[],
+                 rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6, logger=None):
+        assert values is not None and len(values) != 0, \
+            "Pool needs to be initialised with at least one value."
+        assert rtol_min <= rtol_max, \
+            f"rtol_min={rtol_min} must be smaller or equal to rtol_max={rtol_max}"
+        assert atol_min <= atol_max, \
+            f"atol_min={atol_min} must be smaller or equal to ato_max={atol_max}"
+        self.atol_min, self.atol_max = atol_min, atol_max
+        self.rtol_min, self.rtol_max = rtol_min, rtol_max
+        if logger is None:
+            self.log = get_logger(self.__class__.__name__)
+        else:
+            self.log = logger
+        self.update(values)
+
+    @property
+    def d(self):
+        return len(self.values.shape)
+
+    def __len__(self):
+        return len(self.values)
+
+    def __getitem__(self, *args, **kwargs):
+        return self.values.__getitem__(*args, **kwargs)
+
+    def _update_tolerances(self):
+        """Adapts tolerance to the differences in the list."""
+        if self.d == 1:
+            # Assumes that the pool is sorted!
+            values = self.values
+        else:
+            values = np.copy(self.values)
+            values.flatten()
+            values = combine_1d(values)
+        if len(values) > 1:
+            differences = values[1:] - values[:-1]
+            min_difference = np.min(differences)
+            self._adapt_atol_min = self.atol_min * min_difference
+            self._adapt_atol_max = self.atol_max * min_difference
+            min_rel_difference = np.min(differences / values[1:])
+            self._adapt_rtol_min = self.rtol_min * min_rel_difference
+            self._adapt_rtol_max = self.rtol_max * min_rel_difference
+        else:  # single-element list
+            self._adapt_atol_min = self.atol_min * values[0]
+            self._adapt_atol_max = self.atol_max * values[0]
+            self._adapt_rtol_min = self.rtol_min
+            self._adapt_rtol_max = self.rtol_max
+
+    def update(self, values):
+        """Adds a set of values, uniquifies and sorts."""
+        values = self._check_values(values)
+        self._update_values(values)
+        self._update_tolerances()
+
+    @abstractmethod
+    def _check_values(self, values):
+        """
+        Checks that the input values are correctly formatted and re-formats them if
+        necessary.
+
+        Returns a correctly formatted array.
+
+        Internal sorting is enforced, but external is ignored.
+        """
+
+    @abstractmethod
+    def _update_values(self, values):
+        """Combines given and existing pool. Should assign ``self.values``."""
+
+    def find_indices(self, values):
+        """
+        Finds the indices of elements in array ``values`` in the pool.
+
+        For ``dim > 1`` it expects internally ascending-sorted pairs.
+
+        Calls ``numpy.isclose`` for robust comparison, using adaptive ``rtol``, ``atol``
+        limits.
+
+        Raises ValueError if not all elements were found, each only once.
+        """
+        values = self._check_values(values)
+        # Fast search first if possible
+        indices = self._fast_find_indices(values)
+        i_not_found = np.where(indices == -1)[0]
+        if len(i_not_found):
+            # TODO: since the pool is sorted already, we could take advantage of that,
+            #       sort the target values (and save indices to recover original order),
+            #       and iterate only over the part of the pool starting where the last
+            #       value was found. But since running rapid test first, prob not needed.
+            indices_i_prev_not_found = np.concatenate(
+                [self._pick_at_most_one(x, None, None) for x in values[i_not_found]])
+            if len(indices_i_prev_not_found) < len(i_not_found):
+                raise ValueError(
+                    f"Could not find some of {list(values)} in pool {list(self.values)}. "
+                    "If there appear to be a values close to the values in the pool,"
+                    " increase max tolerances.")
+            indices[i_not_found] = indices_i_prev_not_found
+        return indices
+
+    def _fast_find_indices(self, values):
+        """
+        Fast way to find indices, possibly ignoring tolerance, e.g. using np.where(a==b).
+
+        It should check that the right elements have been found, and return an array
+        of length ``values.shape[0]`` with ``-1`` for elements that where not found.
+        """
+        # if no dimensionality-specific implementation: none found
+        return np.full(shape=len(values), fill_value=-1)
+
+    def _pick_at_most_one(self, x, pool=None, rtol=None, atol=None):
+        """
+        Iterates over the pool (full pool if ``pool`` is ``None``) to find the index of a
+        single element ``x``, using the provided tolerances.
+
+        It uses the test function ``self._where_isclose(pool, x, rtol, atol)``, returning
+        an array of indices of matches.
+
+        Tolerances start at the minimum one, and, until an element is found, are
+        progressively increased until the maximum tolerance is reached.
+        """
+        if pool is None:
+            pool = self.values
+        # Start with min tolerance for safety
+        if rtol is None:
+            rtol = self._adapt_rtol_min
+        if atol is None:
+            atol = self._adapt_atol_min
+        i = self._where_isclose(pool, x, rtol=rtol, atol=atol)
+        if not len(i):  # none found
+            # Increase tolerance (if allowed) until one found
+            if rtol > self._adapt_rtol_max and atol > self._adapt_atol_max:
+                # Nothing was found despite high tolerance
+                return np.empty(shape=0, dtype=int)
+            if rtol <= self._adapt_rtol_max:
+                rtol *= 10
+            if atol <= self._adapt_atol_max:
+                atol *= 10
+            return self._pick_at_most_one(x, pool, rtol, atol)
+        elif len(i) > 1:  # more than one found
+            # Decrease tolerance (if allowed!) until only one found
+            if rtol < self._adapt_rtol_min and atol < self._adapt_atol_min:
+                # No way to find only one element despite low tolerance
+                return np.empty(shape=0, dtype=int)
+            # Factor not a divisor of the one above, to avoid infinite loops
+            if rtol >= self._adapt_rtol_min:
+                rtol /= 3
+            if atol >= self._adapt_atol_min:
+                atol /= 3
+            return self._pick_at_most_one(x, pool, rtol, atol)
+        else:
+            return i
+
+    @abstractmethod
+    def _where_isclose(self, pool, x, rtol, atol):
+        """
+        Returns an array of indices of matches.
+
+        E.g. in 1D it works as ``np.where(np.isclose(pool, x, rtol=rtol, atol=atol))[0]``.
+        """
+
+
+class Pool1D(PoolND):
+    r"""
+    Stores a list of values ``[x_1, x_2...]`` for later retrieval given some ``x``.
+
+    ``x`` values are uniquified internally up to machine precision, and an adaptive
+    tolerance (relative to min absolute and relative differences in the list) is
+    applied at retrieving.
+
+    Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
+    """
+
+    def _check_values(self, values):
+        return np.atleast_1d(values)
+
+    def _update_values(self, values):
+        self.values = combine_1d(values, getattr(self, "values", None))
+
+    def _fast_find_indices(self, values):
+        i_insert_left = np.clip(
+            np.searchsorted(self.values, values), a_min=None, a_max=len(self) - 1)
+        return np.where(
+            self._cond_isclose(
+                self.values[i_insert_left], values, rtol=self._adapt_rtol_min,
+                atol=self._adapt_atol_min),
+            i_insert_left, -1)
+
+    def _cond_isclose(self, pool, x, rtol, atol):
+        return np.isclose(pool, x, rtol=rtol, atol=atol)
+
+    def _where_isclose(self, pool, x, rtol, atol):
+        return np.where(self._cond_isclose(pool, x, rtol=rtol, atol=atol))[0]
+
+
+def check_2d(pairs, allow_1d=True):
+    """
+    Checks that the input is a pair (x1, x2) or a list of them.
+
+    Returns a list of pairs as a 2d array with tuples sorted internally.
+
+    Does not sort the pairs with respect to each other or checks for duplicates.
+
+    If `allow_1d=True` (default) a list of more than 2 single values can be passed,
+    and will be converted into an internally-sorted list of all possible pairs,
+    as a 2d array.
+
+    Raises ``ValueError`` if the argument is badly formatted.
+    """
+    pairs = np.array(pairs)
+    if len(pairs.shape) == 1:
+        if len(pairs) < 2:  # Single element or just a number
+            raise ValueError(f"Needs at least a pair of values. Got {list(pairs)}.")
+        elif len(pairs) == 2:  # Single pair
+            pairs = np.atleast_2d(pairs)
+        elif len(pairs) > 2:  # list -> generate combinations
+            if allow_1d:
+                pairs = np.array(list(chain(*[[[x_i, x_j] for x_j in pairs[i + 1:]]
+                                              for i, x_i in enumerate(pairs)])))
+            else:
+                raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
+    elif (len(pairs.shape) == 2 and pairs.shape[1] != 2) or len(pairs.shape) != 2:
+        raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
+    return np.sort(pairs, axis=-1)  # internal sorting
+
+
+def combine_2d(new_pairs, old_pairs=None):
+    """
+    Combines+sorts+uniquifies two lists of pairs of values.
+
+    Pairs will be internally sorted in ascending order, and with respect to each other in
+    ascending order of the first value.
+
+    `new_pairs` can be a list of more than 2 elements, from which all possible
+    internally-sorted combinations will be generated.
+
+    If `old_pairs` given, it is assumed to be a sorted and uniquified array (e.g. the
+    output of this function when passed as first argument).
+
+    Raises ``ValueError`` if the first argument is badly formatted (e.g. not a list
+    of pairs of values).
+    """
+    new_pairs = check_2d(new_pairs)
+    if old_pairs is not None:
+        new_pairs = np.concatenate((old_pairs, new_pairs))
+    return np.unique(new_pairs, axis=0)
+
+
+class Pool2D(PoolND):
+    r"""
+    Stores a list of pairs ``[(x_1, y_1), (x_2, y_2)...]`` for later retrieval given some
+    ``(x, y)``.
+
+    Pairs are uniquified internally up to machine precision, and an adaptive
+    tolerance (relative to min absolute and relative differences in the list) is
+    applied at retrieving.
+
+    Adaptive tolerance is defined between limits ``[atol|rtol]_[min|max]``.
+    """
+
+    def _update_values(self, values):
+        self.values = combine_2d(values, getattr(self, "values", None))
+
+    def _check_values(self, values):
+        return check_2d(values)
+
+    def _fast_find_indices(self, values):
+        # first, locate 1st component
+        i_insert_left = np.clip(np.searchsorted(self.values[:, 0], values[:, 0]),
+                                a_min=None, a_max=len(self) - 1)
+        # we do not need to clip the "right" index, because we will use it as an endpoint
+        # for a slice, which is safe
+        i_insert_right = np.searchsorted(self.values[:, 0], values[:, 0], side="right")
+        slices = np.array([i_insert_left, i_insert_right]).T
+        i_maybe_found = [
+            slices[i][0] + np.searchsorted(
+                self.values[slices[i][0]:slices[i][1], 1], values[i][1])
+            for i in range(len(values))]
+        return np.where(
+            self._cond_isclose(
+                self.values[i_maybe_found], values, rtol=self._adapt_rtol_min,
+                atol=self._adapt_atol_min),
+            i_maybe_found, -1)
+
+    def _cond_isclose(self, pool, x, rtol, atol):
+        return np.all(np.isclose(pool, x, rtol=rtol, atol=atol), axis=-1)
+
+    def _where_isclose(self, pool, x, rtol, atol):
+        return np.where(self._cond_isclose(pool, x, rtol=rtol, atol=atol))[0]

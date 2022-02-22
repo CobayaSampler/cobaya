@@ -19,7 +19,7 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
                   "DH", "Y_p"]
 
 # Small chi2 difference with CLASS (total still <0.5)
-classy_extra_tolerance = 0.4
+classy_extra_tolerance = 0.35
 
 
 # STANDARD ###############################################################################

@@ -586,7 +586,7 @@ class Model(HasLogger):
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
                                    Tuple[np.ndarray, dict]]:
         """
-        Finds a point with finite posterior, sampled from from the reference pdf.
+        Finds a point with finite posterior, sampled from the reference pdf.
 
         It will fail if no valid point is found after `max_tries`.
 

@@ -44,6 +44,8 @@ def test_example():
         globals_example["info"]["sampler"]["mcmc"] = (
                 globals_example["info"]["sampler"]["mcmc"] or {})
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
+        # Run the minimizer -- output doesn't matter. Just checking that it does not fail
+        exec(open(os.path.join(docs_src_folder, "run_min.py")).read(), globals_example)
         # Analyze and plot -- capture print output
         stream = StringIO()
         with stdout_redirector(stream):
