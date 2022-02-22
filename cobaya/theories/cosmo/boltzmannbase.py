@@ -8,8 +8,7 @@
 """
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from typing import Mapping, Iterable, Callable
-from itertools import chain
+from typing import Mapping, Iterable
 
 # Local
 from cobaya.theory import Theory
@@ -108,7 +107,8 @@ class BoltzmannBase(Theory):
           retrieve the interpolator admits extrapolation limits ``extrap_[kmax|kmin]``.
           It is recommended to use ``extrap_kmin`` to reach the desired ``k_min``, and
           increase precision parameters only as much as necessary to improve over the
-          interpolation. All :math:`k` values should be in units of :math:`1/\mathrm{Mpc}`.
+          interpolation. All :math:`k` values should be in units of
+          :math:`1/\mathrm{Mpc}`.
 
           Non-linear contributions are included by default. Note that the non-linear
           setting determines whether non-linear corrections are calculated; the
@@ -150,7 +150,6 @@ class BoltzmannBase(Theory):
         - ``fsigma8={'z': [z_1, ...]}``: Structure growth rate
           :math:`f\sigma_8` at the redshifts requested. Get it with
           :func:`~BoltzmannBase.get_fsigma8`.
-        - ``k_max=[...]``: Fixes the maximum comoving wavenumber considered.
         - **Other derived parameters** that are not included in the input but whose
           value the likelihood may need.
 
@@ -209,12 +208,12 @@ class BoltzmannBase(Theory):
                 # for source, window in v["sources"].items():
                 #     if source in (getattr(self, "sources", {}) or {}):
                 #         # TODO: improve this test!!!
-                #         # (e.g. 2 z-vectors that fulfill np.allclose would fail a == test)
+                #         # (2 z-vectors that fulfill np.allclose would fail a == test)
                 #         if window != self.sources[source]:
                 #             raise LoggedError(
                 #                 self.log,
-                #                 "Source %r requested twice with different specification: "
-                #                 "%r vs %r.", window, self.sources[source])
+                #                 "Source %r requested twice with different specification"
+                #                 ": %r vs %r.", source, window, self.sources[source])
                 self._must_provide[k].update(v)
             elif k in ["Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
                        "angular_diameter_distance", "comoving_radial_distance",
@@ -497,7 +496,7 @@ class BoltzmannBase(Theory):
         :math:`R` and :math:`z` should be in the returned arrays.
 
         :param var_pair: which two fields to use for the RMS power
-        :return: ``R``, ``z``, ``sigma_R``, where ``R`` and ``z`` are arrays of computed
+        :return: ``z``, ``R``, ``sigma_R``, where ``z`` and ``R`` are arrays of computed
                  values, and ``sigma_R[i,j]`` is the value :math:`\sigma_R(z)` for
                  ``z[i]``, ``R[j]``.
         """

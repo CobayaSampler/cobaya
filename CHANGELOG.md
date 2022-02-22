@@ -12,10 +12,12 @@
 
 - Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
 - Added `Omega_b|cdm|nu_massive(z)` and `angular_diameter_distance_2`
+- Returned values for `get_sigma_R` changed from `R, z, sigma(z, R)` to `z, R, sigma(z, R)`.
 
 #### CLASS
 
-- Updated to v3.1.1
+- Updated to v3.1.2
+- Added `Omega_b|cdm|nu_massive(z)`, `angular_diameter_distance_2`, `sigmaR(z)`, `sigma8(z)`, `fsgima8(z)` and Weyl potential power spectrum.
 
 #### BAO
 

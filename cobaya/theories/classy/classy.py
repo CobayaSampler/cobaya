@@ -170,9 +170,10 @@ class classy(BoltzmannBase):
     r"""
     CLASS cosmological Boltzmann code \cite{Blas:2011rf}.
     """
+
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v3.1.1"
+    _min_classy_version = "v3.1.2"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
@@ -247,7 +248,7 @@ class classy(BoltzmannBase):
                                                post=(lambda r, dzdr: r))
             elif k == "angular_diameter_distance_2":
                 self.set_collector_with_z_pool(
-                    k, v["z_pairs"], "angular_distance_between_pair",
+                    k, v["z_pairs"], "angular_distance_from_to",
                     args_names=["z1", "z2"], arg_array=[0, 1], d=2)
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
@@ -304,7 +305,7 @@ class classy(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
                     args_names=["R", "z"], arg_array=[[0], [1]],
-                    post=(lambda R, z, sigma: (R, z, sigma.T)))
+                    post=(lambda R, z, sigma: (z, R, sigma.T)))
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -545,8 +546,8 @@ class classy(BoltzmannBase):
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
                                         "have requested them?", which_error)
         # unit conversion and ell_factor
-        ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
-                      2:] if ell_factor else 1
+        ells_factor = \
+            ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
         units_factor = self._cmb_unit_factor(
             units, self.current_state['derived_extra']['T_cmb'])
         for cl in cls:

@@ -99,8 +99,7 @@ def _test_cosmo_sigma_R(theo, packages_path, skip_not_installed):
     model = _get_model_with_requirements_and_eval(
         theo, reqs, packages_path, skip_not_installed)
     for pair in vars_pairs:
-        R_out, z_out, sigma_R_out = model.theory[theo].get_sigma_R()
-        print(sigma_R_out)
+        z_out, R_out, sigma_R_out = model.theory[theo].get_sigma_R()
         assert np.allclose(R_out, R_sigma_R)
         assert np.allclose(z_out, z_sigma_R)
         assert np.allclose(sigma_R_out, sigma_R_values[pair],
@@ -195,5 +194,6 @@ def test_cosmo_weyl_pkz_camb(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("camb", packages_path, skip_not_installed)
 
 
+@pytest.mark.skip
 def test_cosmo_weyl_pkz_classy(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("classy", packages_path, skip_not_installed)

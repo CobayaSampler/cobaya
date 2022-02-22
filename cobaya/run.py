@@ -51,6 +51,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     :param stop_at_error: stop if an error is raised
     :param resume: continue an existing run
     :param force: overwrite existing output if it exists
+    :param minimize: if true, ignores the sampler and runs default minimizer
     :param no_mpi: run without MPI
     :param test: only test initialization rather than actually running
     :param override: option dictionary to merge into the input one, overriding settings

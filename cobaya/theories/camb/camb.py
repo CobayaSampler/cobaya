@@ -179,7 +179,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, str_to_list, Pool1D, Pool2D, PoolND, check_2d
+    VersionCheckError, str_to_list, Pool1D, Pool2D, PoolND
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
 
@@ -203,6 +203,7 @@ class CAMB(BoltzmannBase):
     r"""
     CAMB cosmological Boltzmann code \cite{Lewis:1999bs,Howlett:2012mh}.
     """
+
     # Name of the Class repo/folder and version to download
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
@@ -393,8 +394,9 @@ class CAMB(BoltzmannBase):
                                                             "in computed P_K array %s", z)
                         _indices = np.array(z_indices, dtype=np.int32)
                         self._sigmaR_z_indices[var_pair] = _indices
-                    return results.get_sigmaR(hubble_units=False, return_R_z=True,
-                                              z_indices=_indices, **tmp)
+                    R, z, sigma = results.get_sigmaR(hubble_units=False, return_R_z=True,
+                                                     z_indices=_indices, **tmp)
+                    return z, R, sigma
 
                 kwargs.update(dict(zip(["var1", "var2"], var_pair)))
                 self.collectors[k] = Collector(method=get_sigmaR, kwargs=kwargs)
@@ -734,9 +736,9 @@ class CAMB(BoltzmannBase):
                     for fixed_param in getfullargspec(
                             getattr(self.camb.CAMBparams, non_param_func)).args[1:]:
                         if fixed_param in args:
-                            raise LoggedError(self.log,
-                                              "Trying to sample fixed theory parameter %s",
-                                              fixed_param)
+                            raise LoggedError(
+                                self.log, "Trying to sample fixed theory parameter %s",
+                                fixed_param)
                         self._reduced_extra_args.pop(fixed_param, None)
                 if self.extra_attrs:
                     self.log.debug("Setting attributes of CAMBparams: %r",
