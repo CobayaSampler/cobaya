@@ -1,5 +1,4 @@
 from copy import deepcopy
-import pytest
 
 from cobaya.tools import get_class
 

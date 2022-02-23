@@ -340,7 +340,7 @@ class classy(BoltzmannBase):
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
     def set_collector_with_z_pool(self, k, zs, method, args=(), args_names=(),
-                                  kwargs=empty_dict, arg_array=None, post=None, d=1):
+                                  kwargs=None, arg_array=None, post=None, d=1):
         """
         Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
 
@@ -355,6 +355,7 @@ class classy(BoltzmannBase):
             Pool = {1: Pool1D, 2: Pool2D}[d]
             z_pool = Pool(zs)
         # Insert z as arg or kwarg
+        kwargs = kwargs or {}
         if d == 1 and "z" in kwargs:
             kwargs = deepcopy(kwargs)
             kwargs["z"] = z_pool.values

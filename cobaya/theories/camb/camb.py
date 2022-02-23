@@ -179,7 +179,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, str_to_list, Pool1D, Pool2D, PoolND
+    VersionCheckError, check_component_version, str_to_list, Pool1D, Pool2D, PoolND
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
 
@@ -354,6 +354,7 @@ class CAMB(BoltzmannBase):
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.set_collector_with_z_pool(k, v["z"], getattr(CAMBdata, k))
             elif k == "angular_diameter_distance_2":
+                check_component_version(self.camb, '1.3.5')
                 self.set_collector_with_z_pool(
                     k, v["z_pairs"], CAMBdata.angular_diameter_distance2, d=2)
             elif k == "sigma8_z":
@@ -368,7 +369,7 @@ class CAMB(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_fsigma8,
                     kwargs={},
-                    post=(lambda* x: x[::-1]))  # returned in inverse order
+                    post=(lambda *x: x[::-1]))  # returned in inverse order
                 self.needs_perts = True
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 kwargs = v.copy()

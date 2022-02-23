@@ -873,7 +873,7 @@ def find_with_regexp(regexp, root, walk_tree=False):
     Returns all files found which are compatible with the given regexp in directory root,
     including their path in their name.
 
-    Set `walk_tree=True` if there is more that one directory level (default: `False`).
+    Set walk_tree=True if there is more than one directory level (default: `False`).
     """
     try:
         if walk_tree:
@@ -991,13 +991,13 @@ def write_config_file(config_info, append=True):
         yaml_dump_file(os.path.join(get_config_path(), packages_path_config_file),
                        info, error_if_exists=False)
     except Exception as e:
-        log.error("Could not write the external packages installation path into the "
+        log.error("Could not write the external packages' installation path into the "
                   "config file. Reason: %r", str(e))
 
 
 def load_packages_path_from_config_file():
     """
-    Returns the external packages path stored in the config file,
+    Returns the external packages' path stored in the config file,
     or `None` if it can't be found.
     """
     return load_config_file().get(packages_path_input)
@@ -1005,7 +1005,7 @@ def load_packages_path_from_config_file():
 
 def write_packages_path_in_config_file(packages_path):
     """
-    Writes the external packages installation path into the config file.
+    Writes the external packages' installation path into the config file.
 
     Relative paths are converted into absolute ones.
     """
@@ -1015,11 +1015,11 @@ def write_packages_path_in_config_file(packages_path):
 def resolve_packages_path(infos=None):
     # noinspection PyStatementEffect
     """
-    Gets the external packages installation path given some infos.
+    Gets the external packages' installation path given some infos.
     If more than one occurrence of the external packages path in the infos,
     raises an error.
 
-    If there is no external packages path defined in the given infos,
+    If there is no external packages' path defined in the given infos,
     defaults to the env variable `%s`, and in its absence to that stored
     in the config file.
 
@@ -1103,7 +1103,7 @@ class PoolND(ABC):
 
     values: np.ndarray
 
-    def __init__(self, values=[],
+    def __init__(self, values=(),
                  rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6, logger=None):
         assert values is not None and len(values) != 0, \
             "Pool needs to be initialised with at least one value."

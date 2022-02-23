@@ -81,7 +81,7 @@ class BoltzmannBase(Theory):
         r"""
         Specifies the quantities that this Boltzmann code is requested to compute.
 
-        Typical requisites in Cosmology (as keywords, case insensitive):
+        Typical requisites in Cosmology (as keywords, case-insensitive):
 
         - ``Cl={...}``: CMB lensed power spectra, as a dictionary ``{[spectrum]:
           l_max}``, where the possible spectra are combinations of ``"t"``, ``"e"``,
