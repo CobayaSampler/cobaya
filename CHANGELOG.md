@@ -1,8 +1,11 @@
 ## 3.X.Y – YYYY-MM-DD
 
+### General
+
 - Documented uses of `Model` class in general contexts (previously only cosmo)
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
 - Added ``--minimize`` flag to ``cobaya-run`` for quick minimization (replaces sampler, uses previous output).
+- Add COBAYA_USE_FILE_LOCKING environment variable to allow disabling of file locks. Warning not to use --test with MPI.
 
 ### Cosmological likelihoods and theory codes
 
@@ -13,6 +16,9 @@
 - Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
 - Added `Omega_b|cdm|nu_massive(z)` and `angular_diameter_distance_2`
 - Returned values for `get_sigma_R` changed from `R, z, sigma(z, R)` to `z, R, sigma(z, R)`.
+- Support setting individual Accuracy parameters, e.g. Accuracy.AccurateBB
+- Calculate accurate BB when tensors are requested
+- Fix for using derived parameters with post-processing
 
 #### CLASS
 
@@ -21,7 +27,7 @@
 
 #### BAO
 
-- Added Boss DR16 likelihood (#185, by @Pablo-Lemos)
+- Added Boss DR16 likelihoods (#185, by @Pablo-Lemos)
 
 #### BICEP-Keck
 
