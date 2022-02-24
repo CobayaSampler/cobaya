@@ -19,7 +19,7 @@ from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
 from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
     packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
-    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params, ParamDict
+    ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_input_dict
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
@@ -612,7 +612,7 @@ class Model(HasLogger):
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
                                    Tuple[np.ndarray, dict]]:
         """
-        Finds a point with finite posterior, sampled from from the reference pdf.
+        Finds a point with finite posterior, sampled from the reference pdf.
 
         It will fail if no valid point is found after `max_tries`.
 
@@ -754,7 +754,9 @@ class Model(HasLogger):
             requirements_are_params.update(provide_params)
             # Invert to get the provider(s) of each available product/parameter
             for k in chain(can_provide, provide_params):
-                providers[k] = providers.get(k, []) + [component]
+                providers[k] = providers.get(k, [])
+                if component not in providers[k]:
+                    providers[k].append(component)
         # Add requirements requested by hand
         manual_theory = Theory(name='_manual')
         if manual_requirements:
@@ -781,6 +783,11 @@ class Model(HasLogger):
                 for requirement in requires:
                     suppliers = providers.get(requirement.name)
                     if not suppliers:
+                        # If failed requirement was manually added,
+                        # remove from list, or it will still fail in the next call too
+                        requirements[manual_theory] = [
+                            req for req in requirements[manual_theory]
+                            if req.name != requirement.name]
                         raise LoggedError(self.log,
                                           "Requirement %s of %r is not provided by any "
                                           "component, nor sampled directly",
@@ -1192,8 +1199,8 @@ class Model(HasLogger):
             blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
                                        list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
-                [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
-                [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
+                    [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
+                    [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
             footprints_split = np.clip(np.array(footprints_split), 0, 1)  # type: ignore
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
@@ -1211,8 +1218,8 @@ class Model(HasLogger):
             # NB: the int() below forces the copy of the factors.
             #     Otherwise the yaml_representer prints references to a single object.
             oversample_factors = (
-                [int(oversample_factors[0])] * (1 + i_last_slow) +
-                [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
+                    [int(oversample_factors[0])] * (1 + i_last_slow) +
+                    [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
             self.log.debug("Doing slow/fast split. The oversampling factors for the fast "
                            "blocks should be interpreted as a global one for all of them")
         self.log.debug(

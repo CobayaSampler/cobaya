@@ -1,6 +1,4 @@
-import sys
 from ..base_classes import InstallableLikelihood, DataSetLikelihood, CMBlikes
-
 
 warn_msg = ("*DEPRECATION*: Likelihood class '_base_classes._{name}' has been renamed to "
             "'base_classes.{name}' (no leading underscores!). Please use the new name,"

@@ -55,7 +55,7 @@ The syntax for priors and ref's has the following fields:
   as they are understood for each particular pdf in :class:`scipy.stats`; e.g. for a
   ``uniform`` pdf, ``loc`` is the lower bound and ``scale`` is the length of the domain,
   whereas in a gaussian (``norm``) ``loc`` is the mean and ``scale`` is the standard
-  deviation).
+  deviation.
 + Additional specific parameters of the distribution, e.g. ``a`` and ``b`` as the powers
   of a Beta pdf.
 
@@ -117,8 +117,8 @@ the definition of :ref:`external likelihoods <likelihood_external>`. We will cal
 custom priors "`external` priors".
 
 Inside the ``prior`` block, list a pair of priors as ``[name]: [function]``, where the
-functions must return **log**-priors. This priors will be multiplied by the
-one-dimensional ones defined above. Even if you define an prior for some parameters
+functions must return **log**-priors. These priors will be multiplied by the
+one-dimensional ones defined above. Even if you define a prior for some parameters
 in the ``prior`` block, you still have to specify their bounds in the ``params`` block.
 
 A prior function can be specified in two different ways:
@@ -149,7 +149,7 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
 
    External priors can only be functions **sampled** and **fixed**
    and **derived** parameters that are dynamically defined in terms of other inputs.
-   Derived parameters computed by the theory code cannot be used in in a prior, since
+   Derived parameters computed by the theory code cannot be used in a prior, since
    otherwise the full prior could not be computed **before** the likelihood,
    preventing us from avoiding computing the likelihood when the prior is null, or
    forcing a *post-call* to the prior.
@@ -188,7 +188,7 @@ In general, avoid improper priors, since they will produce unexpected errors, e.
 Defining parameters dynamically
 -------------------------------
 
-We may want to sample in a parameter space different than the one understood by the
+We may want to sample in a parameter space different from the one understood by the
 likelihood, e.g. because we expect the posterior to be simpler on the alternative
 parameters.
 
@@ -208,7 +208,7 @@ from the logarithm of an **input** parameter of the likelihood, we would do:
       logx:
         prior: [...]
         drop: True
-      x: "lambda logx: np.exp(x)"
+      x: "lambda logx: np.exp(logx)"
       y:
         derived: "lambda x: x**2"
 

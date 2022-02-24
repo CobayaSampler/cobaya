@@ -138,7 +138,6 @@ from typing import Optional, Sequence
 # Local
 from cobaya.log import LoggedError
 from cobaya.conventions import Const, packages_path_input
-from cobaya.typing import InfoDict
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 
@@ -156,12 +155,17 @@ class BAO(InstallableLikelihood):
     prob_dist: Optional[str] = None
     cov_file: Optional[str] = None
     invcov_file: Optional[str] = None
+    redshift: Optional[float] = None
+    observable_1: Optional[str] = None
+    observable_2: Optional[str] = None
+    observable_3: Optional[str] = None
+    grid_file: Optional[str] = None
     path: Optional[str]
 
     def initialize(self):
         self.log.info("Initialising.")
         if not getattr(self, "path", None) and \
-           not getattr(self, packages_path_input, None):
+                not getattr(self, packages_path_input, None):
             raise LoggedError(
                 self.log, "No path given to BAO data. Set the likelihood property "
                           "'path' or the common property '%s'.", packages_path_input)
@@ -184,13 +188,13 @@ class BAO(InstallableLikelihood):
                 raise LoggedError(
                     self.log, "Couldn't find measurements file '%s' in folder '%s'. " % (
                         self.measurements_file, data_file_path) + "Check your paths.")
-        elif getattr(self, "grid_file", None):
+        elif self.grid_file:
             pass
         else:
             self.data = pd.DataFrame([self.data] if not hasattr(self.data[0], "__len__")
                                      else self.data)
 
-        if not getattr(self, "grid_file", None):
+        if not self.grid_file:
             self.use_grid_2d = False
             self.use_grid_3d = False
             # Columns: z value [err] [type]
@@ -223,24 +227,22 @@ class BAO(InstallableLikelihood):
                     self.log, "If 'prob_dist' given, 'prob_dist_bounds' needs to be "
                               "specified as [min, max].")
             spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
-            self.logpdf = lambda x: (
-                spline(x)[0] if self.prob_dist_bounds[0] <= x <= self.prob_dist_bounds[1]
-                else -np.inf)
-        elif getattr(self, "grid_file", None):
+            self.logpdf = lambda _x: (spline(_x)[0] if self.prob_dist_bounds[0]
+                                                       <= _x <= self.prob_dist_bounds[1]
+                                      else -np.inf)
+        elif self.grid_file:
             try:
                 self.grid_data = np.loadtxt(
-                    os.path.join(data_file_path, self.grid_file)
-                )
+                    os.path.join(data_file_path, self.grid_file))
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find grid file '%s' in folder '%s'. " % (
                         self.grid_file, data_file_path) + "Check your paths.")
-            if (not getattr(self, "observable_1", None)) or \
-                    (not getattr(self, "observable_2", None)):
+            if not self.observable_1 or not self.observable_2:
                 raise LoggedError(
                     self.log, "If using grid data, 'observable_1' and 'observable_2'"
                               "need to be specified.")
-            if (not getattr(self, "redshift", None)):
+            if self.redshift is None:
                 raise LoggedError(
                     self.log, "If using grid data, 'redshift'"
                               "needs to be specified.")
@@ -266,7 +268,7 @@ class BAO(InstallableLikelihood):
             elif self.grid_data.shape[1] == 4:
                 self.use_grid_2d = False
                 self.use_grid_3d = True
-                if (not getattr(self, "observable_3", None)):
+                if not self.observable_3:
                     raise LoggedError(
                         self.log, "If using 3D grid data, 'observable_3'"
                                   "needs to be specified.")
@@ -283,9 +285,9 @@ class BAO(InstallableLikelihood):
 
                 chi2 = np.reshape(np.log(self.grid_data[:, 3] + 1e-300), [Nx, Ny, Nz])
 
-                self.interpolator = RegularGridInterpolator((x, y, z), chi2,
-                                                            bounds_error=False,
-                                                            fill_value=np.log(1e-300))
+                self.interpolator3D = RegularGridInterpolator((x, y, z), chi2,
+                                                              bounds_error=False,
+                                                              fill_value=np.log(1e-300))
 
             else:
                 raise LoggedError(
@@ -312,8 +314,8 @@ class BAO(InstallableLikelihood):
                     self.log, "Couldn't find (inv)cov file '%s' in folder '%s'. " % (
                         self.cov_file or self.invcov_file,
                         data_file_path) + "Check your paths.")
-            self.logpdf = lambda x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
-                x - self.data["value"].values)
+            self.logpdf = lambda _x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
+                _x - self.data["value"].values)
 
     def get_requirements(self):
         # Requisites
@@ -416,7 +418,7 @@ class BAO(InstallableLikelihood):
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             z = self.theory_fun(self.redshift, self.observable_3)
-            chi2 = self.interpolator(np.array([x, y, z])[:, 0])
+            chi2 = self.interpolator3D(np.array([x, y, z])[:, 0])
             return chi2 / 2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs

@@ -317,10 +317,11 @@ class MainWindow(QWidget):
 
     @Slot()
     def copy_clipb(self):
+        clipboard = QApplication.clipboard()
         if self.display_tabs.currentWidget() == self.display["covmat"]:
-            self.clipboard.setText(self.save_covmat_txt())
+            clipboard.setText(self.save_covmat_txt())
         else:
-            self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
+            clipboard.setText(self.display_tabs.currentWidget().toPlainText())
 
     def show_defaults(self):
         kind, component = self.sender().data()
@@ -390,6 +391,7 @@ def gui_script():
             "PySide2 is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
+
     clip = app.clipboard()
     window = MainWindow()
     window.clipboard = clip

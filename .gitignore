@@ -21,6 +21,7 @@ docs/src_examples/*/*.png
 # Tests
 .pytest_cache
 tests/.ipynb_checkpoints
+.coverage*
 
 # IDE-specific
 .idea

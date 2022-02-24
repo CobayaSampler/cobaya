@@ -16,7 +16,7 @@ extra_args:
 use_renames: False
 # request primordial P(k) from an external Theory implementation
 external_primordial_pk: False
-# Dictionary of (Planck+CAMB)->CLASS names
+# Dictionary of Planck->CAMB names
 renames:
   omegabh2: ombh2
   omegach2: omch2
@@ -25,4 +25,3 @@ renames:
   yhe: YHe
   yheused: YHe  # used by Planck when YHe is derived
   YpBBN: Y_p
-  zrei: zre

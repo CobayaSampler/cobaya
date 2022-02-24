@@ -472,12 +472,12 @@ class MCMC(CovmatSampler):
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.model.logposterior(
-                proposal_start_point, return_derived=derived,
+                proposal_start_point, return_derived=bool(derived),
                 temperature=self.temperature, _no_check=True).logpost
             if proposal_start_logpost != -np.inf:
                 proposal_end_point = current_end_point + delta_fast
                 proposal_end = self.model.logposterior(
-                    proposal_end_point, return_derived=derived,
+                    proposal_end_point, return_derived=bool(derived),
                     temperature=self.temperature, _no_check=True)
                 if proposal_end.logpost != -np.inf:
                     # create the interpolated probability and do a Metropolis test

@@ -409,7 +409,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
         def set_difflogmax():
             nonlocal difflogmax
-            difflog = (collection_in[OutPar.minuslogpost].to_numpy(dtype=np.float64)[:len(collection_out)]
+            difflog = (collection_in[OutPar.minuslogpost].to_numpy(
+                dtype=np.float64)[:len(collection_out)]
                        - collection_out[OutPar.minuslogpost].to_numpy(dtype=np.float64))
             difflogmax = np.max(difflog)
             if abs(difflogmax) < 1:
@@ -474,8 +475,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             all_params.update(output_derived)
 
             all_params.update(out_func_parameterization.to_derived(all_params))
-            derived = {param: all_params.get(param)
-                       for param in dummy_model_out.parameterization.derived_params()}
+            derived = {param: all_params.get(param) for param in
+                       dummy_model_out.parameterization.derived_params()}
             # We need to recompute the aggregated chi2 by hand
             for type_, likes in inv_types.items():
                 derived[get_chi2_name(type_)] = sum(
