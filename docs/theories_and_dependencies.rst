@@ -136,4 +136,3 @@ sampling settings for 'Xin' so that configuring it is transparent to the user, e
 If multiple theory codes can provide the same quantity, it may be ambiguous which to use to compute which.
 When this happens use the ``provides`` input .yaml keyword to specify that a specific theory computes a
 specific quantity.
-

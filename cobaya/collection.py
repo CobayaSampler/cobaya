@@ -240,7 +240,7 @@ class SampleCollection(BaseCollection):
             if derived is not None:
                 # A simple np.allclose is not enough, because np.allclose([1], []) = True!
                 if len(derived) != len(logpost.derived) or \
-                   not np.allclose(derived, logpost.derived):
+                        not np.allclose(derived, logpost.derived):
                     raise LoggedError(
                         self.log,
                         "derived params not consistent with those of LogPosterior object "
