@@ -40,9 +40,9 @@ separator_files = "."
 # Names for the samples' fields internally and in the output
 class OutPar:
     weight = "weight"  # sample weight
-    # log-posterior, or in general the total log-probability
+    # minus log-posterior, or in general the total minus log-probability
     minuslogpost = "minuslogpost"
-    minuslogprior = "minuslogprior"  # log-prior
+    minuslogprior = "minuslogprior"  # minus log-prior
     chi2 = "chi2"  # chi^2 = -2 * loglike (not always normalized to be useful)
 
 
@@ -92,6 +92,7 @@ class Extension:
 
 # Installation and container definitions
 packages_path_arg = "packages_path"
+packages_path_input = packages_path_arg
 packages_path_arg_posix = packages_path_arg.replace("_", "-")
 packages_path_env = "COBAYA_PACKAGES_PATH"
 packages_path_config_file = "config.yaml"

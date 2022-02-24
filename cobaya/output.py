@@ -31,6 +31,17 @@ _kind = "txt"
 _ext = "txt"
 
 
+def use_portalocker():
+    if os.getenv('COBAYA_USE_FILE_LOCKING', 't').lower() in ('true', '1', 't'):
+        try:
+            import portalocker
+        except ModuleNotFoundError:
+            return None
+        else:
+            return True
+    return False
+
+
 class FileLock:
     _file_handle: Any
 
@@ -52,12 +63,8 @@ class FileLock:
         self.log = log or get_logger("file_lock")
         try:
             h: Any = None
-            try:
+            if use_portalocker():
                 import portalocker
-            except ModuleNotFoundError:
-                # will work, but crashes will leave .lock files that will raise error
-                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
-            else:
                 try:
                     h = open(self.lock_file, 'wb')
                     portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
@@ -66,6 +73,9 @@ class FileLock:
                     if h:
                         h.close()
                     self.lock_error()
+            else:
+                # will work, but crashes will leave .lock files that will raise error
+                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
         except OSError:
             self.lock_error()
 
@@ -79,15 +89,17 @@ class FileLock:
                     pass
             except OSError:
                 pass
+        if mpi.is_disabled():
+            raise LoggedError(self.log,
+                              "File %s is locked by another process, you are running "
+                              "with MPI disabled but may have more than one process. "
+                              "Note that --test should not be used with MPI.")
         if mpi.get_mpi():
             import mpi4py
         else:
             mpi4py = None
-        if mpi.is_main_process():
-            try:
-                import portalocker
-            except ModuleNotFoundError:
-                self.log.warning('install "portalocker" for better file lock control.')
+        if mpi.is_main_process() and use_portalocker() is None:
+            self.log.warning('install "portalocker" for better file lock control.')
         raise LoggedError(self.log,
                           "File %s is locked.\nYou may be running multiple jobs with "
                           "the same output when you intended to run with MPI. "
@@ -142,10 +154,8 @@ class Output(HasLogger):
         # MARKED FOR DEPRECATION IN v3.0
         # -- also remove output_prefix kwarg above
         if output_prefix is not None:
-            self.log.warning("*DEPRECATION*: `output_prefix` will be deprecated in the "
-                             "next version. Please use `prefix` instead.")
-            # BEHAVIOUR TO BE REPLACED BY ERROR:
-            prefix = output_prefix
+            raise LoggedError(self.log, "`output_prefix` has been deprecated. "
+                                        "Please use `prefix` instead.")
         # END OF DEPRECATION BLOCK
         self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
@@ -359,7 +369,7 @@ class Output(HasLogger):
                                               "%s:%s, but you are trying to resume a "
                                               "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
-        # If resuming, we don't want to to *partial* dumps
+        # If resuming, we don't want to do *partial* dumps
         if ignore_blocks and self.is_resuming():
             return
         # Work on a copy of the input info, since we are updating the prefix
@@ -569,7 +579,8 @@ def get_output(*args, **kwargs) -> Output:
     """
     # MARKED FOR DEPRECATION IN v3.0
     if kwargs.get("output_prefix") is not None:
-        kwargs["prefix"] = kwargs["output_prefix"]
+        raise ValueError("DEPRECATION: `output_prefix` has been deprecated. "
+                         "Please use `prefix` instead.")
     # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
         return Output(*args, **kwargs)

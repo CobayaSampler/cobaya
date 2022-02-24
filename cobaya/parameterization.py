@@ -44,7 +44,7 @@ def is_derived_param(info_param: ParamInput) -> bool:
 
 def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict:
     """
-    Expands the info of a parameter, from the user friendly, shorter format
+    Expands the info of a parameter, from the user-friendly, shorter format
     to a more unambiguous one.
     """
     info_param = deepcopy_where_possible(info_param)
@@ -72,6 +72,7 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict
     value = info_param.get("value")
     if isinstance(value, str) or callable(value):
         info_param["derived"] = info_param.get("derived", True)
+    # noinspection PyTypeChecker
     return info_param
 
 
@@ -306,12 +307,37 @@ class Parameterization(HasLogger):
                 self._derived[p] = self._call_param_func(p, func, args)
         return self._derived
 
-    def check_sampled(self, **sampled_params) -> ParamValuesDict:
+    def check_sampled(self, sampled_params: Union[Sequence[float], Dict[str, float]]
+                      ) -> Union[Sequence[float], Dict[str, float]]:
+        """
+        Performs some checks on the given sampled params.
+
+        If an array is passed, the only test performed is for the right amount of
+        parameters, and the same array is returned if successful.
+
+        If a dictionary is passed, it checks that it contains all the sampled parameters,
+        and just them. This function is aware of known renamings. Returns dict of
+        parameters (model's naming, not remanes) and their values.
+        """
+        if sampled_params is None:  # only works if there are no sampled params
+            sampled_params = []
+        if hasattr(sampled_params, "keys"):
+            return self.check_sampled_dict(**sampled_params)
+        else:
+            if len(sampled_params) != len(self._sampled):
+                raise LoggedError(self.log, "Wrong number of sampled parameters passed: "
+                                  "%d given vs %d expected", len(sampled_params),
+                                  len(self._sampled))
+            return sampled_params
+
+    def check_sampled_dict(self, **sampled_params) -> ParamValuesDict:
         """
         Check that the input dictionary contains all the sampled parameters,
-        and just them. Is aware of known renamings.
+        and just them.
 
-        Returns dict of parameters (model's naming) and their values.
+        This function is aware of known renamings.
+
+        Returns dict of parameters (model's naming, not renames) and their values.
         """
         sampled_output: ParamValuesDict = {}
         for p, renames in self._sampled_renames.items():
@@ -324,12 +350,12 @@ class Parameterization(HasLogger):
             if self.allow_renames:
                 msg = ("The following expected sampled parameters " +
                        ("(or their aliases) " if self.allow_renames else "") +
-                       "where not found : %r",
+                       "were not found : %r",
                        ({p: self._sampled_renames[p] for p in not_found}
                         if self.allow_renames else not_found))
             else:
                 msg = ("The following expected sampled parameters "
-                       "where not found : %r",
+                       "were not found : %r",
                        {p: self._sampled_renames[p] for p in not_found})
             raise LoggedError(self.log, *msg)
         # Ignore fixed input parameters if they have the correct value

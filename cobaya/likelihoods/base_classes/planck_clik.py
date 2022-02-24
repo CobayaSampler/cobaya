@@ -18,6 +18,7 @@ from cobaya.log import LoggedError, get_logger
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file, NotInstalledError
 from cobaya.tools import are_different_params_lists, create_banner, load_module
+from cobaya.conventions import packages_path_input
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseded
@@ -51,7 +52,7 @@ class PlanckClik(Likelihood):
             raise LoggedError(
                 self.log, "No path given to the Planck likelihood. Set the "
                           "likelihood property 'path' or the common property "
-                          "'%s'.", "packages_path")
+                          "'%s'.", packages_path_input)
         clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global,
                                       check=False)
         if not clik:

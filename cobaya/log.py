@@ -136,7 +136,7 @@ def logger_setup(debug=None, debug_file=None):
     """
     Configuring the root logger, for its children to inherit level, format and handlers.
 
-    Level: if debug=True, take DEBUG. If numerical, use "logging"'s corresponding level.
+    Level: if debug=True, take DEBUG. If numerical, use ""logging""'s corresponding level.
     Default: INFO
     """
     if debug is True or os.getenv('COBAYA_DEBUG'):

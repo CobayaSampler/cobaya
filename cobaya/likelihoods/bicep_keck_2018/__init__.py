@@ -1,8 +1,8 @@
 """
-.. module:: bicep_keck_2015
+.. module:: bicep_keck_2018
 
-:Synopsis: Likelihood of BICEP2/Keck-Array, October 2018 (2015 data)
-:Author: BICEP2/Keck team and Antony Lewis
+:Synopsis: Likelihood of BICEP/Keck, October 2021 (2018 data)
+:Author: BICEP/Keck Collaboration and Antony Lewis
 
 .. |br| raw:: html
 
@@ -13,14 +13,14 @@
    **If you use this likelihood, please cite it as:**
    |br|
    Keck Array and BICEP2 Collaborations,
-   `BICEP2 / Keck Array x: Constraints on Primordial Gravitational Waves
-   using Planck, WMAP, and New BICEP2/Keck Observations through the 2015 Season`
-   `(arXiv:1810.05216) <https://arxiv.org/abs/1810.05216>`_
+   `BICEP / Keck XIII: Improved Constraints on Primordial Gravitational Waves
+   using Planck, WMAP, and BICEP/Keck Observations through the 2018 Observing Season`
+   `(arXiv:2110.00483v1) <https://arxiv.org/abs/2110.00483>`_
 
 Usage
 -----
 
-To use this likelihood, ``bicep_keck_2015``, you simply need to mention it in the
+To use this likelihood, ``bicep_keck_2018``, you simply need to mention it in the
 ``likelihood`` block, or add them using the :doc:`input generator <cosmo_basic_runs>`.
 
 The corresponding nuisance parameters will be added automatically,
@@ -33,7 +33,7 @@ You shouldn't need to modify any of the options of this simple likelihood,
 but if you really need to, just copy the ``likelihood`` block into your input ``yaml``
 file and modify whatever options you want (you can delete the rest).
 
-.. literalinclude:: ../cobaya/likelihoods/bicep_keck_2015/bicep_keck_2015.yaml
+.. literalinclude:: ../cobaya/likelihoods/bicep_keck_2018/bicep_keck_2018.yaml
    :language: yaml
 
 
@@ -44,7 +44,7 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 If are following the instructions there (you should!), you don't need to read the rest
 of this section.
 
-Manual installation of the BICEP2/Keck-Array likelihood
+Manual installation of the BICEP/Keck likelihood
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Assuming you are installing all your
@@ -53,19 +53,19 @@ likelihoods under ``/path/to/likelihoods``, simply do
 .. code:: bash
 
    $ cd /path/to/likelihoods
-   $ mkdir bicep_keck_2015
-   $ cd bicep_keck_2015
-   $ wget http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz
-   $ tar xvf BK15_cosmomc.tgz
-   $ rm BK15_cosmomc.tgz
+   $ mkdir bicep_keck_2018
+   $ cd bicep_keck_2018
+   $ wget http://bicepkeck.org/BK18_datarelease/BK18_cosmomc.tgz
+   $ tar xvf BK18_cosmomc.tgz
+   $ rm BK18_cosmomc.tgz
 
 After this, mention the path to this likelihood when you include it in an input file as
 
 .. code-block:: yaml
 
    likelihood:
-     bicep_keck_2015:
-       path: /path/to/likelihoods/bicep_keck_2015
+     bicep_keck_2018:
+       path: /path/to/likelihoods/bicep_keck_2018
 
 """
 
@@ -81,12 +81,15 @@ Ghz_Kelvin = Const.h_J_s / Const.kB_J_K * 1e9
 T_CMB_K = 2.7255  # fiducial CMB temperature
 
 
-class bicep_keck_2015(CMBlikes):
+class bicep_keck_2018(CMBlikes):
     r"""
-    CMB power spectrum likelihood of Bicep2/Keck Array X \cite{Ade:2018gkx}.
+    CMB power spectrum likelihood of BICEP/Keck XIII, \cite{BK18}.
     """
     install_options = {
-        "download_url": r"http://bicepkeck.org/BK15_datarelease/BK15_cosmomc.tgz"}
+        "download_url": r"http://bicepkeck.org/BK18_datarelease/BK18_cosmomc.tgz"}
+
+    lform_dust_decorr: str
+    lform_sync_decorr: str
 
     def init_params(self, ini):
         super().init_params(ini)
@@ -101,8 +104,6 @@ class bicep_keck_2015(CMBlikes):
                                    i, default in zip([1, 2], [217., 353.])]
         self.fpivot_sync_decorr = [ini.array_float('fpivot_sync_decorr', i, default) for
                                    i, default in zip([1, 2], [22., 33.])]
-        self.lform_dust_decorr = ini.string('lform_dust_decorr', 'flat')
-        self.lform_sync_decorr = ini.string('lform_sync_decorr', 'flat')
 
     def read_bandpass(self, fname):
         bandpass: Any = Bandpass()
@@ -183,7 +184,7 @@ class bicep_keck_2015(CMBlikes):
         # for a cross-spectrum between two different frequencies.
 
         # Decorrelation scales as log^2(nu0/nu1). rat is l/l_pivot
-        scl_nu = (np.log(nu0 / nu1) ** 2) / (np.log(nupivot(1) / nupivot(2)) ** 2)
+        scl_nu = (np.log(nu0 / nu1) ** 2) / (np.log(nupivot[0] / nupivot[1]) ** 2)
         # Functional form for ell scaling is specified in .dataset file.
         if lform == "flat":
             scl_ell = 1.0
@@ -253,41 +254,47 @@ class bicep_keck_2015(CMBlikes):
         for i in range(self.nmaps_required):
             for j in range(i + 1):
                 CL = cls[i, j]
-                dust = fdust[i] * fdust[j]
-                sync = fsync[i] * fsync[j]
-                dustsync = fdust[i] * fsync[j] + fsync[i] * fdust[j]
                 EE = CL.theory_ij[0] == 1 and CL.theory_ij[1] == 1
-                if EE:
-                    # EE spectrum: multiply foregrounds by EE/BB ratio
-                    dust *= EEtoBB_dust
-                    sync *= EEtoBB_sync
-                    dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
+                BB = CL.theory_ij[0] == 2 and CL.theory_ij[1] == 2
 
-                if need_dust_decorr and i != j:
-                    corr_dust = self.decorrelation(delta_dust, self.bandpasses[i].nu_bar *
-                                                   bandcenter_err[i],
-                                                   self.bandpasses[j].nu_bar *
-                                                   bandcenter_err[j],
-                                                   self.fpivot_dust_decorr, rat,
-                                                   self.lform_dust_decorr)
-                else:
-                    corr_dust = 1
-                if need_sync_decorr and i != j:
-                    corr_sync = self.decorrelation(delta_sync, self.bandpasses[i].nu_bar *
-                                                   bandcenter_err[i],
-                                                   self.bandpasses[j].nu_bar *
-                                                   bandcenter_err[j],
-                                                   self.fpivot_sync_decorr, rat,
-                                                   self.lform_sync_decorr)
-                else:
-                    corr_sync = 1
-                #  Add foreground model to theory spectrum.
-                # NOTE: Decorrelation is not implemented for the dust/sync
-                # correlated component.
-                # In BK15, we never turned on correlation and decorrelation parameters
-                # simultaneously.
-                CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync \
-                         + dustsync * dustsyncpow
+                if EE or BB:
+                    dust = fdust[i] * fdust[j]
+                    sync = fsync[i] * fsync[j]
+                    dustsync = fdust[i] * fsync[j] + fsync[i] * fdust[j]
+
+                    if EE:
+                        # EE spectrum: multiply foregrounds by EE/BB ratio
+                        dust *= EEtoBB_dust
+                        sync *= EEtoBB_sync
+                        dustsync *= np.sqrt(EEtoBB_sync * EEtoBB_dust)
+
+                    if need_dust_decorr and i != j:
+                        corr_dust = self.decorrelation(delta_dust,
+                                                       self.bandpasses[i].nu_bar *
+                                                       bandcenter_err[i],
+                                                       self.bandpasses[j].nu_bar *
+                                                       bandcenter_err[j],
+                                                       self.fpivot_dust_decorr, rat,
+                                                       self.lform_dust_decorr)
+                    else:
+                        corr_dust = 1
+                    if need_sync_decorr and i != j:
+                        corr_sync = self.decorrelation(delta_sync,
+                                                       self.bandpasses[i].nu_bar *
+                                                       bandcenter_err[i],
+                                                       self.bandpasses[j].nu_bar *
+                                                       bandcenter_err[j],
+                                                       self.fpivot_sync_decorr, rat,
+                                                       self.lform_sync_decorr)
+                    else:
+                        corr_sync = 1
+                    #  Add foreground model to theory spectrum.
+                    # NOTE: Decorrelation is not implemented for the dust/sync
+                    # correlated component.
+                    # In BK15, we never turned on correlation and decorrelation parameters
+                    # simultaneously.
+                    CL.CL += dust * dustpow * corr_dust + sync * syncpow * corr_sync \
+                             + dustsync * dustsyncpow
 
 
 class Bandpass:

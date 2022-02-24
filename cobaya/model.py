@@ -6,16 +6,18 @@
 
 """
 # Global
+import os
+import dataclasses
+import numpy as np
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
-    Union, List, Any, Dict, Set
-import numpy as np
-import os
+    Union, List, Any, Dict, Set, Tuple
 
 # Local
-from cobaya.conventions import overhead_time, debug_default, get_chi2_name
+from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
+    packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_input_dict
@@ -43,12 +45,90 @@ def timing_on(model: 'Model'):
             model.set_timing_on(False)
 
 
-# Log-posterior namedtuple
-class LogPosterior(NamedTuple):
-    logpost: float
-    logpriors: Sequence[float]
-    loglikes: Sequence[float]
-    derived: Sequence[float]
+@dataclasses.dataclass(frozen=True)
+class LogPosterior:
+    """
+    Class holding the result of a log-posterior computation, including log-priors,
+    log-likelihoods and derived parameters.
+
+    A consistency check will be performed if initialized simultaneously with
+    log-posterior, log-priors and log-likelihoods, so, for faster initialisation,
+    you may prefer to pass log-priors and log-likelhoods only, and only pass all three
+    (so that the test is performed) only when e.g. loading from an old sample.
+
+    If ``finite=True`` (default: False), it will try to represent infinities as the
+    largest real numbers allowed by machine precision.
+    """
+
+    logpost: Optional[float] = None
+    logpriors: Optional[Sequence[float]] = None
+    loglikes: Optional[Sequence[float]] = None
+    derived: Optional[Sequence[float]] = None
+    finite: Optional[bool] = False
+    logprior: float = dataclasses.field(init=False, repr=False)
+    loglike: float = dataclasses.field(init=False, repr=False)
+
+    def __post_init__(self):
+        """Sets the value of logpost if necessary, and checks for consistency."""
+        # Consistency: derived = None --> []
+        if self.derived is None:
+            object.__setattr__(self, 'derived', [])
+        object.__setattr__(
+            self, 'logprior',
+            sum(self.logpriors) if self.logpriors is not None else None)
+        object.__setattr__(
+            self, 'loglike',
+            sum(self.loglikes) if self.loglikes is not None else None)
+        if self.finite:
+            self.make_finite()
+        if self.logpost is None:
+            if self.logpriors is None or self.loglikes is None:
+                raise ValueError("If `logpost` not passed, both `logpriors` and "
+                                 "`loglikes` must be passed.")
+            object.__setattr__(self, 'logpost', self.logprior + self.loglike)
+        elif self.logpriors is not None and self.loglikes is not None:
+            if not self._logpost_is_consistent():
+                raise ValueError("The given log-posterior is not equal to the "
+                                 "sum of given log-priors and log-likelihoods: "
+                                 "%g != sum(%r) + sum(%r)" %
+                                 (self.logpost, self.logpriors, self.loglikes))
+
+    def _logpost_is_consistent(self):
+        """
+        Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
+        passed.
+        """
+        if self.finite:
+            return np.isclose(np.nan_to_num(self.logpost),
+                              np.nan_to_num(self.logprior + self.loglike))
+        else:
+            return np.isclose(self.logpost, self.logprior + self.loglike)
+
+    def make_finite(self):
+        """
+        Ensures that infinities are represented as the largest real numbers allowed by
+        machine precision, instead of `+/- numpy.inf`.
+        """
+        object.__setattr__(self, 'finite', True)
+        if self.logpost is not None:
+            object.__setattr__(self, 'logpost', np.nan_to_num(self.logpost))
+        if self.logpriors is not None:
+            object.__setattr__(self, 'logpriors', np.nan_to_num(self.logpriors))
+            object.__setattr__(self, 'logprior', np.nan_to_num(self.logprior))
+        if self.loglikes is not None:
+            object.__setattr__(self, 'loglikes', np.nan_to_num(self.loglikes))
+            object.__setattr__(self, 'loglike', np.nan_to_num(self.loglike))
+
+    def as_dict(self, model: "Model") -> Dict[str, Union[float, Dict[str, float]]]:
+        """
+        Given a :class:`~model.Model`, returns a more informative version of itself,
+        containing the names of priors, likelihoods and derived parameters.
+        """
+        return {
+            "logpost": self.logpost,
+            "logpriors": dict(zip(model.prior, self.logpriors)),
+            "loglikes": dict(zip(model.likelihood, self.loglikes)),
+            "derived": dict(zip(model.parameterization.derived_params(), self.derived))}
 
 
 class Requirement(NamedTuple):
@@ -130,6 +210,11 @@ class Model(HasLogger):
                  packages_path=None, timing=None, allow_renames=True, stop_at_error=False,
                  post=False, skip_unused_theories=False,
                  dropped_theory_params: Optional[Iterable[str]] = None):
+        """
+        Creates an instance of :class:`model.Model`.
+
+        It is recommended to use the simpler function :func:`~model.get_model` instead.
+        """
         self.set_logger()
         self._updated_info: InputDict = {
             "params": deepcopy_where_possible(info_params),
@@ -137,7 +222,7 @@ class Model(HasLogger):
         if not self._updated_info["likelihood"]:
             raise LoggedError(self.log, "No likelihood requested!")
         for k, v in (("prior", info_prior), ("theory", info_theory),
-                     ("packages_path", packages_path), ("timing", timing)):
+                     (packages_path_input, packages_path), ("timing", timing)):
             if v not in (None, {}):
                 self._updated_info[k] = deepcopy_where_possible(v)  # type: ignore
         self.parameterization = Parameterization(self._updated_info["params"],
@@ -171,7 +256,9 @@ class Model(HasLogger):
         """
         return deepcopy_where_possible(self._updated_info)
 
-    def _to_sampled_array(self, params_values) -> np.ndarray:
+    def _to_sampled_array(self,
+                          params_values: Union[Dict[str, float], Sequence[float]]
+                          ) -> np.ndarray:
         """
         Internal method to interact with the prior.
         Needs correct (not renamed) parameter names.
@@ -189,7 +276,10 @@ class Model(HasLogger):
                 self.log, "Cannot take arrays of points as inputs, just single points.")
         return params_values_array
 
-    def logpriors(self, params_values, make_finite=False) -> np.ndarray:
+    def logpriors(self,
+                  params_values: Union[Dict[str, float], Sequence[float]],
+                  as_dict: bool = False, make_finite: bool = False
+                  ) -> Union[np.ndarray, Dict[str, float]]:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -201,18 +291,25 @@ class Model(HasLogger):
         product of the 1-dimensional priors specified in the ``params`` block, and it's
         normalized (in general, the external prior densities aren't).
 
+        If ``as_dict=True`` (default: False), returns a dictionary containing the prior
+        names as keys, instead of an array.
+
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
         """
-        if hasattr(params_values, "keys"):
-            params_values = self.parameterization.check_sampled(**params_values)
+        params_values = self.parameterization.check_sampled(params_values)
         params_values_array = self._to_sampled_array(params_values)
         logpriors = np.asarray(self.prior.logps(params_values_array))
         if make_finite:
             return np.nan_to_num(logpriors)
-        return logpriors
+        if as_dict:
+            return dict(zip(self.prior, logpriors))
+        else:
+            return logpriors
 
-    def logprior(self, params_values, make_finite=False):
+    def logprior(self,
+                 params_values: Union[Dict[str, float], Sequence[float]],
+                 make_finite: bool = False) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -230,14 +327,40 @@ class Model(HasLogger):
             return np.nan_to_num(logprior)
         return logprior
 
-    def logps(self, input_params, return_derived=True, cached=True, make_finite=False):
+    def _loglikes_input_params(
+            self, input_params: Optional[Dict[str, float]] = None,
+            return_derived: bool = True, return_output_params: bool = False,
+            as_dict: bool = False, make_finite: bool = False, cached: bool = True
+    ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
+               Tuple[Dict[str, float], Dict[str, float]]]:
+        """
+        Takes a dict of input parameters, computes the likelihood pipeline, and returns
+        the log-likelihoods and derived parameters.
+
+        To return just the list of log-likelihood values, make ``return_derived=False``
+        (default: True).
+
+        To return raw output parameters (including chi2's) instead of derived parameters,
+        make ``return_output_params=True`` (default=False). This overrides
+        ``return_derived``.
+
+        If ``as_dict=True`` (default: False), returns a dictionary containing the
+        likelihood names (and derived parameters, if ``return_derived=True``) as keys,
+        instead of an array.
+
+        If ``make_finite=True``, it will try to represent infinities as the largest real
+        numbers allowed by machine precision.
+
+        If ``cached=False`` (default: True), it ignores previously computed results that
+        could be reused.
+        """
         # Calculate required results and returns likelihoods
-        derived_dict: ParamValuesDict = {}
+        outpar_dict: ParamValuesDict = {}
         compute_success = True
         self.provider.set_current_input_params(input_params)
         self.log.debug("Got input parameters: %r", input_params)
         loglikes = np.zeros(len(self.likelihood))
-        need_derived = self.requires_derived or return_derived
+        need_derived = self.requires_derived or return_derived or return_output_params
         for (component, like_index), param_dep in zip(self._component_order.items(),
                                                       self._params_of_dependencies):
             depend_list = [input_params[p] for p in param_dep]
@@ -249,9 +372,8 @@ class Model(HasLogger):
                 loglikes[:] = -np.inf
                 self.log.debug("Calculation failed, skipping rest of calculations ")
                 break
-            if return_derived:
-                derived_dict.update(component.current_derived)
-            # Add chi2's to derived parameters
+            if return_derived or return_output_params:
+                outpar_dict.update(component.current_derived)
             if like_index is not None:
                 try:
                     loglikes[like_index] = float(component.current_logp)  # type: ignore
@@ -263,19 +385,38 @@ class Model(HasLogger):
                         component.current_logp)  # type: ignore
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
-        if return_derived:
-            # Turn the derived params dict into a list and return
+        if as_dict:
+            loglikes = dict(zip(self.likelihood, loglikes))
+        if return_derived or return_output_params:
             if not compute_success:
-                derived_list = [np.nan] * len(self.output_params)
+                return_params_names = (
+                    self.output_params if return_output_params else self.derived_params)
+                if as_dict:
+                    return_params = dict(
+                        zip(return_params_names, [np.nan] * len(return_params_names)))
+                else:
+                    return_params = [np.nan] * len(return_params_names)
             else:
+                # Add chi2's to derived parameters
                 for chi2_name, indices in self._chi2_names:
-                    derived_dict[chi2_name] = -2 * sum(loglikes[i] for i in indices)
-                derived_list = [derived_dict[p] for p in self.output_params]
-            return loglikes, derived_list
+                    outpar_dict[chi2_name] = -2 * sum(loglikes[i] for i in indices)
+                if return_output_params:
+                    return_params = (outpar_dict if as_dict
+                                     else list(outpar_dict.values()))
+                else:  # explicitly derived, instead of output params
+                    derived_dict = self.parameterization.to_derived(outpar_dict)
+                    self.log.debug("Computed derived parameters: %s", derived_dict)
+                    return_params = (derived_dict if as_dict
+                                     else list(derived_dict.values()))
+            return loglikes, return_params
         return loglikes
 
-    def loglikes(self, params_values=None, return_derived=True, make_finite=False,
-                 cached=True):
+    def loglikes(self,
+                 params_values: Optional[Union[Dict[str, float], Sequence[float]]] = None,
+                 as_dict: bool = False, make_finite: bool = False,
+                 return_derived: bool = True, cached: bool = True
+                 ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
+                            Tuple[Dict[str, float], Dict[str, float]]]:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -288,7 +429,12 @@ class Model(HasLogger):
         are the values of the derived parameters in the order given by
         ``list([your_model].parameterization.derived_params())``.
 
-        To return just the list of log-likelihood values, make ``return_derived=False``.
+        To return just the list of log-likelihood values, make ``return_derived=False``
+        (default: True).
+
+        If ``as_dict=True`` (default: False), returns a dictionary containing the
+        likelihood names (and derived parameters, if ``return_derived=True``) as keys,
+        instead of an array.
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
@@ -296,28 +442,16 @@ class Model(HasLogger):
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
         """
-        if params_values is None:
-            params_values = []
-        elif hasattr(params_values, "keys"):
-            params_values = self.parameterization.check_sampled(**params_values)
-
+        params_values = self.parameterization.check_sampled(params_values)
         input_params = self.parameterization.to_input(params_values)
         return self._loglikes_input_params(input_params, return_derived=return_derived,
-                                           cached=cached, make_finite=make_finite)
+                                           cached=cached, make_finite=make_finite,
+                                           as_dict=as_dict)
 
-    def _loglikes_input_params(self, input_params, return_derived=True, make_finite=False,
-                               cached=True):
-        result = self.logps(input_params, return_derived=return_derived, cached=cached,
-                            make_finite=make_finite)
-        if return_derived:
-            loglikes, derived_list = result
-            derived_sampler = self.parameterization.to_derived(derived_list)
-            self.log.debug("Computed derived parameters: %s", derived_sampler)
-            return loglikes, list(derived_sampler.values())
-        return result
-
-    def loglike(self, params_values=None, return_derived=True, make_finite=False,
-                cached=True):
+    def loglike(self,
+                params_values: Optional[Union[Dict[str, float], Sequence[float]]] = None,
+                make_finite: bool = False, return_derived: bool = True,
+                cached: bool = True) -> Union[float, Tuple[float, np.ndarray]]:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -330,7 +464,8 @@ class Model(HasLogger):
         ``list([your_model].parameterization.derived_params())``.
         If the model contains multiple likelihoods, the sum of the loglikes is returned.
 
-        To return just the list of log-likelihood values, make ``return_derived=False``.
+        To return just the list of log-likelihood values, make ``return_derived=False``,
+        (default: True).
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
@@ -339,27 +474,26 @@ class Model(HasLogger):
         could be reused.
         """
         ret_value = self.loglikes(params_values, return_derived=return_derived,
-                                  cached=cached)
+                                  cached=cached, make_finite=make_finite)
         if return_derived:
-            loglike = np.sum(ret_value[0])
-            if make_finite:
-                return np.nan_to_num(loglike), ret_value[1]
-            return loglike, ret_value[1]
+            return np.sum(ret_value[0]), ret_value[1]
         else:
-            loglike = np.sum(ret_value)
-            if make_finite:
-                return np.nan_to_num(loglike)
-            return loglike
+            return np.sum(ret_value)
 
-    def logposterior(self, params_values, return_derived=True,
-                     make_finite=False, cached=True, _no_check=False) -> LogPosterior:
+    def logposterior(self,
+                     params_values: Union[Dict[str, float], Sequence[float]],
+                     as_dict: bool = False, make_finite: bool = False,
+                     return_derived: bool = True, cached: bool = True,
+                     _no_check: bool = False
+                     ) -> Union[LogPosterior, dict]:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
         When in doubt, you can get the correct order as
         ``list([your_model].parameterization.sampled_params())``.
 
-        Returns the a ``logposterior`` ``NamedTuple``, with the following fields:
+        Returns a :class:`~model.LogPosterior` object (except if ``as_dict=True``, see
+        below), with the following fields:
 
         - ``logpost``: log-value of the posterior.
         - ``logpriors``: log-values of the priors, in the same order as in
@@ -374,7 +508,11 @@ class Model(HasLogger):
         Only computes the log-likelihood and the derived parameters if the prior is
         non-null (otherwise the fields ``loglikes`` and ``derived`` are empty lists).
 
-        To ignore the derived parameters, make ``return_derived=False``.
+        To ignore the derived parameters, make ``return_derived=False`` (default: True).
+
+        If ``as_dict=True`` (default: False), returns a dictionary containing prior names,
+        likelihoods names and, if applicable, derived parameters names as keys, instead of
+        a :class:`~model.LogPosterior` object.
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
@@ -385,8 +523,7 @@ class Model(HasLogger):
         if _no_check:
             params_values_array = params_values
         else:
-            if hasattr(params_values, "keys"):
-                params_values = self.parameterization.check_sampled(**params_values)
+            params_values = self.parameterization.check_sampled(params_values)
             params_values_array = self._to_sampled_array(params_values)
             if self.is_debug():
                 self.log.debug(
@@ -398,39 +535,35 @@ class Model(HasLogger):
                     self.log, "Got non-finite parameter values: %r",
                     dict(zip(self.parameterization.sampled_params(),
                              params_values_array)))
-
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
-        logps = self.prior.logps_internal(params_values_array)
-        if logps == -np.inf:
+        logpriors_1d = self.prior.logps_internal(params_values_array)
+        if logpriors_1d == -np.inf:
             logpriors = [-np.inf] * (1 + len(self.prior.external))
-            logpost = -np.inf
         else:
             input_params = self.parameterization.to_input(params_values_array)
-            logpriors = [logps]
+            logpriors = [logpriors_1d]
             if self.prior.external:
                 logpriors.extend(self.prior.logps_external(input_params))
-                logpost = sum(logpriors)
-            else:
-                logpost = logps
-
-        if logps != -np.inf:
+        if -np.inf not in logpriors:
             # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(input_params,
                                                return_derived=return_derived,
                                                cached=cached, make_finite=make_finite)
             loglikes, derived_sampler = like if return_derived else (like, [])
-            logpost += sum(loglikes)
         else:
             loglikes = []
             derived_sampler = []
-        if make_finite:
-            logpriors = np.nan_to_num(logpriors)
-            logpost = np.nan_to_num(logpost)
-        return LogPosterior(logpost=logpost, logpriors=logpriors,
-                            loglikes=loglikes, derived=derived_sampler)
+        logposterior = LogPosterior(logpriors=logpriors, loglikes=loglikes,
+                                    derived=derived_sampler, finite=make_finite)
+        if as_dict:
+            return logposterior.as_dict(self)
+        else:
+            return logposterior
 
-    def logpost(self, params_values, make_finite=False, cached=True) -> float:
+    def logpost(self,
+                params_values: Union[Dict[str, float], Sequence[float]],
+                make_finite: bool = False, cached: bool = True) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -448,9 +581,12 @@ class Model(HasLogger):
         return self.logposterior(params_values, make_finite=make_finite,
                                  return_derived=False, cached=cached).logpost
 
-    def get_valid_point(self, max_tries, ignore_fixed_ref=False, random_state=None):
+    def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
+                        logposterior_as_dict: bool = False, random_state=None,
+                        ) -> Union[Tuple[np.ndarray, LogPosterior],
+                                   Tuple[np.ndarray, dict]]:
         """
-        Finds a point with finite posterior, sampled from from the reference pdf.
+        Finds a point with finite posterior, sampled from the reference pdf.
 
         It will fail if no valid point is found after `max_tries`.
 
@@ -459,6 +595,10 @@ class Model(HasLogger):
         (useful e.g. to prevent caching when measuring speeds).
 
         Returns (point, LogPosterior(logpost, logpriors, loglikes, derived))
+
+        If ``logposterior_as_dict=True`` (default: False), returns for the log-posterior
+        a dictionary containing prior names, likelihoods names and, if applicable, derived
+        parameters names as keys, instead of a :class:`~model.LogPosterior` object.
         """
         for loop in range(max(1, max_tries // self.prior.d())):
             initial_point = self.prior.reference(max_tries=max_tries,
@@ -475,6 +615,8 @@ class Model(HasLogger):
                                             "or a pdf.")
             raise LoggedError(self.log, "Could not find random point giving finite "
                                         "posterior after %g tries", max_tries)
+        if logposterior_as_dict:
+            results = results.as_dict(self)
         return initial_point, results
 
     def dump_timing(self):
@@ -583,7 +725,9 @@ class Model(HasLogger):
             requirements_are_params.update(provide_params)
             # Invert to get the provider(s) of each available product/parameter
             for k in chain(can_provide, provide_params):
-                providers[k] = providers.get(k, []) + [component]
+                providers[k] = providers.get(k, [])
+                if component not in providers[k]:
+                    providers[k].append(component)
         # Add requirements requested by hand
         manual_theory = Theory(name='_manual')
         if manual_requirements:
@@ -610,6 +754,11 @@ class Model(HasLogger):
                 for requirement in requires:
                     suppliers = providers.get(requirement.name)
                     if not suppliers:
+                        # If failed requirement was manually added,
+                        # remove from list, or it will still fail in the next call too
+                        requirements[manual_theory] = [
+                            req for req in requirements[manual_theory]
+                            if req.name != requirement.name]
                         raise LoggedError(self.log,
                                           "Requirement %s of %r is not provided by any "
                                           "component, nor sampled directly",
@@ -784,6 +933,7 @@ class Model(HasLogger):
         self.input_params = [p for p in self.parameterization.input_params() if p not in
                              self.parameterization.dropped_param_set()]
         self.output_params = list(self.parameterization.output_params())
+        self.derived_params = list(self.parameterization.derived_params())
         input_assign: Dict[str, List[Theory]] = {p: [] for p in self.input_params}
         output_assign: Dict[str, List[Theory]] = {p: [] for p in self.output_params}
         # Go through all components.
@@ -1162,13 +1312,28 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
               packages_path: Optional[str] = None,
               override: Optional[InputDict] = None
               ) -> Model:
+    """
+    Creates a :class:`model.Model`, from Cobaya's input (either as a dictionary, yaml file
+    or yaml string). Input fields/options not needed (e.g. ``sampler``, ``output``,
+    ``force``, ...) will simply be ignored.
+
+    :param info_or_yaml_or_file: input options dictionary, yaml file, or yaml text
+    :param debug: true for verbose debug output, or a specific logging level
+    :param packages_path: path where external packages were installed
+       (if external dependencies are present).
+    :param stop_at_error: stop if an error is raised
+    :param override: option dictionary to merge into the input one, overriding settings
+       (but with lower precedence than the explicit keyword arguments)
+    :return: a :class:`model.Model` instance.
+
+    """
     info = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
                                packages_path, override)
     logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
-        if k not in ["params", "likelihood", "prior", "theory", "packages_path",
+        if k not in ["params", "likelihood", "prior", "theory", packages_path_input,
                      "timing", "stop_at_error", "auto_params"]:
             value = info.pop(k)  # type: ignore
             if value is not None and (not isinstance(value, Mapping) or value):
@@ -1184,7 +1349,7 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Initialize the parameters and posterior
     return Model(updated_info["params"], updated_info["likelihood"],
                  updated_info.get("prior"), updated_info.get("theory"),
-                 packages_path=info.get("packages_path"),
+                 packages_path=info.get(packages_path_input),
                  timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))
 
@@ -1198,7 +1363,7 @@ def load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
             info["resume"] = False
         info = recursive_update(info, override, copied=False)
     if packages_path:
-        info["packages_path"] = packages_path
+        info[packages_path_input] = packages_path
     if debug is not None:
         info["debug"] = debug if isinstance(debug, (int, str)) else bool(debug)
     if stop_at_error is not None:

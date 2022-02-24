@@ -21,7 +21,8 @@ import pkg_resources
 
 # Local
 from cobaya.conventions import products_path, kinds, separator_files, \
-    reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix
+    reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix, \
+    packages_path_input
 from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
     empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
@@ -167,10 +168,10 @@ def get_info_path(folder, prefix, infix=None, kind="updated", ext=Extension.yaml
 
 def get_used_components(*infos, return_infos=False):
     """
-    Returns all requested components as an dict ``{kind: set([components])}``.
+    Returns all requested components as a dict ``{kind: set([components])}``.
     Priors are not included.
 
-    If ``return_infos=True`` (default: ``False``), returns too a dictionary of inputs per
+    If ``return_infos=True`` (default: ``False``), also returns a dictionary of inputs per
     component, updated in the order in which the info arguments are given.
 
     Components which are just renames of others (i.e. defined with `class_name`) return
@@ -457,7 +458,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint_debug = log.debug
     myname = inspect.stack()[0][3]
     ignore = set() if strict else \
-        {"debug", "debug_file", "resume", "force", "packages_path", "test", "version"}
+        {"debug", "debug_file", "resume", "force", packages_path_input, "test", "version"}
     ignore = ignore.union(ignore_blocks or [])
     if set(info for info in info_old if info_old[info] is not None) - ignore \
             != set(info for info in info_new if info_new[info] is not None) - ignore:
@@ -639,7 +640,7 @@ class HasDefaults:
     def get_file_base_name(cls) -> str:
         """
         Gets the string used as the name for .yaml, .bib files, typically the
-        class name or a un-CamelCased class name
+        class name or an un-CamelCased class name
         """
         return cls.__dict__.get('file_base_name') or cls.__name__
 

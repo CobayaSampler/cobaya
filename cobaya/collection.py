@@ -12,9 +12,9 @@ import functools
 import numbers
 import numpy as np
 import pandas as pd
-from getdist import MCSamples, chains
 from copy import deepcopy
-from math import isclose
+from typing import Union, Sequence, Optional
+from getdist import MCSamples, chains
 
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
@@ -96,9 +96,9 @@ class SampleCollection(BaseCollection):
     (returns a copy, not a view).
 
     Note for developers: when expanding this class or inheriting from it, always access
-    the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
-    been dumped. If you really need to access the actual attribute `self._data` in a
-    method, make sure to decorate it with `@ensure_cache_dumped`.
+    the underlying DataFrame as ``self.data`` and not ``self._data``, to ensure the cache
+    has been dumped. If you really need to access the actual attribute ``self._data`` in a
+    method, make sure to decorate it with ``@ensure_cache_dumped``.
     """
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
@@ -179,32 +179,34 @@ class SampleCollection(BaseCollection):
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
-    def add(self, values, derived=None, weight=1,
-            logpost=None, logpriors=None, loglikes=None):
+    def add(self, values: Union[Sequence[float], np.ndarray],
+            logpost: Optional[Union[LogPosterior, float]] = None,
+            logpriors: Optional[Sequence[float]] = None,
+            loglikes: Optional[Sequence[float]] = None,
+            derived: Optional[Sequence[float]] = None,
+            weight: float = 1):
         """
-        Adds a point to the collection. If `logpost` not given, it is obtained as the sum
-        of `logpriors` and `loglikes` (both optional otherwise).
+        Adds a point to the collection.
+
+        If `logpost` can be :class:`~model.LogPosterior`, float or None (in which case,
+        `logpriors`, `loglikes` are both required).
         """
-        logps = self._check_before_adding(values, logpriors, loglikes, logpost=logpost,
-                                          derived=derived, weight=weight)
-        self._cache_add(values, logps, derived=derived, weight=weight,
-                        logpriors=logpriors, loglikes=loglikes)
+        logposterior = self._check_before_adding(
+            values, logpost=logpost, logpriors=logpriors,
+            loglikes=loglikes, derived=derived, weight=weight)
+        self._cache_add(values, logposterior=logposterior, weight=weight)
 
-    def add_log_posterior(self, values: np.ndarray, results: LogPosterior, weight=1):
-        logprior_sum = sum(results.logpriors)
-        loglike_sum = sum(results.loglikes)
-        assert np.isclose(logprior_sum + loglike_sum, results.logpost)
-        self._cache_add(values, (results.logpost, logprior_sum, loglike_sum),
-                        derived=results.derived, weight=weight,
-                        logpriors=results.logpriors, loglikes=results.loglikes)
-
-    def _check_before_adding(self, values, logpriors, loglikes, logpost=None,
-                             derived=None, weight=None):
+    def _check_before_adding(self, values: Union[Sequence[float], np.ndarray],
+                             logpost: Optional[Union[LogPosterior, float]] = None,
+                             logpriors: Optional[Sequence[float]] = None,
+                             loglikes: Optional[Sequence[float]] = None,
+                             derived: Optional[Sequence[float]] = None,
+                             weight: float = 1
+                             ) -> LogPosterior:
         """
         Checks that the arguments of collection.add are correctly formatted.
 
-        Returns a tuple `(logpost, sum(logpriors), sum(loglikes))`, since it needs to sum
-        log-prior and log-likelihood for testing purposes.
+        Returns a :class:`~model.LogPosterior` dataclass (unchanged if one passed).
         """
         if weight is not None and weight <= 0:
             raise LoggedError(self.log, "Weights must be positive. Got %r", weight)
@@ -217,64 +219,75 @@ class SampleCollection(BaseCollection):
                 raise LoggedError(
                     self.log, "Got %d values for the derived parameters. Should be %d.",
                     len(derived), len(self.derived_params))
-        logpriors_sum = sum(logpriors) if logpriors is not None else None
-        loglikes_sum = sum(loglikes) if loglikes is not None else None
-        try:
-            logpost_sum = logpriors_sum + loglikes_sum  # type: ignore
-            if logpost is None:
-                logpost = logpost_sum
-            else:
-                if not isclose(logpost, logpost_sum):
+        if isinstance(logpost, LogPosterior):
+            # If priors and likes passed, check consistency
+            if logpriors is not None:
+                if not np.allclose(logpriors, logpost.logpriors):
                     raise LoggedError(
-                        self.log, "The given log-posterior is not equal to the "
-                                  "sum of given log-likelihoods and log-priors")
-        except TypeError:  # at least one of logpriors|likes not defined
-            if logpost is None:
-                raise LoggedError(
-                    self.log, "If a log-posterior is not specified, you need to pass "
-                              "a log-likelihood and a log-prior.")
-        return logpost, logpriors_sum, loglikes_sum
+                        self.log,
+                        "logpriors not consistent with LogPosterior object passed.")
+            if loglikes is not None:
+                if not np.allclose(loglikes, logpost.loglikes):
+                    raise LoggedError(
+                        self.log,
+                        "loglikes not consistent with LogPosterior object passed.")
+            if derived is not None:
+                # A simple np.allclose is not enough, because np.allclose([1], []) = True!
+                if len(derived) != len(logpost.derived) or \
+                        not np.allclose(derived, logpost.derived):
+                    raise LoggedError(
+                        self.log,
+                        "derived params not consistent with those of LogPosterior object "
+                        "passed.")
+            return_logpost = logpost
+        elif isinstance(logpost, float) or logpost is None:
+            try:
+                return_logpost = LogPosterior(
+                    logpriors=logpriors, loglikes=loglikes, derived=derived)
+            except ValueError as valerr:
+                # missing logpriors/loglikes if logpost is None,
+                # or inconsistent sum if logpost given
+                raise LoggedError(self.log, str(valerr))
+        else:
+            raise LoggedError(
+                self.log, "logpost must be a LogPosterior object, a number or None (in "
+                          "which case logpriors and loglikes are needed.")
+        return return_logpost
 
     def _cache_reset(self):
         self._cache = np.full((self.cache_size, len(self.columns)), np.nan)
         self._cache_last = -1
 
-    def _cache_add(self, values, logps, derived=None, weight=1, logpriors=None,
-                   loglikes=None):
+    def _cache_add(self, values: Union[Sequence[float], np.ndarray],
+                   logposterior: LogPosterior, weight: float = 1):
         """
         Adds the given point to the cache. Dumps and resets the cache if full.
-
-        `logps` must be a tuple `(logpost, sum(logpriors), sum(loglikes))`, where the last
-        two elements can be `None`.
         """
         if self._cache_last == self.cache_size - 1:
             self._cache_dump()
-        self._cache_add_row(self._cache_last + 1, values, logps, derived=derived,
-                            weight=weight, logpriors=logpriors, loglikes=loglikes)
+        self._cache_add_row(
+            self._cache_last + 1, values, logposterior=logposterior, weight=weight)
         self._cache_last += 1
 
-    def _cache_add_row(self, pos, values, logps, derived=None, weight=1, logpriors=None,
-                       loglikes=None):
+    def _cache_add_row(self, pos: int, values: Union[Sequence[float], np.ndarray],
+                       logposterior: LogPosterior, weight: float = 1):
         """
         Adds the given point to the cache at the given position.
-
-        `logps` must be a tuple `(logpost, sum(logpriors), sum(loglikes))`, where the last
-        two elements can be `None`.
         """
         self._cache[pos, self._icol[OutPar.weight]] = weight if weight is not None else 1
-        self._cache[pos, self._icol[OutPar.minuslogpost]] = -logps[0]
+        self._cache[pos, self._icol[OutPar.minuslogpost]] = -logposterior.logpost
         for name, value in zip(self.sampled_params, values):
             self._cache[pos, self._icol[name]] = value
-        if logpriors is not None:
-            for name, value in zip(self.minuslogprior_names, logpriors):
+        if logposterior.logpriors is not None:
+            for name, value in zip(self.minuslogprior_names, logposterior.logpriors):
                 self._cache[pos, self._icol[name]] = -value
-            self._cache[pos, self._icol[OutPar.minuslogprior]] = - logps[1]
-        if loglikes is not None:
-            for name, value in zip(self.chi2_names, loglikes):
+            self._cache[pos, self._icol[OutPar.minuslogprior]] = - logposterior.logprior
+        if logposterior.loglikes is not None:
+            for name, value in zip(self.chi2_names, logposterior.loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
-            self._cache[pos, self._icol[OutPar.chi2]] = -2 * logps[2]
-        if derived is not None:
-            for name, value in zip(self.derived_params, derived):
+            self._cache[pos, self._icol[OutPar.chi2]] = -2 * logposterior.loglike
+        if len(logposterior.derived):
+            for name, value in zip(self.derived_params, logposterior.derived):
                 try:
                     self._cache[pos, self._icol[name]] = value
                 except ValueError:
@@ -400,7 +413,6 @@ class SampleCollection(BaseCollection):
         """
         return self._copy()
 
-    # Statistical computations
     def mean(self, first=None, last=None, derived=False, pweight=False):
         """
         Returns the (weighted) mean of the parameters in the chain,
@@ -613,9 +625,11 @@ class OneSamplePoint:
         self.output_thin = output_thin
         self._added_weight = 0
 
-    def add(self, values, results: LogPosterior):
+    def add(self, values, logpost: LogPosterior):
         self.values = values
-        self.results = results
+        if not isinstance(logpost, LogPosterior):
+            raise ValueError("`logpost` argument must be LogPosterior instance.")
+        self.results = logpost
         self.weight = 1
 
     @property
@@ -633,7 +647,7 @@ class OneSamplePoint:
                 return False
         else:
             weight = self.weight
-        collection.add_log_posterior(self.values, self.results, weight=weight)
+        collection.add(self.values, logpost=self.results, weight=weight)
         return True
 
     def __str__(self):

@@ -51,7 +51,7 @@ from itertools import chain
 from numpy.random import SeedSequence, default_rng
 
 # Local
-from cobaya.conventions import Extension
+from cobaya.conventions import Extension, packages_path_input
 from cobaya.typing import InfoDict, SamplersDict, SamplerDict
 from cobaya.tools import deepcopy_where_possible, find_with_regexp
 from cobaya.tools import recursive_update, str_to_list, get_resolved_class
@@ -330,15 +330,16 @@ class Sampler(CobayaComponent):
         self._entropy = ss.entropy  # for debugging store for reproducibility
         self._rng = default_rng(ss)
 
-    # TO BE DEPRECATED IN NEXT SUBVERSION
+    # MARKED FOR DEPRECATION IN v3.0
     def __getitem__(self, k):
-        self.log.warning(
-            "NB: the variables returned by `cobaya.run` have changed since the last "
-            "version: they were `(updated_info, sampler_products)` and they are now "
+        raise LoggedError(
+            self.log,
+            "NB: the variables returned by `cobaya.run` have changed: "
+            "they were `(updated_info, sampler_products)` and they are now "
             "`(updated_info, sampler)`. You can access the sampler products (the old "
             "return value) as `sampler.products()` and the `Model` used as "
             "`sampler.model`.")
-        return self.products()[k]
+    # END OF DEPRECATION BLOCK
 
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
@@ -464,10 +465,10 @@ class CovmatSampler(Sampler):
         # If given, load and test the covariance matrix
         loaded_params: Sequence[str]
         if isinstance(self.covmat, str):
-            covmat_pre = "{%s}" % "packages_path"
+            covmat_pre = "{%s}" % packages_path_input
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
-                    **{"packages_path": self.packages_path}).replace("/", os.sep)
+                    **{packages_path_input: self.packages_path}).replace("/", os.sep)
             try:
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()

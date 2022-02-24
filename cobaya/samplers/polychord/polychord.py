@@ -52,6 +52,8 @@ class polychord(Sampler):
     oversample_power: float
     nlive: NumberWithUnits
     path: str
+    logzero: float
+    max_ndead: int
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
@@ -228,16 +230,16 @@ class polychord(Sampler):
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
         def logpost(params_values):
-            logposterior, logpriors, loglikes, derived = (
-                self.model.logposterior(params_values))
-            if len(derived) != self.n_derived:
-                derived = np.full(self.n_derived, np.nan)
+            result = self.model.logposterior(params_values)
+            loglikes = result.loglikes
             if len(loglikes) != self.n_likes:
                 loglikes = np.full(self.n_likes, np.nan)
-            derived = list(derived) + list(logpriors) + list(loglikes)
-            return (
-                max(logposterior + self.logvolume, self.pc_settings.logzero),
-                derived)
+            derived = result.derived
+            if len(derived) != self.n_derived:
+                derived = np.full(self.n_derived, np.nan)
+            derived = list(derived) + list(result.logpriors) + list(loglikes)
+            return (max(result.logpost + self.logvolume, self.pc_settings.logzero),
+                    derived)
 
         sync_processes()
         self.mpi_info("Calling PolyChord...")
