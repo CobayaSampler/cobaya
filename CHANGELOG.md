@@ -4,8 +4,9 @@
 
 - Documented uses of `Model` class in general contexts (previously only cosmo)
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
-- Added ``--minimize`` flag to ``cobaya-run`` for quick minimization (replaces sampler, uses previous output).
-- Add COBAYA_USE_FILE_LOCKING environment variable to allow disabling of file locks. Warning not to use --test with MPI.
+- Added `--minimize` flag to `cobaya-run` for quick minimization (replaces sampler, uses previous output).
+- Add `COBAYA_USE_FILE_LOCKING` environment variable to allow disabling of file locks. Warning not to use `--test` with MPI.
+- Installation of external packages is now version-aware for some packages; added `--upgrade` option, off by default to preserve possible user changes.
 
 ### Cosmological likelihoods and theory codes
 
