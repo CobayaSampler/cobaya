@@ -167,7 +167,7 @@ def install(*infos, **kwargs):
                 success = install_this(path=abspath, **kwargs_install)
             except KeyboardInterrupt:
                 raise
-            except:
+            except Exception:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 log.error("An unknown error occurred. Delete the external packages "
                           "folder %r and try again. "
@@ -355,11 +355,16 @@ def pip_install(packages, upgrade=False):
 def check_gcc_version(min_version="6.4", error_returns=None):
     """
     Checks the version of the ``gcc`` compiler installed.
+
+    If the installed version is higher than ``min_version``, return ``True``,
+    and ``False`` otherwise.
+
+    If an error is produced, returns ``error_returns``.
     """
     try:
         version = subprocess.check_output(
             "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
-    except:
+    except subprocess.CalledProcessError:
         return error_returns
     # Change in gcc >= 7: -dumpversion only dumps major version
     if "." not in version:
