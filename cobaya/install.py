@@ -16,9 +16,9 @@ import shutil
 import tempfile
 import logging
 from itertools import chain
-from pkg_resources import parse_version
-import requests
-import tqdm
+from pkg_resources import parse_version  # type: ignore
+import requests  # type: ignore
+import tqdm  # type: ignore
 from typing import List
 
 # Local
@@ -47,6 +47,20 @@ class NotInstalledError(LoggedError):
 
 
 def install(*infos, **kwargs):
+    """
+    Installs the external packages required by the components mentioned in ``infos``.
+
+    :param force: force re-installation of apparently installed packages.
+    :param test: just check whether components are installed.
+    :param skip: keywords of components that will be skipped during installation.
+    :param skip_global: skip installation of already-available Python modules.
+    :param debug: produce verbose debug output.
+    :param code: set to ``False`` to skip code packages.
+    :param data: set to ``False`` to skip data packages.
+    :param no_progress_bars: no progress bars shown; use when output is saved into a text
+       file (e.g. when running on a cluster).
+    :param no_set_global: do not store the installation path for later runs.
+    """
     debug = kwargs.get("debug")
     # noinspection PyUnresolvedReferences
     if not log.root.handlers:
@@ -215,7 +229,20 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
         return False
 
 
-def download_file(url, path, no_progress_bars=False, decompress=False, logger=None):
+def download_file(url, path, decompress=False, no_progress_bars=False, logger=None):
+    """
+    Downloads (and optionally decompresses) a file into a given path.
+
+    :param url: url from which to download the file.
+    :param path: path to where the file should be downloaded.
+    :param decompress: decompress file if a compressed format extension found.
+    :param no_progress_bars: no progress bars shown; use when output is saved into a text
+       file (e.g. when running on a cluster).
+    :param logger: logger to use for reporting information; a new logger is created if not
+       specified.
+    :return: ``True`` if the download (and decompression, if requested) was successfull,
+       and ``False`` otherwise.
+    """
     logger = logger or get_logger("install")
     with tempfile.TemporaryDirectory() as tmp_path:
         try:
@@ -268,6 +295,21 @@ def download_file(url, path, no_progress_bars=False, decompress=False, logger=No
 
 def download_github_release(directory, repo_name, release_name, repo_rename=None,
                             no_progress_bars=False, logger=None):
+    """
+    Downloads a release (i.e. a tagged commit) from the given GitHub repo.
+
+    :param directory: directory into which the release will be downloaded; will be created
+       if it does not exist.
+    :param repo_name: repository name as ``user/repo``.
+    :param release_name: name or tag of the release.
+    :param repo_rename: name of the directory containing the release, if different from
+       ``repo_name``.
+    :param no_progress_bars: no progress bars shown; use when output is saved into a text
+       file (e.g. when running on a cluster).
+    :param logger: logger to use for reporting information; a new logger is created if not
+       specified.
+    :return: ``True`` if the download was successfull, and ``False`` otherwise.
+    """
     logger = logger or get_logger("install")
     if "/" in repo_name:
         github_user = repo_name[:repo_name.find("/")]
@@ -311,6 +353,9 @@ def pip_install(packages, upgrade=False):
 
 
 def check_gcc_version(min_version="6.4", error_returns=None):
+    """
+    Checks the version of the ``gcc`` compiler installed.
+    """
     try:
         version = subprocess.check_output(
             "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
@@ -345,13 +390,6 @@ def install_script(args=None):
                              "Optional if one has been set globally or as an env variable"
                              " (run with '--show_%s' to check)." %
                              packages_path_arg_posix)
-    # MARKED FOR DEPRECATION IN v3.0
-    modules = "modules"
-    parser.add_argument("-" + modules[0], "--" + modules,
-                        action="store", required=False,
-                        metavar="/packages/path", default=None,
-                        help="Deprecated! Use %s instead." % packages_path_arg_posix)
-    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
     output_show_packages_path = resolve_packages_path()
     if output_show_packages_path and os.environ.get(packages_path_env):
         output_show_packages_path += " (from env variable %r)" % packages_path_env
@@ -366,20 +404,12 @@ def install_script(args=None):
     parser.add_argument("-" + "f", "--" + "force", action="store_true",
                         default=False,
                         help="Force re-installation of apparently installed packages.")
+    parser.add_argument("--%s" % "test", action="store_true", default=False,
+                        help="Just check whether components are installed.")
     parser.add_argument("--skip", action="store", nargs="*",
                         metavar="keyword",
                         help="Keywords of components that will be skipped during "
                              "installation.")
-    parser.add_argument("--no-progress-bars", action="store_true", default=False,
-                        help="No progress bars shown. Shorter logs (used in Travis).")
-    parser.add_argument("--%s" % "test", action="store_true", default=False,
-                        help="Just check whether components are installed.")
-    # MARKED FOR DEPRECATION IN v3.0
-    parser.add_argument("--just-check", action="store_true", default=False,
-                        help="Just check whether components are installed.")
-    # END OF DEPRECATION BLOCK -- CONTINUES BELOW!
-    parser.add_argument("--no-set-global", action="store_true", default=False,
-                        help="Do not store the installation path for later runs.")
     parser.add_argument("--skip-global", action="store_true", default=False,
                         help="Skip installation of already-available Python modules.")
     parser.add_argument("-" + "d", "--" + "debug", action="store_true",
@@ -389,6 +419,11 @@ def install_script(args=None):
                             help="Install code of the components.", dest=data_path)
     group_just.add_argument("-D", "--just-data", action="store_false", default=True,
                             help="Install data of the components.", dest=code_path)
+    parser.add_argument("--no-progress-bars", action="store_true", default=False,
+                        help=("No progress bars shown; use when output is saved into a "
+                              "text file (e.g. when running on a cluster)."))
+    parser.add_argument("--no-set-global", action="store_true", default=False,
+                        help="Do not store the installation path for later runs.")
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
@@ -416,28 +451,11 @@ def install_script(args=None):
     if not infos:
         logger.info("Nothing to install.")
         return
-    # List of deprecation warnings, to be printed *after* installation
-    deprecation_warnings = []
-    # MARKED FOR DEPRECATION IN v3.0
-    if getattr(arguments, modules) is not None:
-        raise LoggedError(logger, "-m/--modules has been deprecated in favor of "
-                                  "-%s/--%s",
-                          packages_path_arg[0], packages_path_arg_posix)
-    # END OF DEPRECATION BLOCK
-    # MARKED FOR DEPRECATION IN v3.0
-    if arguments.just_check is True:
-        raise LoggedError(logger, "--just-check has been deprecated in favor of --%s",
-                          "test")
-    # END OF DEPRECATION BLOCK
     # Launch installer
     install(*infos, path=getattr(arguments, packages_path_arg),
             **{arg: getattr(arguments, arg)
                for arg in ["force", code_path, data_path, "no_progress_bars", "test",
                            "no_set_global", "skip", "skip_global", "debug"]})
-    # MARKED FOR DEPRECATION IN v3.0
-    for warning_msg in deprecation_warnings:
-        logger.warning(warning_msg)
-    # END OF DEPRECATION BLOCK
 
 
 if __name__ == '__main__':
