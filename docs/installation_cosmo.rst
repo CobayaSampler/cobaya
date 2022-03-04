@@ -121,3 +121,9 @@ update an auto-installed *camb* use
 .. code:: bash
 
    $ cobaya-install -f --packages-path /path/to/packages camb
+
+
+``install`` function
+--------------------
+
+.. autofunction:: install.install
