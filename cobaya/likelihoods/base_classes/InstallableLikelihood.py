@@ -8,11 +8,14 @@ r"""
 
 # Global
 import os
+from packaging import version
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.typing import InfoDict
 from cobaya.log import get_logger
+from cobaya.install import _version_filename
+from cobaya.tools import VersionCheckError
 
 
 class InstallableLikelihood(Likelihood):
@@ -44,6 +47,17 @@ class InstallableLikelihood(Likelihood):
                 func = log.info if kwargs.get("check", True) else log.error
                 func("The given installation path does not exist: '%s'", path)
                 return False
+            elif opts.get("github_release"):
+                try:
+                    with open(os.path.join(path, _version_filename), "r") as f:
+                        installed_version = version.parse(f.readlines()[0])
+                except FileNotFoundError:  # old install: no version file
+                    raise VersionCheckError("Could not read current version.")
+                min_version = version.parse(opts.get("github_release"))
+                if installed_version < min_version:
+                    raise VersionCheckError(
+                        f"Installed version ({installed_version}) "
+                        f"older than minimum required one ({min_version}).")
         return True
 
     @classmethod

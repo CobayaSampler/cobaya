@@ -24,7 +24,7 @@ from typing import List
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
 from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
-    write_packages_path_in_config_file, get_config_path, get_kind
+    write_packages_path_in_config_file, get_config_path, get_kind, VersionCheckError
 from cobaya.input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
@@ -37,6 +37,7 @@ log = get_logger("install")
 
 _banner_symbol = "="
 _banner_length = 80
+_version_filename = "version.dat"
 
 
 class NotInstalledError(LoggedError):
@@ -50,16 +51,20 @@ def install(*infos, **kwargs):
     """
     Installs the external packages required by the components mentioned in ``infos``.
 
-    :param force: force re-installation of apparently installed packages.
-    :param test: just check whether components are installed.
+    :param force: force re-installation of apparently installed packages (default:
+       ``False``).
+    :param test: just check whether components are installed  (default: ``False``).
+    :param upgrade: force upgrade of obsolete components (default: ``False``).
     :param skip: keywords of components that will be skipped during installation.
-    :param skip_global: skip installation of already-available Python modules.
-    :param debug: produce verbose debug output.
-    :param code: set to ``False`` to skip code packages.
-    :param data: set to ``False`` to skip data packages.
+    :param skip_global: skip installation of already-available Python modules (default:
+       ``False``).
+    :param debug: produce verbose debug output  (default: ``False``).
+    :param code: set to ``False`` to skip code packages (default: ``True``).
+    :param data: set to ``False`` to skip data packages (default: ``True``).
     :param no_progress_bars: no progress bars shown; use when output is saved into a text
-       file (e.g. when running on a cluster).
-    :param no_set_global: do not store the installation path for later runs.
+       file (e.g. when running on a cluster) (default: ``False``).
+    :param no_set_global: do not store the installation path for later runs (default:
+       ``False``).
     """
     debug = kwargs.get("debug")
     # noinspection PyUnresolvedReferences
@@ -88,6 +93,7 @@ def install(*infos, **kwargs):
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
     failed_components = []
+    obsolete_components = []
     skip_keywords_arg = set(kwargs.get("skip", []) or [])
     # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
     skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
@@ -139,11 +145,16 @@ def install(*infos, **kwargs):
             if get_path:
                 install_path = get_path(install_path)
             has_been_installed = False
+            is_old_version_msg = None
             with NoLogging(None if debug else logging.ERROR):
-                if kwargs.get("skip_global"):
-                    has_been_installed = is_installed(path="global", **kwargs_install)
-                if not has_been_installed:
-                    has_been_installed = is_installed(path=install_path, **kwargs_install)
+                try:
+                    if kwargs.get("skip_global"):
+                        has_been_installed = is_installed(path="global", **kwargs_install)
+                    if not has_been_installed:
+                        has_been_installed = is_installed(
+                            path=install_path, **kwargs_install)
+                except VersionCheckError as excpt:
+                    is_old_version_msg = str(excpt)
             if has_been_installed:
                 log.info("External dependencies for this component already installed.")
                 if kwargs.get("test", False):
@@ -153,6 +164,14 @@ def install(*infos, **kwargs):
                 else:
                     log.info("Doing nothing.")
                     continue
+            elif is_old_version_msg:
+                log.info(f"Version check failed: {is_old_version_msg}")
+                if kwargs.get("test", False):
+                    continue
+                if not kwargs.get("upgrade", False):
+                    obsolete_components += [component]
+                    log.info("Skipping because `upgrade` not requested.")
+                    continue
             else:
                 log.info("Check found no existing installation")
                 if not debug:
@@ -161,7 +180,7 @@ def install(*infos, **kwargs):
                         "`cobaya-install` with --debug to get more verbose output.)")
                 if kwargs.get("test", False):
                     continue
-                log.info("Installing...")
+            log.info("Installing...")
             try:
                 install_this = getattr(imported_class, "install", None)
                 success = install_this(path=abspath, **kwargs_install)
@@ -201,14 +220,20 @@ def install(*infos, **kwargs):
     print(create_banner(" * Summary * ",
                         symbol=_banner_symbol, length=_banner_length), end="")
     print()
+    bullet = "\n - "
     if failed_components:
-        bullet = "\n - "
         raise LoggedError(
             log, "The installation (or installation test) of some component(s) has "
                  "failed: %s\nCheck output of the installer of each component above "
                  "for precise error info.\n",
             bullet + bullet.join(failed_components))
-    log.info("All requested components' dependencies correctly installed.")
+    if obsolete_components:
+        raise LoggedError(
+            log, "The following packages are obsolete. Re-run with `upgrade` option "
+                 "(not upgrading by default to preserve possible user changes): %s",
+            bullet + bullet.join(obsolete_components))
+    if not failed_components and not obsolete_components:
+        log.info("All requested components' dependencies correctly installed.")
     # Set the installation path in the global config file
     if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
         write_packages_path_in_config_file(abspath)
@@ -266,6 +291,10 @@ def download_file(url, path, decompress=False, no_progress_bars=False, logger=No
                         bar.update(chunk_size)
             if not no_progress_bars:
                 bar.close()
+            if os.path.getsize(filename_tmp_path) < 1024:  # 1kb
+                with open(filename_tmp_path, "r") as f:
+                    if f.readlines()[0].startswith("404"):
+                        raise ValueError("File not found (404)!")
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
             logger.error(
@@ -331,6 +360,9 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
     if os.path.exists(repo_path):
         shutil.rmtree(repo_path)
     os.rename(os.path.join(directory, w_version), repo_path)
+    # Now save the version into a file to be checked later
+    with open(os.path.join(repo_path, _version_filename), "w") as f:
+        f.write(release_name)
     logger.info("%s %s downloaded and decompressed correctly.", repo_name, release_name)
     return True
 
@@ -406,15 +438,15 @@ def install_script(args=None):
                         version=output_show_packages_path,
                         help="Prints default external packages installation folder "
                              "and exits.")
-    parser.add_argument("-" + "f", "--" + "force", action="store_true",
-                        default=False,
+    parser.add_argument("-" + "f", "--" + "force", action="store_true", default=False,
                         help="Force re-installation of apparently installed packages.")
     parser.add_argument("--%s" % "test", action="store_true", default=False,
                         help="Just check whether components are installed.")
+    parser.add_argument("--upgrade", action="store_true", default=False,
+                        help="Force upgrade of obsolete components.")
     parser.add_argument("--skip", action="store", nargs="*",
-                        metavar="keyword",
-                        help="Keywords of components that will be skipped during "
-                             "installation.")
+                        metavar="keyword", help=("Keywords of components that will be "
+                                                 "skipped during installation."))
     parser.add_argument("--skip-global", action="store_true", default=False,
                         help="Skip installation of already-available Python modules.")
     parser.add_argument("-" + "d", "--" + "debug", action="store_true",
@@ -460,7 +492,7 @@ def install_script(args=None):
     install(*infos, path=getattr(arguments, packages_path_arg),
             **{arg: getattr(arguments, arg)
                for arg in ["force", code_path, data_path, "no_progress_bars", "test",
-                           "no_set_global", "skip", "skip_global", "debug"]})
+                           "no_set_global", "skip", "skip_global", "debug", "upgrade"]})
 
 
 if __name__ == '__main__':
