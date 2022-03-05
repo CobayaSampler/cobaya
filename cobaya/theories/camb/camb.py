@@ -179,7 +179,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, check_component_version, str_to_list, Pool1D, Pool2D, PoolND
+    check_component_version, str_to_list, Pool1D, Pool2D, PoolND
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
 
@@ -868,9 +868,6 @@ class CAMB(BoltzmannBase):
                 log.error("Could not import global CAMB installation. "
                           "Specify a Cobaya or CAMB installation path, "
                           "or install the 'camb' Python package globally.")
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
             return False
 
     @classmethod

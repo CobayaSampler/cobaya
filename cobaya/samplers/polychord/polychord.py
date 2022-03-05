@@ -18,7 +18,7 @@ import re
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, \
-    find_with_regexp, NumberWithUnits, load_module, VersionCheckError
+    find_with_regexp, NumberWithUnits, load_module
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
@@ -505,9 +505,6 @@ class polychord(Sampler):
         except ImportError as e:
             log.error("Couldn't load the PolyChord python interface in %s:\n"
                       "%s", poly_build_path or "global", e)
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
             return False
 
     @classmethod

@@ -144,9 +144,8 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND, \
+from cobaya.tools import load_module, Pool1D, Pool2D, PoolND, \
     combine_1d
-from cobaya.typing import empty_dict
 
 
 # Result collector
@@ -651,9 +650,6 @@ class classy(BoltzmannBase):
                           "Specify a Cobaya or CLASS installation path, "
                           "or install the CLASS Python interface globally with "
                           "'cd /path/to/class/python/ ; python setup.py install'")
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
             return False
 
     @classmethod
