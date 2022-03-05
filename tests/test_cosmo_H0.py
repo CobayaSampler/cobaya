@@ -61,6 +61,6 @@ def body_of_test(packages_path, like_name=None, like_info=None,
     mean = updated_info["likelihood"][like_name].get("%s_mean" % name, fiducial)
     std = updated_info["likelihood"][like_name].get("%s_std" % name, fiducial_std)
     reference_chi2 = (fiducial - mean) ** 2 / std ** 2
-    computed_chi2 = (
-        products["sample"]["chi2__" + list(info["likelihood"])[0]].values[0])
+    chi2_label = "chi2__" + list(info["likelihood"])[0]
+    computed_chi2 = products["sample"][chi2_label].to_numpy(dtype=np.float64)[0]
     assert np.allclose(computed_chi2, reference_chi2)

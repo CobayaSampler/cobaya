@@ -278,8 +278,8 @@ def body_of_test_speeds(info_sampler, manual_blocking=False,
         derived_chain = \
             products["sample"][["sum_like0", "sum_like1"]].to_numpy(dtype=np.float64)[i]
         derived_good = np.array([
-            sum(products["sample"][params0].values[i]),
-            sum(products["sample"][params1].values[i])])
+            sum(products["sample"][params0].to_numpy(dtype=np.float64)[i]),
+            sum(products["sample"][params1].to_numpy(dtype=np.float64)[i])])
         if not np.allclose(derived_chain, derived_good):
             raise ValueError(
                 "Derived params not reproduced correctly. "
