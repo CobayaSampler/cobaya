@@ -14,7 +14,7 @@ from packaging import version
 from cobaya.likelihood import Likelihood
 from cobaya.typing import InfoDict
 from cobaya.log import get_logger
-from cobaya.install import _version_filename
+from cobaya.install import _version_filename, NotInstalledError
 from cobaya.tools import VersionCheckError
 
 
@@ -24,6 +24,13 @@ class InstallableLikelihood(Likelihood):
     """
 
     install_options: InfoDict = {}
+
+    def __init__(self, *args, **kwargs):
+        # Ensure check for install and version errors
+        if not self.is_installed(path=kwargs["packages_path"]):
+            raise NotInstalledError(
+                "The data for this likelihood has not been correctly installed.")
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def get_install_options(cls):
