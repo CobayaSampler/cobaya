@@ -151,8 +151,12 @@ def check_component_version(component: Any, min_version):
 
 
 def load_module(name, package=None, path=None, min_version=None,
-                check_path=False) -> ModuleType:
+                check_path=False, reload=False) -> ModuleType:
     with PythonPath(path):
+        # Force reload if requested
+        # e.g. within is_installed tests, for version upgrade checks
+        if name in sys.modules and reload:
+            del sys.modules[name]
         component = import_module(name, package=package)
     if path and check_path:
         check_component_path(component, path)

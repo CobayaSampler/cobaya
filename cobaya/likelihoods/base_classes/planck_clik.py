@@ -283,7 +283,7 @@ def is_installed_clik(path, allow_global=False, check=True):
     else:
         log.info("Importing *auto-installed* clik (but defaulting to *global*).")
     try:
-        return load_module("clik", path=clik_path)
+        return load_module("clik", path=clik_path, reload=True)
     except ImportError:
         if path is not None and path.lower() != "global":
             func("Couldn't find the clik python interface at '%s'. "
