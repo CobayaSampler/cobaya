@@ -169,7 +169,7 @@ def install(*infos, **kwargs):
                 obsolete_components += ["%s:%s" % (kind, component)]
                 if kwargs.get("test", False):
                     continue
-                if not kwargs.get("upgrade", False):
+                if not kwargs.get("upgrade", False) and not kwargs.get("force", False):
                     log.info("Skipping because `upgrade` not requested.")
                     continue
             else:
