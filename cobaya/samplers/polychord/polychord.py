@@ -144,7 +144,7 @@ class polychord(Sampler):
                    "cluster_posteriors", "write_resume", "read_resume",
                    "write_stats", "write_live", "write_dead", "write_prior",
                    "maximise", "compression_factor", "synchronous", "base_dir",
-                   "file_root", "seed", "grade_dims", "grade_frac", "nlives"]
+                   "file_root", "grade_dims", "grade_frac", "nlives"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
         settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
