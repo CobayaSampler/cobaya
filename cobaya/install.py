@@ -166,10 +166,10 @@ def install(*infos, **kwargs):
                     continue
             elif is_old_version_msg:
                 log.info(f"Version check failed: {is_old_version_msg}")
+                obsolete_components += ["%s:%s" % (kind, component)]
                 if kwargs.get("test", False):
                     continue
                 if not kwargs.get("upgrade", False):
-                    obsolete_components += [component]
                     log.info("Skipping because `upgrade` not requested.")
                     continue
             else:
@@ -179,6 +179,7 @@ def install(*infos, **kwargs):
                         "(If you expected this to be already installed, re-run "
                         "`cobaya-install` with --debug to get more verbose output.)")
                 if kwargs.get("test", False):
+                    failed_components += ["%s:%s" % (kind, component)]
                     continue
             log.info("Installing...")
             try:
