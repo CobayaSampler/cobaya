@@ -27,9 +27,10 @@ class InstallableLikelihood(Likelihood):
 
     def __init__(self, *args, **kwargs):
         # Ensure check for install and version errors
-        if not self.is_installed(path=kwargs["packages_path"]):
-            raise NotInstalledError(
-                "The data for this likelihood has not been correctly installed.")
+        if self.install_options:
+            if not self.is_installed(path=kwargs["packages_path"]):
+                raise NotInstalledError(
+                    "The data for this likelihood has not been correctly installed.")
         super().__init__(*args, **kwargs)
 
     @classmethod
