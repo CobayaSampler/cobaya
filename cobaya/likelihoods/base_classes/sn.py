@@ -19,13 +19,13 @@ This code provides the following likelihoods:
 .. note::
 
    - If you use ``sn.pantheon``, please cite:|br|
-     Scolnic, D. M. et al,
+     Scolnic, D. M. et al.,
      `The Complete Light-curve Sample of Spectroscopically
      Confirmed Type Ia Supernovae from Pan-STARRS1 and
      Cosmological Constraints from The Combined Pantheon Sample`
      `(arXiv:1710.00845) <https://arxiv.org/abs/1710.00845>`_
    - If you use ``sn.jla`` or ``sn.jla_lite``, please cite:|br|
-     Betoule, M. et al,
+     Betoule, M. et al.,
      `Improved cosmological constraints from a joint analysis
      of the SDSS-II and SNLS supernova samples`
      `(arXiv:1401.4064) <https://arxiv.org/abs/1401.4064>`_

@@ -77,7 +77,7 @@ Save the input generated to a file and run it with ``cobaya-run [your_input_file
 
 .. note::
 
-   You may want to start with a *test run*, adding ``--test`` to ``cobaya-run``. It will initialise all components (cosmological theory code and likelihoods, and the sampler) and exit.
+   You may want to start with a *test run*, adding ``--test`` to ``cobaya-run`` (run without MPI). It will initialise all components (cosmological theory code and likelihoods, and the sampler) and exit.
 
 Typical running times for MCMC when using computationally heavy likelihoods (e.g. those involving :math:`C_\ell`, or non-linear :math:`P(k,z)` for several redshifts) are ~10 hours running 4 MPI processes with 4 OpenMP threads per process, provided that the initial covariance matrix is a good approximation to the one of the real posterior (Cobaya tries to select it automatically from a database; check the ``[mcmc]`` output towards the top to see if it succeeded), or a few hours on top of that if the initial covariance matrix is not a good approximation.
 
