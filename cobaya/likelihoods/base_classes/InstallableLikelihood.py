@@ -42,7 +42,7 @@ class InstallableLikelihood(Likelihood):
         i.e. ``cls.get_path(cls.get_path(path)) = cls.get_path(path)``.
         """
         opts = cls.get_install_options()
-        repo = opts.get("github_repository", None)
+        repo = opts.get("directory", opts.get("github_repository", None))
         if repo:
             data_path = repo.split('/')[-1]
         else:
@@ -102,6 +102,7 @@ class InstallableLikelihood(Likelihood):
             log.info("Downloading %s data..." % repo)
             return download_github_release(
                 os.path.join(path, "data"), repo, opts.get("github_release", "master"),
+                asset=opts.get("asset", None), directory=opts.get("directory", None),
                 no_progress_bars=no_progress_bars, logger=log)
         else:
             full_path = cls.get_path(path)
