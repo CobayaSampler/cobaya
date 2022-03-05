@@ -145,7 +145,7 @@ def check_component_version(component: Any, min_version):
     if not hasattr(component, "__version__") or \
             version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(
-            "component %s at %s is version %s but required %s or higher" %
+            "component %s at %s is version %s but required %s or higher." %
             (component.__name__, os.path.dirname(component.__file__),
              getattr(component, "__version__", "(non-given)"), min_version))
 

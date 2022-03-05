@@ -1,8 +1,14 @@
-# Specify a CAMB version, if desired
+# Specify a CAMB version, if desired.
+# After a run, in an updated.yaml file, stores the version used.
+# (Usually not necessary to modify it.)
 version: null
 # Path to local CAMB, if desired,
 # or 'global' to force global-scope import
 path: null
+# If using a custom version based on an outdated CAMB, set to True.
+# Use at your own risk: may produce unexpected behaviour/errors.
+# (Ideally, update the CAMB version on which your modification is based.)
+ignore_obsolete: False
 # Speed in evaluations/second
 speed: 0.3
 # False to fail and stop sampling on *any* computation error

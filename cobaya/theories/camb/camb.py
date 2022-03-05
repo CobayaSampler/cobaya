@@ -179,7 +179,7 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    check_component_version, str_to_list, Pool1D, Pool2D, PoolND
+    check_component_version, str_to_list, Pool1D, Pool2D, PoolND, VersionCheckError
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
 
@@ -208,7 +208,7 @@ class CAMB(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.1.3'
+    _min_camb_version = '1.3.5'
 
     file_base_name = 'camb'
     external_primordial_pk: bool
@@ -220,8 +220,15 @@ class CAMB(BoltzmannBase):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
-        self.camb = self.is_installed(path=self.path, allow_global=allow_global,
-                                      check=False)
+        min_version = None if self.ignore_obsolete else self._min_camb_version
+        try:
+            self.camb = self.is_installed(path=self.path, allow_global=allow_global,
+                                          check=False, min_version=min_version)
+        except VersionCheckError as excpt:
+            raise VersionCheckError(
+                str(excpt) + " If you are using CAMB unmodified, upgrade with"
+                "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
+                "set the option `ignore_obsolete: True` for CAMB.")
         if not self.camb:
             raise NotInstalledError(
                 self.log, "Could not find CAMB. Check error message above.")
@@ -859,7 +866,8 @@ class CAMB(BoltzmannBase):
         else:
             log.info("Importing *auto-installed* CAMB (but defaulting to *global*).")
         try:
-            return load_module("camb", path=path, min_version=cls._min_camb_version)
+            return load_module(
+                "camb", path=path, min_version=kwargs.get("min_version", None))
         except ImportError:
             if path is not None and path.lower() != "global":
                 func("Couldn't find the CAMB python interface at '%s'. "
