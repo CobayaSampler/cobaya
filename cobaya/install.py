@@ -294,7 +294,8 @@ def download_file(url, path, decompress=False, no_progress_bars=False, logger=No
                 bar.close()
             if os.path.getsize(filename_tmp_path) < 1024:  # 1kb
                 with open(filename_tmp_path, "r") as f:
-                    if f.readlines()[0].startswith("404"):
+                    lines = f.readlines()
+                    if lines[0].startswith("404") or "not found" in lines[0].lower():
                         raise ValueError("File not found (404)!")
             logger.info('Downloaded filename %s', filename)
         except Exception as e:
@@ -323,17 +324,18 @@ def download_file(url, path, decompress=False, no_progress_bars=False, logger=No
             return False
 
 
-def download_github_release(directory, repo_name, release_name, repo_rename=None,
-                            no_progress_bars=False, logger=None):
+def download_github_release(base_directory, repo_name, release_name, asset=None,
+                            directory=None, no_progress_bars=False, logger=None):
     """
-    Downloads a release (i.e. a tagged commit) from the given GitHub repo.
+    Downloads a release (i.e. a tagged commit) or a release asset from a GitHub repo.
 
-    :param directory: directory into which the release will be downloaded; will be created
-       if it does not exist.
+    :param base_directory: directory into which the release will be downloaded; will be
+       created if it does not exist.
     :param repo_name: repository name as ``user/repo``.
     :param release_name: name or tag of the release.
-    :param repo_rename: name of the directory containing the release, if different from
-       ``repo_name``.
+    :param asset: download just an asset (attached file) from a release.
+    :param directory: name of the directory that will contain the asset or release, if
+       different ``repo_name``.
     :param no_progress_bars: no progress bars shown; use when output is saved into a text
        file (e.g. when running on a cluster).
     :param logger: logger to use for reporting information; a new logger is created if not
@@ -346,25 +348,34 @@ def download_github_release(directory, repo_name, release_name, repo_rename=None
         repo_name = repo_name[repo_name.find("/") + 1:]
     else:
         github_user = "CobayaSampler"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    url = (r"https://github.com/" + github_user + "/" + repo_name +
-           "/archive/" + release_name + ".tar.gz")
-    if not download_file(url, directory, decompress=True,
+    base_url = r"https://github.com/" + github_user + "/" + repo_name
+    download_directory = base_directory
+    if asset:
+        url = (base_url + "/releases/download/" + release_name + "/" + asset)
+        # Assest would get decompressed in base directory
+        download_directory = os.path.join(download_directory, directory or repo_name)
+    else:
+        url = (base_url + "/archive/" + release_name + ".tar.gz")
+    if not os.path.exists(download_directory):
+        os.makedirs(download_directory)
+    if not download_file(url, download_directory, decompress=True,
                          no_progress_bars=no_progress_bars, logger=logger):
         return False
-    # Remove version number from directory name
-    w_version = next(d for d in os.listdir(directory)
-                     if (d.startswith(repo_name) and len(d) != len(repo_name)))
-    repo_rename = repo_rename or repo_name
-    repo_path = os.path.join(directory, repo_rename)
-    if os.path.exists(repo_path):
-        shutil.rmtree(repo_path)
-    os.rename(os.path.join(directory, w_version), repo_path)
+    # In releases, not assets, remove version number from directory name
+    # and rename if requested
+    if not asset:
+        w_version = next(d for d in os.listdir(base_directory)
+                         if (d.startswith(repo_name) and len(d) != len(repo_name)))
+        actual_download_directory = os.path.join(base_directory, w_version)
+        download_directory = os.path.join(base_directory, directory or repo_name)
+        if os.path.exists(download_directory):
+            shutil.rmtree(download_directory)
+        os.rename(actual_download_directory, download_directory)
     # Now save the version into a file to be checked later
-    with open(os.path.join(repo_path, _version_filename), "w") as f:
+    with open(os.path.join(download_directory, _version_filename), "w") as f:
         f.write(release_name)
-    logger.info("%s %s downloaded and decompressed correctly.", repo_name, release_name)
+    logger.info((f"{asset} from " if asset else "") +
+                "%s %s downloaded and decompressed correctly.", repo_name, release_name)
     return True
 
 
