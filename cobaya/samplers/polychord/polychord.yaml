@@ -16,6 +16,8 @@ num_repeats: 2d
 # Number of prior samples drawn before starting compression
 # Can be in units of nlive (but not dimension) as Xnlive
 nprior: 10nlive
+# Number of failed spawns before stopping nested sampling.
+nfail : nlive
 # Whether to check for and explore multi-modality on the posterior
 do_clustering: True
 # Stopping criterion: fraction of the total evidence contained in the live points
@@ -35,6 +37,20 @@ logzero: -1e30
 boost_posterior: 0  # increase up to `num_repeats`
 # Verbosity during the sampling process. Set to one of [0,1,2,3]
 feedback:  # default: Same as global `verbosity`
+# Parallelise with synchronous workers, rather than asynchronous ones.
+# This can be set to False if the likelihood speed is known to be
+# approximately constant across the parameter space. Synchronous
+# parallelisation is less effective than asynchronous by a factor ~O(1)
+# for large parallelisation.
+synchronous : True
+# Variable number of live points option. This dictionary is a mapping
+# between loglike contours and nlive.
+# You should still set nlive to be a sensible number, as this indicates
+# how often to update the clustering, and to define the default value.
+nlives : {}
+# Perform maximisation at the end of the run to find the maximum
+# likelihood point and value
+maximise : False
 # Exploiting speed hierarchy
 # --------------------------
 # whether to measure actual speeds for your machine/threading at starting rather
@@ -57,7 +73,7 @@ blocking:
 confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
 # Seeding runs
 # ------------
-seed:  # postitive integer
+seed:  # positive integer
 # Raw output of PolyChord (no need to change them, normally)
 # ----------------------------------------------------------
 file_root:
@@ -69,3 +85,4 @@ read_resume: True
 write_stats: True
 write_live: True
 write_dead: True
+write_prior: True
