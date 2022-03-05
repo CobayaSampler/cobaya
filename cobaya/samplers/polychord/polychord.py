@@ -35,7 +35,7 @@ class polychord(Sampler):
     """
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.20.0"
+    _pc_repo_version = "1.20.1"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
@@ -489,9 +489,8 @@ class polychord(Sampler):
             poly_build_path = cls.get_import_path(path)
         cls._poly_build_path = poly_build_path
         try:
-            # TODO: add min_version when polychord module version available
             return load_module(
-                'pypolychord', path=poly_build_path, min_version=None)
+                'pypolychord', path=poly_build_path, min_version=cls._pc_repo_version)
         except ModuleNotFoundError:
             if path is not None and path.lower() != "global":
                 log.error("Couldn't find the PolyChord python interface at '%s'. "
