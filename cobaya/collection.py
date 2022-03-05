@@ -95,9 +95,9 @@ class SampleCollection(BaseCollection):
     (returns a copy, not a view).
 
     Note for developers: when expanding this class or inheriting from it, always access
-    the underlying DataFrame as `self.data` and not `self._data`, to ensure the cache has
-    been dumped. If you really need to access the actual attribute `self._data` in a
-    method, make sure to decorate it with `@ensure_cache_dumped`.
+    the underlying DataFrame as ``self.data`` and not ``self._data``, to ensure the cache
+    has been dumped. If you really need to access the actual attribute ``self._data`` in a
+    method, make sure to decorate it with ``@ensure_cache_dumped``.
     """
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
@@ -233,7 +233,7 @@ class SampleCollection(BaseCollection):
             if derived is not None:
                 # A simple np.allclose is not enough, because np.allclose([1], []) = True!
                 if len(derived) != len(logpost.derived) or \
-                   not np.allclose(derived, logpost.derived):
+                        not np.allclose(derived, logpost.derived):
                     raise LoggedError(
                         self.log,
                         "derived params not consistent with those of LogPosterior object "
@@ -285,7 +285,7 @@ class SampleCollection(BaseCollection):
             for name, value in zip(self.chi2_names, logposterior.loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
             self._cache[pos, self._icol[OutPar.chi2]] = -2 * logposterior.loglike
-        if logposterior.derived != []:
+        if len(logposterior.derived):
             for name, value in zip(self.derived_params, logposterior.derived):
                 self._cache[pos, self._icol[name]] = value
 

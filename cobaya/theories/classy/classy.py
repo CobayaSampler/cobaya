@@ -144,16 +144,21 @@ from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
 from cobaya.install import download_github_release, pip_install, NotInstalledError, \
     check_gcc_version
-from cobaya.tools import load_module, VersionCheckError
+from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND, \
+    combine_1d
+from cobaya.typing import empty_dict
 
 
 # Result collector
+# NB: cannot use kwargs for the args, because the CLASS Python interface
+#     is C-based, so args without default values are not named.
 class Collector(NamedTuple):
     method: str
     args: Sequence = []
     args_names: Sequence = []
     kwargs: dict = {}
     arg_array: Union[int, Sequence, None] = None
+    z_pool: Optional[PoolND] = None
     post: Optional[Callable] = None
 
 
@@ -165,9 +170,10 @@ class classy(BoltzmannBase):
     r"""
     CLASS cosmological Boltzmann code \cite{Blas:2011rf}.
     """
+
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v2.9.3"
+    _min_classy_version = "v3.1.2"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
@@ -226,22 +232,24 @@ class classy(BoltzmannBase):
                 self.collectors[k] = Collector(
                     method="raw_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
             elif k == "Hubble":
-                self.collectors[k] = Collector(
-                    method="Hubble",
-                    args=[np.atleast_1d(v["z"])],
-                    args_names=["z"],
-                    arg_array=0)
+                self.set_collector_with_z_pool(
+                    k, v["z"], "Hubble", args_names=["z"], arg_array=0)
+            elif k in ["Omega_b", "Omega_cdm", "Omega_nu_massive"]:
+                func_name = {"Omega_b": "Om_b", "Omega_cdm": "Om_cdm",
+                             "Omega_nu_massive": "Om_ncdm"}[k]
+                self.set_collector_with_z_pool(
+                    k, v["z"], func_name, args_names=["z"], arg_array=0)
             elif k == "angular_diameter_distance":
-                self.collectors[k] = Collector(
-                    method="angular_distance",
-                    args=[np.atleast_1d(v["z"])],
-                    args_names=["z"],
-                    arg_array=0)
+                self.set_collector_with_z_pool(
+                    k, v["z"], "angular_distance", args_names=["z"], arg_array=0)
             elif k == "comoving_radial_distance":
-                self.collectors[k] = Collector(
-                    method="z_of_r",
-                    args_names=["z"],
-                    args=[np.atleast_1d(v["z"])])
+                self.set_collector_with_z_pool(k, v["z"], "z_of_r", args_names=["z"],
+                                               # returns r and dzdr!
+                                               post=(lambda r, dzdr: r))
+            elif k == "angular_diameter_distance_2":
+                self.set_collector_with_z_pool(
+                    k, v["z_pairs"], "angular_distance_from_to",
+                    args_names=["z1", "z2"], arg_array=[0, 1], d=2)
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
@@ -251,23 +259,53 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-
                 if v["nonlinear"] and "non linear" not in self.extra_args:
                     self.extra_args["non linear"] = non_linear_default_code
                 pair = k[2:]
                 if pair == ("delta_tot", "delta_tot"):
                     v["only_clustering_species"] = False
+                    self.collectors[k] = Collector(
+                        method="get_pk_and_k_and_z",
+                        kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
                 elif pair == ("delta_nonu", "delta_nonu"):
                     v["only_clustering_species"] = True
+                    self.collectors[k] = Collector(
+                        method="get_pk_and_k_and_z", kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+                elif pair == ("Weyl", "Weyl"):
+                    self.extra_args["output"] += " mTk"
+                    self.collectors[k] = Collector(
+                        method="get_Weyl_pk_and_k_and_z", kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
                 else:
                     raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
-                self.collectors[k] = Collector(
-                    method="get_pk_and_k_and_z",
-                    kwargs=v,
-                    post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+            elif k == "sigma8_z":
+                self.add_z_for_matter_power(v["z"])
+                self.set_collector_with_z_pool(
+                    k, v["z"], "sigma", args=[8], args_names=["R", "z"],
+                    kwargs={"h_units": True}, arg_array=1)
+            elif k == "fsigma8":
+                self.add_z_for_matter_power(v["z"])
+                z_step = 0.1  # left to CLASS default; increasing does not appear to help
+                self.set_collector_with_z_pool(
+                    k, v["z"], "effective_f_sigma8", args=[z_step],
+                    args_names=["z", "z_step"], arg_array=0)
             elif isinstance(k, tuple) and k[0] == "sigma_R":
-                raise LoggedError(
-                    self.log, "Classy sigma_R not implemented as yet - use CAMB only")
+                self.extra_args["output"] += " mPk"
+                self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
+                # NB: See note about redshifts in Pk_grid
+                self.add_z_for_matter_power(v["z"])
+                pair = k[1:]
+                try:
+                    method = {("delta_tot", "delta_tot"): "sigma",
+                              ("delta_nonu", "delta_nonu"): "sigma_cb"}[pair]
+                except KeyError:
+                    raise LoggedError(self.log, f"sigma(R,z) not implemented for {pair}")
+                self.collectors[k] = Collector(
+                    method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
+                    args_names=["R", "z"], arg_array=[[0], [1]],
+                    post=(lambda R, z, sigma: (z, R, sigma.T)))
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -275,7 +313,7 @@ class classy(BoltzmannBase):
             else:
                 raise LoggedError(self.log, "Requested product not known: %r", {k: v})
         # Derived parameters (if some need some additional computations)
-        if any(("sigma8" in s) for s in self.output_params or requirements):
+        if any(("sigma8" in s) for s in set(self.output_params).union(requirements)):
             self.extra_args["output"] += " mPk"
             self.add_P_k_max(1, units="1/Mpc")
         # Adding tensor modes if requested
@@ -298,14 +336,53 @@ class classy(BoltzmannBase):
     def add_z_for_matter_power(self, z):
         if getattr(self, "z_for_matter_power", None) is None:
             self.z_for_matter_power = np.empty(0)
-        self.z_for_matter_power = np.flip(np.sort(np.unique(np.concatenate(
-            [self.z_for_matter_power, np.atleast_1d(z)]))), axis=0)
+        self.z_for_matter_power = np.flip(combine_1d(z, self.z_for_matter_power))
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
+
+    def set_collector_with_z_pool(self, k, zs, method, args=(), args_names=(),
+                                  kwargs=None, arg_array=None, post=None, d=1):
+        """
+        Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
+
+        If ``z`` is an arg, i.e. it is in ``args_names``, then omit it in the ``args``,
+        e.g. ``args_names=["a", "z", "b"]`` should be passed together with
+        ``args=[a_value, b_value]``.
+        """
+        if k in self.collectors:
+            z_pool = self.collectors[k].z_pool
+            z_pool.update(zs)
+        else:
+            Pool = {1: Pool1D, 2: Pool2D}[d]
+            z_pool = Pool(zs)
+        # Insert z as arg or kwarg
+        kwargs = kwargs or {}
+        if d == 1 and "z" in kwargs:
+            kwargs = deepcopy(kwargs)
+            kwargs["z"] = z_pool.values
+        elif d == 1 and "z" in args_names:
+            args = deepcopy(args)
+            i_z = args_names.index("z")
+            args = list(args[:i_z]) + [z_pool.values] + list(args[i_z:])
+        elif d == 2 and "z1" in args_names and "z2" in args_names:
+            # z1 assumed appearing before z2!
+            args = deepcopy(args)
+            i_z1 = args_names.index("z1")
+            i_z2 = args_names.index("z2")
+            args = (list(args[:i_z1]) + [z_pool.values[:, 0]] + list(args[i_z1:i_z2]) +
+                    [z_pool.values[:, 1]] + list(args[i_z2:]))
+        else:
+            raise LoggedError(
+                self.log,
+                f"I do not know how to insert the redshift for collector method {method} "
+                f"of requisite {k}")
+        self.collectors[k] = Collector(
+            method=method, z_pool=z_pool, args=args, args_names=args_names, kwargs=kwargs,
+            arg_array=arg_array, post=post)
 
     def add_P_k_max(self, k_max, units):
         r"""
         Unifies treatment of :math:`k_\mathrm{max}` for matter power spectrum:
-        ``P_k_max_[1|h]/Mpc]``.
+        ``P_k_max_[1|h]/Mpc``.
 
         Make ``units="1/Mpc"|"h/Mpc"``.
         """
@@ -366,17 +443,44 @@ class classy(BoltzmannBase):
                 self.collectors["sigma8"].args[0] = 8 / self.classy.h()
             method = getattr(self.classy, collector.method)
             arg_array = self.collectors[product].arg_array
+            if isinstance(arg_array, int):
+                arg_array = np.atleast_1d(arg_array)
             if arg_array is None:
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs)
-            elif isinstance(arg_array, int):
-                state[product] = np.zeros(
-                    len(self.collectors[product].args[arg_array]))
-                for i, v in enumerate(self.collectors[product].args[arg_array]):
-                    args = (list(self.collectors[product].args[:arg_array]) + [v] +
-                            list(self.collectors[product].args[arg_array + 1:]))
-                    state[product][i] = method(
-                        *args, **self.collectors[product].kwargs)
+            elif isinstance(arg_array, Sequence) or isinstance(arg_array, np.ndarray):
+                arg_array = np.array(arg_array)
+                if len(arg_array.shape) == 1:
+                    # if more than one vectorised arg, assume all vectorised in parallel
+                    n_values = len(self.collectors[product].args[arg_array[0]])
+                    state[product] = np.zeros(n_values)
+                    args = deepcopy(list(self.collectors[product].args))
+                    for i in range(n_values):
+                        for arg_arr_index in arg_array:
+                            args[arg_arr_index] = \
+                                self.collectors[product].args[arg_arr_index][i]
+                        state[product][i] = method(
+                            *args, **self.collectors[product].kwargs)
+                elif len(arg_array.shape) == 2:
+                    if len(arg_array) > 2:
+                        raise NotImplementedError("Only 2 array expanded vars so far.")
+                    # Create outer combinations
+                    x_and_y = np.array(np.meshgrid(
+                        self.collectors[product].args[arg_array[0, 0]],
+                        self.collectors[product].args[arg_array[1, 0]])).T
+                    args = deepcopy(list(self.collectors[product].args))
+                    result = np.empty(shape=x_and_y.shape[:2])
+                    for i, row in enumerate(x_and_y):
+                        for j, column_element in enumerate(x_and_y[i]):
+                            args[arg_array[0, 0]] = column_element[0]
+                            args[arg_array[1, 0]] = column_element[1]
+                            result[i, j] = method(
+                                *args, **self.collectors[product].kwargs)
+                    state[product] = (
+                        self.collectors[product].args[arg_array[0, 0]],
+                        self.collectors[product].args[arg_array[1, 0]], result)
+                else:
+                    raise ValueError("arg_array not correctly formatted.")
             elif arg_array in self.collectors[product].kwargs:
                 value = np.atleast_1d(self.collectors[product].kwargs[arg_array])
                 state[product] = np.zeros(value.shape)
@@ -385,6 +489,9 @@ class classy(BoltzmannBase):
                     kwargs[arg_array] = v
                     state[product][i] = method(
                         *self.collectors[product].args, **kwargs)
+            else:
+                raise LoggedError(self.log, "Variable over which to do an array call "
+                                            f"not known: arg_array={arg_array}")
             if collector.post:
                 state[product] = collector.post(*state[product])
         # Prepare derived parameters
@@ -440,8 +547,8 @@ class classy(BoltzmannBase):
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
                                         "have requested them?", which_error)
         # unit conversion and ell_factor
-        ells_factor = ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[
-                      2:] if ell_factor else 1
+        ells_factor = \
+            ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
         units_factor = self._cmb_unit_factor(
             units, self.current_state['derived_extra']['T_cmb'])
         for cl in cls:
@@ -457,21 +564,6 @@ class classy(BoltzmannBase):
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
-    def _get_z_dependent(self, quantity, z):
-        try:
-            z_name = next(k for k in ["redshifts", "z"]
-                          if k in self.collectors[quantity].kwargs)
-            computed_redshifts = self.collectors[quantity].kwargs[z_name]
-        except StopIteration:
-            computed_redshifts = self.collectors[quantity].args[
-                self.collectors[quantity].args_names.index("z")]
-        i_kwarg_z = np.concatenate(
-            [np.where(computed_redshifts == zi)[0] for zi in np.atleast_1d(z)])
-        values = np.array(deepcopy(self.current_state[quantity]))
-        if quantity == "comoving_radial_distance":
-            values = values[0]
-        return values[i_kwarg_z]
-
     def close(self):
         self.classy.empty()
 
@@ -484,8 +576,8 @@ class classy(BoltzmannBase):
         return names
 
     def get_can_support_params(self):
-        # non-exhaustive list of supported input parameters that will be assigne do classy
-        # if they are varied
+        # non-exhaustive list of supported input parameters that will be assigned to
+        # classy if they are varied
         return ['H0']
 
     def get_version(self):

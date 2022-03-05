@@ -173,7 +173,7 @@ def allgather(data) -> list:
 
 def zip_gather(list_of_data, root=0) -> Iterable[tuple]:
     """
-    Takes a list of items and returns a iterable of lists of items from each process
+    Takes a list of items and returns an iterable of lists of items from each process
     e.g. for root node
     [(a_1, a_2),(b_1,b_2),...] = zip_gather([a,b,...])
     """

@@ -399,7 +399,7 @@ reionization = {
 
 # EXPERIMENTS ############################################################################
 base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
-                            "classy": {"non linear": "hmcode", "hmcode_min_k_max": 20}}
+                            "classy": {"non linear": "hmcode", "nonlinear_min_k_max": 20}}
 cmb_precision = deepcopy(base_precision)
 cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                               "lens_potential_accuracy": 1})

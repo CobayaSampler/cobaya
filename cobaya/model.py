@@ -119,7 +119,7 @@ class LogPosterior:
             object.__setattr__(self, 'loglikes', np.nan_to_num(self.loglikes))
             object.__setattr__(self, 'loglike', np.nan_to_num(self.loglike))
 
-    def as_dict(self, model: "Model") -> Dict[str, float]:
+    def as_dict(self, model: "Model") -> Dict[str, Union[float, Dict[str, float]]]:
         """
         Given a :class:`~model.Model`, returns a more informative version of itself,
         containing the names of priors, likelihoods and derived parameters.
@@ -586,7 +586,7 @@ class Model(HasLogger):
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
                                    Tuple[np.ndarray, dict]]:
         """
-        Finds a point with finite posterior, sampled from from the reference pdf.
+        Finds a point with finite posterior, sampled from the reference pdf.
 
         It will fail if no valid point is found after `max_tries`.
 

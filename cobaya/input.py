@@ -168,10 +168,10 @@ def get_info_path(folder, prefix, infix=None, kind="updated", ext=Extension.yaml
 
 def get_used_components(*infos, return_infos=False):
     """
-    Returns all requested components as an dict ``{kind: set([components])}``.
+    Returns all requested components as a dict ``{kind: set([components])}``.
     Priors are not included.
 
-    If ``return_infos=True`` (default: ``False``), returns too a dictionary of inputs per
+    If ``return_infos=True`` (default: ``False``), also returns a dictionary of inputs per
     component, updated in the order in which the info arguments are given.
 
     Components which are just renames of others (i.e. defined with `class_name`) return
@@ -640,7 +640,7 @@ class HasDefaults:
     def get_file_base_name(cls) -> str:
         """
         Gets the string used as the name for .yaml, .bib files, typically the
-        class name or a un-CamelCased class name
+        class name or an un-CamelCased class name
         """
         return cls.__dict__.get('file_base_name') or cls.__name__
 

@@ -56,7 +56,7 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Latest: gcc-11, Python 3.9 Anaconda (conda-forge)"
+    - name: "Latest: gcc-11, Python 3.10 Anaconda (conda-forge)"
       dist: focal
       addons:
         apt:
@@ -70,9 +70,9 @@ jobs:
         - GCC_VERSION="11"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="conda-forge"
-      python: "3.9"
+      python: "3.10"
   allow_failures:
-    - name: "Latest: gcc-11, Python 3.9 Anaconda (conda-forge)"
+    - name: "Latest: gcc-11, Python 3.10 Anaconda (conda-forge)"
 
 before_install:
   # Configure right compiler versions
@@ -106,6 +106,7 @@ before_install:
     else
     pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
     fi
+  - python -m pip install --upgrade pip
   - python --version
 
 script:

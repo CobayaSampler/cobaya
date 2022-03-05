@@ -52,6 +52,8 @@ class polychord(Sampler):
     oversample_power: float
     nlive: NumberWithUnits
     path: str
+    logzero: float
+    max_ndead: int
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
