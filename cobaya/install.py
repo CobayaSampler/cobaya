@@ -233,7 +233,8 @@ def install(*infos, **kwargs):
                  "(not upgrading by default to preserve possible user changes): %s",
             bullet + bullet.join(obsolete_components))
     if not failed_components and not obsolete_components:
-        log.info("All requested components' dependencies correctly installed.")
+        log.info(
+            f"All requested components' dependencies correctly installed at {abspath}")
     # Set the installation path in the global config file
     if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
         write_packages_path_in_config_file(abspath)
