@@ -208,7 +208,11 @@ class PlanckClik(Likelihood):
                 product_id, _ = get_product_id_and_clik_file(name)
                 # Download and decompress the particular likelihood
                 url = pla_url_prefix + product_id
-                if not download_file(url, paths["data"], decompress=True,
+                # Helper for the progress bars: some known product download sizes
+                # (no actual effect if missing or wrong!)
+                size = {"1900": 314153370, "1903": 4509715660, "151902": 60293120,
+                        "151905": 5476083302, "151903": 8160437862}.get(product_id)
+                if not download_file(url, paths["data"], size=size, decompress=True,
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
                     success = False
@@ -283,7 +287,7 @@ def is_installed_clik(path, allow_global=False, check=True):
     else:
         log.info("Importing *auto-installed* clik (but defaulting to *global*).")
     try:
-        return load_module("clik", path=clik_path, reload=True)
+        return load_module("clik", path=clik_path, reload=check)
     except ImportError:
         if path is not None and path.lower() != "global":
             func("Couldn't find the clik python interface at '%s'. "
@@ -332,7 +336,7 @@ def install_clik(path, no_progress_bars=False):
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
     click_url = pla_url_prefix + '152000'
-    if not download_file(click_url, path, decompress=True,
+    if not download_file(click_url, path, size=2369782, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False

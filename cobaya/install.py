@@ -256,12 +256,15 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
         return False
 
 
-def download_file(url, path, decompress=False, no_progress_bars=False, logger=None):
+def download_file(url, path, size=None, decompress=False, no_progress_bars=False,
+                  logger=None):
     """
     Downloads (and optionally decompresses) a file into a given path.
 
     :param url: url from which to download the file.
     :param path: path to where the file should be downloaded.
+    :param size: size in bytes of the file to download; can be used to show percentages
+       when the url headers do not show the actual size.
     :param decompress: decompress file if a compressed format extension found.
     :param no_progress_bars: no progress bars shown; use when output is saved into a text
        file (e.g. when running on a cluster).
@@ -282,7 +285,7 @@ def download_file(url, path, decompress=False, no_progress_bars=False, logger=No
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
-            size = int(req.headers.get('content-length', 0))
+            size = size or int(req.headers.get('content-length', 0))
             # Adapted from https://gist.github.com/yanqd0/c13ed29e29432e3cf3e7c38467f42f51
             if not no_progress_bars:
                 bar = tqdm.tqdm(total=size, unit='iB', unit_scale=True, unit_divisor=1024)

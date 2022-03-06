@@ -867,7 +867,7 @@ class CAMB(BoltzmannBase):
             log.info("Importing *auto-installed* CAMB (but defaulting to *global*).")
         try:
             return load_module("camb", path=path, min_version=kwargs.get(
-                "min_version", cls._min_camb_version), reload=True)
+                "min_version", cls._min_camb_version), reload=check)
         except ImportError:
             if path is not None and path.lower() != "global":
                 func("Couldn't find the CAMB python interface at '%s'. "
