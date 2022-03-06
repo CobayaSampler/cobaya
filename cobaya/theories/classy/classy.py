@@ -640,7 +640,7 @@ class classy(BoltzmannBase):
             classy_build_path = cls.get_import_path(path)
         try:
             return load_module("classy", path=classy_build_path,
-                               min_version=cls._classy_repo_version, reload=True)
+                               min_version=cls._classy_repo_version, reload=check)
         except ImportError:
             if path is not None and path.lower() != "global":
                 func("Couldn't find the CLASS python interface at '%s'. "

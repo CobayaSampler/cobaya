@@ -490,7 +490,7 @@ class polychord(Sampler):
         cls._poly_build_path = poly_build_path
         try:
             return load_module("pypolychord", path=poly_build_path,
-                               min_version=cls._pc_repo_version, reload=True)
+                               min_version=cls._pc_repo_version, reload=check)
         except ModuleNotFoundError:
             if path is not None and path.lower() != "global":
                 log.error("Couldn't find the PolyChord python interface at '%s'. "
