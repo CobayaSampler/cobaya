@@ -19,6 +19,7 @@ List of external packages
 
  * `Planck NPIPE hillipop and lollipop <https://github.com/planck-npipe>`_
  * `ACTPol DR4 <https://github.com/ACTCollaboration/pyactlike>`_
+ * `SPT-SZ, SPTPol & SPT-3G <https://github.com/xgarrido/spt_likelihoods>`_
  * `cobaya-mock-cmb <https://github.com/misharash/cobaya_mock_cmb>`_
  * `Example - simple demo <https://github.com/CobayaSampler/example_external_likelihood>`_
  * `Example - Planck lensing <https://github.com/CobayaSampler/planck_lensing_external>`_
