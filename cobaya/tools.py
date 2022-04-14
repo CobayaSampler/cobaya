@@ -239,22 +239,27 @@ def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
                 return return_class(module_name)
             except:
                 exc_info = sys.exc_info()
-    if None_if_not_found:
-        return None
     if ((exc_info[0] is ModuleNotFoundError and
          str(exc_info[1]).rstrip("'").endswith(name))):
         if allow_internal:
             suggestions = fuzzy_match(name, get_available_internal_class_names(kind), n=3)
             if suggestions:
-                raise LoggedError(
-                    log, "%s '%s' not found. Maybe you meant one of the following "
-                         "(capitalization is important!): %s",
-                    kind.capitalize(), name, suggestions)
+                msg = (f"{kind.capitalize()} '{name}' not found. "
+                       "Maybe you meant one of the following "
+                       f"(capitalization is important!): {suggestions}")
+                if None_if_not_found:
+                    log.info(msg)
+                    return None
+                raise LoggedError(log, msg)
+        if None_if_not_found:
+            return None
         raise LoggedError(log, "'%s' not found", name)
     else:
         log.error("".join(list(traceback.format_exception(*exc_info))))
         log.error("There was a problem when importing %s '%s':", kind or "external",
                   name)
+        if None_if_not_found:
+            return None
         raise exc_info[1]
 
 
