@@ -6,6 +6,7 @@
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
 - Added ``--minimize`` flag to ``cobaya-run`` for quick minimization (replaces sampler, uses previous output).
 - Add COBAYA_USE_FILE_LOCKING environment variable to allow disabling of file locks. Warning not to use --test with MPI.
+- Use of vector parameters now documented (requires upgraded GetDist). (PR #191; inspired by @lukashergt, thanks!)
 
 ### Cosmological likelihoods and theory codes
 
