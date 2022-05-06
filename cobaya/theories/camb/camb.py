@@ -49,6 +49,7 @@ CAMB will be loaded from the automatic-install ``packages_path`` folder, if spec
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CAMB from.
 
+
 .. _camb_modify:
 
 Modifying CAMB
@@ -70,6 +71,15 @@ In your CAMB modification, remember that you can raise a ``CAMBParamRangeError``
 expect that observable to be compatible with the data (e.g. at the fringes of the
 parameter space). Whenever such an error is raised during sampling, the likelihood is
 assumed to be zero, and the run is not interrupted.
+
+.. note::
+
+   If your modified CAMB has a lower version number than the minimum required by Cobaya,
+   you will get an error at initialisation. You may still be able to use it by setting the
+   option ``ignore_obsolete: True`` in the ``camb`` block (though you would be doing that
+   at your own risk; ideally you should translate your modification to a newer CAMB
+   version, in case there have been important fixes since the release of your baseline
+   version).
 
 
 Installation
@@ -213,6 +223,7 @@ class CAMB(BoltzmannBase):
     file_base_name = 'camb'
     external_primordial_pk: bool
     camb: Any
+    ignore_obsolete: bool
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""

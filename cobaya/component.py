@@ -626,7 +626,6 @@ def module_class_for_name(m, name):
     """Get Camel- or uppercase class name matching name in module m."""
     result = None
     valid_names = {name, name[:1] + name[1:].replace('_', '')}
-    from cobaya.component import CobayaComponent
     for cls in classes_in_module(m, subclass_of=CobayaComponent):
         if cls.__name__.lower() in valid_names:
             if result is not None:
