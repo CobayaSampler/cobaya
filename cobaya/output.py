@@ -360,8 +360,7 @@ class Output(HasLogger):
                             updated_info_trimmed[k][c]["version"] = old_version
                         elif old_version is not None:
                             cls = get_component_class(
-                                c, k, None_if_not_found=True,
-                                class_name=updated_info[k][c].get("class"))
+                                c, k, class_name=updated_info[k][c].get("class"))
                             if cls and cls.compare_versions(
                                     old_version, new_version, equal=False):
                                 raise LoggedError(

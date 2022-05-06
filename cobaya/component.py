@@ -472,6 +472,8 @@ class ComponentNotFoundError(LoggedError):
     (in order to distinguish that case from any other error occurring at import time).
     """
 
+    pass  # necessary or it won't print the given error message!
+
 
 def get_component_class(name, kind=None, component_path=None, class_name=None,
                         allow_external=True, allow_internal=True, logger=None):
@@ -562,11 +564,9 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         # Could not find this module in particular (ensuring that it does not mean one
         # imported within it).
         is_module_not_found = isinstance(excpt, ModuleNotFoundError)
-        did_not_find_this_module_in_particular = str(excpt).rstrip("'").endswith(name)
-        # name can be `module` or `module.class`
-        if len(name.split(".")) > 1:
-            did_not_find_this_module_in_particular |= \
-                str(excpt).rstrip("'").endswith(name.split(".")[-2])
+        # the module to be imported may not be the last field in the name
+        did_not_find_this_module_in_particular = any(
+            str(excpt).rstrip("'").endswith(module) for module in name.split("."))
         if is_module_not_found and did_not_find_this_module_in_particular:
             raise ComponentNotFoundError(not_found_msg)
         logger = get_logger(__name__)

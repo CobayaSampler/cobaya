@@ -30,11 +30,11 @@ yaml = """
 likelihood:
  des_y1.clustering:
  bao.generic:
- planck_2018_lensing:
+ planck_2018_lensing.clik:
 theory:
  camb:
 sampler:
- Minimize:
+ minimize:
 """
 
 

@@ -116,6 +116,8 @@ class VersionCheckError(ValueError):
     is older than a reference one.
     """
 
+    pass  # necessary or it won't print the given error message!
+
 
 def check_component_path(component, path):
     if not os.path.realpath(os.path.abspath(component.__file__)).startswith(

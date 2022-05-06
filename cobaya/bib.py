@@ -78,9 +78,16 @@ def get_bib_info(*infos):
             continue  # we will deal with bare component names later, to avoid repetition
         descs[kind], bibs[kind] = {}, {}
         for component in components:
-            descs[kind][component] = get_desc_component(
-                component, kind, component_infos[component])
-            bibs[kind][component] = get_bib_component(component, kind)
+            try:
+                descs[kind][component] = get_desc_component(
+                    component, kind, component_infos[component])
+                bibs[kind][component] = get_bib_component(component, kind)
+            except ComponentNotFoundError:
+                sugg = similar_internal_class_names(component)
+                get_logger("bib").error(
+                    f"Could not identify component '{component}'. "
+                    f"Did you mean any of the following? {sugg} (mind capitalization!)")
+                continue
     # Deal with bare component names
     for component in used_components.get(None, []):
         try:
@@ -89,7 +96,7 @@ def get_bib_info(*infos):
             sugg = similar_internal_class_names(component)
             get_logger("bib").error(
                 f"Could not identify component '{component}'. "
-                f"Did you mean any of the following? {sugg} (mind capitalisation!)")
+                f"Did you mean any of the following? {sugg} (mind capitalization!)")
             continue
         kind = cls.get_kind()
         if kind not in descs:
