@@ -48,6 +48,7 @@ CLASS will be loaded from the automatic-install ``packages_path`` folder, if spe
 otherwise imported as a globally-installed Python package. Cobaya will print at
 initialisation where it is getting CLASS from.
 
+
 .. _classy_modify:
 
 Modifying CLASS
@@ -69,6 +70,15 @@ whenever the computation of any observable would fail, but you do not expect tha
 observable to be compatible with the data (e.g. at the fringes of the parameter
 space). Whenever such an error is raised during sampling, the likelihood is assumed to be
 zero, and the run is not interrupted.
+
+.. note::
+
+   If your modified CLASS has a lower version number than the minimum required by Cobaya,
+   you will get an error at initialisation. You may still be able to use it by setting the
+   option ``ignore_obsolete: True`` in the ``camb`` block (though you would be doing that
+   at your own risk; ideally you should translate your modification to a newer CLASS
+   version, in case there have been important fixes since the release of your baseline
+   version).
 
 
 Installation
@@ -177,6 +187,7 @@ class classy(BoltzmannBase):
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
     classy_module: Any
+    ignore_obsolete: bool
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
@@ -184,8 +195,9 @@ class classy(BoltzmannBase):
         allow_global = not self.path
         if not self.path and self.packages_path:
             self.path = self.get_path(self.packages_path)
+        min_version = None if self.ignore_obsolete else self._classy_repo_version
         self.classy_module = self.is_installed(path=self.path, allow_global=allow_global,
-                                               check=False)
+                                               check=False, min_version=min_version)
         if not self.classy_module:
             raise NotInstalledError(
                 self.log, "Could not find CLASS. Check error message above.")
@@ -639,8 +651,9 @@ class classy(BoltzmannBase):
             log.info("Importing *auto-installed* CLASS (but defaulting to *global*).")
             classy_build_path = cls.get_import_path(path)
         try:
+            min_version = kwargs.get("min_version", cls._classy_repo_version)
             return load_module("classy", path=classy_build_path,
-                               min_version=cls._classy_repo_version, reload=check)
+                               min_version=min_version, reload=check)
         except ImportError:
             if path is not None and path.lower() != "global":
                 func("Couldn't find the CLASS python interface at '%s'. "

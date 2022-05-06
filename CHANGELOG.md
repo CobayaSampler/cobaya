@@ -6,7 +6,12 @@
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
 - Added `--minimize` flag to `cobaya-run` for quick minimization (replaces sampler, uses previous output).
 - Add `COBAYA_USE_FILE_LOCKING` environment variable to allow disabling of file locks. Warning not to use `--test` with MPI.
-- Installation of external packages is now version-aware for some packages; added `--upgrade` option, off by default to preserve possible user changes.
+- Installation of external packages is now version-aware for some packages; added `--upgrade` option to `cobaya-install`, off by default to preserve possible user changes.
+- Introduced `cobaya.component.ComponentNotFoundError` to handle cases in which internal or external components cannot be found.
+
+### PolyChord
+
+- Updated to v1.20.1: adds `nfail` to control failed initialisation, `synchronous` to choose sync/async parallelisation, variable number of live points, and the possibility to use an internal maximiser.
 
 ### Cosmological likelihoods and theory codes
 
@@ -20,11 +25,13 @@
 - Support setting individual Accuracy parameters, e.g. Accuracy.AccurateBB
 - Calculate accurate BB when tensors are requested
 - Fix for using derived parameters with post-processing
+- Added `ignore_obsolete` option to be able to run with user-modified older CAMB versions.
 
 #### CLASS
 
 - Updated to v3.1.2
 - Added `Omega_b|cdm|nu_massive(z)`, `angular_diameter_distance_2`, `sigmaR(z)`, `sigma8(z)`, `fsgima8(z)` and Weyl potential power spectrum.
+- Added `ignore_obsolete` option to be able to run with user-modified older CLASS versions.
 
 #### BAO
 
