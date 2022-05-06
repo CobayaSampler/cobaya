@@ -19,18 +19,19 @@ from itertools import chain
 from pkg_resources import parse_version  # type: ignore
 import requests  # type: ignore
 import tqdm  # type: ignore
-from typing import List
+from typing import List, Mapping, Union
 
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
-from cobaya.tools import create_banner, warn_deprecation, get_resolved_class, \
-    write_packages_path_in_config_file, get_config_path, get_kind, VersionCheckError
+from cobaya.component import get_component_class, ComponentNotFoundError
+from cobaya.tools import create_banner, warn_deprecation, \
+    write_packages_path_in_config_file, get_config_path, VersionCheckError, \
+    resolve_packages_path, similar_internal_class_names
 from cobaya.input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
     packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
-from cobaya.tools import resolve_packages_path
 from cobaya.typing import InputDict
 
 log = get_logger("install")
@@ -50,6 +51,8 @@ class NotInstalledError(LoggedError):
 def install(*infos, **kwargs):
     """
     Installs the external packages required by the components mentioned in ``infos``.
+
+    ``infos`` can be input dictionaries or single component names.
 
     :param force: force re-installation of apparently installed packages (default:
        ``False``).
@@ -71,59 +74,74 @@ def install(*infos, **kwargs):
     if not log.root.handlers:
         logger_setup(debug=debug)
     path = kwargs.get("path")
+    infos_not_single_names = [info for info in infos if isinstance(info, Mapping)]
     if not path:
-        path = resolve_packages_path(infos)
+        path = resolve_packages_path(*infos_not_single_names)
     if not path:
         raise LoggedError(
             log, "No 'path' argument given, and none could be found in input infos "
                  "(as %r), the %r env variable or the config file. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
             packages_path_input, packages_path_env, packages_path_arg[0])
-    abspath = os.path.abspath(path)
-    log.info("Installing external packages at '%s'", abspath)
+    # General install path for all dependencies
+    general_abspath = os.path.abspath(path)
+    log.info("Installing external packages at '%s'", general_abspath)
     kwargs_install = {"force": kwargs.get("force", False),
                       "no_progress_bars": kwargs.get("no_progress_bars")}
     for what in (code_path, data_path):
         kwargs_install[what] = kwargs.get(what, True)
-        spath = os.path.join(abspath, what)
+        spath = os.path.join(general_abspath, what)
         if kwargs_install[what] and not os.path.exists(spath):
             try:
                 os.makedirs(spath)
             except OSError:
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
-    failed_components = []
-    obsolete_components = []
+    unknown_components = []  # could not be identified
+    failed_components = []  # general errors
+    obsolete_components = []  # older or unknown version already installed
     skip_keywords_arg = set(kwargs.get("skip", []) or [])
     # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
     skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
     skip_keywords_env = set(
         os.environ.get(install_skip_env, "").replace(",", " ").lower().split())
     skip_keywords = skip_keywords_arg.union(skip_keywords_env)
+    # Combine all requested components and install them
+    # NB: components mentioned by name may be repeated with those given in dict infos.
+    #     That's OK, because the install check will skip them in the 2nd pass
     used_components, components_infos = get_used_components(*infos, return_infos=True)
     for kind, components in used_components.items():
         for component in components:
+            name_w_kind = (kind + ":" if kind else "") + component
             print()
-            print(create_banner(kind + ":" + component,
+            print(create_banner(name_w_kind,
                                 symbol=_banner_symbol, length=_banner_length), end="")
             print()
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, log):
                 continue
             info = components_infos[component]
             if isinstance(info, str) or "external" in info:
-                log.warning("Component '%s' is a custom function. "
-                            "Nothing to do.", component)
+                log.info(
+                    f"Component '{name_w_kind}' is a custom function. Nothing to do.")
                 continue
             try:
                 class_name = (info or {}).get("class")
                 if class_name:
                     log.info("Class to be installed for this component: %r", class_name)
-                imported_class = get_resolved_class(
+                imported_class = get_component_class(
                     component, kind=kind, component_path=info.pop("python_path", None),
                     class_name=class_name)
-            except ImportError as excpt:
-                log.error("Component '%s' not recognized. [%s].", component, excpt)
-                failed_components += ["%s:%s" % (kind, component)]
+                # Update the name if the kind was unknown
+                if not kind:
+                    name_w_kind = imported_class.get_kind() + ":" + component
+            except ComponentNotFoundError:
+                log.error(f"Component '{name_w_kind}' could not be identified. Skipping.")
+                unknown_components += [name_w_kind]
+                continue
+            except Exception:
+                traceback.print_exception(*sys.exc_info(), file=sys.stdout)
+                log.error(f"An error occurred when loading '{name_w_kind}'. Skipping.")
+                failed_components += [name_w_kind]
                 continue
             else:
                 if _skip_helper(imported_class.__name__.lower(), skip_keywords,
@@ -131,19 +149,21 @@ def install(*infos, **kwargs):
                     continue
             is_compatible = getattr(imported_class, "is_compatible", lambda: True)()
             if not is_compatible:
-                log.info(
-                    "Skipping %r because it is not compatible with your OS.", component)
+                log.error(f"Skipping '{name_w_kind}' "
+                          "because it is not compatible with your OS.")
+                failed_components += [name_w_kind]
                 continue
             log.info("Checking if dependencies have already been installed...")
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
-                log.info("%s.%s is a fully built-in component: nothing to do.",
-                         kind, imported_class.__name__)
+                log.info(f"Component '{name_w_kind}' is a fully built-in component: "
+                         "nothing to do.")
                 continue
-            install_path = abspath
+            this_component_install_path = general_abspath
             get_path = getattr(imported_class, "get_path", None)
             if get_path:
-                install_path = get_path(install_path)
+                this_component_install_path = get_path(this_component_install_path)
+            # Check previous installations and their versions
             has_been_installed = False
             is_old_version_msg = None
             with NoLogging(None if debug else logging.ERROR):
@@ -152,10 +172,10 @@ def install(*infos, **kwargs):
                         has_been_installed = is_installed(path="global", **kwargs_install)
                     if not has_been_installed:
                         has_been_installed = is_installed(
-                            path=install_path, **kwargs_install)
+                            path=this_component_install_path, **kwargs_install)
                 except VersionCheckError as excpt:
                     is_old_version_msg = str(excpt)
-            if has_been_installed:
+            if has_been_installed:  # no VersionCheckError was raised
                 log.info("External dependencies for this component already installed.")
                 if kwargs.get("test", False):
                     continue
@@ -166,11 +186,11 @@ def install(*infos, **kwargs):
                     continue
             elif is_old_version_msg:
                 log.info(f"Version check failed: {is_old_version_msg}")
-                obsolete_components += ["%s:%s" % (kind, component)]
+                obsolete_components += [name_w_kind]
                 if kwargs.get("test", False):
                     continue
                 if not kwargs.get("upgrade", False) and not kwargs.get("force", False):
-                    log.info("Skipping because `upgrade` not requested.")
+                    log.info("Skipping because '--upgrade' not requested.")
                     continue
             else:
                 log.info("Check found no existing installation")
@@ -179,42 +199,54 @@ def install(*infos, **kwargs):
                         "(If you expected this to be already installed, re-run "
                         "`cobaya-install` with --debug to get more verbose output.)")
                 if kwargs.get("test", False):
-                    failed_components += ["%s:%s" % (kind, component)]
+                    # We are only testing whether it was installed, so consider it failed
+                    failed_components += [name_w_kind]
                     continue
+            # Do the install
             log.info("Installing...")
             try:
                 install_this = getattr(imported_class, "install", None)
-                success = install_this(path=abspath, **kwargs_install)
-            except KeyboardInterrupt:
-                raise
+                success = install_this(path=general_abspath, **kwargs_install)
             except Exception:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 log.error("An unknown error occurred. Delete the external packages "
                           "folder %r and try again. "
                           "Please, notify the developers if this error persists.",
-                          abspath)
+                          general_abspath)
                 success = False
             if success:
                 log.info("Successfully installed! Let's check it...")
             else:
                 log.error("Installation failed! Look at the error messages above. "
-                          "Solve them and try again, or, if you are unable to solve, "
-                          "install the packages required by this component manually.")
-                failed_components += ["%s:%s" % (kind, component)]
+                          "Solve them and try again, or, if you are unable to solve them,"
+                          " install the packages required by this component manually.")
+                failed_components += [name_w_kind]
                 continue
-            # test installation
+            # Test installation
+            # To check for a version upgrade, it needs to reload the component class and
+            # all relevant imported modules (should be handled by is_installed(check=True)
+            reloaded_class = get_component_class(
+                component, kind=kind, component_path=info.pop("python_path", None),
+                class_name=class_name)
+            reloaded_is_installed = getattr(reloaded_class, "is_installed", None)
             with NoLogging(None if debug else logging.ERROR):
-                successfully_installed = is_installed(path=install_path, check=False,
-                                                      **kwargs_install)
+                try:
+                    successfully_installed = reloaded_is_installed(
+                        path=this_component_install_path, check=True, **kwargs_install)
+                except Exception:
+                    traceback.print_exception(*sys.exc_info(), file=sys.stdout)
+                    successfully_installed = False
             if not successfully_installed:
                 log.error("Installation apparently worked, "
                           "but the subsequent installation test failed! "
-                          "Look at the error messages above, or re-run with --debug "
-                          "for more more verbose output. "
-                          "Try to solve the issues and try again, or, if you are unable "
-                          "to solve them, install the packages required by this "
+                          "This does not always mean that there was an actual error, "
+                          "and is sometimes fixed simply by running the installer again. "
+                          "If not, look closely at the error messages above, or re-run "
+                          "with --debug for more more verbose output. "
+                          "If you are unable to fix the issues above, "
+                          "try installing the packages required by this "
                           "component manually.")
-                failed_components += ["%s:%s" % (kind, component)]
+                failed_components += [name_w_kind]
             else:
                 log.info("Installation check successful.")
     print()
@@ -222,6 +254,16 @@ def install(*infos, **kwargs):
                         symbol=_banner_symbol, length=_banner_length), end="")
     print()
     bullet = "\n - "
+    if unknown_components:
+        suggestions_dict = {
+            name: similar_internal_class_names(name) for name in unknown_components}
+        suggestions_msg = \
+            bullet + bullet.join(
+                f"{name}: did you mean any of the following? {sugg} "
+                "(mind capitalisation!)" for name, sugg in suggestions_dict.items())
+        raise LoggedError(
+            log, "The following components could not be identified and were skipped:"
+                 f"{suggestions_msg}")
     if failed_components:
         raise LoggedError(
             log, "The installation (or installation test) of some component(s) has "
@@ -230,15 +272,15 @@ def install(*infos, **kwargs):
             bullet + bullet.join(failed_components))
     if obsolete_components:
         raise LoggedError(
-            log, "The following packages are obsolete. Re-run with `upgrade` option "
+            log, "The following packages are obsolete. Re-run with `--upgrade` option "
                  "(not upgrading by default to preserve possible user changes): %s",
             bullet + bullet.join(obsolete_components))
-    if not failed_components and not obsolete_components:
-        log.info(
-            f"All requested components' dependencies correctly installed at {abspath}")
+    if not unknown_components and not failed_components and not obsolete_components:
+        log.info("All requested components' dependencies correctly installed at "
+                 f"{general_abspath}")
     # Set the installation path in the global config file
     if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
-        write_packages_path_in_config_file(abspath)
+        write_packages_path_in_config_file(general_abspath)
         log.info("The installation path has been written into the global config file: %s",
                  os.path.join(get_config_path(), packages_path_config_file))
 
@@ -302,9 +344,9 @@ def download_file(url, path, size=None, decompress=False, no_progress_bars=False
                     if lines[0].startswith("404") or "not found" in lines[0].lower():
                         raise ValueError("File not found (404)!")
             logger.info('Downloaded filename %s', filename)
-        except Exception as e:
+        except Exception as excpt:
             logger.error(
-                "Error downloading %s' to folder '%s': %s", url, tmp_path, e)
+                "Error downloading %s' to folder '%s': %s", url, tmp_path, excpt)
             return False
         logger.debug('Got: %s', filename)
         if not decompress:
@@ -424,6 +466,7 @@ def check_gcc_version(min_version="6.4", error_returns=None):
 # Command-line script ####################################################################
 
 def install_script(args=None):
+    """Command line script for the installer."""
     set_mpi_disabled()
     warn_deprecation()
     # Parse arguments
@@ -482,7 +525,7 @@ def install_script(args=None):
     logger_setup()
     logger = get_logger("install")
     # Gather requests
-    infos: List[InputDict] = []
+    infos: List[Union[InputDict, str]] = []
     for f in arguments.files_or_components:
         if f.lower() == "cosmo":
             logger.info("Installing basic cosmological packages.")
@@ -495,12 +538,8 @@ def install_script(args=None):
         elif os.path.splitext(f)[1].lower() in Extension.yamls:
             from cobaya.input import load_input
             infos += [load_input(f)]
-        else:
-            try:
-                kind = get_kind(f)
-                infos += [{kind: {f: None}}]
-            except Exception:
-                logger.warning("Could not identify component %r. Skipping.", f)
+        else:  # a single component name, no kind specified
+            infos += [f]
     if not infos:
         logger.info("Nothing to install.")
         return

@@ -11,23 +11,21 @@ import os
 import inspect
 import platform
 from copy import deepcopy
-from importlib import import_module
 from itertools import chain
 from functools import reduce
 from typing import Mapping, Union, Optional, TypeVar, Callable, Dict, List
 from collections import defaultdict
-from inspect import cleandoc
-import pkg_resources
 
 # Local
 from cobaya.conventions import products_path, kinds, separator_files, \
-    reserved_attributes, get_chi2_name, get_chi2_label, Extension, FileSuffix, \
+    get_chi2_name, get_chi2_label, Extension, FileSuffix, \
     packages_path_input
 from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
     empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
-    fuzzy_match, deepcopy_where_possible, get_resolved_class
-from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
+    fuzzy_match, deepcopy_where_possible
+from cobaya.component import get_component_class
+from cobaya.yaml import yaml_load_file, yaml_load
 from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
 from cobaya import mpi
@@ -171,6 +169,11 @@ def get_used_components(*infos, return_infos=False):
     Returns all requested components as a dict ``{kind: set([components])}``.
     Priors are not included.
 
+    The list of arguments may contain base strings, which are interpreted as component
+    names and added to the returned dictionary under a ``None`` key. In this case, there
+    is no guarantee that the same component will not be listed both under ``None`` and
+    under its particular kind.
+
     If ``return_infos=True`` (default: ``False``), also returns a dictionary of inputs per
     component, updated in the order in which the info arguments are given.
 
@@ -178,9 +181,14 @@ def get_used_components(*infos, return_infos=False):
     the original class' name.
     """
     # TODO: take inheritance into account
-    comps: Dict[str, List[str]] = defaultdict(list)
+    comps: Dict[Union[str, None], List[str]] = defaultdict(list)
     comp_infos: Dict[str, dict] = defaultdict(dict)
     for info in infos:
+        if isinstance(info, str) and info not in comps[None]:
+            comps[None] += [info]
+            if return_infos and info not in comp_infos:
+                comp_infos[info] = {}
+            continue
         for kind in kinds:
             try:
                 comps[kind] += [a for a in (info.get(kind) or [])
@@ -206,7 +214,7 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
     Get default info for a component_or_class.
     """
     try:
-        cls = get_resolved_class(component_or_class, kind, component_path, class_name)
+        cls = get_component_class(component_or_class, kind, component_path, class_name)
         default_component_info = \
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
@@ -513,7 +521,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                         try:
                             component_path = block1[k].pop("python_path", None) \
                                 if isinstance(block1[k], dict) else None
-                            cls = get_resolved_class(
+                            cls = get_component_class(
                                 k, kind=block_name, component_path=component_path,
                                 class_name=(block1[k] or {}).get("class"))
                             ignore_k_this.update(set(
@@ -548,7 +556,7 @@ def get_preferred_old_values(info_old):
             try:
                 component_path = block[k].pop("python_path", None) \
                     if isinstance(block[k], dict) else None
-                cls = get_resolved_class(
+                cls = get_component_class(
                     k, kind=block_name, component_path=component_path,
                     class_name=(block[k] or {}).get("class"))
                 prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
@@ -560,231 +568,6 @@ def get_preferred_old_values(info_old):
             except ImportError:
                 pass
     return keep_old
-
-
-class Description:
-    """Allows for calling get_desc as both class and instance method."""
-
-    def __get__(self, instance, cls):
-        if instance is None:
-            return_func = lambda info=None: cls._get_desc(info)
-        else:
-            return_func = lambda info=None: cls._get_desc(info=instance.__dict__)
-        return_func.__doc__ = cleandoc("""
-            Returns a short description of the class. By default, returns the class'
-            docstring.
-
-            You can redefine this method to dynamically generate the description based
-            on the class initialisation ``info`` (see e.g. the source code of MCMC's
-            *class method* :meth:`~.mcmc._get_desc`).""")
-        return return_func
-
-
-class HasDefaults:
-    """
-    Base class for components that can read settings from a .yaml file.
-    Class methods provide the methods needed to get the defaults information
-    and associated data.
-
-    """
-
-    @classmethod
-    def get_qualified_names(cls) -> List[str]:
-        if cls.__module__ == '__main__':
-            return [cls.__name__]
-        parts = cls.__module__.split('.')
-        if len(parts) > 1:
-            # get shortest reference
-            try:
-                imported = import_module(".".join(parts[:-1]))
-            except ImportError:
-                pass
-            else:
-                if getattr(imported, cls.__name__, None) is cls:
-                    parts = parts[:-1]
-        # allow removing class name that is CamelCase equivalent of module name
-        if parts[-1] == cls.__name__ or (cls.__name__.lower() ==
-                                         parts[-1][:1] + parts[-1][1:].replace('_', '')):
-            return ['.'.join(parts[i:]) for i in range(len(parts))]
-        else:
-            return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in
-                    range(len(parts) + 1)]
-
-    @classmethod
-    def get_qualified_class_name(cls) -> str:
-        """
-        Get the distinct shortest reference name for the class of the form
-        module.ClassName or module.submodule.ClassName etc.
-        For Cobaya components the name is relative to subpackage for the relevant kind of
-        class (e.g. Likelihood names are relative to cobaya.likelihoods).
-
-        For external classes it loads the shortest fully qualified name of the form
-        package.ClassName or package.module.ClassName or
-        package.subpackage.module.ClassName, etc.
-        """
-        qualified_names = cls.get_qualified_names()
-        if qualified_names[0].startswith('cobaya.'):
-            return qualified_names[2]
-        else:
-            # external
-            return qualified_names[0]
-
-    @classmethod
-    def get_class_path(cls) -> str:
-        """
-        Get the file path for the class.
-        """
-        return os.path.abspath(os.path.dirname(inspect.getfile(cls)))
-
-    @classmethod
-    def get_file_base_name(cls) -> str:
-        """
-        Gets the string used as the name for .yaml, .bib files, typically the
-        class name or an un-CamelCased class name
-        """
-        return cls.__dict__.get('file_base_name') or cls.__name__
-
-    @classmethod
-    def get_root_file_name(cls) -> str:
-        return os.path.join(cls.get_class_path(), cls.get_file_base_name())
-
-    @classmethod
-    def get_yaml_file(cls) -> Optional[str]:
-        """
-        Gets the file name of the .yaml file for this component if it exists on file
-        (otherwise None).
-        """
-        filename = cls.get_root_file_name() + ".yaml"
-        if os.path.exists(filename):
-            return filename
-        return None
-
-    get_desc = Description()
-
-    @classmethod
-    def _get_desc(cls, info=None):
-        return cleandoc(cls.__doc__) if cls.__doc__ else ""
-
-    @classmethod
-    def get_bibtex(cls) -> Optional[str]:
-        """
-        Get the content of .bibtex file for this component. If no specific bibtex
-        from this class, it will return the result from an inherited class if that
-        provides bibtex.
-        """
-        filename = cls.__dict__.get('bibtex_file')
-        if filename:
-            bib = pkg_resources.resource_string(cls.__module__, filename).decode("utf-8")
-        else:
-            bib = cls.get_associated_file_content('.bibtex')
-        if bib:
-            return bib
-        for base in cls.__bases__:
-            if issubclass(base, HasDefaults) and base is not HasDefaults:
-                return base.get_bibtex()
-        return None
-
-    @classmethod
-    def get_associated_file_content(cls, ext, file_root=None) -> Optional[str]:
-        # handle extracting package files when may be inside a zipped package so files
-        # not accessible directly
-        try:
-            string = pkg_resources.resource_string(
-                cls.__module__, (file_root or cls.get_file_base_name()) + ext)
-        except Exception:
-            return None
-        else:
-            return string.decode("utf-8")
-
-    @classmethod
-    def get_class_options(cls, input_options=empty_dict) -> InfoDict:
-        """
-        Returns dictionary of names and values for class variables that can also be
-        input and output in yaml files, by default it takes all the
-        (non-inherited and non-private) attributes of the class excluding known
-        specials.
-
-        Could be overridden using input_options to dynamically generate defaults,
-        e.g. a set of input parameters generated depending on the input_options.
-
-        :param input_options: optional dictionary of input parameters
-        :return:  dict of names and values
-        """
-        return {k: v for k, v in cls.__dict__.items() if not k.startswith('_') and
-                k not in reserved_attributes and not inspect.isroutine(v)
-                and not isinstance(v, property)}
-
-    @classmethod
-    def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True,
-                     input_options=empty_dict):
-        """
-        Return defaults for this component_or_class, with syntax:
-
-        .. code::
-
-           option: value
-           [...]
-
-           params:
-             [...]  # if required
-
-           prior:
-             [...]  # if required
-
-        If keyword `return_yaml` is set to True, it returns literally that,
-        whereas if False (default), it returns the corresponding Python dict.
-
-        Note that in external components installed as zip_safe=True packages files cannot
-        be accessed directly.
-        In this case using !default .yaml includes currently does not work.
-
-        Also note that if you return a dictionary it may be modified (return a deep copy
-        if you want to keep it).
-
-        if yaml_expand_defaults then !default: file includes will be expanded
-
-        input_options may be a dictionary of input options, e.g. in case default params
-        are dynamically dependent on an input variable
-        """
-        if 'class_options' in cls.__dict__:
-            raise LoggedError(log, "class_options (in %s) should now be replaced by "
-                                   "public attributes defined directly in the class" %
-                              cls.get_qualified_class_name())
-        yaml_text = cls.get_associated_file_content('.yaml')
-        options = cls.get_class_options(input_options=input_options)
-        if options and yaml_text:
-            raise LoggedError(log,
-                              "%s: any class can either have .yaml or class variables "
-                              "but not both (type declarations without values are fine "
-                              "also with yaml file). You have class attributes: %s",
-                              cls.get_qualified_class_name(), list(options))
-        if return_yaml and not yaml_expand_defaults:
-            return yaml_text or ""
-        this_defaults = yaml_load_file(cls.get_yaml_file(), yaml_text) \
-            if yaml_text else deepcopy_where_possible(options)
-        # start with this one to keep the order such that most recent class options
-        # near the top. Update below to actually override parameters with these.
-        defaults = this_defaults.copy()
-        if not return_yaml:
-            for base in cls.__bases__:
-                if issubclass(base, HasDefaults) and base is not HasDefaults:
-                    defaults.update(base.get_defaults(input_options=input_options))
-        defaults.update(this_defaults)
-        if return_yaml:
-            return yaml_dump(defaults)
-        else:
-            return defaults
-
-    @classmethod
-    def get_annotations(cls) -> InfoDict:
-        d = {}
-        for base in cls.__bases__:
-            if issubclass(base, HasDefaults) and base is not HasDefaults:
-                d.update(base.get_annotations())
-
-            d.update({k: v for k, v in cls.__dict__.get("__annotations__", {}).items()
-                      if not k.startswith('_')})
-        return d
 
 
 def make_auto_params(auto_params, params_info):

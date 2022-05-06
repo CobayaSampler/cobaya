@@ -21,18 +21,15 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, \
-    Iterable, Set, Dict
+from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, Iterable, Dict
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
 from abc import ABC, abstractmethod
-import traceback
 
 # Local
-from cobaya.conventions import cobaya_package, subfolders, kinds, \
-    packages_path_config_file, packages_path_env, packages_path_arg, dump_sort_cosmetic, \
-    packages_path_input
+from cobaya.conventions import subfolders, kinds, packages_path_config_file, \
+    packages_path_env, packages_path_arg, dump_sort_cosmetic, packages_path_input
 from cobaya.log import LoggedError, HasLogger, get_logger
 from cobaya.typing import Kind
 
@@ -85,30 +82,14 @@ def get_internal_class_component_name(name, kind) -> str:
 
 
 def get_base_classes() -> Dict[Kind, Any]:
+    """
+    Return the base classes for the different kinds.
+    """
     from cobaya.likelihood import Likelihood
     from cobaya.theory import Theory
     from cobaya.sampler import Sampler
     return {"sampler": Sampler, "likelihood": Likelihood,  # type: ignore
             "theory": Theory}
-
-
-def get_kind(name: str, allow_external=True) -> Kind:
-    """
-    Given a helpfully unique component name, tries to determine it's kind:
-    ``sampler``, ``theory`` or ``likelihood``.
-    """
-    for i, kind in enumerate(kinds):
-        cls = get_class(name, kind, allow_external=allow_external and i == len(kinds) - 1,
-                        None_if_not_found=True)
-        if cls is not None:
-            break
-    else:
-        raise LoggedError(log, "Could not find component with name %r", name)
-    for kind, tp in get_base_classes().items():
-        if issubclass(cls, tp):
-            return kind
-
-    raise LoggedError(log, "Class %r is not a standard class type %r", name, kinds)
 
 
 class PythonPath:
@@ -130,7 +111,10 @@ class PythonPath:
 
 
 class VersionCheckError(ValueError):
-    pass
+    """
+    Exception to be raised when the installed version of a component (or its requisited)
+    is older than a reference one.
+    """
 
 
 def check_component_path(component, path):
@@ -145,7 +129,7 @@ def check_component_version(component: Any, min_version):
     if not hasattr(component, "__version__") or \
             version.parse(component.__version__) < version.parse(min_version):
         raise VersionCheckError(
-            "component %s at %s is version %s but required %s or higher." %
+            "component %s at %s is version %s but the minimum required version is %s." %
             (component.__name__, os.path.dirname(component.__file__),
              getattr(component, "__version__", "(non-given)"), min_version))
 
@@ -166,119 +150,6 @@ def load_module(name, package=None, path=None, min_version=None,
     return component
 
 
-def get_class(name, kind=None, None_if_not_found=False, allow_external=True,
-              allow_internal=True, component_path=None):
-    """
-    Retrieves the requested class from its reference name. The name can be a
-    fully-qualified package.module.classname string, or an internal name of the particular
-    kind. If the last element of name is not a class, assume class has the same name and
-    is in that module.
-
-    By default tries to load internal components first, then if that fails external ones.
-    component_path can be used to specify a specific external location.
-
-    Raises ``ImportError`` if class not found in the appropriate place in the source tree
-    and is not a fully qualified external name.
-
-    If 'kind=None' is not given, tries to guess it if the name is unique (slow!).
-
-    If allow_external=True, allows loading explicit name from anywhere on path.
-    If allow_internal=True, will first try to load internal components
-    """
-    if allow_internal and kind is None:
-        kind = get_kind(name)
-    if '.' in name:
-        module_name, class_name = name.rsplit('.', 1)
-    else:
-        module_name = name
-        class_name = None
-    assert allow_internal or allow_external
-
-    def get_matching_class_name(_module: Any, _class_name, none=False):
-        cls = getattr(_module, _class_name, None)
-        if cls is None and _class_name == _class_name.lower():
-            # where the _class_name may be a module name, find CamelCased class
-            cls = module_class_for_name(_module, _class_name)
-        if cls or none:
-            return cls
-        else:
-            return getattr(_module, _class_name)
-
-    def return_class(_module_name, package=None):
-        _module: Any = load_module(_module_name, package=package, path=component_path)
-        if not class_name and hasattr(_module, "get_cobaya_class"):
-            return _module.get_cobaya_class()
-        _class_name = class_name or module_name
-        cls = get_matching_class_name(_module, _class_name, none=True)
-        if not cls:
-            _module = load_module(_module_name + '.' + _class_name,
-                                  package=package, path=component_path)
-            cls = get_matching_class_name(_module, _class_name)
-        if not isinstance(cls, type):
-            return get_matching_class_name(cls, _class_name)
-        else:
-            return cls
-
-    try:
-        if component_path:
-            return return_class(module_name)
-        elif allow_internal:
-            internal_module_name = get_internal_class_component_name(module_name, kind)
-            return return_class(internal_module_name, package=cobaya_package)
-        else:
-            raise Exception()
-    except:
-        exc_info = sys.exc_info()
-    if allow_external and not component_path:
-        try:
-            import_module(module_name)
-        except Exception:
-            exc_info = sys.exc_info()
-        else:
-            try:
-                return return_class(module_name)
-            except:
-                exc_info = sys.exc_info()
-    if ((exc_info[0] is ModuleNotFoundError and
-         str(exc_info[1]).rstrip("'").endswith(name))):
-        if allow_internal:
-            suggestions = fuzzy_match(name, get_available_internal_class_names(kind), n=3)
-            if suggestions:
-                msg = (f"{kind.capitalize()} '{name}' not found. "
-                       "Maybe you meant one of the following "
-                       f"(capitalization is important!): {suggestions}")
-                if None_if_not_found:
-                    log.info(msg)
-                    return None
-                raise LoggedError(log, msg)
-        if None_if_not_found:
-            return None
-        raise LoggedError(log, "'%s' not found", name)
-    else:
-        log.error("".join(list(traceback.format_exception(*exc_info))))
-        log.error("There was a problem when importing %s '%s':", kind or "external",
-                  name)
-        if None_if_not_found:
-            return None
-        raise exc_info[1]
-
-
-def get_resolved_class(component_or_class, kind=None, component_path=None,
-                       class_name=None, None_if_not_found=False):
-    """
-    Returns the class corresponding to the component indicated as first argument.
-
-    If the first argument is a class, it is simply returned. If it is a string, it
-    retrieves the corresponding class name, using the value of `class_name` instead if
-    present.`
-    """
-    if isinstance(component_or_class, str):
-        component_or_class = get_class(class_name or component_or_class, kind,
-                                       component_path=component_path,
-                                       None_if_not_found=None_if_not_found)
-    return component_or_class
-
-
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
     import pkgutil
     from cobaya.theory import HelperTheory
@@ -297,26 +168,6 @@ def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
                 if ispkg:
                     result.update(import_all_classes(os.path.dirname(m.__file__),
                                                      m.__name__, subclass_of, hidden))
-    return result
-
-
-def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
-    return set(cls for _, cls in inspect.getmembers(m, inspect.isclass)
-               if (not subclass_of or issubclass(cls, subclass_of))
-               and (allow_imported or cls.__module__ == m.__name__))
-
-
-def module_class_for_name(m, name):
-    # Get Camel- or uppercase class name matching name in module m
-    result = None
-    valid_names = {name, name[:1] + name[1:].replace('_', '')}
-    from cobaya.component import CobayaComponent
-    for cls in classes_in_module(m, subclass_of=CobayaComponent):
-        if cls.__name__.lower() in valid_names:
-            if result is not None:
-                raise ValueError('More than one class with same lowercase name %s',
-                                 name)
-            result = cls
     return result
 
 
@@ -770,6 +621,9 @@ def progress_bar(logger, percentage, final_text=""):
 
 
 def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
+    """
+    Simple wrapper for fuzzy search of strings within a list.
+    """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         # Suppress message about optional dependency
@@ -779,6 +633,29 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
             input_string, choices, score_cutoff=score_cutoff))))[0][:n]
     except IndexError:
         return []
+
+
+def similar_internal_class_names(name, kind=None):
+    """
+    Returns a list of suggestions for class names similar to the given one.
+
+    To be used e.g. when no class was found with the given name.
+
+    If a ``kind`` is not given, a dictionary of ``{kind: [list of suggestions]}`` is
+    returned instead.
+    """
+    if kind is None:
+        suggestions = {
+            kind: fuzzy_match(name, get_available_internal_class_names(kind), n=3)
+            for kind in kinds}
+        # Further trim the set by pooling them all and selecting again.
+        all_names = list(chain(*suggestions.values()))
+        best_names = fuzzy_match(name, all_names, n=3)
+        suggestions = {kind: [n for n in names if n in best_names]
+                       for kind, names in suggestions.items()}
+        return {kind: sugg for kind, sugg in suggestions.items() if sugg}
+    else:
+        return fuzzy_match(name, get_available_internal_class_names(kind), n=3)
 
 
 def has_non_yaml_reproducible(info):
