@@ -19,11 +19,11 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
 from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
-from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
-from cobaya.input import get_info_path
+from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
 from cobaya.collection import SampleCollection
-from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
-from cobaya.tools import has_non_yaml_reproducible
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic, \
+    has_non_yaml_reproducible
+from cobaya.component import get_component_class
 from cobaya import mpi
 
 # Default output type and extension
@@ -359,7 +359,7 @@ class Output(HasLogger):
                             updated_info[k][c]["version"] = old_version
                             updated_info_trimmed[k][c]["version"] = old_version
                         elif old_version is not None:
-                            cls = get_resolved_class(
+                            cls = get_component_class(
                                 c, k, None_if_not_found=True,
                                 class_name=updated_info[k][c].get("class"))
                             if cls and cls.compare_versions(

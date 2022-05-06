@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from cobaya.tools import get_class
+from cobaya.component import get_component_class
 
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
@@ -12,7 +12,7 @@ def test_generic_camb(packages_path, skip_not_installed):
     like_rename = "my_bao"
     chi2_generic = deepcopy(chi2_sdss_dr12_consensus_bao)
     chi2_generic[like_rename] = chi2_generic.pop(like)
-    likelihood_defaults = get_class(like).get_defaults()
+    likelihood_defaults = get_component_class(like).get_defaults()
     likelihood_defaults.pop("path")
     likelihood_defaults["class"] = "bao.generic"
     info_likelihood = {like_rename: likelihood_defaults}
