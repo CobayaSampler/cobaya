@@ -11,7 +11,7 @@
 
 ### PolyChord
 
-- Updated to v1.20.1: adds `nfail` to control failed initialisation, `synchronous` to choose sync/async parallelisation, variable number of live points, and the possibility to use an internal maximiser.
+- Updated to v1.20.1: adds `nfail` to control failed initialisation, `synchronous` to choose sync/async parallelisation, variable number of live points, and the possibility to use an internal maximiser. Merges #232 (thanks @williamjameshandley).
 
 ### Cosmological likelihoods and theory codes
 
@@ -29,7 +29,7 @@
 
 #### CLASS
 
-- Updated to v3.1.2
+- Updated to v3.2.0
 - Added `Omega_b|cdm|nu_massive(z)`, `angular_diameter_distance_2`, `sigmaR(z)`, `sigma8(z)`, `fsgima8(z)` and Weyl potential power spectrum.
 - Added `ignore_obsolete` option to be able to run with user-modified older CLASS versions.
 
