@@ -260,7 +260,7 @@ def install(*infos, **kwargs):
         suggestions_msg = \
             bullet + bullet.join(
                 f"{name}: did you mean any of the following? {sugg} "
-                "(mind capitalisation!)" for name, sugg in suggestions_dict.items())
+                "(mind capitalization!)" for name, sugg in suggestions_dict.items())
         raise LoggedError(
             log, "The following components could not be identified and were skipped:"
                  f"{suggestions_msg}")

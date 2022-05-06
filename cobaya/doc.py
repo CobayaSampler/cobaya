@@ -69,7 +69,7 @@ def doc_script(args=None):
         suggestions = similar_internal_class_names(arguments.component)
         logger.error(
             f"Could not identify component '{arguments.component}'. "
-            f"Did you mean any of the following? {suggestions} (mind capitalisation!)")
+            f"Did you mean any of the following? {suggestions} (mind capitalization!)")
         return 1
     to_print = get_default_info(
         cls, return_yaml=not arguments.python, yaml_expand_defaults=arguments.expand)
