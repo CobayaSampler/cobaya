@@ -75,7 +75,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         # If any of resume|force given as cmd args, ignore those in the input file
         if resume or force:
             if resume and force:
-                raise ValueError("'rename' and 'force' are exclusive options")
+                raise ValueError("'resume' and 'force' are exclusive options")
             info["resume"] = bool(resume)
             info["force"] = bool(force)
         if info.get("post"):
