@@ -145,6 +145,7 @@ interface ready.
 # Global
 import sys
 import os
+import re
 import numpy as np
 from copy import deepcopy
 from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
@@ -608,10 +609,11 @@ class classy(BoltzmannBase):
             log.error("Either CLASS is not in the given folder, "
                       "'%s', or you have not compiled it.", path)
             return None
-        py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
+        re_lib = re.compile(
+            f"^lib\\..*{sys.version_info.major}\\.*{sys.version_info.minor}$")
         try:
             post = next(d for d in os.listdir(classy_build_path)
-                        if (d.startswith("lib.") and py_version in d))
+                        if re.fullmatch(re_lib, d))
         except StopIteration:
             log.error("The CLASS installation at '%s' has not been compiled for the "
                       "current Python version.", path)
