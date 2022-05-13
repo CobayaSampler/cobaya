@@ -207,6 +207,7 @@ class Collector(NamedTuple):
 
 # default non linear code -- same as CAMB
 non_linear_default_code = "hmcode"
+non_linear_null_value = "none"
 
 
 class classy(BoltzmannBase):
@@ -249,6 +250,21 @@ class classy(BoltzmannBase):
         if "sBBN file" in self.extra_args:
             self.extra_args["sBBN file"] = (
                 self.extra_args["sBBN file"].format(classy=self.path))
+        # Normalize `non_linear` vs `non linear`: prefer underscore
+        # Keep this convention throughout the rest of this module!
+        if "non linear" in self.extra_args:
+            if "non_linear" in self.extra_args:
+                raise LoggedError(
+                    self.log, ("In `extra_args`, only one of `non_linear` or `non linear`"
+                               " should be defined."))
+            self.extra_args["non_linear"] = self.extra_args.pop("non linear")
+        # Normalize non_linear None|False --> "none"
+        # Use default one if not specified
+        if self.extra_args.get("non_linear", "dummy_string") in (None, False):
+            self.extra_args["non_linear"] = non_linear_null_value
+        elif ("non_linear" not in self.extra_args or
+              self.extra_args["non_linear"] is True):
+            self.extra_args["non_linear"] = non_linear_default_code
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
 
@@ -310,8 +326,15 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-                if v["nonlinear"] and "non linear" not in self.extra_args:
-                    self.extra_args["non linear"] = non_linear_default_code
+                if v["nonlinear"]:
+                    if "non_linear" not in self.extra_args:
+                        # this is redundant with initialisation, but just in case
+                        self.extra_args["non_linear"] = non_linear_default_code
+                    elif self.extra_args["non_linear"] == non_linear_null_value:
+                        raise LoggedError(
+                            self.log, ("Non-linear Pk requested, but `non_linear: "
+                                       f"{non_linear_null_value}` imposed in "
+                                       "`extra_args`"))
                 pair = k[2:]
                 if pair == ("delta_tot", "delta_tot"):
                     v["only_clustering_species"] = False
@@ -374,12 +397,13 @@ class classy(BoltzmannBase):
         # Adding tensor modes if requested
         if self.extra_args.get("r") or "r" in self.input_params:
             self.extra_args["modes"] = "s,t"
-        # If B spectrum with l>50, or lensing, recommend using Halofit
+        # If B spectrum with l>50, or lensing, recommend using a non-linear code
         cls = self._must_provide.get("Cl", {})
         has_BB_l_gt_50 = (any(("b" in cl.lower()) for cl in cls) and
                           max(cls[cl] for cl in cls if "b" in cl.lower()) > 50)
         has_lensing = any(("p" in cl.lower()) for cl in cls)
-        if (has_BB_l_gt_50 or has_lensing) and not self.extra_args.get("non linear"):
+        if (has_BB_l_gt_50 or has_lensing) and \
+           self.extra_args.get("non_linear") == non_linear_null_value:
             self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
                              "using a non-linear code is recommended (and you are not "
                              "using any). To activate it, set "
@@ -452,10 +476,10 @@ class classy(BoltzmannBase):
 
     def set(self, params_values_dict):
         # If no output requested, remove arguments that produce an error
-        # (e.g. complaints if halofit requested but no Cl's computed.)
+        # (e.g. complaints if halofit requested but no Cl's computed.) ?????
         # Needed for facilitating post-processing
         if not self.extra_args["output"]:
-            for k in ["non linear"]:
+            for k in ["non_linear"]:
                 self.extra_args.pop(k, None)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}

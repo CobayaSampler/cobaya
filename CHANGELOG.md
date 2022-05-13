@@ -33,6 +33,7 @@
 - Added `Omega_b|cdm|nu_massive(z)`, `angular_diameter_distance_2`, `sigmaR(z)`, `sigma8(z)`, `fsgima8(z)` and Weyl potential power spectrum.
 - Added `ignore_obsolete` option to be able to run with user-modified older CLASS versions.
 - Added direct access to some CLASS computation products, via new requisites `CLASS_[background|thermodynamics|primordial|perturbations|sources]`.
+- Changed behaviour for `non_linear`: if not present in `extra_args`, uses the current default non-linear code (HMcode) instead of no non-linear code. To impose no non-linear corrections, pass `non_linear: False`.
 
 #### BAO
 
