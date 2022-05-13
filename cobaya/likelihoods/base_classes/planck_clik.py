@@ -125,12 +125,16 @@ class PlanckClik(Likelihood):
             [(cl[spectrum][:1 + lmax] if spectrum not in ["tb", "eb"]
               else np.zeros(1 + lmax))
              for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)])
+        # check for nan's: mey produce a segfault in clik
+        # dot product is apparently the fastest way in threading-enabled numpy
+        if np.isnan(np.dot(self.vector, self.vector)):
+            return -np.inf
         # fill with likelihood parameters
         self.vector[-len(self.expected_params):] = (
             [params_values[p] for p in self.expected_params])
         loglike = self.clik(self.vector)[0]
-        # "zero" of clik
-        if np.allclose(loglike, -1e30):
+        # "zero" of clik, and sometimes nan's returned
+        if np.allclose(loglike, -1e30) or np.isnan(loglike):
             loglike = -np.inf
         return loglike
 
