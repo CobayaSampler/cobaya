@@ -79,6 +79,11 @@ def install(*infos, **kwargs):
     # General install path for all dependencies
     general_abspath = os.path.abspath(path)
     log.info("Installing external packages at '%s'", general_abspath)
+    # Set the installation path in the global config file
+    if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
+        write_packages_path_in_config_file(general_abspath)
+        log.info("The installation path has been written into the global config file: %s",
+                 os.path.join(get_config_path(), packages_path_config_file))
     kwargs_install = {"force": kwargs.get("force", False),
                       "no_progress_bars": kwargs.get("no_progress_bars")}
     for what in (code_path, data_path):
@@ -277,11 +282,6 @@ def install(*infos, **kwargs):
     if not unknown_components and not failed_components and not obsolete_components:
         log.info("All requested components' dependencies correctly installed at "
                  f"{general_abspath}")
-    # Set the installation path in the global config file
-    if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
-        write_packages_path_in_config_file(general_abspath)
-        log.info("The installation path has been written into the global config file: %s",
-                 os.path.join(get_config_path(), packages_path_config_file))
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
@@ -521,7 +521,7 @@ def install_script(args=None):
                         help="Do not store the installation path for later runs.")
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
-    logger_setup()
+    logger_setup(arguments.debug)
     logger = get_logger("install")
     # Gather requests
     infos: List[Union[InputDict, str]] = []
@@ -539,9 +539,6 @@ def install_script(args=None):
             infos += [load_input(f)]
         else:  # a single component name, no kind specified
             infos += [f]
-    if not infos:
-        logger.info("Nothing to install.")
-        return
     # Launch installer
     install(*infos, path=getattr(arguments, packages_path_arg),
             **{arg: getattr(arguments, arg)

@@ -689,7 +689,7 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
                 logger.debug(f"{name} to be imported from (sub)directory {import_path}")
             else:
                 import_path = path
-                if not os.path.exist(import_path):
+                if not os.path.exists(import_path):
                     raise FileNotFoundError
         except FileNotFoundError as excpt:
             raise ComponentNotInstalledError(
