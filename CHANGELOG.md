@@ -32,6 +32,7 @@
 - Updated to v3.2.0
 - Added `Omega_b|cdm|nu_massive(z)`, `angular_diameter_distance_2`, `sigmaR(z)`, `sigma8(z)`, `fsgima8(z)` and Weyl potential power spectrum.
 - Added `ignore_obsolete` option to be able to run with user-modified older CLASS versions.
+- Added direct access to some CLASS computation products, via new requisites `CLASS_[background|thermodynamics|primordial|perturbations|sources]`.
 
 #### BAO
 

@@ -4,7 +4,7 @@ Creating your own cosmological likelihood
 Creating your own cosmological likelihood with **cobaya** is super simple. You can either define a likelihood class (see :doc:`cosmo_external_likelihood_class`), or simply create a likelihood function:
 
 #. Define your likelihood as a function that takes some parameters (experimental errors, foregrounds, etc, but **not theory** parameters) and returns a ``log-likelihood``.
-#. Take note of the observables and other cosmological quantities that you will need to request from the theory code (see :func:`~theories.BoltzmannBase.BoltzmannBase.must_provide`). *[If you cannot find the observable that you need, do let us know!]*
+#. Take note of the observables and other cosmological quantities that you will need to request from the theory code (see :func:`~theories.cosmo.BoltzmannBase.must_provide`). *[If you cannot find the observable that you need, do let us know!]*
 #. When declaring the function as a likelihood in **cobaya**'s input, add a field ``requires`` and assign to it all the cosmological requirements as a **dictionary** (e.g. ``{'Cl': {'tt': 2500}}``).
 #. Add to your likelihood function definition a keyword argument ``_self=None``. At run-time, you can call ``get_[...]`` methods of ``_self.provider`` to get the quantities that you requested evaluated at the current parameters values, e.g ``_theory.get_Cl()`` in the example below.
 #. If you wish to define derived paramters, do it as for :ref:`general external likelihoods <likelihood_external>` (example :doc:`here <example_advanced>`): add an ``output_params`` field to the likelihood info listing your derived parameters, and have your function return a tuple ``(log-likelihood, {derived parameters dictionary})``.

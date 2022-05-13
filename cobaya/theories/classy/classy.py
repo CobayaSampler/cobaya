@@ -50,6 +50,35 @@ the global ``classy`` installation is used, pass ``path='global'``. Cobaya will 
 initialisation where CLASS was actually loaded from.
 
 
+.. _classy_access:
+
+Access to CLASS computation products
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can retrieve CLASS computation products within likelihoods (or other pipeline
+components in general) or manually from a :class:`~model.Model` as long as you have added
+them as requisites; see :doc:`cosmo_external_likelihood` or
+:doc:`cosmo_external_likelihood_class` for the likelihood case, and :doc:`cosmo_model` for
+the manual case.
+
+The products that you can request and later retrieve are listed in
+:func:`~theories.cosmo.BoltzmannBase.must_provide`.
+
+If you would like to access a CLASS result that is not accessible that way, you can access
+directly the return value of the `python CLASS interface
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_
+``get_background()``, ``get_thermodynamics()``, ``get_primordial()``,
+``get_perturbations()`` and  ``get_sources()``. To do that add to the requisites
+``{get_CLASS_[...]: None}`` respectively, and retrieve it with
+``provider.get_CLASS_[...]``.
+
+In general, the use of these methods for direct access to CLASS results should be avoided
+in public code, since it breaks compatibility with other Boltzmann codes at the likelihood
+interface level. If you need a quantity for a public code that is not generally interfaced
+in :func:`~theories.cosmo.BoltzmannBase.must_provide`, let us know if you think it makes
+sense to add it.
+
+
 .. _classy_modify:
 
 Modifying CLASS
@@ -60,6 +89,9 @@ exposed in the Python interface
 (`instructions here <https://github.com/lesgourg/class_public/wiki/Python-wrapper>`__).
 If you follow those instructions you do not need to make any additional modification in
 Cobaya.
+
+If your modification involves new computed quantities, add the new quantities to the
+return value of some of the direct-access methods listed in :ref:`classy_access`.
 
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
@@ -325,6 +357,10 @@ class classy(BoltzmannBase):
                     method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
                     args_names=["R", "z"], arg_array=[[0], [1]],
                     post=(lambda R, z, sigma: (z, R, sigma.T)))
+            elif k in [f"CLASS_{q}" for q in ["background", "thermodynamics",
+                                              "primordial", "perturbations", "sources"]]:
+                # Get direct CLASS results
+                self.collectors[k] = Collector(method=f"get_{k.lower()[len('CLASS_'):]}")
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -582,6 +618,26 @@ class classy(BoltzmannBase):
 
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
+
+    def get_CLASS_background(self):
+        """Direct access to ``get_background`` from the CLASS python interface."""
+        return self.current_state["CLASS_background"]
+
+    def get_CLASS_thermodynamics(self):
+        """Direct access to ``get_thermodynamics`` from the CLASS python interface."""
+        return self.current_state["CLASS_thermodynamics"]
+
+    def get_CLASS_primordial(self):
+        """Direct access to ``get_primordial`` from the CLASS python interface."""
+        return self.current_state["CLASS_primordial"]
+
+    def get_CLASS_perturbations(self):
+        """Direct access to ``get_perturbations`` from the CLASS python interface."""
+        return self.current_state["CLASS_perturbations"]
+
+    def get_CLASS_sources(self):
+        """Direct access to ``get_sources`` from the CLASS python interface."""
+        return self.current_state["CLASS_sources"]
 
     def close(self):
         self.classy.empty()

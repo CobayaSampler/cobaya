@@ -51,6 +51,33 @@ the global ``camb`` installation is used, pass ``path='global'``. Cobaya will pr
 initialisation where CAMB was actually loaded from.
 
 
+.. _camb_access:
+
+Access to CAMB computation products
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can retrieve CAMB computation products within likelihoods (or other pipeline
+components in general) or manually from a :class:`~model.Model` as long as you have added
+them as requisites; see :doc:`cosmo_external_likelihood` or
+:doc:`cosmo_external_likelihood_class` for the likelihood case, and :doc:`cosmo_model` for
+the manual case.
+
+The products that you can request and later retrieve are listed in
+:func:`~theories.cosmo.BoltzmannBase.must_provide`.
+
+If you would like to access a CAMB result that is not accessible that way, you can access
+the full CAMB results object
+`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`_
+directly by adding ``{"CAMBdata": None}`` to your requisites, and then retrieving it with
+``provider.get_CAMBdata()``.
+
+In general, the use of ``CAMBdata`` should be avoided in public code, since it breaks
+compatibility with other Boltzmann codes at the likelihood interface level. If you need
+a quantity for a public code that is not generally interfaced in
+:func:`~theories.cosmo.BoltzmannBase.must_provide`, let us know if you think it makes
+sense to add it.
+
+
 .. _camb_modify:
 
 Modifying CAMB
@@ -61,6 +88,10 @@ exposed in the Python interface (`instructions here
 <https://camb.readthedocs.io/en/latest/model.html#camb.model.CAMBparams>`__).
 If you follow those instructions you do not need to make any additional modification in
 Cobaya.
+
+If your modification involves new computed quantities, add a retrieving method to
+`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`_,
+and see :ref:`camb_access`.
 
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
