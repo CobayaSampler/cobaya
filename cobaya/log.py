@@ -10,6 +10,7 @@
 import os
 import sys
 import logging
+import platform
 import traceback
 from copy import deepcopy
 import functools
@@ -95,6 +96,10 @@ current_color_pool = []
 
 def add_color_to_name(name, color=None):
     if not os.getenv('COBAYA_COLOR'):
+        return name
+    # TODO: implement for Windows, see
+    # https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+    if platform.system() == "Windows":
         return name
     if color is None:
         # Choose one at random (ensure no repetition, unless too many requested)
