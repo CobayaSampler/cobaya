@@ -22,7 +22,7 @@ from cobaya.tools import read_dnumber, get_external_function, find_with_regexp, 
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError, get_logger
+from cobaya.log import LoggedError, get_logger, NoLogging
 from cobaya.install import download_github_release
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
@@ -66,14 +66,15 @@ class polychord(Sampler):
                 "pypolychord", path=self.path, install_path=install_path,
                 min_version=self._pc_repo_version,
                 get_import_path=get_compiled_import_path, logger=self.log)
-            settings = load_external_module(
-                "pypolychord.settings", path=self.path, install_path=install_path,
-                get_import_path=get_compiled_import_path, logger=self.log)
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find PolyChord: {excpt}. "
                            "To install it, run 'cobaya-install polychord "
                            f"--{packages_path_arg} [packages_path]'"))
+        with NoLogging(logging.CRITICAL):
+            settings = load_external_module(
+                "pypolychord.settings", path=self.path, install_path=install_path,
+                get_import_path=get_compiled_import_path, logger=self.log)
         # Prepare arguments and settings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
