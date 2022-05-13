@@ -558,7 +558,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
                 raise TypeError("Class %r is not a standard class type %r", name, kinds)
         return cls
 
-    def check_if_ComponentNotFoundError_and_raise(excpt, not_found_msg=_not_found_msg,
+    def check_if_ComponentNotFoundError_and_raise(_excpt, not_found_msg=_not_found_msg,
                                                   logger=logger):
         """
         If the exception looks like the target class not being found, turns it into a
@@ -573,7 +573,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         if is_module_not_found and did_not_find_this_module_in_particular:
             raise ComponentNotFoundError(not_found_msg)
         logger.error(f"There was a problem when importing {name}:")
-        raise excpt
+        raise _excpt
 
     # Lookup logic:
     # 1. If `component_path` is specified, load the class from there or fail.
