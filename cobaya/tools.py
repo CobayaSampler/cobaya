@@ -151,7 +151,7 @@ def load_module(name, package=None, path=None, min_version=None,
     current working directory) and as part of ``package`` (default: ``None``).
 
     Because of the way Python looks for modules to import, it is not guaranteed by default
-    that the the module will be loaded from the given ``path``. This can be enforced with
+    that the module will be loaded from the given ``path``. This can be enforced with
     ``check_path=True`` (default: ``False``), which will raise ``ModuleNotFoundError`` if
     a module was loaded but not from the given ``path``.
 
@@ -206,7 +206,7 @@ def get_compiled_import_path(source_path):
             f"No `lib.[...]` folder found containing compiled products at {source_path}. "
             "This may mean that the compilation process failed, of that it was assuming "
             "the wrong python version (current version: "
-            f"{sys.version_info.major}.{sys.version_info.minor}")
+            f"{sys.version_info.major}.{sys.version_info.minor})")
     return os.path.join(build_path, post)
 
 

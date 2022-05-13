@@ -572,7 +572,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         z, k = (np.atleast_1d(x) for x in [z, k])
         if len(z) < 4:
             raise ValueError('Require at least four redshifts for Pk interpolation.'
-                             'Consider using Pk_grid if you just need a a small number'
+                             'Consider using Pk_grid if you just need a small number'
                              'of specific redshifts (doing 1D splines in k yourself).')
         z, k, P_or_logP = np.array(z), np.array(k), np.array(P_or_logP)
         i_z = np.argsort(z)

@@ -82,7 +82,7 @@ class PlanckClik(Likelihood):
             # Else: unknown clik error
             self.log.error("An unexpected error occurred in clik (possibly related to "
                            "multiple simultaneous initialization, or simultaneous "
-                           "initialization of incompatible likelihoods (e.g. polarised "
+                           "initialization of incompatible likelihoods; e.g. polarised "
                            "vs non-polarised 'lite' likelihoods. See error info below:")
             raise
         self.l_maxs = self.clik.get_lmax()

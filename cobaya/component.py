@@ -637,7 +637,7 @@ def module_class_for_name(m, name):
 
 def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
     """
-    Returns all classes in a module, optionally imposing that the are a subclass of
+    Returns all classes in a module, optionally imposing that they are a subclass of
     ``subclass_of``, and optionally including imported ones with ``allow_imported=True``
     (default False).
     """
@@ -648,7 +648,7 @@ def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
 
 class ComponentNotInstalledError(LoggedError):
     """
-    Exception to be raise manually at component initialization or install check if some
+    Exception to be raised manually at component initialization or install check if some
     external dependency of the component is missing.
     """
 

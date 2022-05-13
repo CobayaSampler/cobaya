@@ -250,7 +250,7 @@ class SampleCollection(BaseCollection):
         else:
             raise LoggedError(
                 self.log, "logpost must be a LogPosterior object, a number or None (in "
-                          "which case logpriors and loglikes are needed.")
+                          "which case logpriors and loglikes are needed).")
         return return_logpost
 
     def _cache_reset(self):
@@ -455,7 +455,7 @@ class SampleCollection(BaseCollection):
         if thin == 1:
             return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
-            raise LoggedError(self.log, "Thin factor must be an positive integer, got %s",
+            raise LoggedError(self.log, "Thin factor must be a positive integer, got %s",
                               thin)
         from getdist.chains import WeightedSamples, WeightedSampleError
         thin = int(thin)
