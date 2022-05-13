@@ -518,8 +518,6 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         class_name = None
     assert allow_internal or allow_external
     _not_found_msg = f"{name} could not be found."
-    if not logger:
-        logger = get_logger(__name__)
 
     def get_matching_class_name(_module: Any, _class_name, none=False):
         cls = getattr(_module, _class_name, None)
@@ -571,6 +569,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             str(excpt).rstrip("'").endswith(module) for module in name.split("."))
         if is_module_not_found and did_not_find_this_module_in_particular:
             raise ComponentNotFoundError(not_found_msg)
+        if not logger:
+            logger = get_logger(__name__)
         logger.error(f"There was a problem when importing {name}:")
         raise excpt
 
