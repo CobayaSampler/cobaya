@@ -389,7 +389,8 @@ class TheoryCollection(ComponentCollection):
                                               "Theory %s is not a Theory subclass", name)
                     else:
                         theory_class = get_component_class(
-                            name, kind="theory", class_name=info.get("class"))
+                            name, kind="theory", class_name=info.get("class"),
+                            logger=self.log)
                     self.add_instance(
                         name, theory_class(
                             info, packages_path=packages_path, timing=timing, name=name))

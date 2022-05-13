@@ -62,13 +62,16 @@ def get_bib_component(component, kind):
     return lines + "\n"
 
 
-def get_bib_info(*infos):
+def get_bib_info(*infos, logger=None):
     """
     Gathers and returns the descriptions and bibliographic sources for the components
     mentioned in ``infos``.
 
     ``infos`` can be input dictionaries or single component names.
     """
+    if not logger:
+        logger_setup()
+        logger = get_logger("bib")
     used_components, component_infos = get_used_components(*infos, return_infos=True)
     descs: InfoDict = {}
     bibs: InfoDict = {}
@@ -84,7 +87,7 @@ def get_bib_info(*infos):
                 bibs[kind][component] = get_bib_component(component, kind)
             except ComponentNotFoundError:
                 sugg = similar_internal_class_names(component)
-                get_logger("bib").error(
+                logger.error(
                     f"Could not identify component '{component}'. "
                     f"Did you mean any of the following? {sugg} (mind capitalization!)")
                 continue
@@ -94,7 +97,7 @@ def get_bib_info(*infos):
             cls = get_component_class(component)
         except ComponentNotFoundError:
             sugg = similar_internal_class_names(component)
-            get_logger("bib").error(
+            logger.error(
                 f"Could not identify component '{component}'. "
                 f"Did you mean any of the following? {sugg} (mind capitalization!)")
             continue
@@ -161,7 +164,7 @@ def bib_script(args=None):
     if not infos:
         logger.info("Nothing to do. Pass input files or component names as arguments.")
         return
-    print(pretty_repr_bib(*get_bib_info(*infos)))
+    print(pretty_repr_bib(*get_bib_info(*infos, logger=logger)))
 
 
 if __name__ == '__main__':

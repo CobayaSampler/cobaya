@@ -64,7 +64,7 @@ def doc_script(args=None):
         return
     # Otherwise, try to identify the component
     try:
-        cls = get_component_class(arguments.component)
+        cls = get_component_class(arguments.component, logger=logger)
     except ComponentNotFoundError:
         suggestions = similar_internal_class_names(arguments.component)
         logger.error(

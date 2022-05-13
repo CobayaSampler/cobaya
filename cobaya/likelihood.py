@@ -271,7 +271,7 @@ class LikelihoodCollection(ComponentCollection):
                 like_class: type = get_component_class(
                     name, kind="likelihood",
                     component_path=info.get("python_path", None),
-                    class_name=info.get("class"))
+                    class_name=info.get("class"), logger=self.log)
                 self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,
                                                    name=name))

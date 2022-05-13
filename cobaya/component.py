@@ -510,7 +510,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     if class_name:
         return get_component_class(
             class_name, kind=kind, component_path=component_path,
-            allow_external=allow_external, allow_internal=allow_internal)
+            allow_external=allow_external, allow_internal=allow_internal, logger=logger)
     if '.' in name:
         module_name, class_name = name.rsplit('.', 1)
     else:
@@ -518,6 +518,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         class_name = None
     assert allow_internal or allow_external
     _not_found_msg = f"{name} could not be found."
+    if not logger:
+        logger = get_logger(__name__)
 
     def get_matching_class_name(_module: Any, _class_name, none=False):
         cls = getattr(_module, _class_name, None)
@@ -556,7 +558,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
                 raise TypeError("Class %r is not a standard class type %r", name, kinds)
         return cls
 
-    def check_if_ComponentNotFoundError_and_raise(_excpt, not_found_msg=_not_found_msg):
+    def check_if_ComponentNotFoundError_and_raise(excpt, not_found_msg=_not_found_msg,
+                                                  logger=logger):
         """
         If the exception looks like the target class not being found, turns it into a
         `ComponentNotFoundError`, so that it can be caught appropriately.
@@ -569,9 +572,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             str(_excpt).rstrip("'").endswith(module) for module in name.split("."))
         if is_module_not_found and did_not_find_this_module_in_particular:
             raise ComponentNotFoundError(not_found_msg)
-        (logger or get_logger(__name__)).error(
-            f"There was a problem when importing {name}:")
-        raise _excpt
+        logger.error(f"There was a problem when importing {name}:")
+        raise excpt
 
     # Lookup logic:
     # 1. If `component_path` is specified, load the class from there or fail.
@@ -593,7 +595,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             for kind in kinds:
                 try:
                     return get_component_class(
-                        name, kind, allow_external=False, allow_internal=True)
+                        name, kind, allow_external=False, allow_internal=True,
+                        logger=logger)
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. check all kinds.
             # If we get here, the class was not found for any kind

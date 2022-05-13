@@ -64,13 +64,13 @@ from cobaya.output import OutputDummy, Output
 from cobaya import mpi
 
 
-def get_sampler_name_and_class(info_sampler: SamplersDict):
+def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    sampler_class = get_component_class(name, kind="sampler")
+    sampler_class = get_component_class(name, kind="sampler", logger=logger)
     assert issubclass(sampler_class, Sampler)
     return name, sampler_class
 
@@ -148,7 +148,8 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info_sampler))
     # Get sampler class & check resume/force compatibility
-    sampler_name, sampler_class = get_sampler_name_and_class(updated_info_sampler)
+    sampler_name, sampler_class = get_sampler_name_and_class(
+        updated_info_sampler, logger=logger_sampler)
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())

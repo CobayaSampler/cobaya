@@ -133,7 +133,7 @@ def install(*infos, **kwargs):
                     logger.info(f"Class to be installed for this component: {class_name}")
                 imported_class = get_component_class(
                     component, kind=kind, component_path=info.pop("python_path", None),
-                    class_name=class_name)
+                    class_name=class_name, logger=logger)
                 # Update the name if the kind was unknown
                 if not kind:
                     name_w_kind = imported_class.get_kind() + ":" + component
@@ -232,7 +232,7 @@ def install(*infos, **kwargs):
             # Test installation
             reloaded_class = get_component_class(
                 component, kind=kind, component_path=info.pop("python_path", None),
-                class_name=class_name)
+                class_name=class_name, logger=logger)
             reloaded_is_installed = getattr(reloaded_class, "is_installed", None)
             with NoLogging(None if debug else logging.ERROR):
                 try:
