@@ -22,6 +22,8 @@ class LoggedError(Exception):
     """
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
+
+    Prints the error message even if caught.
     """
 
     def __init__(self, logger, *args, **kwargs):

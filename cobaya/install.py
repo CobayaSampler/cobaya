@@ -34,8 +34,6 @@ from cobaya.conventions import code_path, data_path, packages_path_arg, \
 from cobaya.mpi import set_mpi_disabled
 from cobaya.typing import InputDict
 
-log = get_logger("install")
-
 _banner_symbol = "="
 _banner_length = 80
 _version_filename = "version.dat"
@@ -62,28 +60,30 @@ def install(*infos, **kwargs):
     :param no_set_global: do not store the installation path for later runs (default:
        ``False``).
     """
-    debug = kwargs.get("debug")
-    # noinspection PyUnresolvedReferences
-    if not log.root.handlers:
+    debug = kwargs.get("debug", False)
+    logger = kwargs.get("logger")
+    if not logger:
         logger_setup(debug=debug)
+        logger = get_logger("install")
     path = kwargs.get("path")
     infos_not_single_names = [info for info in infos if isinstance(info, Mapping)]
     if not path:
         path = resolve_packages_path(*infos_not_single_names)
     if not path:
         raise LoggedError(
-            log, "No 'path' argument given, and none could be found in input infos "
-                 "(as %r), the %r env variable or the config file. "
-                 "Maybe specify one via a command line argument '-%s [...]'?",
+            logger, ("No 'path' argument given, and none could be found in input infos "
+                     "(as %r), the %r env variable or the config file. "
+                     "Maybe specify one via a command line argument '-%s [...]'?"),
             packages_path_input, packages_path_env, packages_path_arg[0])
     # General install path for all dependencies
     general_abspath = os.path.abspath(path)
-    log.info("Installing external packages at '%s'", general_abspath)
+    logger.info("Installing external packages at '%s'", general_abspath)
     # Set the installation path in the global config file
     if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
         write_packages_path_in_config_file(general_abspath)
-        log.info("The installation path has been written into the global config file: %s",
-                 os.path.join(get_config_path(), packages_path_config_file))
+        logger.info(
+            "The installation path has been written into the global config file: %s",
+            os.path.join(get_config_path(), packages_path_config_file))
     kwargs_install = {"force": kwargs.get("force", False),
                       "no_progress_bars": kwargs.get("no_progress_bars")}
     for what in (code_path, data_path):
@@ -94,7 +94,7 @@ def install(*infos, **kwargs):
                 os.makedirs(spath)
             except OSError:
                 raise LoggedError(
-                    log, "Could not create the desired installation folder '%s'", spath)
+                    logger, f"Could not create the desired installation folder '{spath}'")
     # To check e.g. for a version upgrade, it needs to reload the component class and
     # all relevant imported modules: the implementation of `is_installed` for each
     # class is expected to always reload external modules if passed `reload=True`
@@ -120,17 +120,17 @@ def install(*infos, **kwargs):
             print(create_banner(name_w_kind,
                                 symbol=_banner_symbol, length=_banner_length), end="")
             print()
-            if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, log):
+            if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, logger):
                 continue
             info = components_infos[component]
             if isinstance(info, str) or "external" in info:
-                log.info(
+                logger.info(
                     f"Component '{name_w_kind}' is a custom function. Nothing to do.")
                 continue
             try:
                 class_name = (info or {}).get("class")
                 if class_name:
-                    log.info("Class to be installed for this component: %r", class_name)
+                    logger.info(f"Class to be installed for this component: {class_name}")
                 imported_class = get_component_class(
                     component, kind=kind, component_path=info.pop("python_path", None),
                     class_name=class_name)
@@ -138,29 +138,30 @@ def install(*infos, **kwargs):
                 if not kind:
                     name_w_kind = imported_class.get_kind() + ":" + component
             except ComponentNotFoundError:
-                log.error(f"Component '{name_w_kind}' could not be identified. Skipping.")
+                logger.error(
+                    f"Component '{name_w_kind}' could not be identified. Skipping.")
                 unknown_components += [name_w_kind]
                 continue
             except Exception:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
-                log.error(f"An error occurred when loading '{name_w_kind}'. Skipping.")
+                logger.error(f"An error occurred when loading '{name_w_kind}'. Skipping.")
                 failed_components += [name_w_kind]
                 continue
             else:
                 if _skip_helper(imported_class.__name__.lower(), skip_keywords,
-                                skip_keywords_env, log):
+                                skip_keywords_env, logger):
                     continue
             is_compatible = getattr(imported_class, "is_compatible", lambda: True)()
             if not is_compatible:
-                log.error(f"Skipping '{name_w_kind}' "
-                          "because it is not compatible with your OS.")
+                logger.error(f"Skipping '{name_w_kind}' "
+                             "because it is not compatible with your OS.")
                 failed_components += [name_w_kind]
                 continue
-            log.info("Checking if dependencies have already been installed...")
+            logger.info("Checking if dependencies have already been installed...")
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
-                log.info(f"Component '{name_w_kind}' is a fully built-in component: "
-                         "nothing to do.")
+                logger.info(f"Component '{name_w_kind}' is a fully built-in component: "
+                            "nothing to do.")
                 continue
             this_component_install_path = general_abspath
             get_path = getattr(imported_class, "get_path", None)
@@ -181,26 +182,26 @@ def install(*infos, **kwargs):
                 except VersionCheckError as excpt:
                     is_old_version_msg = str(excpt)
             if has_been_installed:  # no VersionCheckError was raised
-                log.info("External dependencies for this component already installed.")
+                logger.info("External dependencies for this component already installed.")
                 if kwargs.get("test", False):
                     continue
                 if kwargs_install["force"] and not kwargs.get("skip_global"):
-                    log.info("Forcing re-installation, as requested.")
+                    logger.info("Forcing re-installation, as requested.")
                 else:
-                    log.info("Doing nothing.")
+                    logger.info("Doing nothing.")
                     continue
             elif is_old_version_msg:
-                log.info(f"Version check failed: {is_old_version_msg}")
+                logger.info(f"Version check failed: {is_old_version_msg}")
                 obsolete_components += [name_w_kind]
                 if kwargs.get("test", False):
                     continue
                 if not kwargs.get("upgrade", False) and not kwargs.get("force", False):
-                    log.info("Skipping because '--upgrade' not requested.")
+                    logger.info("Skipping because '--upgrade' not requested.")
                     continue
             else:
-                log.info("Check found no existing installation")
+                logger.info("Check found no existing installation")
                 if not debug:
-                    log.info(
+                    logger.info(
                         "(If you expected this to be already installed, re-run "
                         "`cobaya-install` with --debug to get more verbose output.)")
                 if kwargs.get("test", False):
@@ -208,23 +209,24 @@ def install(*infos, **kwargs):
                     failed_components += [name_w_kind]
                     continue
             # Do the install
-            log.info("Installing...")
+            logger.info("Installing...")
             try:
                 install_this = getattr(imported_class, "install", None)
                 success = install_this(path=general_abspath, **kwargs_install)
             except Exception:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
-                log.error("An unknown error occurred. Delete the external packages "
-                          "folder %r and try again. "
-                          "Please, notify the developers if this error persists.",
-                          general_abspath)
+                logger.error("An unknown error occurred. Delete the external packages "
+                             "folder %r and try again. "
+                             "Please, notify the developers if this error persists.",
+                             general_abspath)
                 success = False
             if success:
-                log.info("Successfully installed! Let's check it...")
+                logger.info("Successfully installed! Let's check it...")
             else:
-                log.error("Installation failed! Look at the error messages above. "
-                          "Solve them and try again, or, if you are unable to solve them,"
-                          " install the packages required by this component manually.")
+                logger.error(
+                    "Installation failed! Look at the error messages above. "
+                    "Solve them and try again, or, if you are unable to solve them, "
+                    "install the packages required by this component manually.")
                 failed_components += [name_w_kind]
                 continue
             # Test installation
@@ -241,18 +243,18 @@ def install(*infos, **kwargs):
                     traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                     successfully_installed = False
             if not successfully_installed:
-                log.error("Installation apparently worked, "
-                          "but the subsequent installation test failed! "
-                          "This does not always mean that there was an actual error, "
-                          "and is sometimes fixed simply by running the installer again. "
-                          "If not, look closely at the error messages above, or re-run "
-                          "with --debug for more more verbose output. "
-                          "If you are unable to fix the issues above, "
-                          "try installing the packages required by this "
-                          "component manually.")
+                logger.error("Installation apparently worked, "
+                             "but the subsequent installation test failed! "
+                             "This does not always mean that there was an actual error, "
+                             "and is sometimes fixed simply by running the installer "
+                             "again. If not, look closely at the error messages above, "
+                             "or re-run with --debug for more more verbose output. "
+                             "If you are unable to fix the issues above, "
+                             "try installing the packages required by this "
+                             "component manually.")
                 failed_components += [name_w_kind]
             else:
-                log.info("Installation check successful.")
+                logger.info("Installation check successful.")
     print()
     print(create_banner(" * Summary * ",
                         symbol=_banner_symbol, length=_banner_length), end="")
@@ -266,22 +268,22 @@ def install(*infos, **kwargs):
                 f"{name}: did you mean any of the following? {sugg} "
                 "(mind capitalization!)" for name, sugg in suggestions_dict.items())
         raise LoggedError(
-            log, "The following components could not be identified and were skipped:"
-                 f"{suggestions_msg}")
+            logger, ("The following components could not be identified and were skipped:"
+                     f"{suggestions_msg}"))
     if failed_components:
         raise LoggedError(
-            log, "The installation (or installation test) of some component(s) has "
-                 "failed: %s\nCheck output of the installer of each component above "
-                 "for precise error info.\n",
+            logger, ("The installation (or installation test) of some component(s) has "
+                     "failed: %s\nCheck output of the installer of each component above "
+                     "for precise error info.\n"),
             bullet + bullet.join(failed_components))
     if obsolete_components:
         raise LoggedError(
-            log, "The following packages are obsolete. Re-run with `--upgrade` option "
-                 "(not upgrading by default to preserve possible user changes): %s",
+            logger, ("The following packages are obsolete. Re-run with `--upgrade` option"
+                     " (not upgrading by default to preserve possible user changes): %s"),
             bullet + bullet.join(obsolete_components))
     if not unknown_components and not failed_components and not obsolete_components:
-        log.info("All requested components' dependencies correctly installed at "
-                 f"{general_abspath}")
+        logger.info("All requested components' dependencies correctly installed at "
+                    f"{general_abspath}")
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
@@ -424,7 +426,7 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
     return True
 
 
-def pip_install(packages, upgrade=False):
+def pip_install(packages, upgrade=False, logger=None):
     """
     Takes package name or list of them.
 
@@ -437,7 +439,8 @@ def pip_install(packages, upgrade=False):
         cmd += ['--upgrade']
     res = subprocess.call(cmd + packages)
     if res:
-        log.error("pip: error installing packages '%s'", packages)
+        msg = f"pip: error installing packages '{packages}'"
+        logger.error(msg) if logger else print(msg, file=sys.stderr)
     return res
 
 
@@ -540,7 +543,7 @@ def install_script(args=None):
         else:  # a single component name, no kind specified
             infos += [f]
     # Launch installer
-    install(*infos, path=getattr(arguments, packages_path_arg),
+    install(*infos, path=getattr(arguments, packages_path_arg), logger=logger,
             **{arg: getattr(arguments, arg)
                for arg in ["force", code_path, data_path, "no_progress_bars", "test",
                            "no_set_global", "skip", "skip_global", "debug", "upgrade"]})
