@@ -544,7 +544,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         else:
             return cls
 
-    def check_kind_and_return(cls, kind=None):
+    def check_kind_and_return(cls):
         """
         If a component kind is specified, checks that the class ``cls`` has the correct
         inheritance, and raises ``TypeError`` if it doesn't.
@@ -556,23 +556,22 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
                 raise TypeError("Class %r is not a standard class type %r", name, kinds)
         return cls
 
-    def check_if_ComponentNotFoundError_and_raise(excpt, not_found_msg=_not_found_msg):
+    def check_if_ComponentNotFoundError_and_raise(_excpt, not_found_msg=_not_found_msg):
         """
         If the exception looks like the target class not being found, turns it into a
         `ComponentNotFoundError`, so that it can be caught appropriately.
         """
         # Could not find this module in particular (ensuring that it does not mean one
         # imported within it).
-        is_module_not_found = isinstance(excpt, ModuleNotFoundError)
+        is_module_not_found = isinstance(_excpt, ModuleNotFoundError)
         # the module to be imported may not be the last field in the name
         did_not_find_this_module_in_particular = any(
-            str(excpt).rstrip("'").endswith(module) for module in name.split("."))
+            str(_excpt).rstrip("'").endswith(module) for module in name.split("."))
         if is_module_not_found and did_not_find_this_module_in_particular:
             raise ComponentNotFoundError(not_found_msg)
-        if not logger:
-            logger = get_logger(__name__)
-        logger.error(f"There was a problem when importing {name}:")
-        raise excpt
+        (logger or get_logger(__name__)).error(
+            f"There was a problem when importing {name}:")
+        raise _excpt
 
     # Lookup logic:
     # 1. If `component_path` is specified, load the class from there or fail.
@@ -583,7 +582,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     #    already in step 1).
     if component_path:
         try:
-            return check_kind_and_return(return_class(module_name), kind=kind)
+            return check_kind_and_return(return_class(module_name))
         except Exception as excpt:
             check_if_ComponentNotFoundError_and_raise(
                 excpt, not_found_msg=(_not_found_msg +
@@ -611,7 +610,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     if allow_external:
         try:
             # Now looking in the current folder only (component_path case handled above)
-            return check_kind_and_return(return_class(module_name), kind=kind)
+            return check_kind_and_return(return_class(module_name))
         except Exception as excpt:
             try:
                 check_if_ComponentNotFoundError_and_raise(excpt)

@@ -60,7 +60,8 @@ class polychord(Sampler):
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
         try:
-            install_path = (lambda p: self.get_path(p) if p else None)(self.packages_path)
+            install_path = (lambda _p: self.get_path(_p) if _p else None)(
+                self.packages_path)
             self.pc = load_external_module(
                 "pypolychord", path=self.path, install_path=install_path,
                 min_version=self._pc_repo_version,
