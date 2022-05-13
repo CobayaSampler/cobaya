@@ -1,4 +1,4 @@
-## 3.X.Y – YYYY-MM-DD
+## 3.2 – 2022-05-13
 
 ### General
 
@@ -8,6 +8,7 @@
 - Add `COBAYA_USE_FILE_LOCKING` environment variable to allow disabling of file locks. Warning not to use `--test` with MPI.
 - Installation of external packages is now version-aware for some packages; added `--upgrade` option to `cobaya-install`, off by default to preserve possible user changes.
 - Introduced `cobaya.component.ComponentNotFoundError` to handle cases in which internal or external components cannot be found.
+- In Linux terminals, added `COBAYA_COLOR` environment variable to get colourful output, useful e.g. for debugging, but *not* recommended for output to a file (e.g. running in a cluster).
 
 ### PolyChord
 
@@ -43,6 +44,10 @@
 
 - Bugfix in decorrelation function #196 (by Caterina Umilta, @umilta)
 - Updated to 2021 data release (2018 data) and bugfix, #204 and #209 (by Dominic Beck, @doicbek)
+
+#### Planck
+
+- Fixed segfault in clik when receiving NaN in the Cl's. Partially implements #231 (thanks @lukashergt and @williamjameshandley)
 
 ## 3.1.1 – 2021-07-22
 
