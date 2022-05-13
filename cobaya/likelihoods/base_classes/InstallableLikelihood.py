@@ -14,7 +14,8 @@ from packaging import version
 from cobaya.likelihood import Likelihood
 from cobaya.typing import InfoDict
 from cobaya.log import get_logger
-from cobaya.install import _version_filename, NotInstalledError
+from cobaya.install import _version_filename
+from cobaya.component import ComponentNotInstalledError
 from cobaya.tools import VersionCheckError
 
 
@@ -30,7 +31,7 @@ class InstallableLikelihood(Likelihood):
         # (e.g. may inherit from a class that inherits from this one, and not have them)
         if self.install_options:
             if not self.is_installed(path=kwargs["packages_path"]):
-                raise NotInstalledError(
+                raise ComponentNotInstalledError(
                     "The data for this likelihood has not been correctly installed.")
         super().__init__(*args, **kwargs)
 
@@ -66,7 +67,7 @@ class InstallableLikelihood(Likelihood):
     def is_installed(cls, **kwargs):
         """
         Performs an installation check and returns ``True`` if successful, ``False`` if
-        not, or raises `:class:`tools.VersionCheckError` if there is an obsolete
+        not, or raises :class:`tools.VersionCheckError` if there is an obsolete
         installation.
         """
         if kwargs.get("data", True):
@@ -77,8 +78,7 @@ class InstallableLikelihood(Likelihood):
                 return True
             elif not (os.path.exists(path) and len(os.listdir(path)) > 0):
                 log = get_logger(cls.get_qualified_class_name())
-                func = log.info if kwargs.get("check", True) else log.error
-                func("The given installation path does not exist: '%s'", path)
+                log.error ("The given installation path does not exist: '%s'", path)
                 return False
             elif opts.get("github_release"):
                 try:

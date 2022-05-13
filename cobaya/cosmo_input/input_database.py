@@ -705,7 +705,7 @@ for name, pre in preset.items():
 install_basic: InfoDict = {
     "theory": theory,
     "likelihood": {
-        # Native first: avoids reinstalling clik code+data is supp data obsolete
+        # Native first: avoids reinstalling clik code+data if supp data obsolete
         "planck_2018_lensing.native": None,
         "planck_2018_lowl.TT": None,
         "bicep_keck_2018": None,

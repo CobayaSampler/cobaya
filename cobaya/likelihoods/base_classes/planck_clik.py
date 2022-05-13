@@ -10,17 +10,16 @@ r"""
 import os
 import sys
 import numpy as np
-from typing import Any
 from packaging import version
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
 from cobaya.input import get_default_info
-from cobaya.install import pip_install, download_file, NotInstalledError
-from cobaya.tools import are_different_params_lists, create_banner, load_module, \
-    VersionCheckError
-from cobaya.conventions import packages_path_input
+from cobaya.install import pip_install, download_file
+from cobaya.component import ComponentNotInstalledError, load_external_module
+from cobaya.tools import are_different_params_lists, create_banner, VersionCheckError
+from cobaya.conventions import packages_path_arg
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseded
@@ -44,25 +43,25 @@ class PlanckClik(Likelihood):
         if "2015" in self.get_name():
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
-        data_path = get_data_path(self.__class__.get_qualified_class_name())
-        # Allow global import if no direct path specification
-        allow_global = not self.path
-        if self.path:
-            self.path_clik = self.path
-        elif self.packages_path:
-            self.path_clik = self.get_code_path(self.packages_path)
-        else:
-            raise LoggedError(
-                self.log, "No path given to the Planck likelihood. Set the "
-                          "likelihood property 'path' or the common property "
-                          "'%s'.", packages_path_input)
-        clik: Any = is_installed_clik(path=self.path_clik, allow_global=allow_global,
-                                      check=False)
-        if not clik:
-            raise NotInstalledError(
-                self.log, "Could not find the 'clik' Planck likelihood code. "
-                          "Check error message above.")
+        try:
+            install_path = (
+                lambda p: self.get_code_path(p) if p else None)(self.packages_path)
+            # min_version here is checked inside get_clik_import_path, since it is
+            # displayed in the folder name and cannot be retrieved from the module.
+            clik = load_clik(
+                "clik", path=self.path, install_path=install_path,
+                get_import_path=get_clik_import_path, logger=self.log)
+        except VersionCheckError as excpt:
+            raise VersionCheckError(
+                str(excpt) + " Upgrade with `cobaya-install planck_2018_lowl.TT "
+                "--upgrade`.")
+        except ComponentNotInstalledError as excpt:
+            raise ComponentNotInstalledError(
+                self.log, (f"Could not find clik: {excpt}. "
+                           "To install it, run 'cobaya-install planck_2018_lowl.TT "
+                           f"--{packages_path_arg} [packages_path]'"))
         # Loading the likelihood data
+        data_path = get_data_path(self.__class__.get_qualified_class_name())
         if not os.path.isabs(self.clik_file):
             self.path_data = getattr(self, "path_data", os.path.join(
                 self.path or self.packages_path, "data", data_path))
@@ -75,7 +74,7 @@ class PlanckClik(Likelihood):
         except clik.lkl.CError:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
-                raise NotInstalledError(
+                raise ComponentNotInstalledError(
                     self.log, "The .clik file was not found where specified in the "
                               "'clik_file' field of the settings of this likelihood. "
                               "Maybe the 'path' given is not correct? The full path where"
@@ -100,7 +99,6 @@ class PlanckClik(Likelihood):
         # Placeholder for vector passed to clik
         length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
-        self.log.info("Initialized!")
 
     def initialize_with_params(self):
         # Check that the parameters are the right ones
@@ -152,14 +150,14 @@ class PlanckClik(Likelihood):
         return True
 
     @classmethod
-    def is_installed(cls, **kwargs):
+    def is_installed(cls, reload=False, **kwargs):
         code_path = common_path
         data_path = get_data_path(cls.get_qualified_class_name())
         result = True
         if kwargs.get("code", True):
-            result &= bool(is_installed_clik(os.path.realpath(
-                os.path.join(kwargs["path"], "code", code_path)),
-                check=kwargs.get("check", True)))
+            result &= bool(is_installed_clik(
+                os.path.realpath(os.path.join(kwargs["path"], "code", code_path)),
+                reload=reload))
         if kwargs.get("data", True):
             # NB: will never raise VersionCheckerror, since version number is in the path
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
@@ -247,7 +245,15 @@ def get_release(name):
 
 
 def get_clik_source_folder(starting_path):
-    """Safe source install folder: crawl packages/code/planck until >1 subfolders."""
+    """
+    Starting from the installation folder, returns the subdirectory from which the
+    compilation must be run.
+
+    In practice, crawls inside the install folder ``packages/code/planck``
+    until >1 subfolders.
+
+    Raises ``FileNotFoundError`` if no clik install was found.
+    """
     source_dir = starting_path
     while True:
         folders = [f for f in os.listdir(source_dir)
@@ -255,50 +261,51 @@ def get_clik_source_folder(starting_path):
         if len(folders) > 1:
             break
         elif len(folders) == 0:
-            raise FileNotFoundError
+            raise FileNotFoundError(
+                f"Could not find a clik installation under {starting_path}")
         source_dir = os.path.join(source_dir, folders[0])
     return source_dir
 
 
-def is_installed_clik(path, allow_global=False, check=True):
-    log = get_logger("clik")
-    func = log.info if check else log.error
-    if path is not None and path.lower() == "global":
-        path = None
-    clik_path = None
-    if isinstance(path, str) and path.lower() != "global":
-        try:
-            clik_src_path = get_clik_source_folder(path)
-            installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[1])
-            if installed_version < version.parse(last_version_clik):
-                raise VersionCheckError(
-                    f"Installed version ({installed_version}) "
-                    f"older than minimum required one ({last_version_clik}).")
-            elif installed_version > version.parse(last_version_clik):
-                raise ValueError("This should not happen: min version needs update.")
-            clik_path = os.path.join(clik_src_path, 'lib/python/site-packages')
-        except FileNotFoundError:
-            func("The given folder does not exist: '%s'", clik_path or path)
-            return False
-    if path and not allow_global:
-        log.info("Importing *local* clik from %s ", path)
-    elif not path:
-        log.info("Importing *global* clik.")
-    else:
-        log.info("Importing *auto-installed* clik (but defaulting to *global*).")
+def get_clik_import_path(path, min_version=last_version_clik):
+    """
+    Starting from the installation folder, returns the subdirectory from which the
+    ``clik`` module must be imported.
+
+    Raises ``FileNotFoundError`` if no clik install was found, or
+    :class:`tools.VersionCheckError` if the installed version is too old.
+    """
+    clik_src_path = get_clik_source_folder(path)
+    installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[1])
+    if installed_version < version.parse(min_version):
+        raise VersionCheckError(
+            f"Installed version of the Plack likelihood code 'clik' ({installed_version})"
+            f" older than minimum required one ({last_version_clik}).")
+    elif installed_version > version.parse(last_version_clik):
+        raise ValueError("This should not happen: min version needs update.")
+    return os.path.join(clik_src_path, 'lib/python/site-packages')
+
+
+def load_clik(*args, **kwargs):
+    """
+    Just a wrapper around :func:`component.load_external_module`, that checks that we are
+    not being fooled by the wrong `clik <https://pypi.org/project/click/>`_.
+    """
+    clik = load_external_module(*args, **kwargs)
+    if not hasattr(clik, "try_lensing"):
+        raise ComponentNotInstalledError(
+            kwargs.get("logger"), "Loaded wrong clik: `https://pypi.org/project/click/`")
+    return clik
+
+
+def is_installed_clik(path, reload=False):
+    # min_version here is checked inside get_clik_import_path, since it is displayed
+    # in the folder name and cannot be retrieved from the module.
     try:
-        return load_module("clik", path=clik_path, reload=check)
-    except ImportError:
-        if path is not None and path.lower() != "global":
-            func("Couldn't find the clik python interface at '%s'. "
-                 "Are you sure it has been installed and compiled there?", path)
-        elif not check:
-            log.error("Could not import global clik installation. "
-                      "Specify a Cobaya or clik installation path, "
-                      "or install the clik Python interface globally.")
-    except Exception as excpt:
-        log.error("Error when trying to import clik from %s [%s]. Error message: [%s].",
-                  path, clik_path, str(excpt))
+        return bool(load_clik(
+            "clik", path=path, get_import_path=get_clik_import_path,
+            reload=reload, logger=get_logger("clik")))
+    except ComponentNotInstalledError:
         return False
 
 

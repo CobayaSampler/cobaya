@@ -41,7 +41,9 @@ Start by choosing a preset, maybe modify some aspects using the options provided
 
 The parameter combinations and options included in the input generator are in general well-tested, but they are only suggestions: **you can add by hand any parameter that your theory code or likelihood can understand, or modify any setting**.
 
-Don't forget to add the installation path for the cosmological requisites ``packages_path: '/path/to/packages'``, and an ``output`` prefix if you wish.
+You can add an ``output`` prefix if you wish (otherwise, the name of the input file without extension is used). If it contains a folder, e.g. ``chains/[whatever]``, that folder will be created if it does not exist.
+
+In general, you do not need to mention the installation path used by ``cobaya-install`` (see :doc:`installation_cosmo`): it will be selected automatically. If that does not work, add ``packages_path: '/path/to/packages'`` in the input file, or ``-p /path/to/packages`` as a ``cobaya-run`` argument.
 
 .. Notice the checkbox **"Keep common parameter names"**: if checked, instead of the parameter names used by CAMB or CLASS (different from each other), the input will use a common parameter names set, understandable by both. If you are using this, you can exchange both theory codes safely (just don't forget to add the ``extra_args`` generated separately for each theory code.
 

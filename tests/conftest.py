@@ -2,7 +2,7 @@ import logging
 
 import pytest
 import os
-from cobaya.install import NotInstalledError
+from cobaya.component import ComponentNotInstalledError
 from cobaya.log import LoggedError
 from cobaya import mpi
 
@@ -60,7 +60,7 @@ def skip_not_installed(request):
 def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except NotInstalledError:
+    except ComponentNotInstalledError:
         if skip_not_installed:
             pytest.xfail("Missing dependencies.")
         raise

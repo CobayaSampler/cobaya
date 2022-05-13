@@ -4,7 +4,7 @@ import os
 import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
-from cobaya.install import NotInstalledError
+from cobaya.component import ComponentNotInstalledError
 
 params = {'ombh2': 0.02242, 'omch2': 0.11933, 'H0': 67.66, 'tau': 0.0561,
           'mnu': 0.06, 'nnu': 3.046, 'ns': 0.9665,
@@ -16,7 +16,7 @@ def get_camb(packages_path):
         return load_module("camb", path=os.path.join(process_packages_path(packages_path),
                                                      "code", "CAMB"))
     except ModuleNotFoundError:
-        raise NotInstalledError(None)
+        raise ComponentNotInstalledError(None)
 
 
 def _get_model(packages_path, likelihood_info, skip_not_installed):

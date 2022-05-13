@@ -41,13 +41,6 @@ _banner_length = 80
 _version_filename = "version.dat"
 
 
-class NotInstalledError(LoggedError):
-    """
-    Exception to be raise manually at component initialisation
-    if some external dependency is missing.
-    """
-
-
 def install(*infos, **kwargs):
     """
     Installs the external packages required by the components mentioned in ``infos``.
@@ -97,6 +90,11 @@ def install(*infos, **kwargs):
             except OSError:
                 raise LoggedError(
                     log, "Could not create the desired installation folder '%s'", spath)
+    # To check e.g. for a version upgrade, it needs to reload the component class and
+    # all relevant imported modules: the implementation of `is_installed` for each
+    # class is expected to always reload external modules if passed `reload=True`
+    # (should be False by default to avoid deleting objects unnecessarily).
+    kwargs_is_installed = {"reload": True}
     unknown_components = []  # could not be identified
     failed_components = []  # general errors
     obsolete_components = []  # older or unknown version already installed
@@ -169,10 +167,12 @@ def install(*infos, **kwargs):
             with NoLogging(None if debug else logging.ERROR):
                 try:
                     if kwargs.get("skip_global"):
-                        has_been_installed = is_installed(path="global", **kwargs_install)
+                        has_been_installed = is_installed(
+                            path="global", **kwargs_install, **kwargs_is_installed)
                     if not has_been_installed:
                         has_been_installed = is_installed(
-                            path=this_component_install_path, **kwargs_install)
+                            path=this_component_install_path, **kwargs_install,
+                            **kwargs_is_installed)
                 except VersionCheckError as excpt:
                     is_old_version_msg = str(excpt)
             if has_been_installed:  # no VersionCheckError was raised
@@ -223,8 +223,6 @@ def install(*infos, **kwargs):
                 failed_components += [name_w_kind]
                 continue
             # Test installation
-            # To check for a version upgrade, it needs to reload the component class and
-            # all relevant imported modules (should be handled by is_installed(check=True)
             reloaded_class = get_component_class(
                 component, kind=kind, component_path=info.pop("python_path", None),
                 class_name=class_name)
@@ -232,7 +230,8 @@ def install(*infos, **kwargs):
             with NoLogging(None if debug else logging.ERROR):
                 try:
                     successfully_installed = reloaded_is_installed(
-                        path=this_component_install_path, check=True, **kwargs_install)
+                        path=this_component_install_path, **kwargs_install,
+                        **kwargs_is_installed)
                 except Exception:
                     traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                     successfully_installed = False

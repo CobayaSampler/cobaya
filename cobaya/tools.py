@@ -94,7 +94,8 @@ def get_base_classes() -> Dict[Kind, Any]:
 
 class PythonPath:
     """
-    A context that keeps sys.path unchanged, optionally adding path during the context.
+    A context that keeps sys.path unchanged, optionally adding path during the context
+    at the beginning of the directory search list.
     """
 
     def __init__(self, path=None, when=True):
@@ -110,46 +111,103 @@ class PythonPath:
         sys.path[:] = self.old_path
 
 
+def check_module_path(module, path):
+    """
+    Raises ``ModuleNotFoundError`` is ``module`` was not loaded from the given ``path``.
+    """
+    module_path = os.path.dirname(os.path.realpath(os.path.abspath(module.__file__)))
+    if not module_path.startswith(os.path.realpath(os.path.abspath(path))):
+        raise ModuleNotFoundError(
+            f"Module {module.__name__} successfully loaded, but not from requested path:"
+            f" {path}, but instead from {module_path}")
+
+
 class VersionCheckError(ValueError):
     """
-    Exception to be raised when the installed version of a component (or its requisited)
+    Exception to be raised when the installed version of a component (or its requisites)
     is older than a reference one.
     """
 
     pass  # necessary or it won't print the given error message!
 
 
-def check_component_path(component, path):
-    if not os.path.realpath(os.path.abspath(component.__file__)).startswith(
-            os.path.realpath(os.path.abspath(path))):
-        raise LoggedError(
-            log, "Component %s successfully loaded, but not from requested path: %s.",
-            component.__name__, path)
-
-
-def check_component_version(component: Any, min_version):
-    if not hasattr(component, "__version__") or \
-            version.parse(component.__version__) < version.parse(min_version):
+def check_module_version(module: Any, min_version):
+    """
+    Tries to get the module version and raises :class:`tools.VersionCheckError` if not
+    found or older than the specified ``min_version``.
+    """
+    if not hasattr(module, "__version__") or \
+            version.parse(module.__version__) < version.parse(min_version):
         raise VersionCheckError(
-            "component %s at %s is version %s but the minimum required version is %s." %
-            (component.__name__, os.path.dirname(component.__file__),
-             getattr(component, "__version__", "(non-given)"), min_version))
+            "Module %s at %s is version %s but the minimum required version is %s." %
+            (module.__name__, os.path.dirname(module.__file__),
+             getattr(module, "__version__", "(non-given)"), min_version))
 
 
 def load_module(name, package=None, path=None, min_version=None,
                 check_path=False, reload=False) -> ModuleType:
+    """
+    Loads and returns the Python module ``name`` from ``path`` (default: ``None``, meaning
+    current working directory) and as part of ``package`` (default: ``None``).
+
+    Because of the way Python looks for modules to import, it is not guaranteed by default
+    that the the module will be loaded from the given ``path``. This can be enforced with
+    ``check_path=True`` (default: ``False``), which will raise ``ModuleNotFoundError`` if
+    a module was loaded but not from the given ``path``.
+
+    If some version tag is passed as ``min_version``, it will try to get the module
+    version, and may raise :class:`tools.VersionCheckError` if no version tag is found
+    or if the found one is older than the specified ``min_version``.
+
+    If ``reload=True`` (default: ``False``), deletes the module from memory previous to
+    loading it.
+
+    This is a low-level function. You may want to use instead
+    :func:`component.load_external_module`, which interacts with Cobaya's installation and
+    logging systems.
+    """
     with PythonPath(path):
         # Force reload if requested.
         # Use with care and only in install checks (e.g. for version upgrade checks):
         # will delete all references from previous imports!
         if name in sys.modules and reload:
             del sys.modules[name]
-        component = import_module(name, package=package)
+        module = import_module(name, package=package)
     if path and check_path:
-        check_component_path(component, path)
+        check_module_path(module, path)
     if min_version:
-        check_component_version(component, min_version)
-    return component
+        check_module_version(module, min_version)
+    return module
+
+
+def get_compiled_import_path(source_path):
+    """
+    Returns the folder containing the compiled ``.so`` Python wrapper of a low-level
+    language (C, Fortran) code package within the given ``source_path``, e.g.
+    ``[source_path]/build/lib.linux-x86_64-3.8``.
+
+    Raises ``FileNotFoundError`` if either the ``build`` or ``lib.[...]`` subfolder does
+    not exist, which may indicate a failed compilation of the source package.
+    """
+    if not os.path.isdir(source_path):
+        raise FileNotFoundError(f"Source path {source_path} not found.")
+    build_path = os.path.join(source_path, "build")
+    if not os.path.isdir(build_path):
+        raise FileNotFoundError(f"`build` folder not found for source path {source_path}."
+                                f" Maybe compilation failed?")
+    # Folder starts with `lib.` and ends with either MAJOR.MINOR (standard) or
+    # MAJORMINOR (some anaconda versions)
+    re_lib = re.compile(
+        f"^lib\\..*{sys.version_info.major}\\.*{sys.version_info.minor}$")
+    try:
+        post = next(d for d in os.listdir(build_path) if re.fullmatch(re_lib, d))
+    except StopIteration:
+        raise FileNotFoundError(
+            f"No `lib.[...]` folder found containing compiled products at {source_path}. "
+            "This may mean that the compilation process failed, of that it was assuming "
+            "the wrong python version (current version: "
+            f"{sys.version_info.major}.{sys.version_info.minor}")
+    return os.path.join(build_path, post)
 
 
 def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):

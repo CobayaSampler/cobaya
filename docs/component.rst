@@ -27,5 +27,5 @@ Provider class
 HasDefaults class
 ------------------
 
-.. autoclass:: input.HasDefaults
+.. autoclass:: component.HasDefaults
    :members:

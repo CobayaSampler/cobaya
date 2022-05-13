@@ -92,7 +92,7 @@ class Theory(CobayaComponent):
         Function to be called specifying any output products that are needed and hence
         should be calculated by this component depending..
 
-        The ``requirements'' argument is a requirement name with any optional parameters.
+        The ``requirements`` argument is a requirement name with any optional parameters.
         This function may be called more than once with different requirements.
 
         :return: optional dictionary (or list of requirement name, option tuples) of

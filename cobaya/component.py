@@ -644,3 +644,126 @@ def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
     return set(cls for _, cls in inspect.getmembers(m, inspect.isclass)
                if (not subclass_of or issubclass(cls, subclass_of)) and
                (allow_imported or cls.__module__ == m.__name__))
+
+
+class ComponentNotInstalledError(LoggedError):
+    """
+    Exception to be raise manually at component initialization or install check if some
+    external dependency of the component is missing.
+    """
+
+    pass  # necessary or it won't print the given error message!
+
+
+def _bare_load_external_module(name, path=None, min_version=None, reload=False,
+                               get_import_path=None, logger=None):
+    """
+    Loads an external module ``name``.
+
+    If a ``path`` is given, it looks for an installation there and fails if it does
+    not find one. If ``path`` is not given, tries a global
+    ``import``.
+
+    Raises :class:`component.ComponetNotInstalledError` if the module could not be
+    imported.
+
+    If ``min_version`` given, may raise :class:`~tools.VersionCheckError`.
+
+    If ``get_import_path`` (callable, takes ``path``) and ``path`` are given, the function
+    is called before attempting to load the module, and is expected to return the
+    directory from which the module should be imported (useful e.g. if different from the
+    root source directory). It can check e.g. for compilation of non-Python source. It
+    should raise ``FileNotFoundError`` with a meaningful error message if the expected
+    import directory does not exist.
+
+    If ``reload=True`` (default: ``False``), deletes the module from memory previous
+    to loading it.
+    """
+    if not logger:
+        logger = get_logger(__name__)
+    import_path = None
+    if path:
+        try:
+            if get_import_path:
+                import_path = get_import_path(path)
+                logger.debug(f"{name} to be imported from (sub)directory {import_path}")
+            else:
+                import_path = path
+                if not os.path.exist(import_path):
+                    raise FileNotFoundError
+        except FileNotFoundError as excpt:
+            raise ComponentNotInstalledError(
+                logger, f"No (compiled) installation of {name} at {path}: {excpt}")
+    try:
+        # check_path=True may be redundant with check_external_module above
+        return load_module(name, path=import_path, min_version=min_version,
+                           check_path=bool(path), reload=reload)
+    except ModuleNotFoundError as excpt:
+        path_msg = f"from {path}" if path else "(tried global import)"
+        raise ComponentNotInstalledError(
+            logger, f"Could not import {name} {path_msg}: {excpt}")
+
+
+def load_external_module(module_name=None, path=None, install_path=None, min_version=None,
+                         get_import_path=None, reload=False, logger=None):
+    """
+    Tries to load an external module at initialisation, dealing with explicit paths
+    and Cobaya's installation path.
+
+    If a ``path`` was given, it is enforced (may use ``path="global"`` to force a global
+    import).
+
+    If no explicit ``path`` was given, try first from Cobaya's ``install_path``,
+    and if it fails try a global import.
+
+    ``install_path`` is the path where Cobaya installed this requisite, up to and
+    including the source for the requisite, e.g. ``[...]/cobaya_packages/code/[requisite]`
+
+    If ``get_import_path`` (callable, takes ``path``) and ``path`` are given, the function
+    is called before attempting to load the module, and is expected to return the
+    directory from which the module should be imported (useful e.g. if different from the
+    root source directory). It can check e.g. for compilation of non-Python source. It
+    should raise ``FileNotFoundError`` with a meaningful error message if the expected
+    import directory does not exist.
+
+    If ``reload=True`` (default: ``False``), deletes the module from memory previous
+    to loading it.
+
+    If ``min_version`` given, may raise :class:`~tools.VersionCheckError`.
+
+    May raise :class:`component.ComponentNotInstalledError` if the module was not
+    found.
+    """
+    if not logger:
+        logger = get_logger(__name__)
+    load_kwargs = {"name": module_name, "path": path, "get_import_path": get_import_path,
+                   "min_version": min_version, "reload": False, "logger": logger}
+    default_global = False
+    msg_tried = ""
+    if isinstance(path, str):
+        if path.lower() == "global":
+            msg_tried = "global import (`path='global'` given)"
+            load_kwargs["path"] = None
+        else:
+            msg_tried = f"import from {path}"
+    elif install_path:
+        load_kwargs["path"] = install_path
+        default_global = True
+        msg_tried = ("import of Cobaya-installed version, but "
+                     "defaulting to global import if not found")
+    else:
+        msg_tried = "global import (no `path` or Cobaya installation path given)"
+    try:
+        logger.debug(f"Attempting {msg_tried}.")
+        module = _bare_load_external_module(**load_kwargs)
+    except ComponentNotInstalledError:
+        if default_global:
+            logger.debug("Defaulting to global import.")
+            load_kwargs["path"] = None
+            module = _bare_load_external_module(**load_kwargs)
+        else:
+            raise
+    # Check from where was the module actually loaded
+    logger.info(f"`{module_name}` module loaded successfully from "
+                f"{os.path.dirname(os.path.realpath(os.path.abspath(module.__file__)))}")
+    return module

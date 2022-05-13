@@ -45,8 +45,9 @@ You can specify any parameter that CLASS understands in the ``params`` block:
 If you want to use your own version of CLASS, you need to specify its location with a
 ``path`` option inside the ``classy`` block. If you do not specify a ``path``,
 CLASS will be loaded from the automatic-install ``packages_path`` folder, if specified, or
-otherwise imported as a globally-installed Python package. Cobaya will print at
-initialisation where it is getting CLASS from.
+otherwise imported as a globally-installed Python package. If you want to force that
+the global ``classy`` installation is used, pass ``path='global'``. Cobaya will print at
+initialisation where CLASS was actually loaded from.
 
 
 .. _classy_modify:
@@ -75,8 +76,8 @@ zero, and the run is not interrupted.
 
    If your modified CLASS has a lower version number than the minimum required by Cobaya,
    you will get an error at initialisation. You may still be able to use it by setting the
-   option ``ignore_obsolete: True`` in the ``camb`` block (though you would be doing that
-   at your own risk; ideally you should translate your modification to a newer CLASS
+   option ``ignore_obsolete: True`` in the ``classy`` block (though you would be doing
+   that at your own risk; ideally you should translate your modification to a newer CLASS
    version, in case there have been important fixes since the release of your baseline
    version).
 
@@ -145,7 +146,6 @@ interface ready.
 # Global
 import sys
 import os
-import re
 import numpy as np
 from copy import deepcopy
 from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
@@ -153,10 +153,11 @@ from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, pip_install, NotInstalledError, \
-    check_gcc_version
-from cobaya.tools import load_module, Pool1D, Pool2D, PoolND, \
-    combine_1d
+from cobaya.install import download_github_release, pip_install, check_gcc_version
+from cobaya.component import ComponentNotInstalledError, load_external_module
+from cobaya.tools import Pool1D, Pool2D, PoolND, combine_1d, get_compiled_import_path, \
+    VersionCheckError
+from cobaya.conventions import packages_path_arg
 
 
 # Result collector
@@ -192,16 +193,23 @@ class classy(BoltzmannBase):
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
-        # Allow global import if no direct path specification
-        allow_global = not self.path
-        if not self.path and self.packages_path:
-            self.path = self.get_path(self.packages_path)
-        min_version = None if self.ignore_obsolete else self._classy_repo_version
-        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global,
-                                               check=False, min_version=min_version)
-        if not self.classy_module:
-            raise NotInstalledError(
-                self.log, "Could not find CLASS. Check error message above.")
+        try:
+            install_path = (lambda p: self.get_path(p) if p else None)(self.packages_path)
+            min_version = None if self.ignore_obsolete else self._classy_repo_version
+            self.classy_module = load_external_module(
+                "classy", path=self.path, install_path=install_path,
+                min_version=min_version, get_import_path=self.get_import_path,
+                logger=self.log)
+        except VersionCheckError as excpt:
+            raise VersionCheckError(
+                str(excpt) + " If you are using CLASS unmodified, upgrade with"
+                "`cobaya-install classy --upgrade`. If you are using a modified CLASS, "
+                "set the option `ignore_obsolete: True` for CLASS.")
+        except ComponentNotInstalledError as excpt:
+            raise ComponentNotInstalledError(
+                self.log, (f"Could not find CLASS: {excpt}. "
+                           "To install it, run 'cobaya-install classy "
+                           f"--{packages_path_arg} [packages_path]'"))
         self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
@@ -211,7 +219,6 @@ class classy(BoltzmannBase):
                 self.extra_args["sBBN file"].format(classy=self.path))
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
-        self.log.info("Initialized!")
 
     def set_cl_reqs(self, reqs):
         """
@@ -601,24 +608,9 @@ class classy(BoltzmannBase):
     def get_path(cls, path):
         return os.path.realpath(os.path.join(path, "code", cls.__name__))
 
-    @classmethod
-    def get_import_path(cls, path):
-        log = get_logger(cls.__name__)
-        classy_build_path = os.path.join(path, "python", "build")
-        if not os.path.isdir(classy_build_path):
-            log.error("Either CLASS is not in the given folder, "
-                      "'%s', or you have not compiled it.", path)
-            return None
-        re_lib = re.compile(
-            f"^lib\\..*{sys.version_info.major}\\.*{sys.version_info.minor}$")
-        try:
-            post = next(d for d in os.listdir(classy_build_path)
-                        if re.fullmatch(re_lib, d))
-        except StopIteration:
-            log.error("The CLASS installation at '%s' has not been compiled for the "
-                      "current Python version.", path)
-            return None
-        return os.path.join(classy_build_path, post)
+    @staticmethod
+    def get_import_path(path):
+        return get_compiled_import_path(os.path.join(path, "python"))
 
     @classmethod
     def is_compatible(cls):
@@ -628,43 +620,15 @@ class classy(BoltzmannBase):
         return True
 
     @classmethod
-    def is_installed(cls, **kwargs):
+    def is_installed(cls, reload=False, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = get_logger(cls.__name__)
-        check = kwargs.get("check", True)
-        func = log.info if check else log.error
-        path = kwargs["path"]
-        if path is not None and path.lower() == "global":
-            path = None
-        if path and not kwargs.get("allow_global"):
-            log.info("Importing *local* CLASS from '%s'.", path)
-            assert path is not None
-            if not os.path.exists(path):
-                func("The given folder does not exist: '%s'", path)
-                return False
-            classy_build_path = cls.get_import_path(path)
-            if not classy_build_path:
-                return False
-        elif not path:
-            log.info("Importing *global* CLASS.")
-            classy_build_path = None
-        else:
-            log.info("Importing *auto-installed* CLASS (but defaulting to *global*).")
-            classy_build_path = cls.get_import_path(path)
         try:
-            min_version = kwargs.get("min_version", cls._classy_repo_version)
-            return load_module("classy", path=classy_build_path,
-                               min_version=min_version, reload=check)
-        except ImportError:
-            if path is not None and path.lower() != "global":
-                func("Couldn't find the CLASS python interface at '%s'. "
-                     "Are you sure it has been installed there?", path)
-            elif not check:
-                log.error("Could not import global CLASS installation. "
-                          "Specify a Cobaya or CLASS installation path, "
-                          "or install the CLASS Python interface globally with "
-                          "'cd /path/to/class/python/ ; python setup.py install'")
+            return bool(load_external_module(
+                "classy", path=kwargs["path"], get_import_path=cls.get_import_path,
+                min_version=cls._classy_repo_version, reload=reload,
+                logger=get_logger(cls.__name__)))
+        except ComponentNotInstalledError:
             return False
 
     @classmethod
