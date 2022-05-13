@@ -518,6 +518,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         class_name = None
     assert allow_internal or allow_external
     _not_found_msg = f"{name} could not be found."
+    if not logger:
+        logger = get_logger(__name__)
 
     def get_matching_class_name(_module: Any, _class_name, none=False):
         cls = getattr(_module, _class_name, None)
@@ -569,7 +571,6 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             str(excpt).rstrip("'").endswith(module) for module in name.split("."))
         if is_module_not_found and did_not_find_this_module_in_particular:
             raise ComponentNotFoundError(not_found_msg)
-        logger = get_logger(__name__)
         logger.error(f"There was a problem when importing {name}:")
         raise excpt
 
@@ -737,9 +738,8 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
     if not logger:
         logger = get_logger(__name__)
     load_kwargs = {"name": module_name, "path": path, "get_import_path": get_import_path,
-                   "min_version": min_version, "reload": False, "logger": logger}
+                   "min_version": min_version, "reload": reload, "logger": logger}
     default_global = False
-    msg_tried = ""
     if isinstance(path, str):
         if path.lower() == "global":
             msg_tried = "global import (`path='global'` given)"
