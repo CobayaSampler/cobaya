@@ -560,7 +560,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         """
         if kind is not None:
             if not issubclass(cls, get_base_classes()[kind]):
-                raise TypeError("Class %r is not a standard class type %r", name, kinds)
+                raise TypeError(f"Class '{name}' is not a standard class of type {kind}.")
         return cls
 
     def check_if_ComponentNotFoundError_and_raise(_excpt, not_found_msg=_not_found_msg,
