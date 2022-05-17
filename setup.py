@@ -31,6 +31,10 @@ def extract_docs_requirements():
     """Get requirements for building the documentation."""
     path_docs_requirements = path.join(path.abspath(path.dirname(__file__)),
                                        "docs/requirements.txt")
+    # Quick fix for pip install from PyPI: apparently tries to run this function before
+    # pulling the 'docs' folder. Assume this is only used with a git-pulled install.
+    if not path.exists(path_docs_requirements):
+        return []
     with open(path_docs_requirements, "r") as f:
         lines = f.readlines()
     i_first = next(i for i, line in enumerate(lines)
