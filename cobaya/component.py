@@ -476,7 +476,8 @@ class ComponentNotFoundError(LoggedError):
 
 
 def get_component_class(name, kind=None, component_path=None, class_name=None,
-                        allow_external=True, allow_internal=True, logger=None):
+                        allow_external=True, allow_internal=True, logger=None,
+                        not_found_level=None):
     """
     Retrieves the requested component class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
@@ -495,8 +496,12 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     ``component_path`` can be used to specify a specific external location, and in that
     case the class is only looked-for there.
 
-    If the class is not found, it raises :class:`component.ComponentNotFoundError`. Any
-    other exception should mean that the component was found but could not be imported.
+    If the class is not found, it raises :class:`component.ComponentNotFoundError`. If
+    this exception will be handled at a higher level, you may pass
+    `not_found_level='debug'` to prevent printing non-important messages at error-level
+    logging.
+
+    Any other exception means that the component was found but could not be imported.
 
     If ``allow_external=True`` (default), allows loading explicit name from anywhere on
     path.
@@ -517,7 +522,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         module_name = name
         class_name = None
     assert allow_internal or allow_external
-    _not_found_msg = f"{name} could not be found."
+    _not_found_msg = f"'{name}' could not be found."
     if not logger:
         logger = get_logger(__name__)
 
@@ -559,7 +564,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         return cls
 
     def check_if_ComponentNotFoundError_and_raise(_excpt, not_found_msg=_not_found_msg,
-                                                  logger=logger):
+                                                  logger=logger, level="debug"):
         """
         If the exception looks like the target class not being found, turns it into a
         `ComponentNotFoundError`, so that it can be caught appropriately.
@@ -571,8 +576,8 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         did_not_find_this_module_in_particular = any(
             str(_excpt).rstrip("'").endswith(module) for module in name.split("."))
         if is_module_not_found and did_not_find_this_module_in_particular:
-            raise ComponentNotFoundError(not_found_msg)
-        logger.error(f"There was a problem when importing {name}:")
+            raise ComponentNotFoundError(logger, not_found_msg, level=level)
+        logger.error(f"There was a problem when importing '{name}':")
         raise _excpt
 
     # Lookup logic:
@@ -596,7 +601,7 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
                 try:
                     return get_component_class(
                         name, kind, allow_external=False, allow_internal=True,
-                        logger=logger)
+                        logger=logger, not_found_level="debug")
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. check all kinds.
             # If we get here, the class was not found for any kind
@@ -607,7 +612,9 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
                 return return_class(internal_module_name, package=cobaya_package)
             except Exception as excpt:
                 try:
-                    check_if_ComponentNotFoundError_and_raise(excpt)
+                    check_if_ComponentNotFoundError_and_raise(
+                        excpt,
+                        not_found_msg=_not_found_msg[:-1] + " as internal component.")
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. try external (if allowed)
     if allow_external:
@@ -616,13 +623,15 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             return check_kind_and_return(return_class(module_name))
         except Exception as excpt:
             try:
-                check_if_ComponentNotFoundError_and_raise(excpt)
+                check_if_ComponentNotFoundError_and_raise(
+                    excpt, not_found_msg=(_not_found_msg[:-1] +
+                                          " as external component in the current path."))
             except ComponentNotFoundError:
                 pass  # do not raise it yet. Give a report below.
     # If we got here, didn't work. Give a report of what has been tried.
     tried = " and ".join(allow_internal * ["internal"] + allow_external * ["external"])
     add_msg = f" Tried loading {tried} classes. No component path was given."
-    raise ComponentNotFoundError(_not_found_msg + add_msg)
+    raise ComponentNotFoundError(logger, _not_found_msg + add_msg, level=not_found_level)
 
 
 def module_class_for_name(m, name):
@@ -659,7 +668,8 @@ class ComponentNotInstalledError(LoggedError):
 
 
 def _bare_load_external_module(name, path=None, min_version=None, reload=False,
-                               get_import_path=None, logger=None):
+                               get_import_path=None, logger=None,
+                               not_installed_level=None):
     """
     Loads an external module ``name``.
 
@@ -689,14 +699,15 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
         try:
             if get_import_path:
                 import_path = get_import_path(path)
-                logger.debug(f"{name} to be imported from (sub)directory {import_path}")
+                logger.debug(f"'{name}' to be imported from (sub)directory {import_path}")
             else:
                 import_path = path
                 if not os.path.exists(import_path):
                     raise FileNotFoundError
         except FileNotFoundError as excpt:
             raise ComponentNotInstalledError(
-                logger, f"No (compiled) installation of {name} at {path}: {excpt}")
+                logger, f"No (compiled) installation of '{name}' at {path}: {excpt}",
+                level=not_installed_level)
     try:
         # check_path=True may be redundant with check_external_module above
         return load_module(name, path=import_path, min_version=min_version,
@@ -704,11 +715,13 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
     except ModuleNotFoundError as excpt:
         path_msg = f"from {path}" if path else "(tried global import)"
         raise ComponentNotInstalledError(
-            logger, f"Could not import {name} {path_msg}: {excpt}")
+            logger, f"Could not import '{name}' {path_msg}: {excpt}",
+            level=not_installed_level)
 
 
 def load_external_module(module_name=None, path=None, install_path=None, min_version=None,
-                         get_import_path=None, reload=False, logger=None):
+                         get_import_path=None, reload=False, logger=None,
+                         not_installed_level=None):
     """
     Tries to load an external module at initialisation, dealing with explicit paths
     and Cobaya's installation path.
@@ -735,7 +748,9 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
     If ``min_version`` given, may raise :class:`~tools.VersionCheckError`.
 
     May raise :class:`component.ComponentNotInstalledError` if the module was not
-    found.
+    found. If this exception will be handled at a higher level, you may pass
+    `not_installed_level='debug'` to prevent printing non-important messages at
+    error-level logging.
     """
     if not logger:
         logger = get_logger(__name__)
@@ -757,12 +772,13 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
         msg_tried = "global import (no `path` or Cobaya installation path given)"
     try:
         logger.debug(f"Attempting {msg_tried}.")
-        module = _bare_load_external_module(**load_kwargs)
+        module = _bare_load_external_module(not_installed_level="debug", **load_kwargs)
     except ComponentNotInstalledError:
         if default_global:
             logger.debug("Defaulting to global import.")
             load_kwargs["path"] = None
-            module = _bare_load_external_module(**load_kwargs)
+            module = _bare_load_external_module(
+                not_installed_level=not_installed_level, **load_kwargs)
         else:
             raise
     # Check from where was the module actually loaded

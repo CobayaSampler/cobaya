@@ -227,7 +227,6 @@ from cobaya.tools import getfullargspec, get_class_methods, get_properties, \
     check_module_version, str_to_list, Pool1D, Pool2D, PoolND, VersionCheckError
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
-from cobaya.conventions import packages_path_arg
 
 
 # Result collector
@@ -269,7 +268,7 @@ class CAMB(BoltzmannBase):
             self.camb = load_external_module(
                 "camb", path=self.path, install_path=install_path,
                 min_version=min_version, get_import_path=self.get_import_path,
-                logger=self.log)
+                logger=self.log, not_installed_level="debug")
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " If you are using CAMB unmodified, upgrade with"
@@ -278,8 +277,7 @@ class CAMB(BoltzmannBase):
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find CAMB: {excpt}. "
-                           "To install it, run 'cobaya-install camb "
-                           f"--{packages_path_arg} [packages_path]'"))
+                           "To install it, run `cobaya-install camb`"))
         super().initialize()
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
@@ -902,7 +900,7 @@ class CAMB(BoltzmannBase):
             return bool(load_external_module(
                 "camb", path=kwargs["path"], get_import_path=cls.get_import_path,
                 min_version=cls._min_camb_version, reload=reload,
-                logger=get_logger(cls.__name__)))
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
         except ComponentNotInstalledError:
             return False
 

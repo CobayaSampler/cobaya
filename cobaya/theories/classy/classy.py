@@ -189,7 +189,6 @@ from cobaya.install import download_github_release, pip_install, check_gcc_versi
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.tools import Pool1D, Pool2D, PoolND, combine_1d, get_compiled_import_path, \
     VersionCheckError
-from cobaya.conventions import packages_path_arg
 
 
 # Result collector
@@ -232,7 +231,7 @@ class classy(BoltzmannBase):
             self.classy_module = load_external_module(
                 "classy", path=self.path, install_path=install_path,
                 min_version=min_version, get_import_path=self.get_import_path,
-                logger=self.log)
+                logger=self.log, not_installed_level="debug")
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " If you are using CLASS unmodified, upgrade with"
@@ -241,8 +240,7 @@ class classy(BoltzmannBase):
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find CLASS: {excpt}. "
-                           "To install it, run 'cobaya-install classy "
-                           f"--{packages_path_arg} [packages_path]'"))
+                           "To install it, run `cobaya-install classy`"))
         self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
@@ -707,7 +705,7 @@ class classy(BoltzmannBase):
             return bool(load_external_module(
                 "classy", path=kwargs["path"], get_import_path=cls.get_import_path,
                 min_version=cls._classy_repo_version, reload=reload,
-                logger=get_logger(cls.__name__)))
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
         except ComponentNotInstalledError:
             return False
 

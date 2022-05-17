@@ -19,7 +19,6 @@ from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.tools import are_different_params_lists, create_banner, VersionCheckError
-from cobaya.conventions import packages_path_arg
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseded
@@ -50,7 +49,8 @@ class PlanckClik(Likelihood):
             # displayed in the folder name and cannot be retrieved from the module.
             clik = load_clik(
                 "clik", path=self.path, install_path=install_path,
-                get_import_path=get_clik_import_path, logger=self.log)
+                get_import_path=get_clik_import_path, logger=self.log,
+                not_installed_level="debug")
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " Upgrade with `cobaya-install planck_2018_lowl.TT "
@@ -58,8 +58,7 @@ class PlanckClik(Likelihood):
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find clik: {excpt}. "
-                           "To install it, run 'cobaya-install planck_2018_lowl.TT "
-                           f"--{packages_path_arg} [packages_path]'"))
+                           "To install it, run `cobaya-install planck_2018_lowl.TT`"))
         # Loading the likelihood data
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         if not os.path.isabs(self.clik_file):
@@ -308,7 +307,7 @@ def is_installed_clik(path, reload=False):
     try:
         return bool(load_clik(
             "clik", path=path, get_import_path=get_clik_import_path,
-            reload=reload, logger=get_logger("clik")))
+            reload=reload, logger=get_logger("clik"), not_installed_level="debug"))
     except ComponentNotInstalledError:
         return False
 

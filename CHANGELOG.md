@@ -1,3 +1,10 @@
+## 3.2.1 – 2022-05-17
+
+### General
+
+- Fixed PyPI installation error (thanks Paul Shah!).
+- Cleaner logging and better advice and error messages for missing component requirements.
+
 ## 3.2 – 2022-05-13
 
 ### General

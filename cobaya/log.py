@@ -36,7 +36,10 @@ class LoggedError(Exception):
                               "instance or name." %
                               self.__class__.__name__)
         if args:
-            logger.error(*args, **kwargs)
+            # If the exception is going to be caught, we may not want to print the msg
+            # at logger.error level, but e.g. debug level.
+            level = kwargs.pop("level", "error") or "error"
+            getattr(logger, level)(*args, **kwargs)
         msg = args[0] if len(args) else ""
         if msg and len(args) > 1:
             msg = msg % args[1:]

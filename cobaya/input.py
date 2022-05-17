@@ -24,7 +24,7 @@ from cobaya.typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, Li
     empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible
-from cobaya.component import get_component_class
+from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.yaml import yaml_load_file, yaml_load
 from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
@@ -220,6 +220,8 @@ def get_default_info(component_or_class, kind=None, return_yaml=False,
             cls.get_defaults(return_yaml=return_yaml,
                              yaml_expand_defaults=yaml_expand_defaults,
                              input_options=input_options)
+    except ComponentNotFoundError:
+        raise
     except Exception as e:
         raise LoggedError(logger,
                           "Failed to get defaults for component or class '%s' [%s]",

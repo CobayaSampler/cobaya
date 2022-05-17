@@ -26,7 +26,7 @@ from cobaya.log import LoggedError, get_logger, NoLogging
 from cobaya.install import download_github_release
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
+from cobaya.conventions import derived_par_name_separator, Extension
 
 
 class polychord(Sampler):
@@ -65,12 +65,12 @@ class polychord(Sampler):
             self.pc = load_external_module(
                 "pypolychord", path=self.path, install_path=install_path,
                 min_version=self._pc_repo_version,
-                get_import_path=get_compiled_import_path, logger=self.log)
+                get_import_path=get_compiled_import_path, logger=self.log,
+                not_installed_level="debug")
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find PolyChord: {excpt}. "
-                           "To install it, run 'cobaya-install polychord "
-                           f"--{packages_path_arg} [packages_path]'"))
+                           "To install it, run `cobaya-install polychord`"))
         with NoLogging(logging.CRITICAL):
             settings = load_external_module(
                 "pypolychord.settings", path=self.path, install_path=install_path,
@@ -453,7 +453,7 @@ class polychord(Sampler):
                 "pypolychord", path=kwargs["path"],
                 get_import_path=get_compiled_import_path,
                 min_version=cls._pc_repo_version, reload=reload,
-                logger=get_logger(cls.__name__)))
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
         except ComponentNotInstalledError:
             return False
 
