@@ -74,7 +74,7 @@ def doc_script(args=None):
     to_print = get_default_info(
         cls, return_yaml=not arguments.python, yaml_expand_defaults=arguments.expand)
     if arguments.python:
-        print(pformat({arguments.kind: {arguments.component: to_print}}))
+        print(pformat({cls.get_kind(): {arguments.component: to_print}}))
     else:
         print(cls.get_kind() + ":\n" + _indent + arguments.component + ":\n" +
               2 * _indent + ("\n" + 2 * _indent).join(to_print.split("\n")))

@@ -144,9 +144,9 @@ If you want to get the available options with their default values for a given c
 
    $ cobaya-doc [component_name]
 
-If the component name is not unique (i.e. there are more than one component with the same name but different kinds), use the option ``--kind [component_kind]`` to specify its kind: ``sampler``, ``theory`` or ``likelihood``.
+The output will be YAML-compatible by default, and Python-compatible if passed a ``-p`` / ``--python`` flag.
 
-Call ``$ cobaya-doc`` with a kind instead of a component name (e.g. ``$ cobaya-doc likelihood``) to get a list of components of that kind. Call with no arguments to get all available components of all kinds.
+Call ``$ cobaya-doc`` with no arguments to get a list of all available components of all kinds.
 
 If you would like to cite the results of a run in a paper, you would need citations for all the different parts of the process. In the example above that would be this very sampling framework, the MCMC sampler, the CAMB or CLASS cosmological code and the Planck 2018 likelihoods.
 
@@ -156,7 +156,7 @@ The ``bibtex`` for those citations, along with a short text snippet for each ele
 
    $ cobaya-bib [your_input_file_name.yaml] > output_file.tex
 
-You can pass multiple input files this way, or even a (list of) component name(s), as in ``cobaya-doc``.
+You can pass multiple input files this way, or even a (list of) component name(s).
 
 You can also do this interactively, by passing your input info, as a python dictionary, to the function :func:`~bib.get_bib_info`:
 
