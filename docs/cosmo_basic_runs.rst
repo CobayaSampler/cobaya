@@ -85,6 +85,12 @@ Typical running times for MCMC when using computationally heavy likelihoods (e.g
 
 It is much harder to provide typical PolyChord running times. We recommend starting with a low number of live points and a low convergence tolerance, and build up from there towards PolyChord's default settings (or higher, if needed).
 
+If you would like to find the MAP (maximum-a-posteriori) or best fit (maximum of the likelihood within prior ranges, but ignoring prior density), you can swap the sampler (``mcmc``, ``polychord``, etc) by ``minimize``, as described in :doc:`sampler_minimize`. As a shortcut, to run a minimizer process for the MAP without modifying your input file, you can simply do
+
+.. code:: bash
+
+   cobaya-run [your_input_file_name.yaml] --minimize
+
 
 .. _cosmo_post:
 
@@ -132,6 +138,17 @@ Assuming we saved the sample at ``chains/planck``, we need to define the followi
          S8:
            derived: 'lambda sigma8, omegam: sigma8*(omegam/0.3)**0.5'
            latex: \sigma_8 (\Omega_\mathrm{m}/0.3)^{0.5}
+
+
+.. _compare_cosmomc:
+
+Comparison with CosmoMC/GetDist conventions
+-------------------------------------------
+
+In CosmoMC, uniform priors are defined with unit density, whereas in Cobaya their density is the inverse of their range, so that they integrate to 1. Because of this, the value of CosmoMC posteriors is different from Cobaya's. In fact, CosmoMC (and GetDist) call its posterior *log-likelihood*, and it consists of the sum of the individual data log-likelihoods and the non-flat log-priors (which also do not necessarily have the same normalisation as in Cobaya). So the comparison of posterior values is non-trivial. But values of particular likelihoods (``chi2__[likelihood_name]`` in Cobaya) should be almost exactly equal in Cobaya and CosmoMC at equal cosmological parameter values.
+
+Regarding minimizer runs, Cobaya produces both a ``[prefix].minimum.txt`` file following the same conventions as the output chains, and also a legacy ``[prefix].minimum`` file (no ``.txt`` extension) similar to CosmoMC's for GetDist compatibility, following the conventions described above.
+
 
 .. _citations:
 
