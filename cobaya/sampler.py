@@ -474,6 +474,7 @@ class CovmatSampler(Sampler):
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
+                self.log.debug(f"Loaded a covariance matrix from '{self.covmat}'")
             except TypeError:
                 raise LoggedError(self.log, "The property 'covmat' must be a file name,"
                                             "but it's '%s'.", str(self.covmat))
@@ -511,14 +512,18 @@ class CovmatSampler(Sampler):
                     self.log, "The number of parameters in %s and the "
                               "dimensions of the matrix do not agree: %d vs %r",
                     str_msg, len(loaded_params), loaded_covmat.shape)
-            if not (np.allclose(loaded_covmat.T, loaded_covmat) and
-                    np.all(np.linalg.eigvals(loaded_covmat) > 0)):
-                str_msg = "passed"
-                if isinstance(self.covmat, str):
-                    str_msg = "loaded from %r" % self.covmat
+            loaded_covmat = np.atleast_2d(loaded_covmat)
+            is_square_symmetric = (len(loaded_covmat.shape) == 2 and
+                                   loaded_covmat.shape[0] == loaded_covmat.shape[1] and
+                                   np.allclose(loaded_covmat.T, loaded_covmat))
+            # Not checking for positive-definiteness yet: may contain highly degenerate
+            # derived parameters that would spoil it now, but will later be dropped.
+            if not is_square_symmetric:
+                from_msg = (f"loaded from '{self.covmat}'" if isinstance(self.covmat, str)
+                            else "passed")
                 raise LoggedError(
-                    self.log, "The covariance matrix %s is not a positive-definite, "
-                              "symmetric square matrix.", str_msg)
+                    self.log,
+                    f"The covariance matrix {from_msg} is not a symmetric square matrix.")
             # Fill with parameters in the loaded covmat
             renames = {p: [p] + str_to_list(v.get("renames") or [])
                        for p, v in params_infos.items()}
