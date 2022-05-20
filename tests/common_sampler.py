@@ -76,7 +76,6 @@ def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmp
             info["sampler"]["mcmc"]["covmat_params"] = (
                 list(info["params"])[:dimension])
     info["debug"] = False
-    info["debug_file"] = None
     info["output"] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)

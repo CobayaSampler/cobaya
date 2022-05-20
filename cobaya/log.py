@@ -188,7 +188,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
             "If you cannot solve it yourself and need to report it, "
             "include the debug output,\n"
             "which you can send it to a file setting '%s:[some_file_name]'.",
-            "debug", "debug_file")
+            "debug", "debug")
     # Exit all MPI processes
     if want_abort:
         mpi.abort_if_mpi()
@@ -199,14 +199,21 @@ def logger_setup(debug=None, debug_file=None):
     Configuring the root logger, for its children to inherit level, format and handlers.
 
     Level: if debug=True, take DEBUG. If numerical, use ""logging""'s corresponding level.
+    If string, set debug level and use if as ``debug_file`` (unless specified separately).
     Default: INFO
     """
     if debug is True or os.getenv('COBAYA_DEBUG'):
         level = logging.DEBUG
     elif debug in (False, None):
         level = logging.INFO
-    else:
+    elif isinstance(debug, int):
         level = debug
+    elif isinstance(debug, str):
+        level = logging.DEBUG
+        debug_file = debug_file or debug
+    else:
+        raise ValueError(
+            f"Bad value for debug: {debug}. Set to bool|str(file)|int(level).")
     # Set the default level, to make sure the handlers have a higher one
     logging.root.setLevel(level)
     debug = is_debug(logging.root)

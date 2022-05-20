@@ -185,7 +185,7 @@ def test_post_params():
                              "derived": "lambda chi2__target: chi2__target"},
                          "cprime": None}}}}
     info_post.update(updated_info_gaussian)
-    products = post(info_post, products_gaussian["sample"]).products
+    _, products = post(info_post, products_gaussian["sample"])
     # Compare parameters
     assert allclose(products["sample"]["a"] - products["sample"]["b"],
                     products["sample"]["a_minus_b"])

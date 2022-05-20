@@ -20,7 +20,7 @@ from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
     packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
-from cobaya.input import update_info, load_input_dict
+from cobaya.input import update_info, load_info_overrides
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
@@ -1327,9 +1327,18 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     :return: a :class:`model.Model` instance.
 
     """
-    info = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
-                               packages_path, override)
-    logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
+    flags = {packages_path_input: packages_path, "debug": debug,
+             "stop_at_error": stop_at_error}
+    info = load_info_overrides(info_or_yaml_or_file, override or {}, **flags)
+    # MARKED FOR DEPRECATION IN v3.2
+    if info.get("debug_file"):
+        print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
+              "save the debug output to a file, use 'debug: [filename]'.")
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
+        if info.get("debug"):
+            info["debug"] = info.pop("debug_file")
+    # END OF DEPRECATION BLOCK
+    logger_setup(info.get("debug"))
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
@@ -1352,20 +1361,3 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                  packages_path=info.get(packages_path_input),
                  timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))
-
-
-def load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
-                        packages_path, override=None) -> InputDict:
-    info = load_input_dict(info_or_yaml_or_file)  # makes deep copy if dict
-
-    if override:
-        if "post" in override:
-            info["resume"] = False
-        info = recursive_update(info, override, copied=False)
-    if packages_path:
-        info[packages_path_input] = packages_path
-    if debug is not None:
-        info["debug"] = debug if isinstance(debug, (int, str)) else bool(debug)
-    if stop_at_error is not None:
-        info["stop_at_error"] = bool(stop_at_error)
-    return info

@@ -112,8 +112,12 @@ def load_input(input_file: str) -> InputDict:
                        "output")
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
-        for out in ("output", "debug_file"):
-            if info.get(out):
+        # MARKED FOR DEPRECATION IN v3.2
+        if info.get("debug_file") and info.get("debug"):
+            info["debug"] = info.pop("debug_file")
+        # END OF DEPRECATION BLOCK
+        for out in ("output", "debug"):
+            if isinstance(info.get(out), str):
                 if not info[out].startswith("/"):
                     info[out] = os.path.join(products_path, info[out])
     return info
@@ -123,6 +127,25 @@ def load_input(input_file: str) -> InputDict:
 @mpi.from_root
 def load_input_MPI(input_file) -> InputDict:
     return load_input(input_file)
+
+
+def load_info_overrides(*infos_or_yaml_or_files, **flags) -> InputDict:
+    """
+    Takes a number of input dictionaries (or paths to them), loads them and updates them,
+    the latter ones taking precedence.
+
+    If present, it updates the results with the kwargs if their value is not ``None``.
+
+    Returns a deep copy of the resulting updated input dict (non-copyable object are
+    retained).
+    """
+    info = load_input_dict(infos_or_yaml_or_files[0])  # makes deep copy if dict
+    for another_info in infos_or_yaml_or_files[1:]:
+        info = recursive_update(info, load_input_dict(another_info))
+    for flag, value in flags.items():
+        if value is not None:
+            info[flag] = value
+    return info
 
 
 # load from dill pickle, including any lambda functions or external classes
@@ -469,8 +492,11 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint = logger.info
         myprint_debug = logger.debug
     myname = inspect.stack()[0][3]
-    ignore = set() if strict else \
-        {"debug", "debug_file", "resume", "force", packages_path_input, "test", "version"}
+    ignorable = {"debug", "resume", "force", packages_path_input, "test", "version"}
+    # MARKED FOR DEPRECATION IN v3.2
+    ignorable.add("debug_file")
+    # END OF DEPRECATION BLOCK
+    ignore = set() if strict else ignorable
     ignore = ignore.union(ignore_blocks or [])
     if set(info for info in info_old if info_old[info] is not None) - ignore \
             != set(info for info in info_new if info_new[info] is not None) - ignore:
