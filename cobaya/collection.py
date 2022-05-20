@@ -174,7 +174,7 @@ class SampleCollection(BaseCollection):
     def reset(self):
         """Create/reset the DataFrame."""
         self._cache_reset()
-        self._data = pd.DataFrame(columns=self.columns)
+        self._data = pd.DataFrame(columns=self.columns, dtype=np.float64)
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
