@@ -7,7 +7,7 @@
 """
 
 # Global
-from typing import Union, Optional, NamedTuple
+from typing import Union, Optional, Tuple
 import os
 
 # Local
@@ -21,13 +21,8 @@ from cobaya.log import logger_setup, is_debug, get_logger, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
-from cobaya.post import post, PostTuple
+from cobaya.post import post, PostResultDict
 from cobaya import mpi
-
-
-class InfoSamplerTuple(NamedTuple):
-    info: InputDict
-    sampler: Sampler
 
 
 def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
@@ -39,7 +34,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         minimize: Optional[bool] = None,
         no_mpi: bool = False, test: bool = False,
         override: Optional[InputDict] = None,
-        ) -> Union[InfoSamplerTuple, PostTuple]:
+        ) -> Tuple[InputDict, Union[Sampler, PostResultDict]]:
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
@@ -166,8 +161,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     return InfoSamplerTuple(updated_info, sampler)
                 # Run the sampler
                 sampler.run()
-
-    return InfoSamplerTuple(updated_info, sampler)
+    return updated_info, sampler
 
 
 # Command-line script

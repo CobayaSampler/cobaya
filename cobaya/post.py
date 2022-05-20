@@ -10,7 +10,7 @@ import os
 import sys
 import time
 from itertools import chain
-from typing import List, Union, NamedTuple, Optional
+from typing import List, Union, Optional, Tuple
 import numpy as np
 
 from cobaya import mpi
@@ -54,11 +54,6 @@ class OutputOptions:
     output_inteveral_s = 60
 
 
-class PostTuple(NamedTuple):
-    info: InputDict
-    products: PostResultDict
-
-
 def value_or_list(lst: list):
     if len(lst) == 1:
         return lst[0]
@@ -79,7 +74,7 @@ class DummyModel:
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          sample: Union[SampleCollection, List[SampleCollection], None] = None
-         ) -> PostTuple:
+         ) -> Tuple[InputDict, PostResultDict]:
     info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.get("debug"), info.get("debug_file"))
     log = get_logger(__name__)
@@ -574,4 +569,4 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                           'points': sum(points_s)},
                                 "logpost_weight_offset": difflogmax,
                                 "weights": value_or_list(weights)}
-    return PostTuple(info=out_combined, products=products)
+    return out_combined, products
