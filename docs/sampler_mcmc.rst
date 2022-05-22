@@ -191,7 +191,7 @@ Convergence of an MCMC run is assessed in terms a generalized version of the :ma
 
 In particular, given a small number of chains from the same run, the :math:`R-1` statistic measures (from the last half of each chain) the variance between the means of the different chains in units of the covariance of the chains (in other words, that all chains are centered around the same point, not deviating from it a significant fraction of the standard deviation of the posterior). When that number becomes smaller than ``Rminus1_stop`` twice in a row, a second :math:`R-1` check is also performed on the bounds of the ``Rminus1_cl_level`` % confidence level interval, which, if smaller than ``Rminus1_cl_stop``, stops the run.
 
-The default settings have *Rminus1_stop = 0.01*, *Rminus1_cl_level = 0.95* and *Rminus1_cl_level = 0.2*; the stop values can be decreased for better convergence.
+The default settings are ``Rminus1_stop = 0.01``, ``Rminus1_cl_level = 0.95`` and ``Rminus1_cl_level = 0.2``; the stop values can be decreased for better convergence.
 
 .. note::
 
@@ -334,4 +334,3 @@ Proposal
    :members:
 .. autoclass:: samplers.mcmc.proposal.BlockedProposer
    :members:
-

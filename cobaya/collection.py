@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from typing import Union, Sequence, Optional
-from getdist import MCSamples, chains
+from getdist import MCSamples, chains  # type: ignore
 
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
@@ -314,7 +314,7 @@ class SampleCollection(BaseCollection):
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self._data = pd.concat([self.data[:len(self)], collection.data],
+        self._data = pd.concat([self.data, collection.data],
                                ignore_index=True)
 
     def __len__(self):
@@ -330,11 +330,11 @@ class SampleCollection(BaseCollection):
 
     # Make the dataframe printable (but only the filled ones!)
     def __repr__(self):
-        return self.data[:len(self)].__repr__()
+        return self.data.__repr__()
 
     # Make the dataframe iterable over rows
     def __iter__(self):
-        return self.data[:len(self)].iterrows()
+        return self.data.iterrows()
 
     # Accessing the dataframe
     def __getitem__(self, *args):
@@ -376,77 +376,112 @@ class SampleCollection(BaseCollection):
     def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
         return self.data.to_numpy(copy=copy, dtype=dtype or np.float64)
 
-    def _copy(self, data=None) -> 'SampleCollection':
+    def _copy(self, data=None, empty=False) -> 'SampleCollection':
         """
         Returns a copy of the collection.
 
+        If ``empty=True`` (default ``False``), returns an empty copy.
+
         If data specified (default: None), the copy returned contains the given data;
         no checks are performed on given data, so use with care (e.g. use with a slice of
-        `self.data`).
+        ``self.data``).
         """
         current_data = self.data
         if data is None:
             data = current_data
-        # Avoids creating a copy of the data, to save memory
+        # Avoids creating an unnecessary copy of the data, to save memory
         delattr(self, "_data")
         self_copy = deepcopy(self)
         setattr(self, "_data", current_data)
-        setattr(self_copy, "_data", data)
-        setattr(self_copy, "_n", data.last_valid_index() + 1)
+        if empty:
+            self_copy.reset()
+        else:
+            setattr(self_copy, "_data", data.copy())
+            setattr(self_copy, "_n", data.last_valid_index() + 1)
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
-    def copy(self) -> 'SampleCollection':
+    def copy(self, empty=False) -> 'SampleCollection':
         """
         Returns a copy of the collection.
-        """
-        return self._copy()
 
-    def mean(self, first=None, last=None, derived=False, pweight=False):
+        If ``empty=True`` (default ``False``), returns an empty copy.
+        """
+        return self._copy(empty=empty)
+
+    def _weights_for_stats(self, first: Optional[int] = None, last: Optional[int] = None,
+                           pweight: bool = False) -> np.ndarray:
+        """
+        Returns weights for computation of statistical quantities such as mean and
+        covariance.
+
+        If ``pweight=True`` (default ``False``) every point is weighted with its
+        probability, and sample weights are ignored (may lead to very inaccurate
+        estimates!).
+        """
+        if pweight:
+            logps = -self[OutPar.minuslogpost][first:last]\
+                .to_numpy(dtype=np.float64, copy=True)
+            logps -= max(logps)
+            weights = np.exp(logps)
+        else:
+            weights = self[OutPar.weight][first:last]\
+                .to_numpy(dtype=np.float64, copy=True)
+        return weights
+
+    def mean(self, first: Optional[int] = None, last: Optional[int] = None,
+             pweight: bool = False, derived: bool = False) -> np.ndarray:
         """
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If `pweight=True` (default `False`) weights every point with its probability.
-        The estimate of the mean in this case is unstable; use carefully.
+        If ``pweight=True`` (default ``False``) every point is weighted with its
+        probability, and sample weights are ignored (may lead to inaccurate
+        estimates!).
         """
-        if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64,
-                                                                    copy=True)
-            logps -= max(logps)
-            weights = np.exp(logps)
-        else:
-            weights = self[OutPar.weight][first:last].to_numpy(dtype=np.float64)
+        weights = self._weights_for_stats(first, last, pweight=pweight)
         return np.average(self[list(self.sampled_params) +
                                (list(self.derived_params) if derived else [])]
                           [first:last].to_numpy(dtype=np.float64).T, weights=weights,
                           axis=-1)
 
-    def cov(self, first=None, last=None, derived=False, pweight=False):
+    def cov(self, first: Optional[int] = None, last: Optional[int] = None,
+            pweight: bool = False, derived: bool = False) -> np.ndarray:
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If `pweight=True` (default `False`) weights every point with its probability.
-        The estimate of the covariance matrix in this case is unstable; use carefully.
+        If ``pweight=True`` (default ``False``) every point is weighted with its
+        probability, and sample weights are ignored (may lead to very inaccurate
+        estimates!).
         """
+        weights = self._weights_for_stats(first, last, pweight=pweight)
         if pweight:
-            logps = -self[OutPar.minuslogpost][first:last].to_numpy(dtype=np.float64,
-                                                                    copy=True)
-            logps -= max(logps)
-            weights = np.exp(logps)
-            kwarg = "aweights"
+            weight_type_kwarg = "aweights"
+        elif np.allclose(np.round(weights), weights):
+            weights = np.round(weights).astype(int)
+            weight_type_kwarg = "fweights"
         else:
-            weights = self[OutPar.weight][first:last].to_numpy(dtype=np.float64)
-            kwarg = "fweights" if np.allclose(np.round(weights), weights) else "aweights"
-        weights_kwarg = {kwarg: weights}
+            weight_type_kwarg = "aweights"
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
                 dtype=np.float64).T,
-            **weights_kwarg))
+            **{weight_type_kwarg: weights}))
+
+    def reweight(self, importance_weights):
+        """
+        Reweights the sample with the given ``importance_weights``.
+
+        This cannot be fully undone (e.g. recovering original integer weights).
+        You may want to call this method on a copy (see :func:`SampleCollection.copy`).
+        """
+        self._cache_dump()
+        self._data[OutPar.weight] *= importance_weights
+        self._data = self.data[self._data.weight > 0].reset_index(drop=True)
+        self._n = self._data.last_valid_index() + 1
 
     def filtered_copy(self, where) -> 'SampleCollection':
         return self._copy(self.data[where].reset_index(drop=True))
@@ -457,7 +492,7 @@ class SampleCollection(BaseCollection):
         if thin != int(thin) or thin < 1:
             raise LoggedError(self.log, "Thin factor must be a positive integer, got %s",
                               thin)
-        from getdist.chains import WeightedSamples, WeightedSampleError
+        from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
         thin = int(thin)
         try:
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
@@ -487,7 +522,8 @@ class SampleCollection(BaseCollection):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
 
-    def sampled_to_getdist_mcsamples(self, first=None, last=None):
+    def sampled_to_getdist_mcsamples(
+        self, first: Optional[int] = None, last: Optional[int] = None) -> MCSamples:
         """
         Basic interface with getdist -- internal use only!
         (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
@@ -497,20 +533,14 @@ class SampleCollection(BaseCollection):
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         with NoLogging():
             mcsamples = MCSamples(
-                samples=self.data[:len(self)][names].to_numpy(dtype=np.float64)[
+                samples=self.data[names].to_numpy(dtype=np.float64)[
                         first:last],
-                weights=self.data[:len(self)][OutPar.weight].to_numpy(dtype=np.float64)[
+                weights=self.data[OutPar.weight].to_numpy(dtype=np.float64)[
                         first:last],
-                loglikes=self.data[:len(self)][OutPar.minuslogpost].to_numpy(
+                loglikes=self.data[OutPar.minuslogpost].to_numpy(
                     dtype=np.float64)[first:last],
                 names=names)
         return mcsamples
-
-    def reweight(self, importance_weights):
-        self._cache_dump()
-        self._data[OutPar.weight] *= importance_weights
-        self._data = self.data[self._data.weight > 0].reset_index(drop=True)
-        self._n = self._data.last_valid_index() + 1
 
     # Saving and updating
     def _get_driver(self, method):
@@ -626,7 +656,12 @@ class OneSamplePoint:
         return self.results.logpost
 
     def add_to_collection(self, collection: SampleCollection):
-        """Adds this point at the end of a given collection."""
+        """
+        Adds this point at the end of a given collection.
+
+        It is assumed that both this instance and the collection passed were
+        initialised with the same :class:`model.Model` (no checks are performed).
+        """
         if self.output_thin > 1:
             self._added_weight += self.weight
             if self._added_weight >= self.output_thin:

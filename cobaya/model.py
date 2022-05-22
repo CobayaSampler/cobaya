@@ -60,11 +60,18 @@ class LogPosterior:
     largest real numbers allowed by machine precision.
     """
 
-    logpost: Optional[float] = None
-    logpriors: Optional[Sequence[float]] = None
-    loglikes: Optional[Sequence[float]] = None
-    derived: Optional[Sequence[float]] = None
-    finite: Optional[bool] = False
+    # A note on typing:
+    # Though None is allowed for some arguments, after initialisation everything should
+    # be not None. So we can either (a) use Optional, and then get A LOT of typing errors
+    # or (b) not use it (use dataclasses.field(default=None) instead) and get fewer errors
+    # (only wherever LogPosterior is initialised).
+    # Let's opt for (b) and suppress errors there.
+
+    logpost: float = dataclasses.field(default=None)  # type: ignore
+    logpriors: Sequence[float] = dataclasses.field(default=None)  # type: ignore
+    loglikes: Sequence[float] = dataclasses.field(default=None)  # type: ignore
+    derived: Sequence[float] = dataclasses.field(default=None)  # type: ignore
+    finite: bool = dataclasses.field(default=False)
     logprior: float = dataclasses.field(init=False, repr=False)
     loglike: float = dataclasses.field(init=False, repr=False)
 
@@ -85,7 +92,7 @@ class LogPosterior:
             if self.logpriors is None or self.loglikes is None:
                 raise ValueError("If `logpost` not passed, both `logpriors` and "
                                  "`loglikes` must be passed.")
-            object.__setattr__(self, 'logpost', self.logprior + self.loglike)
+            object.__setattr__(self, 'logpost', self._logpost())
         elif self.logpriors is not None and self.loglikes is not None:
             if not self._logpost_is_consistent():
                 raise ValueError("The given log-posterior is not equal to the "
@@ -93,16 +100,19 @@ class LogPosterior:
                                  "%g != sum(%r) + sum(%r)" %
                                  (self.logpost, self.logpriors, self.loglikes))
 
+    def _logpost(self):
+        """Computes logpost from prior and likelihood product."""
+        return self.logprior + self.loglike
+
     def _logpost_is_consistent(self):
         """
         Checks that the sum of logpriors and loglikes (if present) add up to logpost, if
         passed.
         """
         if self.finite:
-            return np.isclose(np.nan_to_num(self.logpost),
-                              np.nan_to_num(self.logprior + self.loglike))
+            return np.isclose(np.nan_to_num(self.logpost), np.nan_to_num(self._logpost()))
         else:
-            return np.isclose(self.logpost, self.logprior + self.loglike)
+            return np.isclose(self.logpost, self._logpost())
 
     def make_finite(self):
         """
@@ -609,7 +619,7 @@ class Model(HasLogger):
             if results.logpost != -np.inf:
                 break
         else:
-            if self.prior.reference_is_pointlike():
+            if self.prior.reference_is_pointlike:
                 raise LoggedError(self.log, "The reference point provided has null "
                                             "likelihood. Set 'ref' to a different point "
                                             "or a pdf.")

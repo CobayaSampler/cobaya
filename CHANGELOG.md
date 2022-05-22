@@ -1,3 +1,10 @@
+## 3.X.Y – 2022-XX-YY
+
+### General
+
+- Deprecated `debug_file` in input, in favour of `debug: [filename]`.
+- `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
+
 ## 3.2.1 – 2022-05-17
 
 ### General

@@ -137,7 +137,7 @@ class MCMC(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[last]).to_numpy(dtype=np.float64, copy=True)
+                             .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
                 logpost=-self.collection[OutPar.minuslogpost].iloc[last],
                 logpriors=-(self.collection[self.collection.minuslogprior_names]
@@ -165,7 +165,7 @@ class MCMC(CovmatSampler):
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
         self.set_proposer_blocking()
-        self.set_proposer_covmat(load=True)
+        self.set_proposer_initial_covmat(load=True)
 
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
@@ -292,10 +292,10 @@ class MCMC(CovmatSampler):
         for number in self._quants_d_units:
             number.set_scale(self.cycle_length // self.current_point.output_thin)
 
-    def set_proposer_covmat(self, load=False):
+    def set_proposer_initial_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(
+            self._initial_covmat, where_nan = self._load_covmat(
                 prefer_load_old=self.output.is_resuming())
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
@@ -308,11 +308,11 @@ class MCMC(CovmatSampler):
                 self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
             self.log.debug(
                 "Sampling with covmat:\n%s",
-                DataFrame(self._covmat,
+                DataFrame(self._initial_covmat,
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
                     line_width=line_width))
-        self.proposer.set_covariance(self._covmat)
+        self.proposer.set_covariance(self._initial_covmat)
 
     def _get_last_nondragging_block(self, blocks, speeds):
         # blocks and speeds are already sorted
