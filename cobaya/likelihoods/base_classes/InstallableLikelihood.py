@@ -30,13 +30,22 @@ class InstallableLikelihood(Likelihood):
         # Ensure check for install and version errors
         # (e.g. may inherit from a class that inherits from this one, and not have them)
         if self.install_options:
+            name = self.get_qualified_class_name()
+            logger = get_logger(name)
             packages_path = kwargs.get("packages_path") or resolve_packages_path()
-            if not self.is_installed(path=packages_path):
-                name = self.get_qualified_class_name()
-                logger = get_logger(name)
+            old = False
+            try:
+                installed = self.is_installed(path=packages_path)
+            except Exception as excpt:  # catches VersionCheckError and unexpected ones
+                installed = False
+                old = isinstance(excpt, VersionCheckError)
+                logger.error(f"{type(excpt).__name__}: {excpt}")
+            if not installed:
+                not_or_old = ("is not up to date" if old
+                              else "has not been correctly installed")
                 raise ComponentNotInstalledError(
-                    logger, ("The data for this likelihood has not been correctly "
-                             f"installed. To install it, run `cobaya-install {name}`"))
+                    logger, (f"The data for this likelihood {not_or_old}. To install it, "
+                             f"run `cobaya-install {name}{' --upgrade' if old else ''}`"))
         super().__init__(*args, **kwargs)
 
     @classmethod

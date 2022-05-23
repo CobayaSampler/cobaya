@@ -163,7 +163,6 @@ class BAO(InstallableLikelihood):
     path: Optional[str]
 
     def initialize(self):
-        self.log.info("Initialising.")
         if not getattr(self, "path", None) and \
                 not getattr(self, packages_path_input, None):
             raise LoggedError(
@@ -316,6 +315,7 @@ class BAO(InstallableLikelihood):
                         data_file_path) + "Check your paths.")
             self.logpdf = lambda _x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 _x - self.data["value"].values)
+            self.log.info("Initialized.")
 
     def get_requirements(self):
         # Requisites
