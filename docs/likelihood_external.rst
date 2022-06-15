@@ -17,6 +17,7 @@ The python_path is not needed if the package has been pip installed.
 List of external packages
 ==========================
 
+ * `Planck NPIPE lensing <https://github.com/carronj/planck_PR4_lensing>`_
  * `Planck NPIPE hillipop and lollipop <https://github.com/planck-npipe>`_
  * `ACTPol DR4 <https://github.com/ACTCollaboration/pyactlike>`_
  * `SPT-SZ, SPTPol & SPT-3G <https://github.com/xgarrido/spt_likelihoods>`_
