@@ -413,13 +413,13 @@ class BAO(InstallableLikelihood):
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             chi2 = float(self.interpolator(x, y)[0])
-            return chi2 / 2
+            return chi2
         elif self.use_grid_3d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             z = self.theory_fun(self.redshift, self.observable_3)
             chi2 = self.interpolator3D(np.array([x, y, z])[:, 0])
-            return chi2 / 2
+            return chi2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
                                in zip(self.data["z"], self.data["observable"])]).T[0]
