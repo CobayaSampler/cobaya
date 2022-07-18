@@ -214,7 +214,7 @@ def test_sdss_dr7_mgs_classy(packages_path, skip_not_installed):
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 
 chi2_sdss_dr16_baoplus_elg = {
-    "bao.sdss_dr16_baoplus_elg": 3.26, "tolerance": 0.04}
+    "bao.sdss_dr16_baoplus_elg": 3.20, "tolerance": 0.04}
 chi2_sdss_dr16_baoplus_lrg = {
     "bao.sdss_dr16_baoplus_lrg": 5.96, "tolerance": 0.04}
 chi2_sdss_dr16_baoplus_qso = {
