@@ -89,8 +89,10 @@ class Theory(CobayaComponent):
     def must_provide(self, **requirements) -> Union[None, InfoDict, Sequence[str],
                                                     Sequence[Tuple[str, InfoDict]]]:
         """
-        Function to be called specifying any output products that are needed and hence
-        should be calculated by this component depending..
+        Function called by Cobaya with the actual products that this component needs to
+        compute (i.e. the things this compononent can provide that are acutally used by
+        other components). The function can return conditional requirements that this
+        component needs from other components in order to compute those things.
 
         The ``requirements`` argument is a requirement name with any optional parameters.
         This function may be called more than once with different requirements.
