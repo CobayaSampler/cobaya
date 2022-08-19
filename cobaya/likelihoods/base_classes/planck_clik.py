@@ -279,7 +279,7 @@ def get_clik_import_path(path, min_version=last_version_clik):
     :class:`tools.VersionCheckError` if the installed version is too old.
     """
     clik_src_path = get_clik_source_folder(path)
-    installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[1])
+    installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[-1])
     if installed_version < version.parse(min_version):
         raise VersionCheckError(
             f"Installed version of the Plack likelihood code 'clik' ({installed_version})"
