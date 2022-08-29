@@ -555,7 +555,7 @@ class MCMC(CovmatSampler):
                 raise LoggedError(
                     self.log,
                     "The chain has been stuck for %d attempts, stopping sampling. "
-                    "Make sure the reference point is semsible and initial covmat."
+                    "Make sure the reference point is sensible and initial covmat. "
                     "For parameters not included in an initial covmat, the 'proposal' "
                     "width set for each parameter should be of order of the expected "
                     "conditional posterior width, which may be much smaller than the "

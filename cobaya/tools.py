@@ -391,11 +391,11 @@ class NumberWithUnits:
 
         def cast(x):
             try:
-                if dtype == int:
+                val = float(x)
+                if dtype == int and np.isfinite(val):
                     # in case ints are given in exponential notation, make int(float())
-                    return int(float(x))
-                else:
-                    return float(x)
+                    return int(val)
+                return val
             except ValueError:
                 raise LoggedError(log, "Could not convert '%r' to a number.", x)
 
