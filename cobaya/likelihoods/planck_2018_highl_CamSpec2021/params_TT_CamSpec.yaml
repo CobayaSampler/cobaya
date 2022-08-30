@@ -58,7 +58,7 @@
       dist: norm
       loc: 1
       scale: 0.2
-    latex: \gamma^{\rm power}_{143}
+    latex: \gamma^{\rm power}_{217}
     proposal: 0.2
   n_143x217:
     prior:
@@ -69,5 +69,5 @@
       dist: norm
       loc: 1
       scale: 0.2
-    latex: \gamma^{\rm power}_{143}
+    latex: \gamma^{\rm power}_{143\times217}
     proposal: 0.2
