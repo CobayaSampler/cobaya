@@ -137,7 +137,7 @@ class MCMC(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                             .iloc[last]).to_numpy(dtype=np.float64, copy=True)
+                .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
                 logpost=-self.collection[OutPar.minuslogpost].iloc[last],
                 logpriors=-(self.collection[self.collection.minuslogprior_names]
@@ -231,11 +231,11 @@ class MCMC(CovmatSampler):
         if self.drag:
             if len(self.blocks) == 1:
                 self.drag = False
-                self.log.warning(
+                self.log.mpi_warning(
                     "Dragging disabled: not possible if there is only one block.")
             if max(self.oversampling_factors) / min(self.oversampling_factors) < 2:
                 self.drag = False
-                self.log.warning("Dragging disabled: speed ratios < 2.")
+                self.log.mpi_warning("Dragging disabled: speed ratios < 2.")
         if self.drag:
             # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
@@ -246,8 +246,8 @@ class MCMC(CovmatSampler):
                          self.n_fast / self.n_slow))
             if self.drag_interp_steps < 2:
                 self.drag = False
-                self.log.warning("Dragging disabled: "
-                                 "speed ratio and fast-to-slow ratio not large enough.")
+                self.log.mpi_warning("Dragging disabled: "
+                                     "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
             # MARKED FOR DEPRECATION IN v3.0
@@ -287,7 +287,7 @@ class MCMC(CovmatSampler):
         else:
             self.cycle_length = sum(len(b) * o for b, o in
                                     zip(blocks_indices, self.oversampling_factors))
-        self.log.debug(
+        self.log.mpi_debug(
             "Cycle length in steps: %r", self.cycle_length)
         for number in self._quants_d_units:
             number.set_scale(self.cycle_length // self.current_point.output_thin)
@@ -306,7 +306,7 @@ class MCMC(CovmatSampler):
                               self.learn_proposal_Rminus1_max_early,
                               self.learn_proposal_Rminus1_max)
                 self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
-            self.log.debug(
+            self.log.mpi_debug(
                 "Sampling with covmat:\n%s",
                 DataFrame(self._initial_covmat,
                           columns=self.model.parameterization.sampled_params(),
@@ -565,7 +565,10 @@ class MCMC(CovmatSampler):
                     "less efficiently once things converge.\n"
                     "Alternatively (though not advisable) make 'max_tries: np.inf' "
                     "(or 'max_tries: .inf' in yaml).\n"
-                    "Current point: %s", max_tries_now, self.current_point)
+                    "Current point: %s\nCurrent result: %s\n"
+                    "Last proposal: %s\nWith rejected result: %s",
+                    max_tries_now, self.current_point, self.current_point.results,
+                    trial, trial_results)
 
     # Functions to check convergence and learn the covariance of the proposal distribution
 
