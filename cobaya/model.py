@@ -846,24 +846,23 @@ class Model(HasLogger):
                         self.log, "Could not find anything to use input parameter(s) %r.",
                         unassigned)
                 else:
-                    self.log.warning("Parameter(s) %s are only used by the prior",
+                    self.mpi_warning("Parameter(s) %s are only used by the prior",
                                      self._unassigned_input)
 
         unused_theories = set(self.theory.values()) - used_suppliers
         if unused_theories:
             if skip_unused_theories:
-                self.log.debug('Theories %s do not need to be computed '
+                self.mpi_debug('Theories %s do not need to be computed '
                                'and will be skipped', unused_theories)
                 for theory in unused_theories:
                     self._component_order.pop(theory, None)
                     components.remove(theory)
             else:
-                self.log.warning('Theories %s do not appear to be actually used '
+                self.mpi_warning('Theories %s do not appear to be actually used '
                                  'for anything', unused_theories)
 
-        if self.is_debug():
-            self.log.debug("Components will be computed in the order:")
-            self.log.debug(" - %r" % list(self._component_order))
+        self.mpi_debug("Components will be computed in the order:")
+        self.mpi_debug(" - %r" % list(self._component_order))
 
         def dependencies_of(_component):
             deps = set()

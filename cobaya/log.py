@@ -168,7 +168,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
             mpi.abort_if_mpi()
         if is_debug(log):
             return  # no traceback printed
-    elif exception_type == mpi.OtherProcessError:
+    elif issubclass(exception_type, mpi.OtherProcessError):
         log.info(str(exception_instance))
         if is_debug(log):
             return  # no traceback printed

@@ -774,11 +774,13 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
     else:
         msg_tried = "global import (no `path` or Cobaya installation path given)"
     try:
-        logger.debug(f"Attempting {msg_tried}.")
+        if is_main_process():
+            logger.debug(f"Attempting {msg_tried}.")
         module = _bare_load_external_module(not_installed_level="debug", **load_kwargs)
     except ComponentNotInstalledError:
         if default_global:
-            logger.debug("Defaulting to global import.")
+            if is_main_process():
+                logger.debug("Defaulting to global import.")
             load_kwargs["path"] = None
             module = _bare_load_external_module(
                 not_installed_level=not_installed_level, **load_kwargs)
