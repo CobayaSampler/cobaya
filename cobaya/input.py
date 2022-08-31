@@ -416,8 +416,7 @@ def merge_default_params_info(defaults: LikesDict):
                                  "likelihood it was '%r'. Check your defaults!"),
                         p, lik, info, defaults_merged[p])
                 if mpi.is_main_process():
-                    logger.mpi_debug(
-                        "Parameter '%s' is multiply defined but consistent.", p)
+                    logger.debug("Parameter '%s' is multiply defined but consistent.", p)
             defaults_merged[p] = info
     return defaults_merged
 
