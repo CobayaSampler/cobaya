@@ -231,11 +231,11 @@ class MCMC(CovmatSampler):
         if self.drag:
             if len(self.blocks) == 1:
                 self.drag = False
-                self.log.mpi_warning(
+                self.mpi_warning(
                     "Dragging disabled: not possible if there is only one block.")
             if max(self.oversampling_factors) / min(self.oversampling_factors) < 2:
                 self.drag = False
-                self.log.mpi_warning("Dragging disabled: speed ratios < 2.")
+                self.mpi_warning("Dragging disabled: speed ratios < 2.")
         if self.drag:
             # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
@@ -246,7 +246,7 @@ class MCMC(CovmatSampler):
                          self.n_fast / self.n_slow))
             if self.drag_interp_steps < 2:
                 self.drag = False
-                self.log.mpi_warning("Dragging disabled: "
+                self.mpi_warning("Dragging disabled: "
                                      "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
@@ -287,7 +287,7 @@ class MCMC(CovmatSampler):
         else:
             self.cycle_length = sum(len(b) * o for b, o in
                                     zip(blocks_indices, self.oversampling_factors))
-        self.log.mpi_debug(
+        self.mpi_debug(
             "Cycle length in steps: %r", self.cycle_length)
         for number in self._quants_d_units:
             number.set_scale(self.cycle_length // self.current_point.output_thin)
@@ -306,7 +306,7 @@ class MCMC(CovmatSampler):
                               self.learn_proposal_Rminus1_max_early,
                               self.learn_proposal_Rminus1_max)
                 self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
-            self.log.mpi_debug(
+            self.mpi_debug(
                 "Sampling with covmat:\n%s",
                 DataFrame(self._initial_covmat,
                           columns=self.model.parameterization.sampled_params(),

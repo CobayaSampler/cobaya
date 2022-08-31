@@ -1190,7 +1190,7 @@ class Model(HasLogger):
             # If no oversampling, slow-fast separation makes no sense: warn and set to 2
             if oversample_factors[1] == 1:
                 min_factor = 2
-                self.log.mpi_warning(
+                self.mpi_warning(
                     "Oversampling would be trivial due to small speed difference or "
                     "small `oversample_power`. Set to %d.", min_factor)
             # Finally, unfold `oversampling_factors` to have the right number of elements,
@@ -1201,10 +1201,10 @@ class Model(HasLogger):
             oversample_factors = (
                     [int(oversample_factors[0])] * (1 + i_last_slow) +
                     [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
-            self.log.mpi_debug("Doing slow/fast split. The oversampling factors for "
-                               "the fast blocks should be interpreted as a global one "
-                               "for all of them")
-        if self.log.is_debug_and_mpi_root():
+            self.mpi_debug("Doing slow/fast split. The oversampling factors for "
+                           "the fast blocks should be interpreted as a global one "
+                           "for all of them")
+        if self.is_debug_and_mpi_root():
             self.log.debug(
                 "Cost, oversampling factor and parameters per block, in optimal order:")
             for c, o, b in zip(costs, oversample_factors, blocks_sorted):
@@ -1303,7 +1303,7 @@ class Model(HasLogger):
                                              warn_if_no_ref=False)
                 if self.loglike(point, cached=False)[0] != -np.inf:
                     n_done += 1
-            self.log.mpi_debug("Computed %d points to measure speeds.", n_done)
+            self.mpi_debug("Computed %d points to measure speeds.", n_done)
             times = [component.timer.get_time_avg() or 0  # type: ignore
                      for component in self.components]
         if mpi.more_than_one_process():
