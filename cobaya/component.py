@@ -14,6 +14,7 @@ from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
 from cobaya.conventions import packages_path_input, kinds, cobaya_package, \
     reserved_attributes
 from cobaya.yaml import yaml_load_file, yaml_dump
+from cobaya.mpi import is_main_process
 
 
 class Timer:
@@ -699,8 +700,9 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
         try:
             if get_import_path:
                 import_path = get_import_path(path)
-                logger.mpi_debug(
-                    f"'{name}' to be imported from (sub)directory {import_path}")
+                if is_main_process():
+                    logger.debug(
+                        f"'{name}' to be imported from (sub)directory {import_path}")
             else:
                 import_path = path
                 if not os.path.exists(import_path):
@@ -783,7 +785,8 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
         else:
             raise
     # Check from where was the module actually loaded
-    logger.mpi_info(
-        f"`{module_name}` module loaded successfully from "
-        f"{os.path.dirname(os.path.realpath(os.path.abspath(module.__file__)))}")
+    if is_main_process():
+        logger.info(
+            f"`{module_name}` module loaded successfully from "
+            f"{os.path.dirname(os.path.realpath(os.path.abspath(module.__file__)))}")
     return module
