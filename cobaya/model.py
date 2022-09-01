@@ -16,7 +16,7 @@ from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
     Union, List, Any, Dict, Set, Tuple
 
 # Local
-from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
+from cobaya.conventions import overhead_time, get_chi2_name, \
     packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params

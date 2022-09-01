@@ -329,6 +329,9 @@ class Output(HasLogger):
                 # TODO: could probably just compare full infos here, with externals?
                 #  for the moment cautiously keeping old behaviour
                 old_info = yaml_load(yaml_dump(old_info))  # type: ignore
+                if old_info.get("test"):
+                    old_info = None
+            if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [

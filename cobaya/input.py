@@ -493,7 +493,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         myprint = logger.info
         myprint_debug = logger.debug
     myname = inspect.stack()[0][3]
-    ignorable = {"debug", "resume", "force", packages_path_input, "test", "version"}
+    ignorable = {"debug", "resume", "force", packages_path_input,
+                 "test", "version", "stop_at_error"}
     # MARKED FOR DEPRECATION IN v3.2
     ignorable.add("debug_file")
     # END OF DEPRECATION BLOCK
