@@ -561,7 +561,7 @@ class SampleCollection(BaseCollection):
 
     # txt driver
     def _load__txt(self, skip=0):
-        self.log.debug("Skipping %d rows", skip)
+        self.log.debug("Skipping %s rows", skip)
         self._data = load_DataFrame(self.file_name, skip=skip,
                                     root_file_name=self.root_file_name)
         self.log.info("Loaded %d sample points from '%s'", len(self._data),

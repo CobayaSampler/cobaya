@@ -200,6 +200,9 @@ def run_script(args=None):
     arguments = parser.parse_args(args)
     info = arguments.input_file
     del arguments.input_file
+    if not info.endswith('.yaml') and not os.path.exists(info):
+        if os.path.exists(info + '.yaml'):
+            info = info + '.yaml'
     run(info, **arguments.__dict__)
 
 

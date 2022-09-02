@@ -498,6 +498,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 logpost_new = sum(logpriors_new) + sum(loglikes_new)
                 importance_weight = np.exp(logpost_new + point.get(OutPar.minuslogpost)
                                            - difflogmax)
+                log.debug("Importance weight: %s", importance_weight)
                 weight = weight * importance_weight
                 importance_weights.append(importance_weight)
                 if time.time() - last_dump_time > OutputOptions.output_inteveral_s:
