@@ -19,11 +19,11 @@ from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
 from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
-from cobaya.input import is_equal_info, get_resolved_class, load_info_dump, split_prefix
-from cobaya.input import get_info_path
+from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
 from cobaya.collection import SampleCollection
-from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic
-from cobaya.tools import has_non_yaml_reproducible
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic, \
+    has_non_yaml_reproducible
+from cobaya.component import get_component_class
 from cobaya import mpi
 
 # Default output type and extension
@@ -329,6 +329,9 @@ class Output(HasLogger):
                 # TODO: could probably just compare full infos here, with externals?
                 #  for the moment cautiously keeping old behaviour
                 old_info = yaml_load(yaml_dump(old_info))  # type: ignore
+                if old_info.get("test"):
+                    old_info = None
+            if old_info:
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [
@@ -359,9 +362,9 @@ class Output(HasLogger):
                             updated_info[k][c]["version"] = old_version
                             updated_info_trimmed[k][c]["version"] = old_version
                         elif old_version is not None:
-                            cls = get_resolved_class(
-                                c, k, None_if_not_found=True,
-                                class_name=updated_info[k][c].get("class"))
+                            cls = get_component_class(
+                                c, k, class_name=updated_info[k][c].get("class"),
+                                logger=self.log)
                             if cls and cls.compare_versions(
                                     old_version, new_version, equal=False):
                                 raise LoggedError(
@@ -369,7 +372,7 @@ class Output(HasLogger):
                                               "%s:%s, but you are trying to resume a "
                                               "run that used a newer version: %r.",
                                     new_version, k, c, old_version)
-        # If resuming, we don't want to to *partial* dumps
+        # If resuming, we don't want to do *partial* dumps
         if ignore_blocks and self.is_resuming():
             return
         # Work on a copy of the input info, since we are updating the prefix

@@ -567,10 +567,10 @@ class DES(DataSetLikelihood):
 
     def logp(self, **params_values):
         PKdelta = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
-                                                    extrap_kmax=500 * self.acc)
+                                                    extrap_kmax=3000 * self.acc)
         if self.use_Weyl:
             PKWeyl = self.provider.get_Pk_interpolator(("Weyl", "Weyl"),
-                                                       extrap_kmax=500 * self.acc)
+                                                       extrap_kmax=3000 * self.acc)
         else:
             PKWeyl = None
 

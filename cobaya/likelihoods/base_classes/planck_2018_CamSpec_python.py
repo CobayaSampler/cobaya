@@ -46,10 +46,10 @@ def range_to_ells(use_range):
 
 
 class Planck2018CamSpecPython(DataSetLikelihood):
-    install_options = {
-        "download_url": "https://github.com/CobayaSampler/planck_native_data/"
-                        "releases/download/v1/CamSpec2018.zip",
-        "data_path": "planck_2018_CamSpec_native"}
+    install_options = {"github_repository": "CobayaSampler/planck_native_data",
+                       "github_release": "v1", "asset": "CamSpec2018.zip",
+                       "directory": "planck_2018_CamSpec_native"}
+
     bibtex_file = 'planck2018.bibtex'
     type = "CMB"
 
@@ -72,8 +72,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
             used_ell = ini.params['use_range']
             if isinstance(used_ell, dict):
                 print('Using range %s' % used_ell)
-                for key, value in used_ell.items():
-                    used_ell[key] = range_to_ells(value)
+                used_ell = {key: range_to_ells(value) for key, value in used_ell.items()}
             else:
                 if silent:
                     print('CamSpec using range: %s' % used_ell)

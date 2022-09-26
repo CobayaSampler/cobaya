@@ -12,20 +12,21 @@ import numpy as np
 import logging
 import inspect
 from itertools import chain
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from tempfile import gettempdir
 import re
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, \
-    find_with_regexp, NumberWithUnits, load_module, VersionCheckError
+from cobaya.tools import read_dnumber, get_external_function, find_with_regexp, \
+    NumberWithUnits, get_compiled_import_path
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, NotInstalledError
+from cobaya.log import LoggedError, get_logger, NoLogging
+from cobaya.install import download_github_release
+from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
+from cobaya.conventions import derived_par_name_separator, Extension
 
 
 class polychord(Sampler):
@@ -33,9 +34,10 @@ class polychord(Sampler):
     PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
     tailored for high-dimensional parameter spaces with a speed hierarchy.
     """
+
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.18.2"
+    _pc_repo_version = "1.20.1"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
@@ -52,20 +54,27 @@ class polychord(Sampler):
     oversample_power: float
     nlive: NumberWithUnits
     path: str
+    logzero: float
+    max_ndead: int
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
-        # Allow global import if no direct path specification
-        allow_global = not self.path
-        if not self.path and self.packages_path:
-            self.path = self.get_path(self.packages_path)
-        self.pc: Any = self.is_installed(path=self.path, allow_global=allow_global,
-                                         check=False)
-        if not self.pc:
-            raise NotInstalledError(
-                self.log, "Could not find PolyChord. Check error message above. "
-                          "To install it, run 'cobaya-install polychord --%s "
-                          "[packages_path]'", packages_path_arg)
+        try:
+            install_path = (lambda _p: self.get_path(_p) if _p else None)(
+                self.packages_path)
+            self.pc = load_external_module(
+                "pypolychord", path=self.path, install_path=install_path,
+                min_version=self._pc_repo_version,
+                get_import_path=get_compiled_import_path, logger=self.log,
+                not_installed_level="debug")
+        except ComponentNotInstalledError as excpt:
+            raise ComponentNotInstalledError(
+                self.log, (f"Could not find PolyChord: {excpt}. "
+                           "To install it, run `cobaya-install polychord`"))
+        with NoLogging(logging.CRITICAL):
+            settings = load_external_module(
+                "pypolychord.settings", path=self.path, install_path=install_path,
+                get_import_path=get_compiled_import_path, logger=self.log)
         # Prepare arguments and settings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
@@ -82,7 +91,7 @@ class polychord(Sampler):
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
                     getattr(self, p), "d", scale=self.nDims, dtype=int).value)
-        self._quants_nlive_units = ["nprior"]
+        self._quants_nlive_units = ["nprior", "nfail"]
         for p in self._quants_nlive_units:
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
@@ -136,17 +145,15 @@ class polychord(Sampler):
             int(o * read_dnumber(self.num_repeats, dim_block))
             for o, dim_block in zip(oversampling_factors, self.grade_dims)]
         # Assign settings
-        pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
-                   "precision_criterion", "max_ndead", "boost_posterior", "feedback",
-                   "logzero", "posteriors", "equals", "compression_factor",
-                   "cluster_posteriors", "write_resume", "read_resume", "write_stats",
-                   "write_live", "write_dead", "base_dir", "grade_frac", "grade_dims",
-                   "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
-                   "grade_dims"]
+        pc_args = ["nlive", "num_repeats", "nprior", "nfail", "do_clustering",
+                   "feedback", "precision_criterion", "logzero",
+                   "max_ndead", "boost_posterior", "posteriors", "equals",
+                   "cluster_posteriors", "write_resume", "read_resume",
+                   "write_stats", "write_live", "write_dead", "write_prior",
+                   "maximise", "compression_factor", "synchronous", "base_dir",
+                   "file_root", "grade_dims", "grade_frac", "nlives"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
-                                    min_version=None)
         self.pc_settings = settings.PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
@@ -181,7 +188,6 @@ class polychord(Sampler):
             for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
                 if not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
-        self.mpi_info("Initialized!")
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
         if self.callback_function is None:
@@ -432,24 +438,6 @@ class polychord(Sampler):
                          cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:]))
 
     @classmethod
-    def get_import_path(cls, path):
-        log = get_logger(cls.__name__)
-        poly_build_path = os.path.join(path, "build")
-        if not os.path.isdir(poly_build_path):
-            log.error("Either PolyChord is not in the given folder, "
-                      "'%s', or you have not compiled it.", path)
-            return None
-        py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
-        try:
-            post = next(d for d in os.listdir(poly_build_path)
-                        if (d.startswith("lib.") and py_version in d))
-        except StopIteration:
-            log.error("The PolyChord installation at '%s' has not been compiled for the "
-                      "current Python version.", path)
-            return None
-        return os.path.join(poly_build_path, post)
-
-    @classmethod
     def is_compatible(cls):
         import platform
         if platform.system() == "Windows":
@@ -457,55 +445,16 @@ class polychord(Sampler):
         return True
 
     @classmethod
-    def is_installed(cls, **kwargs):
-        log = get_logger(cls.__name__)
+    def is_installed(cls, reload=False, **kwargs):
         if not kwargs.get("code", True):
             return True
-        check = kwargs.get("check", True)
-        func = log.info if check else log.error
-        path: Optional[str] = kwargs["path"]
-        if path is not None and path.lower() == "global":
-            path = None
-        if path and not kwargs.get("allow_global"):
-            if is_main_process():
-                log.info("Importing *local* PolyChord from '%s'.", path)
-            if not os.path.exists(path):
-                if is_main_process():
-                    func("The given folder does not exist: '%s'", path)
-                return False
-            poly_build_path = cls.get_import_path(path)
-            if not poly_build_path:
-                return False
-        elif not path:
-            if is_main_process():
-                log.info("Importing *global* PolyChord.")
-            poly_build_path = None
-        else:
-            if is_main_process():
-                log.info(
-                    "Importing *auto-installed* PolyChord (but defaulting to *global*).")
-            poly_build_path = cls.get_import_path(path)
-        cls._poly_build_path = poly_build_path
         try:
-            # TODO: add min_version when polychord module version available
-            return load_module(
-                'pypolychord', path=poly_build_path, min_version=None)
-        except ModuleNotFoundError:
-            if path is not None and path.lower() != "global":
-                log.error("Couldn't find the PolyChord python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            elif not check:
-                log.error("Could not import global PolyChord installation. "
-                          "Specify a Cobaya or PolyChord installation path, "
-                          "or install the PolyChord Python interface globally with "
-                          "'cd /path/to/polychord/ ; python setup.py install'")
-            return False
-        except ImportError as e:
-            log.error("Couldn't load the PolyChord python interface in %s:\n"
-                      "%s", poly_build_path or "global", e)
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
+            return bool(load_external_module(
+                "pypolychord", path=kwargs["path"],
+                get_import_path=get_compiled_import_path,
+                min_version=cls._pc_repo_version, reload=reload,
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
+        except ComponentNotInstalledError:
             return False
 
     @classmethod
@@ -530,15 +479,10 @@ class polychord(Sampler):
                            cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:])
         my_env = os.environ.copy()
         my_env.update({"PWD": cwd})
-        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
-                             stdout=PIPE, stderr=PIPE)
-        out, err = process_make.communicate()
-        if process_make.returncode:
-            log.info(out.decode("utf-8"))
-            log.info(err.decode("utf-8"))
-            log.error("Compilation failed!")
-            return False
-        my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
+        if "CC" not in my_env:
+            my_env["CC"] = "mpicc"
+        if "CXX" not in my_env:
+            my_env["CXX"] = "mpicxx"
         process_make = Popen([sys.executable, "setup.py", "build"],
                              cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()

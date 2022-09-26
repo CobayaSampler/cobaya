@@ -1,22 +1,67 @@
-## 3.X.Y – YYYY-MM-DD
+## 3.X.Y – 2022-XX-YY
+
+### General
+
+- Deprecated `debug_file` in input, in favour of `debug: [filename]`.
+- `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
+
+## 3.2.1 – 2022-05-17
+
+### General
+
+- Fixed PyPI installation error (thanks Paul Shah!).
+- Cleaner logging and better advice and error messages for missing component requirements.
+
+## 3.2 – 2022-05-13
+
+### General
 
 - Documented uses of `Model` class in general contexts (previously only cosmo)
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
+- Added `--minimize` flag to `cobaya-run` for quick minimization (replaces sampler, uses previous output).
+- Add `COBAYA_USE_FILE_LOCKING` environment variable to allow disabling of file locks. Warning not to use `--test` with MPI.
+- Installation of external packages is now version-aware for some packages; added `--upgrade` option to `cobaya-install`, off by default to preserve possible user changes.
+- Introduced `cobaya.component.ComponentNotFoundError` to handle cases in which internal or external components cannot be found.
+- In Linux terminals, added `COBAYA_COLOR` environment variable to get colourful output, useful e.g. for debugging, but *not* recommended for output to a file (e.g. running in a cluster).
+
+### PolyChord
+
+- Updated to v1.20.1: adds `nfail` to control failed initialisation, `synchronous` to choose sync/async parallelisation, variable number of live points, and the possibility to use an internal maximiser. Merges #232 (thanks @williamjameshandley).
 
 ### Cosmological likelihoods and theory codes
+
+- `Pk_interpolator`: added extrapolation up to `extrap_kmin` and improved robustness
 
 #### CAMB
 
 - Removed problematic `zrei: zre` alias (fixes #199, thanks @pcampeti)
+- Added `Omega_b|cdm|nu_massive(z)` and `angular_diameter_distance_2`
+- Returned values for `get_sigma_R` changed from `R, z, sigma(z, R)` to `z, R, sigma(z, R)`.
+- Support setting individual Accuracy parameters, e.g. Accuracy.AccurateBB
+- Calculate accurate BB when tensors are requested
+- Fix for using derived parameters with post-processing
+- Added `ignore_obsolete` option to be able to run with user-modified older CAMB versions.
+
+#### CLASS
+
+- Updated to v3.2.0
+- Added `Omega_b|cdm|nu_massive(z)`, `angular_diameter_distance_2`, `sigmaR(z)`, `sigma8(z)`, `fsgima8(z)` and Weyl potential power spectrum.
+- Added `ignore_obsolete` option to be able to run with user-modified older CLASS versions.
+- Added direct access to some CLASS computation products, via new requisites `CLASS_[background|thermodynamics|primordial|perturbations|sources]`.
+- Changed behaviour for `non_linear`: if not present in `extra_args`, uses the current default non-linear code (HMcode) instead of no non-linear code. To impose no non-linear corrections, pass `non_linear: False`.
 
 #### BAO
 
-- Added Boss DR16 likelihood (#185, by @Pablo-Lemos)
+- Added Boss DR16 likelihoods (#185, by @Pablo-Lemos)
 
 #### BICEP-Keck
 
 - Bugfix in decorrelation function #196 (by Caterina Umilta, @umilta)
 - Updated to 2021 data release (2018 data) and bugfix, #204 and #209 (by Dominic Beck, @doicbek)
+
+#### Planck
+
+- Fixed segfault in clik when receiving NaN in the Cl's. Partially implements #231 (thanks @lukashergt and @williamjameshandley)
 
 ## 3.1.1 – 2021-07-22
 

@@ -399,7 +399,7 @@ reionization = {
 
 # EXPERIMENTS ############################################################################
 base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
-                            "classy": {"non linear": "hmcode", "hmcode_min_k_max": 20}}
+                            "classy": {"non linear": "hmcode", "nonlinear_min_k_max": 20}}
 cmb_precision = deepcopy(base_precision)
 cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                               "lens_potential_accuracy": 1})
@@ -705,8 +705,9 @@ for name, pre in preset.items():
 install_basic: InfoDict = {
     "theory": theory,
     "likelihood": {
-        "planck_2018_lowl.TT": None,
+        # Native first: avoids reinstalling clik code+data if supp data obsolete
         "planck_2018_lensing.native": None,
+        "planck_2018_lowl.TT": None,
         "bicep_keck_2018": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,

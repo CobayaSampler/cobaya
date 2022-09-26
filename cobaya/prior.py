@@ -29,16 +29,21 @@ You can specify three different kinds of parameters:
   (e.g. to guess the pdf tails correctly if the derived quantity needs to be positive or
   negative -- defaulted to ``-.inf``, ``.inf`` resp.).
 
-The (optional) **reference** pdf (``ref``) for **sampled** parameters
-defines the region of the prior which is of most
-interest (e.g. where most of the prior mass is expected);
-samplers needing an initial point
-for a chain will attempt to draw it from the ``ref`` if it has been defined (otherwise
-from the prior). A good reference pdf will avoid a long *burn-in* stage during the
-sampling. If you assign a single value to ``ref``, samplers will always start from
-that value; however this makes convergence tests less reliable as each chain will
-start from the same point (so all chains could be stuck near the same point).
+The (optional) **reference** pdf (``ref``) for **sampled** parameters defines the region
+of the prior which is of most interest (e.g. where most of the prior mass is expected);
+samplers needing an initial point for a chain will attempt to draw it from the ``ref``
+if it has been defined (otherwise from the prior). A good reference pdf will avoid a long
+*burn-in* stage during the sampling. If you assign a single value to ``ref``, samplers
+will always start from that value; however this makes convergence tests less reliable as
+each chain will start from the same point (so all chains could be stuck near the same
+point).
 
+.. note::
+
+   When running in parallel with MPI you can give ``ref`` different values for each of
+   the different parallel processes (either at initialisation or by calling
+   :func:`Prior.set_reference`). They will be taken into account e.g. for starting
+   parallel MCMC chains at different points/distributions of your choice.
 
 The syntax for priors and ref's has the following fields:
 
@@ -50,7 +55,7 @@ The syntax for priors and ref's has the following fields:
   as they are understood for each particular pdf in :class:`scipy.stats`; e.g. for a
   ``uniform`` pdf, ``loc`` is the lower bound and ``scale`` is the length of the domain,
   whereas in a gaussian (``norm``) ``loc`` is the mean and ``scale`` is the standard
-  deviation).
+  deviation.
 + Additional specific parameters of the distribution, e.g. ``a`` and ``b`` as the powers
   of a Beta pdf.
 
@@ -112,8 +117,8 @@ the definition of :ref:`external likelihoods <likelihood_external>`. We will cal
 custom priors "`external` priors".
 
 Inside the ``prior`` block, list a pair of priors as ``[name]: [function]``, where the
-functions must return **log**-priors. This priors will be multiplied by the
-one-dimensional ones defined above. Even if you define an prior for some parameters
+functions must return **log**-priors. These priors will be multiplied by the
+one-dimensional ones defined above. Even if you define a prior for some parameters
 in the ``prior`` block, you still have to specify their bounds in the ``params`` block.
 
 A prior function can be specified in two different ways:
@@ -144,7 +149,7 @@ b) **As a string,** which will be passed to ``eval()``. The string can be a
 
    External priors can only be functions **sampled** and **fixed**
    and **derived** parameters that are dynamically defined in terms of other inputs.
-   Derived parameters computed by the theory code cannot be used in in a prior, since
+   Derived parameters computed by the theory code cannot be used in a prior, since
    otherwise the full prior could not be computed **before** the likelihood,
    preventing us from avoiding computing the likelihood when the prior is null, or
    forcing a *post-call* to the prior.
@@ -183,7 +188,7 @@ In general, avoid improper priors, since they will produce unexpected errors, e.
 Defining parameters dynamically
 -------------------------------
 
-We may want to sample in a parameter space different than the one understood by the
+We may want to sample in a parameter space different from the one understood by the
 likelihood, e.g. because we expect the posterior to be simpler on the alternative
 parameters.
 
@@ -376,8 +381,6 @@ class Prior(HasLogger):
         # in principle, separable: one per parameter
         self.params = []
         self.pdf = []
-        self.ref_pdf = []
-        self._ref_is_pointlike = True
         self._bounds = np.zeros((len(sampled_params_info), 2))
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
@@ -386,26 +389,6 @@ class Prior(HasLogger):
             fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
             if fast_logpdf:
                 self.pdf[-1].logpdf = MethodType(fast_logpdf, self.pdf[-1])
-            # Get the reference (1d) pdf
-            ref = sampled_params_info[p].get("ref")
-            # Cases: number, pdf (something, but not a number), nothing
-            if isinstance(ref, Sequence) and len(ref) == 2 and all(
-                    isinstance(n, numbers.Number) for n in ref):
-                ref = {"dist": "norm", "loc": ref[0], "scale": ref[1]}
-            if isinstance(ref, numbers.Real):
-                self.ref_pdf += [float(ref)]
-            elif isinstance(ref, Mapping):
-                self.ref_pdf += [get_scipy_1d_pdf({p: ref})]
-                self._ref_is_pointlike = False
-            elif ref is None:
-                self.ref_pdf += [np.nan]
-                self._ref_is_pointlike = False
-            else:
-                raise LoggedError(self.log,
-                                  "'ref' for starting position should be None or a number"
-                                  ", a list of two numbers for normal mean and deviation,"
-                                  "or a dict with parameters for a scipy distribution.")
-
             self._bounds[i] = [-np.inf, np.inf]
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
@@ -423,7 +406,8 @@ class Prior(HasLogger):
         self._lower_limits = self._bounds[:, 0].copy()
         self._uniform_logp = -np.sum(np.log(self._upper_limits[self._uniform_indices] -
                                             self._lower_limits[self._uniform_indices]))
-
+        # Set the reference pdf's
+        self.set_reference({p: v.get("ref") for p, v in sampled_params_info.items()})
         # Process the external prior(s):
         self.external = {}
         self.external_dependence = set()
@@ -435,7 +419,6 @@ class Prior(HasLogger):
             self.log.debug(
                 "Loading external prior '%s' from: '%s'", name, info_prior[name])
             logp = get_external_function(info_prior[name], name=name)
-
             argspec = getfullargspec(logp)
             known = set(parameterization.input_params())
             params = [p for p in argspec.args if p in known]
@@ -590,7 +573,67 @@ class Prior(HasLogger):
                 "It is not possible to get the covariance matrix from an external prior.")
         return np.diag([pdf.var() for pdf in self.pdf]).T
 
+    def set_reference(self, ref_info):
+        """
+        Sets or updates the reference pdf with the given parameter input info.
+
+        ``ref_info`` should be a dict ``{parameter_name: [ref definition]}``, not
+        ``{parameter_name: {"ref": [ref definition]}}``.
+
+        When called after prior initialisation, not mentioning a parameter leaves
+        its reference pdf unchanged, whereas explicitly setting ``ref: None`` sets
+        the prior as the reference pdf.
+
+        You can set different reference pdf's/values for different MPI processes,
+        e.g. for fixing different starting points for parallel MCMC chains.
+        """
+        if not hasattr(self, "ref_pdf"):
+            # Initialised with nan's in case ref==None: no ref -> uses prior
+            self.ref_pdf = [np.nan] * self.d()
+        unknown = set(ref_info).difference(self.params)
+        if unknown:
+            raise LoggedError(self.log,
+                              f"Cannot set reference pdf for parameter(s) {unknown}: "
+                              "not sampled parameters.")
+        for i, p in enumerate(self.params):
+            # The next if ensures correct behavious in "update call",
+            # where not mentioning a parameter and making its ref None are different
+            # (not changing vs setting to prior)
+            if p not in ref_info:
+                continue  # init: use prior; update: don't change
+            ref = ref_info[p]
+            # [number, number] interpreted as Gaussian
+            if isinstance(ref, Sequence) and len(ref) == 2 and all(
+                    isinstance(n, numbers.Number) for n in ref):
+                ref = {"dist": "norm", "loc": ref[0], "scale": ref[1]}
+            if isinstance(ref, numbers.Real):
+                self.ref_pdf[i] = float(ref)
+            elif isinstance(ref, Mapping):
+                self.ref_pdf[i] = get_scipy_1d_pdf({p: ref})
+            elif ref is None:
+                # We only get here if explicit `param: None` mention!
+                self.ref_pdf[i] = np.nan
+            else:
+                raise LoggedError(self.log,
+                                  "'ref' for starting position should be None or a number"
+                                  ", a list of two numbers for normal mean and deviation,"
+                                  "or a dict with parameters for a scipy distribution.")
+        # Re-set the pointlike-ref property
+        if hasattr(self, "_ref_is_pointlike"):
+            delattr(self, "_ref_is_pointlike")
+        self.reference_is_pointlike
+
+    @property
     def reference_is_pointlike(self) -> bool:
+        """
+        Whether there is a fixed reference point for all parameters, such that calls to
+        :func:`Prior.reference` would always return the same.
+        """
+        if not hasattr(self, "_ref_is_pointlike"):
+            self._ref_is_pointlike = all(
+                # np.nan is a numbers.Number instance, but not a fixed ref (uses prior)
+                (isinstance(ref, numbers.Number) and ref is not np.nan)
+                for ref in self.ref_pdf)
         return self._ref_is_pointlike
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
@@ -643,7 +686,7 @@ class Prior(HasLogger):
                     "If stuck here, maybe it is not possible to sample from the "
                     "reference pdf a point with non-null prior. Check that the reference "
                     "pdf and the prior are consistent.")
-        if self.reference_is_pointlike():
+        if self.reference_is_pointlike:
             raise LoggedError(self.log, "The reference point provided has null prior. "
                                         "Set 'ref' to a different point or a pdf.")
         raise LoggedError(

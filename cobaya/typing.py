@@ -97,7 +97,9 @@ if sys.version_info >= (3, 8):
         post: PostDict
         force: bool
         debug: Union[bool, int, str]
+        # MARKED FOR DEPRECATION IN v3.2
         debug_file: Optional[str]
+        # END OF DEPRECATION BLOCK
         resume: bool
         stop_at_error: bool
         test: bool

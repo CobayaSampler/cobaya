@@ -41,7 +41,9 @@ Start by choosing a preset, maybe modify some aspects using the options provided
 
 The parameter combinations and options included in the input generator are in general well-tested, but they are only suggestions: **you can add by hand any parameter that your theory code or likelihood can understand, or modify any setting**.
 
-Don't forget to add the installation path for the cosmological requisites ``packages_path: '/path/to/packages'``, and an ``output`` prefix if you wish.
+You can add an ``output`` prefix if you wish (otherwise, the name of the input file without extension is used). If it contains a folder, e.g. ``chains/[whatever]``, that folder will be created if it does not exist.
+
+In general, you do not need to mention the installation path used by ``cobaya-install`` (see :doc:`installation_cosmo`): it will be selected automatically. If that does not work, add ``packages_path: '/path/to/packages'`` in the input file, or ``-p /path/to/packages`` as a ``cobaya-run`` argument.
 
 .. Notice the checkbox **"Keep common parameter names"**: if checked, instead of the parameter names used by CAMB or CLASS (different from each other), the input will use a common parameter names set, understandable by both. If you are using this, you can exchange both theory codes safely (just don't forget to add the ``extra_args`` generated separately for each theory code.
 
@@ -77,11 +79,17 @@ Save the input generated to a file and run it with ``cobaya-run [your_input_file
 
 .. note::
 
-   You may want to start with a *test run*, adding ``--test`` to ``cobaya-run``. It will initialise all components (cosmological theory code and likelihoods, and the sampler) and exit.
+   You may want to start with a *test run*, adding ``--test`` to ``cobaya-run`` (run without MPI). It will initialise all components (cosmological theory code and likelihoods, and the sampler) and exit.
 
 Typical running times for MCMC when using computationally heavy likelihoods (e.g. those involving :math:`C_\ell`, or non-linear :math:`P(k,z)` for several redshifts) are ~10 hours running 4 MPI processes with 4 OpenMP threads per process, provided that the initial covariance matrix is a good approximation to the one of the real posterior (Cobaya tries to select it automatically from a database; check the ``[mcmc]`` output towards the top to see if it succeeded), or a few hours on top of that if the initial covariance matrix is not a good approximation.
 
 It is much harder to provide typical PolyChord running times. We recommend starting with a low number of live points and a low convergence tolerance, and build up from there towards PolyChord's default settings (or higher, if needed).
+
+If you would like to find the MAP (maximum-a-posteriori) or best fit (maximum of the likelihood within prior ranges, but ignoring prior density), you can swap the sampler (``mcmc``, ``polychord``, etc) by ``minimize``, as described in :doc:`sampler_minimize`. As a shortcut, to run a minimizer process for the MAP without modifying your input file, you can simply do
+
+.. code:: bash
+
+   cobaya-run [your_input_file_name.yaml] --minimize
 
 
 .. _cosmo_post:
@@ -131,6 +139,17 @@ Assuming we saved the sample at ``chains/planck``, we need to define the followi
            derived: 'lambda sigma8, omegam: sigma8*(omegam/0.3)**0.5'
            latex: \sigma_8 (\Omega_\mathrm{m}/0.3)^{0.5}
 
+
+.. _compare_cosmomc:
+
+Comparison with CosmoMC/GetDist conventions
+-------------------------------------------
+
+In CosmoMC, uniform priors are defined with unit density, whereas in Cobaya their density is the inverse of their range, so that they integrate to 1. Because of this, the value of CosmoMC posteriors is different from Cobaya's. In fact, CosmoMC (and GetDist) call its posterior *log-likelihood*, and it consists of the sum of the individual data log-likelihoods and the non-flat log-priors (which also do not necessarily have the same normalisation as in Cobaya). So the comparison of posterior values is non-trivial. But values of particular likelihoods (``chi2__[likelihood_name]`` in Cobaya) should be almost exactly equal in Cobaya and CosmoMC at equal cosmological parameter values.
+
+Regarding minimizer runs, Cobaya produces both a ``[prefix].minimum.txt`` file following the same conventions as the output chains, and also a legacy ``[prefix].minimum`` file (no ``.txt`` extension) similar to CosmoMC's for GetDist compatibility, following the conventions described above.
+
+
 .. _citations:
 
 Getting help and bibliography for a component
@@ -142,9 +161,9 @@ If you want to get the available options with their default values for a given c
 
    $ cobaya-doc [component_name]
 
-If the component name is not unique (i.e. there are more than one component with the same name but different kinds), use the option ``--kind [component_kind]`` to specify its kind: ``sampler``, ``theory`` or ``likelihood``.
+The output will be YAML-compatible by default, and Python-compatible if passed a ``-p`` / ``--python`` flag.
 
-Call ``$ cobaya-doc`` with a kind instead of a component name (e.g. ``$ cobaya-doc likelihood``) to get a list of components of that kind. Call with no arguments to get all available components of all kinds.
+Call ``$ cobaya-doc`` with no arguments to get a list of all available components of all kinds.
 
 If you would like to cite the results of a run in a paper, you would need citations for all the different parts of the process. In the example above that would be this very sampling framework, the MCMC sampler, the CAMB or CLASS cosmological code and the Planck 2018 likelihoods.
 
@@ -154,7 +173,7 @@ The ``bibtex`` for those citations, along with a short text snippet for each ele
 
    $ cobaya-bib [your_input_file_name.yaml] > output_file.tex
 
-You can pass multiple input files this way, or even a (list of) component name(s), as in ``cobaya-doc``.
+You can pass multiple input files this way, or even a (list of) component name(s).
 
 You can also do this interactively, by passing your input info, as a python dictionary, to the function :func:`~bib.get_bib_info`:
 

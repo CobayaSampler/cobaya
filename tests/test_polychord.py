@@ -30,7 +30,7 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
 
     def callback(sampler):
         nonlocal dead_points
-        dead_points = sampler.dead[["a", "b"]].values.copy()
+        dead_points = sampler.dead[["a", "b"]].to_numpy(dtype=np.float64).copy()
 
     info = {
         "likelihood": {

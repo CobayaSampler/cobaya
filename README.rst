@@ -96,3 +96,9 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
    :target: https://erc.europa.eu/
    :height: 150px
    :width: 150px
+
+.. image:: https://cdn.cosmologist.info/antony/STFC_white.svg
+   :alt: STFC
+   :target: https://stfc.ukri.org/
+   :height: 150px
+   :width: 150px

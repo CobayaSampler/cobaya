@@ -703,8 +703,9 @@ def save_cl_dict(filename, array_dict, lmin=2, lmax=None,
             lmax = lmax or array_dict[key].shape[0] - 1 + cl_dict_lmin
             cols.append(array_dict[key][lmin - cl_dict_lmin:lmax - cl_dict_lmin + 1])
             labels.append(key.upper())
-    if 'pp' in CMB_keys:
-        cols.append(array_dict['pp'][lmin - cl_dict_lmin::lmax - cl_dict_lmin + 1])
+    if 'pp' in array_dict:
+        lmax = lmax or array_dict['pp'].shape[0] - 1 + cl_dict_lmin
+        cols.append(array_dict['pp'][lmin - cl_dict_lmin:lmax - cl_dict_lmin + 1])
         labels.append('PP')
     ls = np.arange(lmin, lmax + 1)
     np.savetxt(filename, np.vstack((ls,) + tuple(cols)).T,
@@ -750,7 +751,7 @@ def make_forecast_cmb_dataset(fiducial_Cl, output_root, output_dir=None,
 
     cl_keys = fiducial_Cl.keys()
     use_CMB = set(cl_keys).intersection(CMB_keys)
-    use_lensing = lens_recon_noise
+    use_lensing = lens_recon_noise is not None
 
     if use_CMB:
         if NoiseVar is None:

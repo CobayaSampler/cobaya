@@ -165,7 +165,7 @@ class MCMC(CovmatSampler):
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
         self.set_proposer_blocking()
-        self.set_proposer_covmat(load=True)
+        self.set_proposer_initial_covmat(load=True)
 
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
@@ -231,11 +231,11 @@ class MCMC(CovmatSampler):
         if self.drag:
             if len(self.blocks) == 1:
                 self.drag = False
-                self.log.warning(
+                self.mpi_warning(
                     "Dragging disabled: not possible if there is only one block.")
             if max(self.oversampling_factors) / min(self.oversampling_factors) < 2:
                 self.drag = False
-                self.log.warning("Dragging disabled: speed ratios < 2.")
+                self.mpi_warning("Dragging disabled: speed ratios < 2.")
         if self.drag:
             # The definition of oversample_power=1 as spending the same amount of time in
             # the slow and fast block would suggest a 1/2 factor here, but this additional
@@ -246,8 +246,8 @@ class MCMC(CovmatSampler):
                          self.n_fast / self.n_slow))
             if self.drag_interp_steps < 2:
                 self.drag = False
-                self.log.warning("Dragging disabled: "
-                                 "speed ratio and fast-to-slow ratio not large enough.")
+                self.mpi_warning("Dragging disabled: "
+                                     "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
             # MARKED FOR DEPRECATION IN v3.0
@@ -287,15 +287,15 @@ class MCMC(CovmatSampler):
         else:
             self.cycle_length = sum(len(b) * o for b, o in
                                     zip(blocks_indices, self.oversampling_factors))
-        self.log.debug(
+        self.mpi_debug(
             "Cycle length in steps: %r", self.cycle_length)
         for number in self._quants_d_units:
             number.set_scale(self.cycle_length // self.current_point.output_thin)
 
-    def set_proposer_covmat(self, load=False):
+    def set_proposer_initial_covmat(self, load=False):
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._covmat, where_nan = self._load_covmat(
+            self._initial_covmat, where_nan = self._load_covmat(
                 prefer_load_old=self.output.is_resuming())
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
@@ -306,13 +306,13 @@ class MCMC(CovmatSampler):
                               self.learn_proposal_Rminus1_max_early,
                               self.learn_proposal_Rminus1_max)
                 self.learn_proposal_Rminus1_max = self.learn_proposal_Rminus1_max_early
-            self.log.debug(
+            self.mpi_debug(
                 "Sampling with covmat:\n%s",
-                DataFrame(self._covmat,
+                DataFrame(self._initial_covmat,
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
                     line_width=line_width))
-        self.proposer.set_covariance(self._covmat)
+        self.proposer.set_covariance(self._initial_covmat)
 
     def _get_last_nondragging_block(self, blocks, speeds):
         # blocks and speeds are already sorted
@@ -555,7 +555,7 @@ class MCMC(CovmatSampler):
                 raise LoggedError(
                     self.log,
                     "The chain has been stuck for %d attempts, stopping sampling. "
-                    "Make sure the reference point is semsible and initial covmat."
+                    "Make sure the reference point is sensible and initial covmat. "
                     "For parameters not included in an initial covmat, the 'proposal' "
                     "width set for each parameter should be of order of the expected "
                     "conditional posterior width, which may be much smaller than the "
@@ -565,7 +565,10 @@ class MCMC(CovmatSampler):
                     "less efficiently once things converge.\n"
                     "Alternatively (though not advisable) make 'max_tries: np.inf' "
                     "(or 'max_tries: .inf' in yaml).\n"
-                    "Current point: %s", max_tries_now, self.current_point)
+                    "Current point: %s\nCurrent result: %s\n"
+                    "Last proposal: %s\nWith rejected result: %s",
+                    max_tries_now, self.current_point, self.current_point.results,
+                    trial, trial_results)
 
     # Functions to check convergence and learn the covariance of the proposal distribution
 

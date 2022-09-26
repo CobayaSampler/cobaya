@@ -5,6 +5,7 @@ import pytest
 from getdist.mcsamples import MCSamplesFromCobaya, loadMCSamples
 from cobaya import mpi, run, Theory, InputDict, PostDict, LoggedError
 from cobaya.conventions import Extension
+from cobaya.component import ComponentNotFoundError
 from cobaya.tools import deepcopy_where_possible
 from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
 from cobaya.log import NoLogging
@@ -72,14 +73,12 @@ def test_cosmo_run_not_found():
     with NoLogging(logging.ERROR):
         inf = deepcopy_where_possible(info)
         inf["likelihood"]["H0.perfect"] = None
-        with pytest.raises(LoggedError) as e:
+        with pytest.raises(ComponentNotFoundError):
             run(inf)
-        assert "Failed to get defaults for component" in str(e)
         inf = deepcopy_where_possible(info)
         inf["likelihood"]["none"] = None
-        with pytest.raises(LoggedError) as e:
+        with pytest.raises(ComponentNotFoundError):
             run(inf)
-        assert "Failed to get defaults for component" in str(e)
         inf = deepcopy_where_possible(info)
         inf["likelihood"]["pandas.plotting.PlotAccessor"] = None
         with pytest.raises(LoggedError) as e:

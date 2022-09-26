@@ -53,24 +53,24 @@ from numpy.random import SeedSequence, default_rng
 # Local
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.typing import InfoDict, SamplersDict, SamplerDict
-from cobaya.tools import deepcopy_where_possible, find_with_regexp
-from cobaya.tools import recursive_update, str_to_list, get_resolved_class
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update, \
+    str_to_list
 from cobaya.model import Model
 from cobaya.log import LoggedError, get_logger, is_debug
 from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.component import CobayaComponent
+from cobaya.component import CobayaComponent, get_component_class
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy, Output
 from cobaya import mpi
 
 
-def get_sampler_name_and_class(info_sampler: SamplersDict):
+def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    sampler_class = get_resolved_class(name, kind="sampler")
+    sampler_class = get_component_class(name, kind="sampler", logger=logger)
     assert issubclass(sampler_class, Sampler)
     return name, sampler_class
 
@@ -148,7 +148,8 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info_sampler))
     # Get sampler class & check resume/force compatibility
-    sampler_name, sampler_class = get_sampler_name_and_class(updated_info_sampler)
+    sampler_name, sampler_class = get_sampler_name_and_class(
+        updated_info_sampler, logger=logger_sampler)
     check_sampler_info(
         (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())
@@ -473,6 +474,7 @@ class CovmatSampler(Sampler):
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
+                self.log.debug(f"Loaded a covariance matrix from '{self.covmat}'")
             except TypeError:
                 raise LoggedError(self.log, "The property 'covmat' must be a file name,"
                                             "but it's '%s'.", str(self.covmat))
@@ -510,14 +512,18 @@ class CovmatSampler(Sampler):
                     self.log, "The number of parameters in %s and the "
                               "dimensions of the matrix do not agree: %d vs %r",
                     str_msg, len(loaded_params), loaded_covmat.shape)
-            if not (np.allclose(loaded_covmat.T, loaded_covmat) and
-                    np.all(np.linalg.eigvals(loaded_covmat) > 0)):
-                str_msg = "passed"
-                if isinstance(self.covmat, str):
-                    str_msg = "loaded from %r" % self.covmat
+            loaded_covmat = np.atleast_2d(loaded_covmat)
+            is_square_symmetric = (len(loaded_covmat.shape) == 2 and
+                                   loaded_covmat.shape[0] == loaded_covmat.shape[1] and
+                                   np.allclose(loaded_covmat.T, loaded_covmat))
+            # Not checking for positive-definiteness yet: may contain highly degenerate
+            # derived parameters that would spoil it now, but will later be dropped.
+            if not is_square_symmetric:
+                from_msg = (f"loaded from '{self.covmat}'" if isinstance(self.covmat, str)
+                            else "passed")
                 raise LoggedError(
-                    self.log, "The covariance matrix %s is not a positive-definite, "
-                              "symmetric square matrix.", str_msg)
+                    self.log,
+                    f"The covariance matrix {from_msg} is not a symmetric square matrix.")
             # Fill with parameters in the loaded covmat
             renames = {p: [p] + str_to_list(v.get("renames") or [])
                        for p, v in params_infos.items()}

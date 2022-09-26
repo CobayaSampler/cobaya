@@ -1,10 +1,6 @@
 Importance reweighting and general ``post``-processing
 ======================================================
 
-.. note::
-
-   *new in 1.2*
-
 The `post` component provides a way to post-process an existing sample in different ways:
 
 - Add/remove/recompute a prior, e.g. to impose a parameter cut.
