@@ -16,22 +16,13 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
 
 .. note::
 
-   If ``PySide2`` is not installed, this will fail. To fix it:
+   If ``PySide`` is not installed, this will fail. To fix it:
 
    .. code:: bash
 
-      $ python -m pip install pyqt5 pyside2
+      $ python -m pip install PySide6
 
-
-   Anaconda users should instead do:
-
-   .. code:: bash
-
-      $ conda install -c conda-forge pyside2
-
-   Installing PySide2 via pip, and sometime Anaconda, is often problematic.
-   The most reliable solution seems to be to make a clean conda-forge environment and
-   use that, e.g. install Anaconda or Miniconda and use the environment created with
+   You can also use PySide2. If installing via pip is problematic, the most reliable solution seems to be to make a clean conda-forge environment and use that, e.g. install Anaconda or Miniconda and use the environment created with
 
   .. code:: bash
 

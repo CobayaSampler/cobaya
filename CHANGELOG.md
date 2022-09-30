@@ -2,6 +2,7 @@
 
 ### General
 
+- GUI now support PySide6
 - Deprecated `debug_file` in input, in favour of `debug: [filename]`.
 - `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
 

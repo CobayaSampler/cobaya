@@ -82,7 +82,7 @@ setup(
     install_requires=install_requires,
     extras_require={
         'test': ['pytest', 'pytest-forked', 'flaky', 'mpi4py'],
-        'gui': ['pyqt5', 'pyside2', 'matplotlib'],
+        'gui': ['pyside6', 'matplotlib'],
         'docs': extract_docs_requirements()},
     package_data={
         'cobaya': list(chain(*[['%s/*/*.yaml' % folder, '%s/*/*.bibtex' % folder]
