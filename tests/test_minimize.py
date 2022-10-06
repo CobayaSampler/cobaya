@@ -34,12 +34,12 @@ def test_minimize_gaussian(tmpdir):
         info: InputDict = {'likelihood': {'like': NoisyCovLike},
                            "sampler": {"minimize": {"ignore_prior": True,
                                                     "method": method}}}
-        products = run(info).sampler.products()
+        products = run(info)[1].products()
         error = abs(maxloglik - -products["minimum"]["minuslogpost"])
         assert error < 0.01
 
         info['output'] = os.path.join(tmpdir, 'testmin')
-        products = run(info, force=True).sampler.products()
+        products = run(info, force=True)[1].products()
         if mpi.is_main_process():
             from getdist.types import BestFit
             res = BestFit(info['output'] + '.bestfit').getParamDict()

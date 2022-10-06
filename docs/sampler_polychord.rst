@@ -130,7 +130,7 @@ Troubleshooting
 
 If you are getting an error whose cause is not immediately obvious, try substituting ``polychord`` by :doc:`the dummy sampler <sampler_evaluate>` ``evaluate``.
 
-If still in doubt, run with debug output and check what the prior and likelihood are getting and producing: either set ``debug: True`` in the input file and set ``debug_file`` to some file name, or add the ``--debug`` flag to ``cobaya-run`` and pipe the output to a file with ``cobaya-run [input.yaml] --debug > file``.
+If still in doubt, run with debug output and check what the prior and likelihood are getting and producing: either set ``debug`` to ``True`` for on-screen debug output, or to a file name to send the debug output to that file (and print only normal progress on screen). Alternatively, add a ``--debug`` flag to ``cobaya-run`` and pipe the output to a file with ``cobaya-run [input.yaml] --debug > file``.
 
 If everything seems to be working fine, but PolyChord is taking too long to converge, reduce the number of live points ``nlive`` to e.g. 10 per dimension, and the ``precision_criterion`` to 0.1 or so, and check that you get reasonable (but low-precision) sample and evidences.
 

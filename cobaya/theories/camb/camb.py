@@ -46,8 +46,37 @@ You can specify any parameter that CAMB understands in the ``params`` block:
 If you want to use your own version of CAMB, you need to specify its location with a
 ``path`` option inside the ``camb`` block. If you do not specify a ``path``,
 CAMB will be loaded from the automatic-install ``packages_path`` folder, if specified, or
-otherwise imported as a globally-installed Python package. Cobaya will print at
-initialisation where it is getting CAMB from.
+otherwise imported as a globally-installed Python package. If you want to force that
+the global ``camb`` installation is used, pass ``path='global'``. Cobaya will print at
+initialisation where CAMB was actually loaded from.
+
+
+.. _camb_access:
+
+Access to CAMB computation products
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can retrieve CAMB computation products within likelihoods (or other pipeline
+components in general) or manually from a :class:`~model.Model` as long as you have added
+them as requisites; see :doc:`cosmo_external_likelihood` or
+:doc:`cosmo_external_likelihood_class` for the likelihood case, and :doc:`cosmo_model` for
+the manual case.
+
+The products that you can request and later retrieve are listed in
+:func:`~theories.cosmo.BoltzmannBase.must_provide`.
+
+If you would like to access a CAMB result that is not accessible that way, you can access
+the full CAMB results object
+`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`_
+directly by adding ``{"CAMBdata": None}`` to your requisites, and then retrieving it with
+``provider.get_CAMBdata()``.
+
+In general, the use of ``CAMBdata`` should be avoided in public code, since it breaks
+compatibility with other Boltzmann codes at the likelihood interface level. If you need
+a quantity for a public code that is not generally interfaced in
+:func:`~theories.cosmo.BoltzmannBase.must_provide`, let us know if you think it makes
+sense to add it.
+
 
 .. _camb_modify:
 
@@ -60,6 +89,10 @@ exposed in the Python interface (`instructions here
 If you follow those instructions you do not need to make any additional modification in
 Cobaya.
 
+If your modification involves new computed quantities, add a retrieving method to
+`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`_,
+and see :ref:`camb_access`.
+
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
 space (set ``debug: True`` to get more detailed information of what exactly is passed to
@@ -70,6 +103,15 @@ In your CAMB modification, remember that you can raise a ``CAMBParamRangeError``
 expect that observable to be compatible with the data (e.g. at the fringes of the
 parameter space). Whenever such an error is raised during sampling, the likelihood is
 assumed to be zero, and the run is not interrupted.
+
+.. note::
+
+   If your modified CAMB has a lower version number than the minimum required by Cobaya,
+   you will get an error at initialisation. You may still be able to use it by setting the
+   option ``ignore_obsolete: True`` in the ``camb`` block (though you would be doing that
+   at your own risk; ideally you should translate your modification to a newer CAMB
+   version, in case there have been important fixes since the release of your baseline
+   version).
 
 
 Installation
@@ -162,7 +204,8 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
    In any of these methods, if you intend to switch between different versions or
    modifications of CAMB you should not install CAMB as python package using
-   ``python setup.py install``, as the official instructions suggest.
+   ``python setup.py install``, as the official instructions suggest. It is not necessary
+   if you indicate the path to your preferred installation as explained above.
 """
 
 # Global
@@ -170,16 +213,18 @@ import sys
 import os
 import numbers
 import ctypes
+import platform
 from copy import deepcopy
 from typing import NamedTuple, Any, Callable, Optional
 import numpy as np
 from itertools import chain
 # Local
+from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, check_gcc_version, NotInstalledError
-from cobaya.tools import getfullargspec, get_class_methods, get_properties, load_module, \
-    VersionCheckError, check_component_version, str_to_list, Pool1D, Pool2D, PoolND
+from cobaya.install import download_github_release, check_gcc_version
+from cobaya.tools import getfullargspec, get_class_methods, get_properties, \
+    check_module_version, str_to_list, Pool1D, Pool2D, PoolND, VersionCheckError
 from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
 
@@ -208,23 +253,31 @@ class CAMB(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.1.3'
+    _min_camb_version = '1.3.5'
 
     file_base_name = 'camb'
     external_primordial_pk: bool
     camb: Any
+    ignore_obsolete: bool
 
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
-        # Allow global import if no direct path specification
-        allow_global = not self.path
-        if not self.path and self.packages_path:
-            self.path = self.get_path(self.packages_path)
-        self.camb = self.is_installed(path=self.path, allow_global=allow_global,
-                                      check=False)
-        if not self.camb:
-            raise NotInstalledError(
-                self.log, "Could not find CAMB. Check error message above.")
+        try:
+            install_path = (lambda p: self.get_path(p) if p else None)(self.packages_path)
+            min_version = None if self.ignore_obsolete else self._min_camb_version
+            self.camb = load_external_module(
+                "camb", path=self.path, install_path=install_path,
+                min_version=min_version, get_import_path=self.get_import_path,
+                logger=self.log, not_installed_level="debug")
+        except VersionCheckError as excpt:
+            raise VersionCheckError(
+                str(excpt) + " If you are using CAMB unmodified, upgrade with"
+                "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
+                "set the option `ignore_obsolete: True` for CAMB.")
+        except ComponentNotInstalledError as excpt:
+            raise ComponentNotInstalledError(
+                self.log, (f"Could not find CAMB: {excpt}. "
+                           "To install it, run `cobaya-install camb`"))
         super().initialize()
         self.extra_attrs = {"Want_CMB": False, "Want_cl_2D_array": False,
                             'WantCls': False}
@@ -262,7 +315,6 @@ class CAMB(BoltzmannBase):
         self._transfer_requires = [p for p in self.requires if
                                    p not in self.get_can_support_params()]
         self.requires = [p for p in self.requires if p not in self._transfer_requires]
-        self.log.info("Initialized!")
 
     def _extract_params(self, set_func):
         args = {}
@@ -354,7 +406,7 @@ class CAMB(BoltzmannBase):
             elif k in ("angular_diameter_distance", "comoving_radial_distance"):
                 self.set_collector_with_z_pool(k, v["z"], getattr(CAMBdata, k))
             elif k == "angular_diameter_distance_2":
-                check_component_version(self.camb, '1.3.5')
+                check_module_version(self.camb, '1.3.5')
                 self.set_collector_with_z_pool(
                     k, v["z_pairs"], CAMBdata.angular_diameter_distance2, d=2)
             elif k == "sigma8_z":
@@ -828,49 +880,28 @@ class CAMB(BoltzmannBase):
             os.path.join(path, "code",
                          cls._camb_repo_name[cls._camb_repo_name.find("/") + 1:]))
 
+    @staticmethod
+    def get_import_path(path):
+        """
+        Returns the ``camb`` module import path if there is a compiled version of CAMB in
+        the given folder. Otherwise raises ``FileNotFoundError``.
+        """
+        lib_fname = "cambdll.dll" if platform.system() == "Windows" else "camblib.so"
+        if not os.path.isfile(os.path.realpath(os.path.join(path, "camb", lib_fname))):
+            raise FileNotFoundError(
+                f"Could not find compiled CAMB library {lib_fname} in {path}.")
+        return path
+
     @classmethod
-    def is_installed(cls, **kwargs):
+    def is_installed(cls, reload=False, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = get_logger(cls.__name__)
-        import platform
-        check = kwargs.get("check", True)
-        func = log.info if check else log.error
-        path = kwargs["path"]
-        if path is not None and path.lower() == "global":
-            path = None
-        if isinstance(path, str) and not kwargs.get("allow_global"):
-            log.info("Importing *local* CAMB from " + path)
-            if not os.path.exists(path):
-                func("The given folder does not exist: '%s'", path)
-                return False
-            if not os.path.exists(os.path.join(path, "setup.py")):
-                func("Either CAMB is not in the given folder, '%s', or you are using"
-                     " a very old version without the Python interface.", path)
-                return False
-            if not os.path.isfile(os.path.realpath(
-                    os.path.join(path, "camb", "cambdll.dll" if (
-                            platform.system() == "Windows") else "camblib.so"))):
-                log.error("CAMB installation at '%s' appears not to be compiled.", path)
-                return False
-        elif not path:
-            log.info("Importing *global* CAMB.")
-            path = None
-        else:
-            log.info("Importing *auto-installed* CAMB (but defaulting to *global*).")
         try:
-            return load_module("camb", path=path, min_version=cls._min_camb_version)
-        except ImportError:
-            if path is not None and path.lower() != "global":
-                func("Couldn't find the CAMB python interface at '%s'. "
-                     "Are you sure it has been installed there?", path)
-            elif not check:
-                log.error("Could not import global CAMB installation. "
-                          "Specify a Cobaya or CAMB installation path, "
-                          "or install the 'camb' Python package globally.")
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
+            return bool(load_external_module(
+                "camb", path=kwargs["path"], get_import_path=cls.get_import_path,
+                min_version=cls._min_camb_version, reload=reload,
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
+        except ComponentNotInstalledError:
             return False
 
     @classmethod

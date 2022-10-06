@@ -35,8 +35,8 @@ from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any, L
 # Local
 from cobaya.typing import TheoryDictIn, TheoriesDict, InfoDict, ParamValuesDict, \
     ParamsDict, empty_dict, unset_params
-from cobaya.component import CobayaComponent, ComponentCollection
-from cobaya.tools import get_resolved_class, str_to_list
+from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
+from cobaya.tools import str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods
 
@@ -89,10 +89,12 @@ class Theory(CobayaComponent):
     def must_provide(self, **requirements) -> Union[None, InfoDict, Sequence[str],
                                                     Sequence[Tuple[str, InfoDict]]]:
         """
-        Function to be called specifying any output products that are needed and hence
-        should be calculated by this component depending..
+        Function called by Cobaya with the actual products that this component needs to
+        compute (i.e. the things this compononent can provide that are acutally used by
+        other components). The function can return conditional requirements that this
+        component needs from other components in order to compute those things.
 
-        The ``requirements'' argument is a requirement name with any optional parameters.
+        The ``requirements`` argument is a requirement name with any optional parameters.
         This function may be called more than once with different requirements.
 
         :return: optional dictionary (or list of requirement name, option tuples) of
@@ -388,8 +390,9 @@ class TheoryCollection(ComponentCollection):
                             raise LoggedError(self.log,
                                               "Theory %s is not a Theory subclass", name)
                     else:
-                        theory_class = get_resolved_class(
-                            name, kind="theory", class_name=info.get("class"))
+                        theory_class = get_component_class(
+                            name, kind="theory", class_name=info.get("class"),
+                            logger=self.log)
                     self.add_instance(
                         name, theory_class(
                             info, packages_path=packages_path, timing=timing, name=name))

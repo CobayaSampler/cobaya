@@ -18,7 +18,7 @@ if sys.version_info < (3, 7):
         raise ValueError('Cobaya only supports CPython/PyPy on Python 3.6')
 
 __author__ = "Jesus Torrado and Antony Lewis"
-__version__ = "3.1.1"
+__version__ = "3.2.1"
 __obsolete__ = False
-__year__ = "2021"
+__year__ = "2022"
 __url__ = "https://cobaya.readthedocs.io"

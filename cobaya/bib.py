@@ -12,10 +12,13 @@ Inspired by a similar characteristic of
 # Global
 import os
 from inspect import cleandoc
+from typing import List, Dict, Union
 
 # Local
-from cobaya.conventions import Extension, kinds, dump_sort_cosmetic
-from cobaya.tools import create_banner, warn_deprecation, get_class
+from cobaya.log import logger_setup, get_logger
+from cobaya.conventions import Extension, dump_sort_cosmetic
+from cobaya.tools import create_banner, warn_deprecation, similar_internal_class_names
+from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.input import load_input, get_used_components
 from cobaya.typing import InfoDict
 
@@ -46,40 +49,75 @@ cobaya_bib = r"""
 
 
 def get_desc_component(component, kind, info=None):
-    cls = get_class(component, kind, None_if_not_found=True)
-    if cls:
-        lines = cleandoc(cls.get_desc(info) or "")
-    else:
-        lines = "[no description found]"
-    return lines + "\n"
+    """Extract a short description of a component, if defined."""
+    cls = get_component_class(component, kind)
+    return cleandoc(cls.get_desc(info) or "") + "\n"
 
 
 def get_bib_component(component, kind):
-    cls = get_class(component, kind, None_if_not_found=True)
-    if cls:
-        lines = ((cls.get_bibtex() or "").lstrip("\n").rstrip("\n")
-                 or "# [no bibliography information found]")
-    else:
-        lines = "# [Component '%s.%s' not known.]" % (kind, component)
+    """Extract the bibliographic sources of a component, if defined."""
+    cls = get_component_class(component, kind)
+    lines = ((cls.get_bibtex() or "").lstrip("\n").rstrip("\n") or
+             "# [no bibliography information found]")
     return lines + "\n"
 
 
-def get_bib_info(*infos):
+def get_bib_info(*infos, logger=None):
+    """
+    Gathers and returns the descriptions and bibliographic sources for the components
+    mentioned in ``infos``.
+
+    ``infos`` can be input dictionaries or single component names.
+    """
+    if not logger:
+        logger_setup()
+        logger = get_logger("bib")
     used_components, component_infos = get_used_components(*infos, return_infos=True)
     descs: InfoDict = {}
     bibs: InfoDict = {}
-    for kind, components in get_used_components(*infos).items():
+    used_components = get_used_components(*infos)
+    for kind, components in used_components.items():
+        if kind is None:
+            continue  # we will deal with bare component names later, to avoid repetition
         descs[kind], bibs[kind] = {}, {}
         for component in components:
-            descs[kind][component] = get_desc_component(
-                component, kind, component_infos[component])
-            bibs[kind][component] = get_bib_component(component, kind)
+            try:
+                descs[kind][component] = get_desc_component(
+                    component, kind, component_infos[component])
+                bibs[kind][component] = get_bib_component(component, kind)
+            except ComponentNotFoundError:
+                sugg = similar_internal_class_names(component)
+                logger.error(
+                    f"Could not identify component '{component}'. "
+                    f"Did you mean any of the following? {sugg} (mind capitalization!)")
+                continue
+    # Deal with bare component names
+    for component in used_components.get(None, []):
+        try:
+            cls = get_component_class(component)
+        except ComponentNotFoundError:
+            sugg = similar_internal_class_names(component)
+            logger.error(
+                f"Could not identify component '{component}'. "
+                f"Did you mean any of the following? {sugg} (mind capitalization!)")
+            continue
+        kind = cls.get_kind()
+        if kind not in descs:
+            descs[kind], bibs[kind] = {}, {}
+        if kind in descs and component in descs[kind]:
+            continue  # avoid repetition
+        descs[kind][component] = get_desc_component(cls, kind)
+        bibs[kind][component] = get_bib_component(cls, kind)
     descs["cobaya"] = {"cobaya": cobaya_desc}
     bibs["cobaya"] = {"cobaya": cobaya_bib}
     return descs, bibs
 
 
-def prettyprint_bib(descs, bibs):
+def pretty_repr_bib(descs, bibs):
+    """
+    Generates a pretty-print multi-line string from component descriptions and
+    bibliographical sources.
+    """
     # Sort them "optimally"
     sorted_kinds = [k for k in dump_sort_cosmetic if k in descs]
     sorted_kinds += [k for k in descs if k not in dump_sort_cosmetic]
@@ -100,52 +138,33 @@ def prettyprint_bib(descs, bibs):
     return txt.lstrip().rstrip() + "\n"
 
 
-# Command-line script
+# Command-line script ####################################################################
+
 def bib_script(args=None):
+    """Command line script for the bibliography."""
     warn_deprecation()
     # Parse arguments and launch
     import argparse
-    parser = argparse.ArgumentParser(
-        prog="cobaya bib",
-        description="Prints bibliography to be cited for a component or input file.")
-    parser.add_argument("components_or_files", action="store", nargs="+",
-                        metavar="component_name or input_file.yaml",
+    parser = argparse.ArgumentParser(prog="cobaya bib", description=(
+        "Prints bibliography to be cited for one or more components or input files."))
+    parser.add_argument("files_or_components", action="store", nargs="+",
+                        metavar="input_file.yaml|component_name",
                         help="Component(s) or input file(s) whose bib info is requested.")
-    kind_opt, kind_opt_ishort = "kind", 0
-    parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
-                        default=None, metavar="component_kind",
-                        help=("If component name given, "
-                              "kind of component whose bib is requested: " +
-                              ", ".join(['%s' % kind for kind in kinds]) + ". " +
-                              "Use only when component name is not unique "
-                              "(it would fail)."))
     arguments = parser.parse_args(args)
-    # Case of files
-    are_yaml = [
-        (os.path.splitext(f)[1] in Extension.yamls) for f in
-        arguments.components_or_files]
-    if all(are_yaml):
-        infos = [load_input(f) for f in arguments.components_or_files]
-        print(prettyprint_bib(*get_bib_info(*infos)))
-    elif not any(are_yaml):
-        if arguments.kind:
-            arguments.kind = arguments.kind.lower()
-        for component in arguments.components_or_files:
-            try:
-                print(create_banner(
-                    component, symbol=_default_symbol, length=_default_length))
-                print(get_bib_component(component, arguments.kind))
-            except Exception:
-                if not arguments.kind:
-                    print("Specify its kind with '--%s [component_kind]'." % kind_opt +
-                          "(NB: all requested components must have the same kind, "
-                          "or be requested separately).")
-                print("")
-    else:
-        print("Give either a list of input yaml files, "
-              "or of component names (not a mix of them).")
-        return 1
-    return
+    # Configure the logger ASAP
+    logger_setup()
+    logger = get_logger("bib")
+    # Gather requests
+    infos: List[Union[Dict, str]] = []
+    for f in arguments.files_or_components:
+        if os.path.splitext(f)[1].lower() in Extension.yamls:
+            infos += [load_input(f)]
+        else:  # a single component name, no kind specified
+            infos += [f]
+    if not infos:
+        logger.info("Nothing to do. Pass input files or component names as arguments.")
+        return
+    print(pretty_repr_bib(*get_bib_info(*infos, logger=logger)))
 
 
 if __name__ == '__main__':

@@ -86,7 +86,21 @@ def _construct_defaults(loader, node):
     return loaded_defaults
 
 
+def no_duplicates_constructor(loader, node, deep=False):
+    # https://gist.github.com/pypt/94d747fe5180851196eb
+    """Check for duplicate keys."""
+    used = []
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in used:
+            raise InputSyntaxError(f"Duplicate key {key}")
+        used.append(key)
+    return loader.construct_mapping(node, deep)
+
+
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
+DefaultsLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                               no_duplicates_constructor)
 
 
 def yaml_load(text_stream, file_name=None) -> InfoDict:

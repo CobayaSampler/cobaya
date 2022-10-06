@@ -146,7 +146,7 @@ class BAO(InstallableLikelihood):
     type = "BAO"
 
     install_options = {"github_repository": "CobayaSampler/bao_data",
-                       "github_release": "v2.0"}
+                       "github_release": "v2.1"}
 
     prob_dist_bounds: Optional[Sequence[float]]
     measurements_file: Optional[str] = None
@@ -163,7 +163,6 @@ class BAO(InstallableLikelihood):
     path: Optional[str]
 
     def initialize(self):
-        self.log.info("Initialising.")
         if not getattr(self, "path", None) and \
                 not getattr(self, packages_path_input, None):
             raise LoggedError(
@@ -316,6 +315,7 @@ class BAO(InstallableLikelihood):
                         data_file_path) + "Check your paths.")
             self.logpdf = lambda _x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 _x - self.data["value"].values)
+            self.log.info("Initialized.")
 
     def get_requirements(self):
         # Requisites
@@ -413,13 +413,13 @@ class BAO(InstallableLikelihood):
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             chi2 = float(self.interpolator(x, y)[0])
-            return chi2 / 2
+            return chi2
         elif self.use_grid_3d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             z = self.theory_fun(self.redshift, self.observable_3)
             chi2 = self.interpolator3D(np.array([x, y, z])[:, 0])
-            return chi2 / 2
+            return chi2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
                                in zip(self.data["z"], self.data["observable"])]).T[0]

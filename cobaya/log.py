@@ -10,9 +10,11 @@
 import os
 import sys
 import logging
+import platform
 import traceback
 from copy import deepcopy
 import functools
+from random import shuffle, choice
 
 # Local
 from cobaya import mpi
@@ -22,6 +24,8 @@ class LoggedError(Exception):
     """
     Dummy exception, to be raised when the originating exception
     has been cleanly handled and logged.
+
+    Prints the error message even if caught.
     """
 
     def __init__(self, logger, *args, **kwargs):
@@ -32,7 +36,10 @@ class LoggedError(Exception):
                               "instance or name." %
                               self.__class__.__name__)
         if args:
-            logger.error(*args, **kwargs)
+            # If the exception is going to be caught, we may not want to print the msg
+            # at logger.error level, but e.g. debug level.
+            level = kwargs.pop("level", "error") or "error"
+            getattr(logger, level)(*args, **kwargs)
         msg = args[0] if len(args) else ""
         if msg and len(args) > 1:
             msg = msg % args[1:]
@@ -52,7 +59,62 @@ def is_debug(log=None):
 def get_logger(name):
     if name.startswith('cobaya.'):
         name = name.split('.')[-1]
-    return logging.getLogger(name)
+    return logging.getLogger(add_color_to_name(name))
+
+
+# Some legible color combinations
+color_strs = {
+    "red_bold": "\x1b[31;1m",
+    "green_bold": "\x1b[32;1m",
+    "yellow_bold": "\x1b[33;1m",
+    "blue_bold": "\x1b[34;1m",
+    "magenta_bold": "\x1b[35;1m",
+    "cyan_bold": "\x1b[36;1m",
+    "light_red_bold": "\x1b[91;1m",
+    "light_green_bold": "\x1b[92;1m",
+    "light_yellow_bold": "\x1b[93;1m",
+    "light_blue_bold": "\x1b[94;1m",
+    "light_magenta_bold": "\x1b[95;1m",
+    "light_cyan_bold": "\x1b[96;1m",
+    # With background
+    "light_grey_on_red_bold": "\x1b[37;1;41m",
+    "light_grey_on_green_bold": "\x1b[37;1;42m",
+    "light_grey_on_yellow_bold": "\x1b[37;1;43m",
+    "light_grey_on_blue_bold": "\x1b[37;1;44m",
+    "light_grey_on_magenta_bold": "\x1b[37;1;45m",
+    "light_grey_on_cyan_bold": "\x1b[37;1;46m",
+    "blue_on_light_green_bold": "\x1b[34;1;102m",
+    "blue_on_light_yellow_bold": "\x1b[34;1;103m",
+    "light_yellow_on_blue_bold": "\x1b[93;1;44m",
+    "blue_on_light_cyan": "\x1b[34;1;106m",
+    "red_on_white_bold": "\x1b[31;1;107m",
+    "blue_on_white_bold": "\x1b[34;1;107m",
+    "magenta_on_white_bold": "\x1b[35;1;107m",
+}
+
+reset_str = "\x1b[0m"
+
+current_color_pool = []
+
+
+def add_color_to_name(name, color=None):
+    if not os.getenv('COBAYA_COLOR'):
+        return name
+    # TODO: implement for Windows, see
+    # https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+    if platform.system() == "Windows":
+        return name
+    if color is None:
+        # Choose one at random (ensure no repetition, unless too many requested)
+        global current_color_pool
+        if not current_color_pool:
+            current_color_pool = list(color_strs.values())
+            shuffle(current_color_pool)
+        i = choice(list(range(len(current_color_pool))))
+        color_str = current_color_pool.pop(i)
+    else:
+        color_str = color_strs.get(color)
+    return color_str + name + reset_str
 
 
 def abstract(method):
@@ -106,7 +168,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
             mpi.abort_if_mpi()
         if is_debug(log):
             return  # no traceback printed
-    elif exception_type == mpi.OtherProcessError:
+    elif issubclass(exception_type, mpi.OtherProcessError):
         log.info(str(exception_instance))
         if is_debug(log):
             return  # no traceback printed
@@ -126,7 +188,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
             "If you cannot solve it yourself and need to report it, "
             "include the debug output,\n"
             "which you can send it to a file setting '%s:[some_file_name]'.",
-            "debug", "debug_file")
+            "debug", "debug")
     # Exit all MPI processes
     if want_abort:
         mpi.abort_if_mpi()
@@ -137,14 +199,21 @@ def logger_setup(debug=None, debug_file=None):
     Configuring the root logger, for its children to inherit level, format and handlers.
 
     Level: if debug=True, take DEBUG. If numerical, use ""logging""'s corresponding level.
+    If string, set debug level and use if as ``debug_file`` (unless specified separately).
     Default: INFO
     """
     if debug is True or os.getenv('COBAYA_DEBUG'):
         level = logging.DEBUG
     elif debug in (False, None):
         level = logging.INFO
-    else:
+    elif isinstance(debug, int):
         level = debug
+    elif isinstance(debug, str):
+        level = logging.DEBUG
+        debug_file = debug_file or debug
+    else:
+        raise ValueError(
+            f"Bad value for debug: {debug}. Set to bool|str(file)|int(level).")
     # Set the default level, to make sure the handlers have a higher one
     logging.root.setLevel(level)
     debug = is_debug(logging.root)
@@ -202,7 +271,9 @@ class HasLogger:
 
     def set_logger(self, lowercase=True, name=None):
         name = name or self.__class__.__name__
-        self.log = logging.getLogger(name.lower() if lowercase else name)
+        if lowercase:
+            name = name.lower()
+        self.log = logging.getLogger(add_color_to_name(name))
 
     # Copying and pickling
     def __deepcopy__(self, memo=None):
@@ -219,6 +290,9 @@ class HasLogger:
 
     def is_debug(self):
         return is_debug(self.log)
+
+    def is_debug_and_mpi_root(self):
+        return is_debug(self.log) and mpi.is_main_process()
 
     @mpi.root_only
     def mpi_warning(self, msg, *args, **kwargs):

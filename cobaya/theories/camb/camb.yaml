@@ -1,4 +1,6 @@
-# Specify a CAMB version, if desired
+# Specify a CAMB version, if desired.
+# After a run, in an updated.yaml file, stores the version used.
+# (Usually not necessary to modify it.)
 version: null
 # Path to local CAMB, if desired,
 # or 'global' to force global-scope import
@@ -11,6 +13,10 @@ stop_at_error: False
 # Other precision parameters to be passed to CAMB
 # e.g. precision parameters or non-numerical parameters
 extra_args:
+# If using a custom version based on an outdated CAMB, set to True.
+# Use at your own risk: may produce unexpected behaviour/errors.
+# (Ideally, update the CAMB version on which your modification is based.)
+ignore_obsolete: False
 # e.g AccuracyBoost: [larger than 1]
 # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
 use_renames: False

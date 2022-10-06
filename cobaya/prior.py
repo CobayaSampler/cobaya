@@ -419,7 +419,6 @@ class Prior(HasLogger):
             self.log.debug(
                 "Loading external prior '%s' from: '%s'", name, info_prior[name])
             logp = get_external_function(info_prior[name], name=name)
-
             argspec = getfullargspec(logp)
             known = set(parameterization.input_params())
             params = [p for p in argspec.args if p in known]
@@ -624,8 +623,6 @@ class Prior(HasLogger):
             delattr(self, "_ref_is_pointlike")
         self.reference_is_pointlike
 
-# TODO: check for errors due to the change into property
-# TODO: check for errors in test for pointlike-ness
     @property
     def reference_is_pointlike(self) -> bool:
         """

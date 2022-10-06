@@ -115,9 +115,17 @@ Individual likelihood or theory components can be installed using
    $ cobaya-install component_name --packages-path /path/to/packages
 
 This will also work with your own or third-party :ref:`likelihood classes <likelihood_classes>`.
-To force reinstallation of a package that is already installed, you can use the ``-f`` option, e.g. to
-update an auto-installed *camb* use
+
+To force reinstallation of a package that is already installed, e.g. because you modified it manually, you can use the ``-f`` (or ``--force``) option, e.g.
 
 .. code:: bash
 
-   $ cobaya-install -f --packages-path /path/to/packages camb
+   $ cobaya-install camb -f --packages-path /path/to/packages
+
+To upgrade an obsolete requisite, use the ``--upgrade`` argument.
+
+
+``install`` function
+--------------------
+
+.. autofunction:: install.install

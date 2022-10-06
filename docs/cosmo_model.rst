@@ -123,4 +123,4 @@ To sample from your newly-create model's posterior, it is preferable to pass it 
 Low-level access to the theory code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can access the imported CAMB module or CLASS 'classy' instance as, respectively, ``Model.theory["camb"].camb`` and ``Model.theory["classy"].classy``. But be careful about manually changing their settings: it may unexpectedly influence subsequent cosmological observable computations for the present model instance. If you want to directly access CAMB's results object, the likelihood can request 'CAMBdata' as a requirement and retrieve it from a likelihood using ``self.provider.get_CAMBdata()``.
+Besides the results listed in :func:`~theories.cosmo.BoltzmannBase.must_provide`, you may be able to access other cosmological quantities from the Boltzmann code, see :ref:`camb_access` and :ref:`classy_access`.

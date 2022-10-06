@@ -1,4 +1,4 @@
-Copyright 2017-2021 Jesus Torrado and Antony Lewis
+Copyright 2017-2022 Jesus Torrado and Antony Lewis
 
 You are licensed to use this software free of charge within the terms of the LGPL (see below), with two additional conditions (from CAMB.info):
 

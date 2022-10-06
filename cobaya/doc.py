@@ -10,10 +10,12 @@
 from pprint import pformat
 
 # Local
-from cobaya.tools import warn_deprecation, get_available_internal_class_names, get_kind
+from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
+    similar_internal_class_names
+from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.conventions import subfolders, kinds
 from cobaya.input import get_default_info
-from cobaya.log import LoggedError
+from cobaya.log import logger_setup, get_logger
 
 _indent = 2 * " "
 
@@ -21,32 +23,27 @@ _indent = 2 * " "
 # Command-line script ####################################################################
 
 def doc_script(args=None):
+    """Command line script for the documentation."""
     warn_deprecation()
+    logger_setup()
+    logger = get_logger("doc")
     # Parse arguments
     import argparse
     parser = argparse.ArgumentParser(
         prog="cobaya doc", description="Prints defaults for Cobaya's components.")
     parser.add_argument("component", action="store", nargs="?", default="",
                         metavar="component_name",
-                        help="The component whose defaults are requested.")
-    kind_opt, kind_opt_ishort = "kind", 0
-    parser.add_argument("-" + kind_opt[kind_opt_ishort], "--" + kind_opt, action="store",
-                        default=None, metavar="component_kind",
-                        help=("Kind of component whose defaults are requested: " +
-                              ", ".join(['%s' % kind for kind in kinds]) + ". " +
-                              "Use only when component name is not unique "
-                              "(it would fail)."))
+                        help=("The component whose defaults are requested. "
+                              "Pass a component kind (sampler, theory, likelihood) to "
+                              "list all available (internal) ones, pass nothing to list "
+                              "all available (internal) components of all kinds."))
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
     expand_flag, expand_flag_ishort = "expand", 1
     parser.add_argument("-" + expand_flag[expand_flag_ishort], "--" + expand_flag,
                         action="store_true", default=False, help="Expand YAML defaults.")
     arguments = parser.parse_args(args)
-    # Remove plurals (= name of src subfolders), for user-friendliness
-    if arguments.component.lower() in subfolders.values():
-        arguments.component = next(
-            k for k in subfolders if arguments.component == subfolders[k])
-    # Kind given, list all
+    # Nothing passed: list all
     if not arguments.component:
         msg = "Available components: (some may need external code/data)"
         print(msg + "\n" + "-" * len(msg))
@@ -55,43 +52,36 @@ def doc_script(args=None):
             print(_indent + ("\n" + _indent).join(
                 get_available_internal_class_names(kind)))
         return
-    # Kind given: list all components of that kind
+    # A kind passed (plural or singular): list all of that kind
+    if arguments.component.lower() in subfolders.values():
+        arguments.component = next(
+            k for k in subfolders if arguments.component == subfolders[k])
     if arguments.component.lower() in kinds:
         print("%s:" % arguments.component.lower())
         print(_indent +
               ("\n" + _indent).join(
                   get_available_internal_class_names(arguments.component.lower())))
         return
-    # Otherwise, check if it's a unique component name
+    # Otherwise, try to identify the component
     try:
-        if arguments.kind:
-            arguments.kind = arguments.kind.lower()
-            if arguments.kind not in kinds:
-                print("Kind %r not recognized. Try one of %r" % (
-                    arguments.kind, tuple(kinds)))
-                raise ValueError
-        else:
-            arguments.kind = get_kind(arguments.component)
-        to_print = get_default_info(
-            arguments.component, arguments.kind, return_yaml=not arguments.python,
-            yaml_expand_defaults=arguments.expand)
-        if arguments.python:
-            print(pformat({arguments.kind: {arguments.component: to_print}}))
-        else:
-            print(arguments.kind + ":\n" + _indent + arguments.component + ":\n" +
-                  2 * _indent + ("\n" + 2 * _indent).join(to_print.split("\n")))
-            if "!defaults" in to_print:
-                print("# This file contains defaults. "
-                      "To populate them, use the flag --%s (or -%s)." % (
-                          expand_flag, expand_flag[expand_flag_ishort]))
-    except Exception as e:
-        if isinstance(e, LoggedError):
-            pass
-        else:
-            if not arguments.kind:
-                print("Specify its kind with '--%s [component_kind]'." % kind_opt)
+        cls = get_component_class(arguments.component, logger=logger)
+    except ComponentNotFoundError:
+        suggestions = similar_internal_class_names(arguments.component)
+        logger.error(
+            f"Could not identify component '{arguments.component}'. "
+            f"Did you mean any of the following? {suggestions} (mind capitalization!)")
         return 1
-    return
+    to_print = get_default_info(
+        cls, return_yaml=not arguments.python, yaml_expand_defaults=arguments.expand)
+    if arguments.python:
+        print(pformat({cls.get_kind(): {arguments.component: to_print}}))
+    else:
+        print(cls.get_kind() + ":\n" + _indent + arguments.component + ":\n" +
+              2 * _indent + ("\n" + 2 * _indent).join(to_print.split("\n")))
+        if "!defaults" in to_print:
+            print("# This file contains defaults. "
+                  "To populate them, use the flag --%s (or -%s)." % (
+                      expand_flag, expand_flag[expand_flag_ishort]))
 
 
 if __name__ == '__main__':

@@ -16,11 +16,11 @@ from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
     Union, List, Any, Dict, Set, Tuple
 
 # Local
-from cobaya.conventions import overhead_time, debug_default, get_chi2_name, \
+from cobaya.conventions import overhead_time, get_chi2_name, \
     packages_path_input
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
-from cobaya.input import update_info, load_input_dict
+from cobaya.input import update_info, load_info_overrides
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
@@ -75,6 +75,7 @@ class LogPosterior:
     loglikes: Sequence[float] = dataclasses.field(default=None)  # type: ignore
     derived: Sequence[float] = dataclasses.field(default=None)  # type: ignore
     temperature: float = 1
+
     finite: bool = dataclasses.field(default=False)
     logprior: float = dataclasses.field(init=False, repr=False)
     loglike: float = dataclasses.field(init=False, repr=False)
@@ -865,24 +866,23 @@ class Model(HasLogger):
                         self.log, "Could not find anything to use input parameter(s) %r.",
                         unassigned)
                 else:
-                    self.log.warning("Parameter(s) %s are only used by the prior",
+                    self.mpi_warning("Parameter(s) %s are only used by the prior",
                                      self._unassigned_input)
 
         unused_theories = set(self.theory.values()) - used_suppliers
         if unused_theories:
             if skip_unused_theories:
-                self.log.debug('Theories %s do not need to be computed '
+                self.mpi_debug('Theories %s do not need to be computed '
                                'and will be skipped', unused_theories)
                 for theory in unused_theories:
                     self._component_order.pop(theory, None)
                     components.remove(theory)
             else:
-                self.log.warning('Theories %s do not appear to be actually used '
+                self.mpi_warning('Theories %s do not appear to be actually used '
                                  'for anything', unused_theories)
 
-        if self.is_debug():
-            self.log.debug("Components will be computed in the order:")
-            self.log.debug(" - %r" % list(self._component_order))
+        self.mpi_debug("Components will be computed in the order:")
+        self.mpi_debug(" - %r" % list(self._component_order))
 
         def dependencies_of(_component):
             deps = set()
@@ -926,7 +926,7 @@ class Model(HasLogger):
             requirements_are_params.intersection(requirement_providers)
 
         # ## 4. Initialize the provider and pass it to each component ##
-        if self.is_debug():
+        if self.is_debug_and_mpi_root():
             if requirement_providers:
                 self.log.debug("Requirements will be calculated by these components:")
                 for req, provider in requirement_providers.items():
@@ -1118,7 +1118,7 @@ class Model(HasLogger):
                 if inf:
                     inf.pop("params", None)
                     inf[option] = component.get_attr_list_with_helpers(option)
-        if self.is_debug():
+        if self.is_debug_and_mpi_root():
             self.log.debug("Parameters were assigned as follows:")
             for component in self.components:
                 self.log.debug("- %r:", component)
@@ -1209,7 +1209,7 @@ class Model(HasLogger):
             # If no oversampling, slow-fast separation makes no sense: warn and set to 2
             if oversample_factors[1] == 1:
                 min_factor = 2
-                self.log.warning(
+                self.mpi_warning(
                     "Oversampling would be trivial due to small speed difference or "
                     "small `oversample_power`. Set to %d.", min_factor)
             # Finally, unfold `oversampling_factors` to have the right number of elements,
@@ -1220,12 +1220,14 @@ class Model(HasLogger):
             oversample_factors = (
                     [int(oversample_factors[0])] * (1 + i_last_slow) +
                     [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
-            self.log.debug("Doing slow/fast split. The oversampling factors for the fast "
-                           "blocks should be interpreted as a global one for all of them")
-        self.log.debug(
-            "Cost, oversampling factor and parameters per block, in optimal order:")
-        for c, o, b in zip(costs, oversample_factors, blocks_sorted):
-            self.log.debug("* %g : %r : %r", c, o, b)
+            self.mpi_debug("Doing slow/fast split. The oversampling factors for "
+                           "the fast blocks should be interpreted as a global one "
+                           "for all of them")
+        if self.is_debug_and_mpi_root():
+            self.log.debug(
+                "Cost, oversampling factor and parameters per block, in optimal order:")
+            for c, o, b in zip(costs, oversample_factors, blocks_sorted):
+                self.log.debug("* %g : %r : %r", c, o, b)
         return blocks_sorted, oversample_factors
 
     def check_blocking(self, blocking):
@@ -1320,7 +1322,7 @@ class Model(HasLogger):
                                              warn_if_no_ref=False)
                 if self.loglike(point, cached=False)[0] != -np.inf:
                     n_done += 1
-            self.log.debug("Computed %d points to measure speeds.", n_done)
+            self.mpi_debug("Computed %d points to measure speeds.", n_done)
             times = [component.timer.get_time_avg() or 0  # type: ignore
                      for component in self.components]
         if mpi.more_than_one_process():
@@ -1356,14 +1358,23 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     :return: a :class:`model.Model` instance.
 
     """
-    info = load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
-                               packages_path, override)
-    logger_setup(info.pop("debug", debug_default), info.pop("debug_file", None))
+    flags = {packages_path_input: packages_path, "debug": debug,
+             "stop_at_error": stop_at_error}
+    info = load_info_overrides(info_or_yaml_or_file, override or {}, **flags)
+    # MARKED FOR DEPRECATION IN v3.2
+    if info.get("debug_file"):
+        print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
+              "save the debug output to a file, use 'debug: [filename]'.")
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
+        if info.get("debug"):
+            info["debug"] = info.pop("debug_file")
+    # END OF DEPRECATION BLOCK
+    logger_setup(info.get("debug"))
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
         if k not in ["params", "likelihood", "prior", "theory", packages_path_input,
-                     "timing", "stop_at_error", "auto_params"]:
+                     "timing", "stop_at_error", "auto_params", "debug"]:
             value = info.pop(k)  # type: ignore
             if value is not None and (not isinstance(value, Mapping) or value):
                 ignored_info.append(k)
@@ -1381,20 +1392,3 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                  packages_path=info.get(packages_path_input),
                  timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))
-
-
-def load_info_overrides(info_or_yaml_or_file, debug, stop_at_error,
-                        packages_path, override=None) -> InputDict:
-    info = load_input_dict(info_or_yaml_or_file)  # makes deep copy if dict
-
-    if override:
-        if "post" in override:
-            info["resume"] = False
-        info = recursive_update(info, override, copied=False)
-    if packages_path:
-        info[packages_path_input] = packages_path
-    if debug is not None:
-        info["debug"] = debug if isinstance(debug, (int, str)) else bool(debug)
-    if stop_at_error is not None:
-        info["stop_at_error"] = bool(stop_at_error)
-    return info

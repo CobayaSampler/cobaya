@@ -179,7 +179,7 @@ class SampleCollection(BaseCollection):
     def reset(self):
         """Create/reset the DataFrame."""
         self._cache_reset()
-        self._data = pd.DataFrame(columns=self.columns)
+        self._data = pd.DataFrame(columns=self.columns, dtype=np.float64)
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
@@ -272,7 +272,7 @@ class SampleCollection(BaseCollection):
         else:
             raise LoggedError(
                 self.log, "logpost must be a LogPosterior object, a number or None (in "
-                          "which case logpriors and loglikes are needed.")
+                          "which case logpriors and loglikes are needed).")
         return return_logpost
 
     def _cache_reset(self):
@@ -398,31 +398,38 @@ class SampleCollection(BaseCollection):
     def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
         return self.data.to_numpy(copy=copy, dtype=dtype or np.float64)
 
-    def _copy(self, data=None) -> 'SampleCollection':
+    def _copy(self, data=None, empty=False) -> 'SampleCollection':
         """
         Returns a copy of the collection.
 
+        If ``empty=True`` (default ``False``), returns an empty copy.
+
         If data specified (default: None), the copy returned contains the given data;
         no checks are performed on given data, so use with care (e.g. use with a slice of
-        `self.data`).
+        ``self.data``).
         """
         current_data = self.data
         if data is None:
             data = current_data
-        # Avoids creating a copy of the data, to save memory
+        # Avoids creating an unnecessary copy of the data, to save memory
         delattr(self, "_data")
         self_copy = deepcopy(self)
         setattr(self, "_data", current_data)
-        setattr(self_copy, "_data", data.copy())
-        setattr(self_copy, "_n", data.last_valid_index() + 1)
+        if empty:
+            self_copy.reset()
+        else:
+            setattr(self_copy, "_data", data.copy())
+            setattr(self_copy, "_n", data.last_valid_index() + 1)
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
-    def copy(self) -> 'SampleCollection':
+    def copy(self, empty=False) -> 'SampleCollection':
         """
         Returns a copy of the collection.
+
+        If ``empty=True`` (default ``False``), returns an empty copy.
         """
-        return self._copy()
+        return self._copy(empty=empty)
 
     def _weights_for_stats(self, first: Optional[int] = None, last: Optional[int] = None,
                            pweight: bool = False, ignore_temperature: bool = False
@@ -561,7 +568,7 @@ class SampleCollection(BaseCollection):
         if thin == 1:
             return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
-            raise LoggedError(self.log, "Thin factor must be an positive integer, got %s",
+            raise LoggedError(self.log, "Thin factor must be a positive integer, got %s",
                               thin)
         from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
         thin = int(thin)
@@ -645,7 +652,7 @@ class SampleCollection(BaseCollection):
 
     # txt driver
     def _load__txt(self, skip=0):
-        self.log.debug("Skipping %d rows", skip)
+        self.log.debug("Skipping %s rows", skip)
         self._data = load_DataFrame(self.file_name, skip=skip,
                                     root_file_name=self.root_file_name)
         self.log.info("Loaded %d sample points from '%s'", len(self._data),

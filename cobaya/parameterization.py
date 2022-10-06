@@ -223,7 +223,7 @@ class Parameterization(HasLogger):
         labels_inv_repeated = invert_dict(self.labels())
         labels_inv_repeated = {k: v for k, v in labels_inv_repeated.items() if len(v) > 1}
         if labels_inv_repeated:
-            self.log.warning(
+            self.mpi_warning(
                 "There are repeated parameter labels: %r", labels_inv_repeated)
 
     def dropped_param_set(self) -> Set[str]:
@@ -326,7 +326,8 @@ class Parameterization(HasLogger):
         else:
             if len(sampled_params) != len(self._sampled):
                 raise LoggedError(self.log, "Wrong number of sampled parameters passed: "
-                                  "%d given vs %d expected", len(sampled_params),
+                                            "%d given vs %d expected",
+                                  len(sampled_params),
                                   len(self._sampled))
             return sampled_params
 

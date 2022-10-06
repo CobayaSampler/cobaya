@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from cobaya.tools import get_class
+from cobaya.component import get_component_class
 
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
@@ -12,7 +12,7 @@ def test_generic_camb(packages_path, skip_not_installed):
     like_rename = "my_bao"
     chi2_generic = deepcopy(chi2_sdss_dr12_consensus_bao)
     chi2_generic[like_rename] = chi2_generic.pop(like)
-    likelihood_defaults = get_class(like).get_defaults()
+    likelihood_defaults = get_component_class(like).get_defaults()
     likelihood_defaults.pop("path")
     likelihood_defaults["class"] = "bao.generic"
     info_likelihood = {like_rename: likelihood_defaults}
@@ -214,16 +214,16 @@ def test_sdss_dr7_mgs_classy(packages_path, skip_not_installed):
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 
 chi2_sdss_dr16_baoplus_elg = {
-    "bao.sdss_dr16_baoplus_elg": 1.63, "tolerance": 0.04}
+    "bao.sdss_dr16_baoplus_elg": 3.24, "tolerance": 0.06}
 chi2_sdss_dr16_baoplus_lrg = {
     "bao.sdss_dr16_baoplus_lrg": 5.96, "tolerance": 0.04}
 chi2_sdss_dr16_baoplus_qso = {
     "bao.sdss_dr16_baoplus_qso": 8.78, "tolerance": 0.04,
     "classy_extra_tolerance": 0.21}
 chi2_sdss_dr16_baoplus_lyauto = {
-    "bao.sdss_dr16_baoplus_lyauto": 0.87, "tolerance": 0.04}
+    "bao.sdss_dr16_baoplus_lyauto": 1.74, "tolerance": 0.04}
 chi2_sdss_dr16_baoplus_lyxqso = {
-    "bao.sdss_dr16_baoplus_lyxqso": 1.62, "tolerance": 0.04}
+    "bao.sdss_dr16_baoplus_lyxqso": 3.24, "tolerance": 0.04}
 chi2_sdss_dr12_consensus_bao = {
     "bao.sdss_dr12_consensus_bao": 5.687, "tolerance": 0.04}
 chi2_sdss_dr12_consensus_full_shape = {
