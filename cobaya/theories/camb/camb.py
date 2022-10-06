@@ -810,7 +810,7 @@ class CAMB(BoltzmannBase):
                     else:
                         raise LoggedError(
                             self.log,
-                            "Some of the attributes to be set manually were not "
+                            "Some attributes to be set manually were not "
                             "recognized: %s=%s", attr, value)
                 # Sources
                 if getattr(self, "sources", None):

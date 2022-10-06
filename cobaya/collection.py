@@ -448,14 +448,14 @@ class SampleCollection(BaseCollection):
         """
         if pweight:
             if ignore_temperature:
-                logps = -self[OutPar.minuslogpost][first:last]\
+                logps = -self[OutPar.minuslogpost][first:last] \
                     .to_numpy(dtype=np.float64, copy=True)
             else:
                 logps = -self.detempered_minuslogpost(first, last)
             logps -= max(logps)
             weights = np.exp(logps)
         else:
-            weights = self[OutPar.weight][first:last]\
+            weights = self[OutPar.weight][first:last] \
                 .to_numpy(dtype=np.float64, copy=True)
             if not ignore_temperature:
                 weights *= self.detempering_reweight_factor(first, last)
@@ -512,7 +512,7 @@ class SampleCollection(BaseCollection):
         return np.atleast_2d(np.cov(
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
-                     dtype=np.float64).T,
+                dtype=np.float64).T,
             **{weight_type_kwarg: weights}))
 
     def reweight(self, importance_weights):
@@ -542,8 +542,9 @@ class SampleCollection(BaseCollection):
         """
         if self.temperature != 1:
             return (
-                self.data[OutPar.minuslogprior][first:last].to_numpy(dtype=np.float64) +
-                self.data[OutPar.chi2][first:last].to_numpy(dtype=np.float64) / 2)
+                    self.data[OutPar.minuslogprior][first:last].to_numpy(
+                        dtype=np.float64) +
+                    self.data[OutPar.chi2][first:last].to_numpy(dtype=np.float64) / 2)
         else:
             return self[OutPar.minuslogpost][first:last].to_numpy(
                 dtype=np.float64, copy=True)
