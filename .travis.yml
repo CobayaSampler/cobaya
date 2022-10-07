@@ -35,14 +35,14 @@ jobs:
         - GCC_VERSION="6"
       python: "3.6"
     - name: "Typical scenario: latest Ubuntu LTS"
-      dist: jammy
+      dist: focal
       addons:
         apt:
           packages:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.9"
+      python: "3.8"
     - name: "Anaconda: gcc-8, Python 3.7"
       addons:
         apt:
