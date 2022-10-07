@@ -42,7 +42,7 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.8"
+      python: "3.9"
     - name: "Anaconda: gcc-8, Python 3.7"
       addons:
         apt:
