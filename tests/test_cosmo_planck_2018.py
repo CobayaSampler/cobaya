@@ -50,7 +50,7 @@ def test_planck_2018_p_camb(packages_path, skip_not_installed, native=False):
                  best_fit_derived, skip_not_installed=skip_not_installed)
 
 
-def test_planck_2018_p_camb_native(packages_path, skip_not_installed):
+def test_planck_2018_p_native_camb(packages_path, skip_not_installed):
     test_planck_2018_p_camb(packages_path, skip_not_installed, True)
 
 
