@@ -35,15 +35,23 @@ def test_planck_2018_t_camb(packages_path, skip_not_installed):
                  skip_not_installed=skip_not_installed)
 
 
-def test_planck_2018_p_camb(packages_path, skip_not_installed):
+def test_planck_2018_p_camb(packages_path, skip_not_installed, native=False):
     best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
     chi2 = chi2_lowTE_highTTTEEE_lensingcmblikes.copy()
+    if native:
+        info_likelihood["planck_2018_lowl.EE_native"] = \
+            info_likelihood.pop("planck_2018_lowl.EE")
+        chi2["planck_2018_lowl.EE_native"] = chi2.pop("planck_2018_lowl.EE")
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  best_fit_derived, skip_not_installed=skip_not_installed)
+
+
+def test_planck_2018_p_native_camb(packages_path, skip_not_installed):
+    test_planck_2018_p_camb(packages_path, skip_not_installed, True)
 
 
 # LITES ##################################################################################
