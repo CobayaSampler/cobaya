@@ -311,7 +311,9 @@ class CobayaComponent(HasLogger, HasDefaults):
         self._name = name or self.get_qualified_class_name()
         self.packages_path = packages_path or resolve_packages_path()
         # set attributes from the info (from yaml file or directly input dictionary)
+        annotations = self.get_annotations()
         for k, value in info.items():
+            self.validate_info(k, value, annotations)
             try:
                 # MARKED FOR DEPRECATION IN v3.0
                 # NB: cannot ever raise an error, since users may use "path_install" for
@@ -383,6 +385,22 @@ class CobayaComponent(HasLogger, HasDefaults):
         Whether to track version information for this component
         """
         return True
+
+    def validate_info(self, k: str, value: Any, annotations: dict):
+        """
+        Does any validation on parameter k read from an input dictionary or yaml file,
+        before setting the corresponding class attribute.
+        You could enforce consistency with annotations here, but does not by default.
+
+        :param k: name of parameter
+        :param value: value
+        :param annotations: resolved inherited dictionary of attributes for this class
+        """
+
+        # by default just test booleans, e.g. for typos of "false" which evaluate true
+        if annotations.get(k) is bool and value and isinstance(value, str):
+            raise AttributeError("Class '%s' parameter '%s' should be True "
+                                 "or False, got '%s'" % (self, k, value))
 
     @classmethod
     def get_kind(cls):
