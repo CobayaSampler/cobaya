@@ -19,6 +19,9 @@ The datasets implemented at this moment are:
 - ``bao.sdss_dr16_baoplus_lyauto``
 - ``bao.sdss_dr16_baoplus_lyxqso``
 - ``bao.sdss_dr16_baoplus_qso``
+- ``bao.sdss_dr12_lrg_bao_dmdh``
+- ``bao.sdss_dr16_lrg_bao_dmdh``
+
 
 .. |br| raw:: html
 
@@ -61,7 +64,11 @@ To use any of these likelihoods, simply mention them in the likelihoods block, o
 using the :doc:`input generator <cosmo_basic_runs>`.
 
 These likelihoods have no nuisance parameters or particular settings that you may want
-to change (except for the installation path; see below)
+to change (except for the installation path; see below).
+
+Note that although called "bao", many of these data combinations also include redshift
+distortion data (RSD), encapsulated via a single "f sigma8" parameter (which is not
+accurate for some non-LCDM models).
 
 
 Defining your own BAO likelihood
