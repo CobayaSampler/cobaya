@@ -151,7 +151,7 @@ class MCMC(CovmatSampler):
             self.max_tries.set_scale(self.model.prior.d())
             self.log.info("Getting initial point... (this may take a few seconds)")
             initial_point, results = \
-                self.model.get_valid_point(max_tries=self.max_tries.value,
+                self.model.get_valid_point(max_tries=min(self.max_tries.value, int(1e7)),
                                            random_state=self._rng)
             # If resuming but no existing chain, assume failed run and ignore blocking
             # if speeds measurement requested
@@ -247,7 +247,7 @@ class MCMC(CovmatSampler):
             if self.drag_interp_steps < 2:
                 self.drag = False
                 self.mpi_warning("Dragging disabled: "
-                                     "speed ratio and fast-to-slow ratio not large enough.")
+                                 "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
             # MARKED FOR DEPRECATION IN v3.0
