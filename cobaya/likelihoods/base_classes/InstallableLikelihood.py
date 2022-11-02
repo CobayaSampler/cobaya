@@ -96,9 +96,10 @@ class InstallableLikelihood(Likelihood):
             elif opts.get("github_release"):
                 try:
                     with open(os.path.join(path, _version_filename), "r") as f:
-                        installed_version = version.parse(f.readlines()[0])
+                        ver = f.readlines()[0]
                 except FileNotFoundError:  # old install: no version file
-                    raise VersionCheckError("Could not read current version.")
+                    ver = '0.0'
+                installed_version = version.parse(ver)
                 min_version = version.parse(opts.get("github_release"))
                 if installed_version < min_version:
                     raise VersionCheckError(
