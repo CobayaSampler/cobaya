@@ -1,10 +1,17 @@
-## 3.X.Y – 2022-XX-YY
+## 3.2.2 – 2022-11-03
 
 ### General
 
 - GUI now support PySide6
 - Deprecated `debug_file` in input, in favour of `debug: [filename]`.
 - `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
+
+### Cosmology
+
+- Added native version of `planck_2018_lowl.EE`.
+- Added links to external likelihoods Planck PR4 Lensing, pyWMAP.
+- Fixed bug in BAO likelihood (#250, thanks @Pablo-Lemos)
+- Added files for the BAO DR12 and DR16 LRG likelihoods (PR #235; thanks @markm42)
 
 ## 3.2.1 – 2022-05-17
 
