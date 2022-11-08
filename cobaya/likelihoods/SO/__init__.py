@@ -9,20 +9,28 @@ if not os.path.exists(dir):
     dir = os.path.dirname(__file__)
 
 
-class SO_lensing_baseline(CMBlikes):
-    dataset_file = os.path.join(dir, 'SO_lensing_baseline.dataset')
+class Var_like(CMBlikes):
+    variant = ''
+
+    def initialize(self):
+        self.dataset_file = os.path.join(dir, self.dataset_file % self.variant)
+        super().initialize()
 
 
-class SO_ILC_baseline(CMBlikes):
-    dataset_file = os.path.join(dir, 'SO_ILC_baseline.dataset')
+class SO_lensing_baseline(Var_like):
+    dataset_file = 'SO_lensing_baseline%s.dataset'
 
 
-class PlanckMidT(CMBlikes):
-    dataset_file = os.path.join(dir, 'PlanckMidT.dataset')
+class SO_ILC_baseline(Var_like):
+    dataset_file = 'SO_ILC_baseline%s.dataset'
 
 
-class PlanckLowT(CMBlikes):
-    dataset_file = os.path.join(dir, 'PlanckLowT.dataset')
+class PlanckMidT(Var_like):
+    dataset_file = 'PlanckMidT%s.dataset'
+
+
+class PlanckLowT(Var_like):
+    dataset_file = 'PlanckLowT.dataset'
 
 
 class SO_corr_like(Likelihood):
@@ -30,6 +38,7 @@ class SO_corr_like(Likelihood):
     lmin = 40
     fsky = 0.4
     inv_cov_file = "covinv.npy"
+    variant = ""
 
     def get_requirements(self):
         return {
@@ -37,8 +46,8 @@ class SO_corr_like(Likelihood):
 
     def initialize(self):
         import pickle
-        phi = np.loadtxt(SO_lensing_baseline.dataset_file.replace('.dataset', '.dat'))
-        cmb = np.loadtxt(SO_ILC_baseline.dataset_file.replace('.dataset', '.dat'))
+        phi = np.loadtxt(os.path.join(dir, 'SO_lensing_baseline%s.dat' % self.variant))
+        cmb = np.loadtxt(os.path.join(dir, 'SO_ILC_baseline%s.dat' % self.variant))
         res = {'pp': np.concatenate(([0, 0], phi[:, 1])),
                'tt': np.concatenate(([0, 0], cmb[:, 1])) / 2.726e6 ** 2,
                'ee': np.concatenate(([0, 0], cmb[:, 3])) / 2.726e6 ** 2,
