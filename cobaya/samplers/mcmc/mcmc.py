@@ -40,6 +40,7 @@ class MCMC(CovmatSampler):
         "Rminus1_cl_level", "covmat", "covmat_params"]
     _at_resume_prefer_old = CovmatSampler._at_resume_prefer_new + [
         "proposal_scale", "blocking"]
+    _prior_rejections: int = 0
     file_base_name = 'mcmc'
 
     # instance variables from yaml
@@ -525,7 +526,8 @@ class MCMC(CovmatSampler):
         else:
             return self._rng.standard_exponential() > (logp_current - logp_trial)
 
-    def process_accept_or_reject(self, accept_state, trial, trial_results):
+    def process_accept_or_reject(self, accept_state: bool, trial: np.ndarray,
+                                 trial_results: LogPosterior):
         """Processes the acceptance/rejection of the new point."""
         if accept_state:
             # add the old point to the collection (if not burning or initial point)
@@ -545,12 +547,16 @@ class MCMC(CovmatSampler):
                                   self.burn_in.value)
             # set the new point as the current one, with weight one
             self.current_point.add(trial, trial_results)
+            self._prior_rejections = 0
         else:  # not accepted
             self.current_point.weight += 1
+            if trial_results.logprior == -np.inf:
+                self._prior_rejections += 1
             # Failure criterion: chain stuck! (but be more permissive during burn_in)
+            # only stop if not a pure-prior rejection
             max_tries_now = self.max_tries.value * (
                     1 + (10 - 1) * np.sign(self.burn_in_left))
-            if self.current_point.weight > max_tries_now:
+            if self.current_point.weight - self._prior_rejections > max_tries_now:
                 self.collection.out_update()
                 raise LoggedError(
                     self.log,
@@ -570,6 +576,10 @@ class MCMC(CovmatSampler):
                     "Last proposal: %s\nWith rejected result: %s",
                     max_tries_now, self.current_point, self.current_point.results,
                     trial, trial_results)
+            elif self.current_point.weight > max_tries_now and \
+                    not getattr(self, '_prior_tries_warning'):
+                self.log.warning("Proposal has been rejected %s times", max_tries_now)
+                self._prior_tries_warning = True
 
     # Functions to check convergence and learn the covariance of the proposal distribution
 
