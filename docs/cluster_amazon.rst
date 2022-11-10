@@ -22,7 +22,7 @@ Now install the requisites with
    $ bash miniconda.sh -b -p $HOME/miniconda
    $ export PATH="$HOME/miniconda/bin:$PATH"
    $ conda config --set always_yes yes --set changeps1 no
-   $ conda create -q -n cobaya-env python=3.7 scipy matplotlib cython PyYAML pytest pytest-forked flaky
+   $ conda create -q -n cobaya-env python=3.9 scipy matplotlib cython PyYAML pytest pytest-forked flaky
    $ source activate cobaya-env
    $ pip install mpi4py
 
