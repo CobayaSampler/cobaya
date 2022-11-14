@@ -279,7 +279,6 @@ def get_clik_import_path(path, min_version=last_version_clik):
     """
     clik_src_path = get_clik_source_folder(path)
     version_file = os.path.join(clik_src_path, 'svnversion')
-    print(f'{version_file=}')
     if os.path.exists(version_file):
         with open(version_file, 'r') as f:
             installed_version = version.parse(f.readline().split("_")[-1])

@@ -12,9 +12,9 @@ env:
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
   directories:
-    - /home/travis/build/CosmoPars/packages/code
+#    - /home/travis/build/CosmoPars/packages/code
     - /home/travis/build/CosmoPars/packages/data/planck_supp_data_and_covmats
-    - /home/travis/build/CosmoPars/packages/data/planck_2018/baseline
+#    - /home/travis/build/CosmoPars/packages/data/planck_2018/baseline
     - /home/travis/build/CosmoPars/packages/data/bicep_keck_2018
     - /home/travis/build/CosmoPars/packages/data/bao_data
     - /home/travis/build/CosmoPars/packages/data/sn_data
@@ -43,16 +43,10 @@ jobs:
       env:
         - GCC_VERSION="ubuntu"
       python: "3.10"
-    - name: "Anaconda: gcc-8, Python 3.9"
-      dist: focal
-      addons:
-        apt:
-          packages:
-            - gcc-8
-            - gfortran-8
-            - g++-8
+    - name: "Anaconda: latest Ubuntu LTS Python 3.9"
+      dist: jammy
       env:
-        - GCC_VERSION="8"
+        - GCC_VERSION="ubuntu"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.9"
@@ -117,7 +111,8 @@ script:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report
-  - pip install numba
+  # numba can speed things, but makes for some messy logs
+  # - pip install numba
   # Cosmology tests:
   - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
@@ -125,10 +120,8 @@ script:
     git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
     python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
-  # mpi tests [not sure why it hangs in py3.6]
-  - if [[ "$GCC_VERSION" != "6" ]]; then
-    mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report ;
-    fi;
+  # mpi tests
+  - mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report ;
   - mkdir covers; mv .coverage.* covers; ls -ltra covers
   - pytest tests/ --cov -v -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
   - mv .coverage .coverage.pytest; mv covers/.cov* .
