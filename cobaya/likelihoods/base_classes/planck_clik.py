@@ -29,7 +29,8 @@ clik_url = 'https://github.com/benabed/clik/archive/refs/heads/main.zip'
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
 last_version_supp_data_and_covmats = "v2.01"
-last_version_clik = "3.1"
+last_version_clik = "15.0"
+min_version_clik = "3.1"
 
 
 class PlanckClik(Likelihood):
@@ -269,7 +270,7 @@ def get_clik_source_folder(starting_path):
     return source_dir
 
 
-def get_clik_import_path(path, min_version=last_version_clik):
+def get_clik_import_path(path, min_version=min_version_clik):
     """
     Starting from the installation folder, returns the subdirectory from which the
     ``clik`` module must be imported.
