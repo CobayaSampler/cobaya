@@ -44,10 +44,9 @@ jobs:
         - GCC_VERSION="ubuntu"
       python: "3.10"
     - name: "Anaconda: gcc-8, Python 3.9"
+      dist: focal
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
           packages:
             - gcc-8
             - gfortran-8

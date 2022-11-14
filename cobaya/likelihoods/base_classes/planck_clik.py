@@ -345,8 +345,8 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = pla_url_prefix + '152000'
-    if not download_file(click_url, path, size=2369782, decompress=True,
+    clik_url = 'https://github.com/benabed/clik/archive/refs/heads/main.zip'
+    if not download_file(clik_url, path, size=2369782, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
