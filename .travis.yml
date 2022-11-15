@@ -25,14 +25,15 @@ cache:
 # (Pre)Installation
 jobs:
   include:
-    - name: "Minimum requisites for Cosmology: gcc-8, Python 3.8"
+    - dist: bionic
+      name: "Minimum requisites for Cosmology: gcc-7, Python 3.8"
       addons:
         apt:
           packages:
-            - gcc-8
-            - gfortran-8
+            - gcc-7
+            - gfortran-7
       env:
-        - GCC_VERSION="8"
+        - GCC_VERSION="7"
       python: "3.8"
     - name: "Typical scenario: latest Ubuntu LTS"
       dist: jammy
@@ -42,9 +43,9 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.10"
+      python: "3.9"
     - name: "Anaconda: focal LTS Python 3.9"
-      dist: focal
+      dist: jammy
       addons:
         apt:
           packages:
@@ -55,7 +56,7 @@ jobs:
         - ANACONDA_CHANNEL="defaults"
       python: "3.9"
     - name: "Latest: gcc-11, Python 3.11 Anaconda (conda-forge)"
-      dist: focal
+      dist: jammy
       addons:
         apt:
           sources:
