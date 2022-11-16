@@ -101,11 +101,12 @@ before_install:
     conda info -a;
     conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked pytest-cov flaky dill coverage flake8;
     source activate test-environment;
+    python -m pip install --upgrade pip setuptools wheel
     pip install mpi4py;
     else
+    python -m pip install --upgrade pip setuptools wheel
     pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
     fi
-  - python -m pip install --upgrade pip
   - python --version
 
 script:
