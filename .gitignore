@@ -9,6 +9,7 @@
 # Python and packaging
 *.pyc
 *.egg-info/
+*.ipynb_checkpoints
 build/
 dist/
 __pycache__
