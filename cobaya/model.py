@@ -1176,8 +1176,8 @@ class Model(HasLogger):
             # Split them so that "adding the next block to the slow ones" has max cost
             log_differences = np.log(costs_per_block[:-1]) - np.log(costs_per_block[1:])
             i_last_slow: int = np.argmax(log_differences)  # type: ignore
-            blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
-                                       list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
+            blocks_split = (lambda L: [list(chain(*L[:i_last_slow + 1])),
+                                       list(chain(*L[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
                     [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
                     [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])

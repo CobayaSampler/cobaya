@@ -91,7 +91,8 @@ class InstallableLikelihood(Likelihood):
                 return True
             elif not (os.path.exists(path) and len(os.listdir(path)) > 0):
                 log = get_logger(cls.get_qualified_class_name())
-                log.error("The given installation path does not exist: '%s'", path)
+                (log.error if kwargs.get("show_error") is not False else log.info)(
+                    "The given installation path does not exist: '%s'", path)
                 return False
             elif opts.get("github_release"):
                 try:
