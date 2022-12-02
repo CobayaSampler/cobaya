@@ -1,0 +1,3 @@
+# eyeballed low-z centroid, https://inspirehep.net/literature/2108012;artif z 0.025 -> 0.03 to avoid overlap
+0.03 0.357 0.071
+ 

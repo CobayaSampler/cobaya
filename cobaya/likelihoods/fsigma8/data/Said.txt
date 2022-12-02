@@ -1,0 +1,2 @@
+# FO of 6DF and SDSS gals, with predicted delta, vpec from M++; Said etal;artif z 0.035 -> 0.04 to avoid overlap
+0.04 0.338  0.027

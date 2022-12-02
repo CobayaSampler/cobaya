@@ -1,0 +1,4 @@
+# Blake, et al (2011); Mon. Not. R. Astron. Soc. 415, 2876–2891 (2011) - NOTE EXACT PAPER (OTHER ONE SMALLER ERRORS)
+0.44  0.413  0.080  
+0.60  0.390  0.063  
+0.73  0.437  0.072

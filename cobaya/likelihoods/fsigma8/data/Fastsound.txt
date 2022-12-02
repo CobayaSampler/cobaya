@@ -1,0 +1,2 @@
+# Okumura et al (2016); RDS of Subaru FMOS galaxy red. survey (FastSound); marg also over sigma_v
+1.4 0.494 0.123

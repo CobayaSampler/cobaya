@@ -1,0 +1,2 @@
+# Boruah, Hudson, Lavaux 1912.09383; I eyeballed cent z of SN ~0.02 but made it 0.01 to avoid overlap
+0.01 0.400  0.017

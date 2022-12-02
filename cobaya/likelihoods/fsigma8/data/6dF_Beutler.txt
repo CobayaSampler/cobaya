@@ -1,0 +1,2 @@
+# Beutler et al (2012), RSD of 2PCF of 6dF 
+0.067 0.423 0.055

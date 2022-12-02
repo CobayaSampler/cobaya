@@ -1,0 +1,3 @@
+#Vipers, from two bins; Pezotta et al (2017); z1 artificially shifted to avoid overlap
+0.62 0.55 0.12
+0.8 0.40 0.11

@@ -1,0 +1,7 @@
+# eBOSS  (2020); data at https://www.sdss.org/science/final-bao-and-rsd-measurements/ ;z=0.15, 0.38 shifted hor 
+0.1599 0.53  0.16
+0.3899 0.500 0.047
+0.51 0.455 0.039
+0.70 0.448 0.043
+0.85 0.315 0.095
+1.48 0.462 0.045
