@@ -18,7 +18,7 @@
 # Pezotta et al (2017), Vipers (VIMOS Public Extragalatic Redshift Survey) RSD, two z-bins, axiv:1612.05645; z1 artificially shifted to avoid overlap
 0.62 0.55 0.12
 0.8 0.40 0.11
-# Blake, et al (2011); Mon. Not. R. Astron. Soc. 415, 2876–2891 (2011) - NOTE EXACT PAPER (OTHER ONE SMALLER ERRORS); check with Dragan
+# Blake, et al (2011), joint measurement of A(z), F(z) and fsigma8 using WiggleZ, arxiv:1204.3674;
 0.44 0.413 0.080
 0.60 0.390 0.063
 0.73 0.437 0.072
