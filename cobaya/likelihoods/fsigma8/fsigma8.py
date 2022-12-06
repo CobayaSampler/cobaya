@@ -106,7 +106,7 @@ class fsigma8(Likelihood):
             elif self.invcov_file:
                 invcov = np.loadtxt(os.path.join(self.data_dir, self.invcov_file))
                 self.cov = np.linalg.inv(invcov)
-            elif "error" in self.data.columns:
+            elif "fsigma8_err" in self.data.columns:
                 self.cov = np.diag(self.data["fsigma8_err"] ** 2)
             else:
                 raise LoggedError(
