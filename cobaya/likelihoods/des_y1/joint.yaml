@@ -25,16 +25,6 @@ speed: 20
 
   
 params:
-  omegab:
-    prior:
-      min: 0.03
-      max: 0.07
-    ref:
-      dist: norm
-      loc: 0.049
-      scale: 0.004
-    proposal: 0.002
-    latex: \Omega_\mathrm{b}
   # Lensing photo-z errors
   DES_DzL1:
     prior:
