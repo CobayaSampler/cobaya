@@ -562,35 +562,11 @@ class SampleCollection(BaseCollection):
     # Accessing the dataframe
     def __getitem__(self, *args):
         """
-        This is a hack of the DataFrame __getitem__ in order to never go
-        beyond the number of samples.
+        Direct access to the DataFrame, ensuring cache has been dumped.
 
-        When slicing (e.g. [ini:end:step]) or single index, returns a copy of the
-        collection.
-
-        When asking for specific columns, returns a *view* of the original DataFrame
-        (so careful when assigning and modifying returned values).
-
-        Errors are ValueError because this is not for internal use in this class,
-        but an external interface to other classes and the user.
+        Returns views or copies as Pandas would do.
         """
-        if len(args) > 1:
-            raise ValueError("Use just one index/column, or use .loc[row, column]. "
-                             "(Notice that slices in .loc *include* the last point.)")
-        if isinstance(args[0], str):
-            return self.data.iloc[:, self.data.columns.get_loc(args[0])]
-        if hasattr(args[0], "__len__"):  # assume list of columns
-            try:
-                return self.data.iloc[:, [self.data.columns.get_loc(c) for c in args[0]]]
-            except KeyError as excpt:
-                raise ValueError("Some of the indices are not valid columns.") from excpt
-        elif isinstance(args[0], int):
-            new_data = self.data.iloc[check_index(args[0], len(self.data))]
-        elif isinstance(args[0], slice):
-            new_data = self.data.iloc[check_slice(args[0])]
-        else:
-            raise ValueError("Index type not recognized: use column names or slices.")
-        return self._copy(data=new_data)
+        return self.data.__getitem__(*args)
 
     # MARKED FOR DEPRECATION IN v3.2
     @property
