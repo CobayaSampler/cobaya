@@ -812,12 +812,12 @@ class SampleCollection(BaseCollection):
 
     def bestfit(self):
         """Best fit (maximum likelihood) sample. Returns a copy."""
-        return self.data.loc[self.data[OutPar.chi2].idxmin()].copy()
+        return self.data.loc[self.data[OutPar.chi2].astype(np.float64).idxmin()].copy()
 
     def MAP(self):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
-        return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
-
+        return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()]\
+                        .copy()
     def sampled_to_getdist_mcsamples(
             self,
             first: Optional[int] = None,

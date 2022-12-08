@@ -1,3 +1,4 @@
+import warnings
 from flaky import flaky
 import numpy as np
 
@@ -112,11 +113,15 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     #     of the unphysical region.
     info_like = info.pop("likelihood")
     info["likelihood"] = {"one": None}
-    _, sampler_prior_only = install_test_wrapper(skip_not_installed, run, info)
+    with warnings.catch_warnings():  # suppress warning log(0)
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        _, sampler_prior_only = install_test_wrapper(skip_not_installed, run, info)
     logZpi = sampler_prior_only.products()["logZ"]
     logZpistd = sampler_prior_only.products()["logZstd"]
     info["likelihood"] = info_like
-    _, sampler_with_like = run(info)
+    with warnings.catch_warnings():  # suppress warning log(0)
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        _, sampler_with_like = run(info)
     logZlike = sampler_with_like.products()["logZ"]
     logZlikestd = sampler_with_like.products()["logZstd"]
     logZ = logZlike - logZpi

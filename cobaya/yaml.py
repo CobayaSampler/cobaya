@@ -158,10 +158,20 @@ def yaml_load_file(file_name: Optional[str], yaml_text: Optional[str] = None) ->
 # Custom dumper ##########################################################################
 
 def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
+    """
+    Drop-in replacement for the yaml dumper with some tweaks:
+
+    - Order is preserved in dictionaries and other mappings
+    - Tuples are dumped as lists
+    - Numpy arrays (``numpy.ndarray``) are dumped as lists
+    - Numpy scalars are dumped as numbers, preserving type
+    """
+
     class CustomDumper(yaml.Dumper):
         pass
 
     # Make sure dicts preserve order when dumped
+    # (This is still needed even for CPython 3!)
     def _dict_representer(dumper, data):
         return dumper.represent_mapping(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
