@@ -9,11 +9,12 @@
 # Global
 import os
 import functools
+from copy import deepcopy
+from typing import Union, Sequence, Optional, Tuple, Iterable
 import numpy as np
 import pandas as pd
-from copy import deepcopy
-from typing import Union, Sequence, Optional
 from getdist import MCSamples, chains  # type: ignore
+from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
 
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
@@ -30,18 +31,22 @@ chains.print_load_details = False
 _default_cache_size = 200
 
 
-# Make sure that we don't reach the empty part of the dataframe
 def check_index(i, imax):
+    """Makes sure that we don't reach the empty part of the dataframe."""
     if (i > 0 and i >= imax) or (i < 0 and -i > imax):
         raise IndexError("Trying to access a sample index larger than "
-                         "the amount of samples (%d)!" % imax)
+                         f"the amount of samples ({imax})!")
     if i < 0:
         return imax + i
     return i
 
 
-# Notice that slices are never supposed to raise IndexError, but an empty list at worst!
 def check_slice(ij: slice, imax=None):
+    """
+    Restricts a slice to the non-empty part of the DataFrame.
+
+    Notice that slices are never supposed to raise IndexError, but an empty list at worst!
+    """
     newlims = {"start": ij.start, "stop": ij.stop}
     if ij.start is None:
         newlims["start"] = 0
@@ -56,8 +61,47 @@ def check_slice(ij: slice, imax=None):
     return slice(newlims["start"], newlims["stop"], ij.step)
 
 
+def apply_temperature(logpost, temperature):
+    """Applies sampling temperature to a log-posteior."""
+    return logpost / temperature
+
+
+def remove_temperature(logpost, temperature):
+    """Removes sampling temperature from a log-posteior."""
+    return apply_temperature(logpost, 1 / temperature)
+
+
+def compute_temperature(logpost, logprior, loglike, check=True):
+    """
+    Returns the temperature of a sample.
+
+    If ``check=True`` and the log-probabilites passed are arrays, checks consistency
+    of the sample temperature, and raises ``AssertionError`` if inconsistent.
+    """
+    temp = (logprior + loglike) / logpost
+    if check and isinstance(temp, Iterable) and len(temp) > 1:
+        assert np.allclose(temp, temp[0]), "Inconsistent temperature in sample."
+        temp = temp[0]
+    return temp
+
+
+def detempering_weights_factor(tempered_logpost, temperature):
+    """
+    Returns the detempering factors for the weights of a tempered sample, i.e. if ``w_t``
+    is the weight of the tempered sample, then the weight of the unit-temperature one is
+    ``w_t * f``, where the ``f`` returned by this method is
+    ``exp(logp * (1 - 1/temperature))``, where ``logp`` is the (untempered) logposterior.
+
+    Factors are normalized so that the largest equals one.
+    """
+    if temperature == 1:
+        return np.ones(np.atleast_1d(tempered_logpost).shape)
+    log_ratio = remove_temperature(tempered_logpost, temperature) - tempered_logpost
+    return np.exp(log_ratio - max(log_ratio))
+
+
 class BaseCollection(HasLogger):
-    def __init__(self, model, name=None):
+    def __init__(self, model, name=None, temperature=1):
         self.name = name
         self.set_logger(name)
         self.sampled_params = list(model.parameterization.sampled_params())
@@ -70,6 +114,7 @@ class BaseCollection(HasLogger):
         columns += [p for p in self.derived_params if p not in self.chi2_names]
         columns += [OutPar.minuslogprior] + self.minuslogprior_names
         columns += [OutPar.chi2] + self.chi2_names
+        self.temperature = temperature if temperature is not None else 1
         self.columns = columns
 
 
@@ -80,7 +125,7 @@ def ensure_cache_dumped(method):
 
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
-        self._cache_dump()
+        self._cache_dump()  # pylint: disable=protected-access
         return method(self, *args, **kwargs)
 
     return wrapper
@@ -94,6 +139,12 @@ class SampleCollection(BaseCollection):
     but slicing can be done on the ``SampleCollection`` itself
     (returns a copy, not a view).
 
+    When ``temperature`` is different from 1, weights and log-posterior (but not priors
+    or likelihoods' chi squared's) are those of the tempered sample, obtained assuming a
+    posterior raised to the power of ``1/temperature``. Functions returning statistics,
+    e.g. :func:`~SampleCollection.cov`, will return the statistics of the original
+    (untempered) posterior, unless indicated otherwise with a keyword argument.
+
     Note for developers: when expanding this class or inheriting from it, always access
     the underlying DataFrame as ``self.data`` and not ``self._data``, to ensure the cache
     has been dumped. If you really need to access the actual attribute ``self._data`` in a
@@ -102,9 +153,10 @@ class SampleCollection(BaseCollection):
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
                  extension=None, file_name=None, resuming=False, load=False,
-                 onload_skip=0, onload_thin=1):
+                 temperature=1, onload_skip=0, onload_thin=1):
         super().__init__(model, name)
         self.cache_size = cache_size
+        self._data = None
         # Create/load the main data frame and the tracking indices
         # Create the DataFrame structure
         if output:
@@ -147,10 +199,11 @@ class SampleCollection(BaseCollection):
                         data_col_set = set(self.data.columns)
                         col_set = set(self.columns)
                         if data_col_set != col_set:
+                            missing = set(self.columns).difference(self.data.columns)
+                            unexpected = set(self.data.columns).difference(self.columns)
                             raise LoggedError(
-                                self.log,
-                                "Unexpected column names!\nLoaded: %s\nShould be: %s",
-                                list(self.data.columns), self.columns)
+                                self.log, (f"Bad column names! Missing {missing}; "
+                                           f"unexpected: {unexpected}"))
                     self._n_last_out = len(self)
                 except IOError:
                     if resuming:
@@ -167,9 +220,33 @@ class SampleCollection(BaseCollection):
             self._out_delete()
         if not resuming and not load:
             self.reset()
+        # If loaded, check sample weights, consistent logp sums,
+        # and temperature (ignores the given one)
+        if len(self):
+            try:
+                self.temperature = self._check_logps()
+                self._check_weights()
+            except LoggedError as excpt:
+                raise LoggedError(
+                    self.log,
+                    "Error when loading samples: %s",
+                    str(excpt)
+                ) from excpt
+            self._drop_samples_null_weight()
         # Prepare fast numpy cache
         self._icol = {col: i for i, col in enumerate(self.columns)}
         self._cache_reset()
+        # Prepare txt formatter
+        self.n_float = 8
+        # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
+        width_col = lambda col: max(7 + self.n_float, len(col))
+        self._numpy_fmts = ["%{}.{}".format(width_col(col), self.n_float) + "g"
+                            for col in self.data.columns]
+        self._header_formatter = [
+            eval('lambda s, w=width_col(col): '  # pylint: disable=eval-used
+                 '("{:>" + "{}".format(w) + "s}").format(s)',
+                 {'width_col': width_col, 'col': col})
+            for col in self.data.columns]
 
     def reset(self):
         """Create/reset the DataFrame."""
@@ -189,6 +266,8 @@ class SampleCollection(BaseCollection):
 
         If `logpost` can be :class:`~model.LogPosterior`, float or None (in which case,
         `logpriors`, `loglikes` are both required).
+
+        If the weight is not specified, it is assumed to be 1.
         """
         logposterior = self._check_before_adding(
             values, logpost=logpost, logpriors=logpriors,
@@ -242,11 +321,14 @@ class SampleCollection(BaseCollection):
         elif isinstance(logpost, float) or logpost is None:
             try:
                 return_logpost = LogPosterior(
-                    logpriors=logpriors, loglikes=loglikes, derived=derived)
+                    logpriors=logpriors,  # type: ignore
+                    loglikes=loglikes,  # type: ignore
+                    derived=derived,  # type: ignore
+                )
             except ValueError as valerr:
                 # missing logpriors/loglikes if logpost is None,
                 # or inconsistent sum if logpost given
-                raise LoggedError(self.log, str(valerr))
+                raise LoggedError(self.log, str(valerr)) from valerr
         else:
             raise LoggedError(
                 self.log, "logpost must be a LogPosterior object, a number or None (in "
@@ -274,7 +356,8 @@ class SampleCollection(BaseCollection):
         Adds the given point to the cache at the given position.
         """
         self._cache[pos, self._icol[OutPar.weight]] = weight if weight is not None else 1
-        self._cache[pos, self._icol[OutPar.minuslogpost]] = -logposterior.logpost
+        self._cache[pos, self._icol[OutPar.minuslogpost]] = \
+            -apply_temperature(logposterior.logpost, self.temperature)
         for name, value in zip(self.sampled_params, values):
             self._cache[pos, self._icol[name]] = value
         if logposterior.logpriors is not None:
@@ -300,6 +383,140 @@ class SampleCollection(BaseCollection):
             self._cache[:self._cache_last + 1]
         self._cache_reset()
 
+    def _check_logps(self, temperature_only=False):
+        """
+        Checks the correct sums for the logpriors and likelihoods' chi-squared's, as well
+        as the posterior temperature, which is returned.
+
+        Raises ``LoggedError`` if the sums or the temperature of the sample are not
+        consistent.
+        """
+        try:
+            temperature = compute_temperature(
+                -self["minuslogpost"], -self["minuslogprior"], -self["chi2"] * 0.5,
+                check=True)
+        except AssertionError as excpt:
+            raise LoggedError(
+                self.log, "The sample seems to have an inconsistent temperature.") \
+                from excpt
+        if not temperature_only:
+            if not np.allclose(
+                    self[OutPar.minuslogprior],
+                    np.sum(
+                        np.atleast_2d(
+                            self[self.minuslogprior_names].to_numpy(dtype=np.float64)),
+                        axis=-1,
+                    )
+            ):
+                raise LoggedError(
+                    self.log,
+                    "The sum of logpriors in the sample is not consistent."
+                )
+            if not np.allclose(
+                    self[OutPar.chi2],
+                    np.sum(
+                        np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)),
+                        axis=-1,
+                    )
+            ):
+                raise LoggedError(
+                    self.log,
+                    "The sum of likelihood's chi2's in the sample is not consistent."
+                )
+        return temperature
+
+    def _check_weights(
+            self,
+            weights: Optional[np.ndarray] = None,
+            length: Optional[int] = None
+    ):
+        """
+        Checks correct length, shape and signs of the ``weights``.
+
+        If no weights passed, checks internal consistency.
+
+        If ``length`` passed, checks for specific length of the weights vector.
+
+        Raises ``LoggedError`` if the weights are badly arranged or invalid.
+        """
+        if weights is None:
+            weights_array = self[OutPar.weight].to_numpy(dtype=np.float64)
+        else:
+            weights_array = np.atleast_1d(weights)
+            if len(weights_array.shape) != 1:
+                raise LoggedError(
+                    self.log,
+                    "The shape of the weights is wrong. Expected a 1d array, "
+                    "but got shape %r.",
+                    weights_array.shape
+                )
+            check_length = len(self) if length is None else length
+            if len(weights_array) != check_length:
+                raise LoggedError(
+                    self.log,
+                    "The length of the weights vector is wrong. Expected %d but got %d.",
+                    check_length,
+                    len(weights_array)
+                )
+        if np.any(weights_array < 0):
+            raise LoggedError(
+                self.log,
+                "The weight vector contains negative elements."
+            )
+
+    @property
+    def is_tempered(self) -> bool:
+        """
+        Whether the sample was obtained by drawing from a different-temperature
+        distribution.
+        """
+        return self.temperature != 1
+
+    @property
+    def has_int_weights(self) -> bool:
+        """
+        Whether weights are integer.
+        """
+        weights = self[OutPar.weight]
+        return np.allclose(np.round(weights), weights)
+
+    def _detempered_weights(self):
+        """Computes the detempered weights."""
+        if self.temperature == 1:
+            return self._data[OutPar.weight].to_numpy(dtype=np.float64)
+        return (
+            self._data[OutPar.weight].to_numpy(dtype=np.float64) *
+            detempering_weights_factor(
+                -self._data[OutPar.minuslogpost],
+                self.temperature
+            )
+        )
+
+    def _detempered_minuslogpost(self):
+        """Computes the detempered -log-posterior."""
+        if self.temperature == 1:
+            return self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64)
+        return -remove_temperature(
+            -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
+            self.temperature
+        )
+
+    def reset_temperature(self):
+        """
+        Drops the information about sampling temperature: ``weight`` and ``minuslogpost``
+        columns will now correspond to those of a unit-temperature posterior sample.
+
+        This cannot be undone: (e.g. recovering original integer tempered weights).
+        You may want to call this method on a copy (see :func:`SampleCollection.copy`).
+        """
+        self._cache_dump()
+        if self.temperature == 1:
+            return
+        self._data[OutPar.weight] = self._detempered_weights()
+        self._drop_samples_null_weight()
+        self._data[OutPar.minuslogpost] = self._detempered_minuslogpost()
+        self.temperature = 1
+
     def _enlarge(self, n):
         """
         Enlarges the DataFrame by `n` rows.
@@ -309,7 +526,7 @@ class SampleCollection(BaseCollection):
                 np.nan, columns=self._data.columns,
                 index=np.arange(len(self._data), len(self._data) + n))])
 
-    def append(self, collection):
+    def _append(self, collection):
         """
         Append another collection.
         Internal method: does not check for consistency!
@@ -320,12 +537,15 @@ class SampleCollection(BaseCollection):
     def __len__(self):
         return len(self._data) + (self._cache_last + 1)
 
+    @property
     def n_last_out(self):
+        """Index of the last point saved to the output."""
         return self._n_last_out
 
     @property  # type: ignore
     @ensure_cache_dumped
     def data(self):
+        """Pandas' ``DataFrame`` containing the sample collection."""
         return self._data
 
     # Make the dataframe printable (but only the filled ones!)
@@ -356,11 +576,11 @@ class SampleCollection(BaseCollection):
                              "(Notice that slices in .loc *include* the last point.)")
         if isinstance(args[0], str):
             return self.data.iloc[:, self.data.columns.get_loc(args[0])]
-        elif hasattr(args[0], "__len__"):  # assume list of columns
+        if hasattr(args[0], "__len__"):  # assume list of columns
             try:
                 return self.data.iloc[:, [self.data.columns.get_loc(c) for c in args[0]]]
-            except KeyError:
-                raise ValueError("Some of the indices are not valid columns.")
+            except KeyError as excpt:
+                raise ValueError("Some of the indices are not valid columns.") from excpt
         elif isinstance(args[0], int):
             new_data = self.data.iloc[check_index(args[0], len(self.data))]
         elif isinstance(args[0], slice):
@@ -369,11 +589,21 @@ class SampleCollection(BaseCollection):
             raise ValueError("Index type not recognized: use column names or slices.")
         return self._copy(data=new_data)
 
+    # MARKED FOR DEPRECATION IN v3.2
     @property
     def values(self) -> np.ndarray:
+        """
+        Returns the sample collection as a numpy array; to be deprecated in favour of
+        ``Collection.to_numpy``, following Pandas.
+        """
+        print("*WARNING* Following Pandas, the 'Collection.values()' method will soon be "
+              "deprecated in favour of 'Collection.to_numpy()'.")
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
         return self.data.to_numpy(dtype=np.float64)
+        # END OF DEPRECATION BLOCK
 
     def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
+        """Returns the sample collection as a numpy array."""
         return self.data.to_numpy(copy=copy, dtype=dtype or np.float64)
 
     def _copy(self, data=None, empty=False) -> 'SampleCollection':
@@ -409,90 +639,150 @@ class SampleCollection(BaseCollection):
         """
         return self._copy(empty=empty)
 
-    def _weights_for_stats(self, first: Optional[int] = None, last: Optional[int] = None,
-                           pweight: bool = False) -> np.ndarray:
+    def _weights_for_stats(
+            self,
+            first: Optional[int] = None,
+            last: Optional[int] = None,
+            weights: Optional[np.ndarray] = None,
+            tempered: bool = False,
+    ) -> Tuple[np.ndarray, bool]:
         """
-        Returns weights for computation of statistical quantities such as mean and
-        covariance.
+        Returns ``(weights, are_int)``, where weights can be used for computation of
+        statistical quantities such as mean and covariance, and ``are_int`` is ``True``
+        if the returned weights are known to be integer, and ``False`` if it cannot be
+        guaranteed.
 
-        If ``pweight=True`` (default ``False``) every point is weighted with its
-        probability, and sample weights are ignored (may lead to very inaccurate
-        estimates!).
+        If ``tempered=True`` (default ``False``) returns the weights of the tempered
+        posterior ``p**(1/temperature)``.
+
+        Custom weights can be passed with the argument ``weights``. In that case, internal
+        weights are ignored, and some checks are performed on the passed ones.
         """
-        if pweight:
-            logps = -self[OutPar.minuslogpost][first:last]\
-                .to_numpy(dtype=np.float64, copy=True)
-            logps -= max(logps)
-            weights = np.exp(logps)
-        else:
-            weights = self[OutPar.weight][first:last]\
-                .to_numpy(dtype=np.float64, copy=True)
-        return weights
+        if weights is not None:
+            first = first or 0
+            last = last or len(self)
+            self._check_weights(weights, length=last - first)
+            weights /= max(weights)
+            return weights, np.allclose(np.round(weights), weights)
+        if self.is_tempered and not tempered:
+            # For sure the weights are not integer
+            return self._detempered_weights()[first:last], False
+        return (
+            self[OutPar.weight][first:last].to_numpy(dtype=np.float64),
+            self.has_int_weights
+        )
 
-    def mean(self, first: Optional[int] = None, last: Optional[int] = None,
-             pweight: bool = False, derived: bool = False) -> np.ndarray:
+    def mean(
+            self,
+            first: Optional[int] = None,
+            last: Optional[int] = None,
+            weights: Optional[np.ndarray] = None,
+            derived: bool = False,
+            tempered: bool = False
+    ) -> np.ndarray:
         """
         Returns the (weighted) mean of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If ``pweight=True`` (default ``False``) every point is weighted with its
-        probability, and sample weights are ignored (may lead to inaccurate
-        estimates!).
+        Custom weights can be passed with the argument ``weights``.
+
+        If ``derived`` is ``True`` (default ``False``), the means of the derived
+        parameters are included in the returned vector.
+
+        If ``tempered=True`` (default ``False``) returns the mean of the tempered
+        posterior ``p**(1/temperature)``.
+
+        NB: For tempered samples, if passed ``tempered=False`` (default), detempered
+        weights are computed on-the-fly. If this or any other function returning
+        untempered statistical quantities of a tempered sample is expected to be called
+        repeatedly, it would be more efficient to detemper the collection first with
+        :func:`SampleCollection.reset_temperature`, and call these methods on the returned
+        Collection.
         """
-        weights = self._weights_for_stats(first, last, pweight=pweight)
+        weights_mean, _ = self._weights_for_stats(
+            first, last, weights=weights, tempered=tempered)
         return np.average(self[list(self.sampled_params) +
                                (list(self.derived_params) if derived else [])]
-                          [first:last].to_numpy(dtype=np.float64).T, weights=weights,
-                          axis=-1)
+                          [first:last].to_numpy(dtype=np.float64).T, weights=weights_mean,
+                          axis=-1
+                          )
 
-    def cov(self, first: Optional[int] = None, last: Optional[int] = None,
-            pweight: bool = False, derived: bool = False) -> np.ndarray:
+    def cov(
+            self,
+            first: Optional[int] = None,
+            last: Optional[int] = None,
+            weights: Optional[np.ndarray] = None,
+            derived: bool = False,
+            tempered: bool = False
+    ) -> np.ndarray:
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
         between `first` (default 0) and `last` (default last obtained),
         optionally including derived parameters if `derived=True` (default `False`).
 
-        If ``pweight=True`` (default ``False``) every point is weighted with its
-        probability, and sample weights are ignored (may lead to very inaccurate
-        estimates!).
+        Custom weights can be passed with the argument ``weights``.
+
+        If ``derived`` is ``True`` (default ``False``), the covariances of/with the
+        derived parameters are included in the returned matrix.
+
+        If ``tempered=True`` (default ``False``) returns the covariances of the tempered
+        posterior ``p**(1/temperature)``.
+
+        NB: For tempered samples, if passed ``tempered=False`` (default), detempered
+        weights are computed on-the-fly. If this or any other function returning
+        untempered statistical quantities of a tempered sample is expected to be called
+        repeatedly, it would be more efficient to detemper the collection first with
+        :func:`SampleCollection.reset_temperature`, and call these methods on the returned
+        Collection.
         """
-        weights = self._weights_for_stats(first, last, pweight=pweight)
-        if pweight:
-            weight_type_kwarg = "aweights"
-        elif np.allclose(np.round(weights), weights):
-            weights = np.round(weights).astype(int)
-            weight_type_kwarg = "fweights"
-        else:
-            weight_type_kwarg = "aweights"
-        return np.atleast_2d(np.cov(
+        weights_cov, are_int = self._weights_for_stats(
+            first, last, weights=weights, tempered=tempered)
+        weight_type_kwarg = "fweights" if are_int else "aweights"
+        return np.atleast_2d(np.cov(  # type: ignore
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
                 dtype=np.float64).T,
-            **{weight_type_kwarg: weights}))
+            **{weight_type_kwarg: weights_cov}))
 
-    def reweight(self, importance_weights):
-        """
-        Reweights the sample with the given ``importance_weights``.
-
-        This cannot be fully undone (e.g. recovering original integer weights).
-        You may want to call this method on a copy (see :func:`SampleCollection.copy`).
-        """
-        self._cache_dump()
-        self._data[OutPar.weight] *= importance_weights
+    def _drop_samples_null_weight(self):
+        """Removes from the DataFrame all samples that have 0 weight."""
         self._data = self.data[self._data.weight > 0].reset_index(drop=True)
         self._n = self._data.last_valid_index() + 1
 
+    def reweight(self, importance_weights, check=True):
+        """
+        Reweights the sample with the given ``importance_weights``.
+
+        Temperature information is dropped.
+
+        This cannot be fully undone (e.g. recovering original integer weights).
+        You may want to call this method on a copy (see :func:`SampleCollection.copy`).
+
+        For the sake of speed, length and positivity checks on the importance weights can
+        be skipped with ``check=False`` (default ``True``).
+        """
+        self.reset_temperature()  # includes a self._cache_dump()
+        if check:
+            self._check_weights(importance_weights)
+        self._data[OutPar.weight] *= importance_weights
+        self._drop_samples_null_weight()
+
     def filtered_copy(self, where) -> 'SampleCollection':
+        """Returns a copy of the collection with some condition ``where`` imposed."""
         return self._copy(self.data[where].reset_index(drop=True))
 
     def thin_samples(self, thin, inplace=False) -> 'SampleCollection':
+        """
+        Thins the sample collection by some factor ``thin>1``.
+
+        If ``inplace=False`` (default), returns a copy of the collection.
+        """
         if thin == 1:
             return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
             raise LoggedError(self.log, "Thin factor must be a positive integer, got %s",
                               thin)
-        from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
         thin = int(thin)
         try:
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
@@ -502,7 +792,7 @@ class SampleCollection(BaseCollection):
             else:
                 raise LoggedError(self.log, "Thinning requires GetDist 1.2+", )
         except WeightedSampleError as e:
-            raise LoggedError(self.log, "Error thinning: %s", e)
+            raise LoggedError(self.log, "Error thinning: %s", e) from e
         else:
             data = self._data.iloc[unique, :].copy()
             data.iloc[:, 0] = counts
@@ -523,23 +813,29 @@ class SampleCollection(BaseCollection):
         return self.data.loc[self.data[OutPar.minuslogpost].idxmin()].copy()
 
     def sampled_to_getdist_mcsamples(
-        self, first: Optional[int] = None, last: Optional[int] = None) -> MCSamples:
+            self,
+            first: Optional[int] = None,
+            last: Optional[int] = None,
+            tempered: bool = False
+    ) -> MCSamples:
         """
         Basic interface with getdist -- internal use only!
         (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
         <https://getdist.readthedocs.io/en/latest/mcsamples.html#getdist.mcsamples.loadMCSamples>`_.)
         """
         names = list(self.sampled_params)
+        weights, _ = self._weights_for_stats(first, last, tempered=tempered)
+        if self.is_tempered and not tempered:
+            minuslogposts = self._detempered_minuslogpost()[first:last]
+        else:
+            minuslogposts = self.data[OutPar.minuslogpost].to_numpy(
+                dtype=np.float64)[first:last]
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         with NoLogging():
             mcsamples = MCSamples(
-                samples=self.data[names].to_numpy(dtype=np.float64)[
-                        first:last],
-                weights=self.data[OutPar.weight].to_numpy(dtype=np.float64)[
-                        first:last],
-                loglikes=self.data[OutPar.minuslogpost].to_numpy(
-                    dtype=np.float64)[first:last],
-                names=names)
+                samples=self.data[names].to_numpy(dtype=np.float64)[first:last],
+                weights=weights, loglikes=minuslogposts, names=names,
+            )
         return mcsamples
 
     # Saving and updating
@@ -554,6 +850,7 @@ class SampleCollection(BaseCollection):
     # Dump/update/delete collection
 
     def out_update(self):
+        """Update the output file to the current state of the Collection."""
         self._get_driver("_update")()
 
     def _out_delete(self):
@@ -561,7 +858,7 @@ class SampleCollection(BaseCollection):
 
     # txt driver
     def _load__txt(self, skip=0):
-        self.log.debug("Skipping %s rows", skip)
+        self.log.debug("Skipping %d rows", skip)
         self._data = load_DataFrame(self.file_name, skip=skip,
                                     root_file_name=self.root_file_name)
         self.log.info("Loaded %d sample points from '%s'", len(self._data),
@@ -571,7 +868,7 @@ class SampleCollection(BaseCollection):
         self._dump_slice__txt(0, len(self))
 
     def _update__txt(self):
-        self._dump_slice__txt(self.n_last_out(), len(self))
+        self._dump_slice__txt(self.n_last_out, len(self))
 
     def _dump_slice__txt(self, n_min=None, n_max=None):
         if n_min is None or n_max is None:
@@ -579,17 +876,6 @@ class SampleCollection(BaseCollection):
         if self._n_last_out == n_max:
             return
         self._n_last_out = n_max
-        if not hasattr(self, "_numpy_fmts"):
-            n_float = 8
-            # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
-            width_col = lambda col: max(7 + n_float, len(col))
-            self._numpy_fmts = ["%{}.{}".format(width_col(col), n_float) + "g"
-                                for col in self.data.columns]
-            self._header_formatter = [
-                eval('lambda s, w=width_col(col): '
-                     '("{:>" + "{}".format(w) + "s}").format(s)',
-                     {'width_col': width_col, 'col': col})
-                for col in self.data.columns]
         do_header = not n_min
         if do_header:
             if os.path.exists(self.file_name):
@@ -633,18 +919,26 @@ class SampleCollection(BaseCollection):
 
 
 class OneSamplePoint:
-    """Wrapper to hold a single point, e.g. the current point of an MCMC.
-    Alternative to :class:`~collection.OnePoint`, faster but with less functionality."""
+    """
+    Wrapper to hold a single point, e.g. the current point of an MCMC.
+    Alternative to :class:`~collection.OnePoint`, faster but with less functionality.
+
+    For tempered samples, stores the weight and -logp of the tempered posterior (but
+    untempered priors and likelihoods).
+    """
+
     results: LogPosterior
     values: np.ndarray
     weight: int
 
-    def __init__(self, model, output_thin=1):
+    def __init__(self, model, temperature=1, output_thin=1):
         self.sampled_params = list(model.parameterization.sampled_params())
+        self.temperature = temperature
         self.output_thin = output_thin
         self._added_weight = 0
 
     def add(self, values, logpost: LogPosterior):
+        """Add/override the sampled point."""
         self.values = values
         if not isinstance(logpost, LogPosterior):
             raise ValueError("`logpost` argument must be LogPosterior instance.")
@@ -653,6 +947,7 @@ class OneSamplePoint:
 
     @property
     def logpost(self):
+        """:class:`~model.Logposterior` instance of the sampled point."""
         return self.results.logpost
 
     def add_to_collection(self, collection: SampleCollection):
@@ -680,24 +975,27 @@ class OneSamplePoint:
 
 
 class OnePoint(SampleCollection):
-    """Wrapper of :class:`~collection.SampleCollection` to hold a single point,
-    e.g. the best-fit point of a minimization run (not used by default MCMC)."""
+    """
+    Wrapper of :class:`~collection.SampleCollection` to hold a single point,
+    e.g. the best-fit point of a minimization run (not used by default MCMC).
+    """
 
-    def __getitem__(self, columns):
+    def __getitem__(self, columns, *args):
         if isinstance(columns, str):
             return self.data.values[0, self.data.columns.get_loc(columns)]
-        else:
-            try:
-                return self.data.values[0,
-                                        [self.data.columns.get_loc(c) for c in columns]]
-            except KeyError:
-                raise ValueError("Some of the indices are not valid columns.")
+        try:
+            return self.data.values[0,
+                                    [self.data.columns.get_loc(c) for c in columns]]
+        except KeyError as excpt:
+            raise ValueError("Some of the indices are not valid columns.") from excpt
 
     def add(self, *args, **kwargs):
+        """Add/override the sampled point."""
         self.reset()  # resets the DataFrame, so never goes beyond 1 point
         super().add(*args, **kwargs)
 
-    def increase_weight(self, increase):
+    def increase_weight(self, increase=1):
+        """Increase the weight of the point by ``increase`` (default: 1)."""
         # For some reason, faster than `self.data[Par.weight] += increase`
         self.data.at[0, OutPar.weight] += increase
 

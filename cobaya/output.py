@@ -531,7 +531,7 @@ class Output(HasLogger):
         if concatenate and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
-                collection.append(collection_i)
+                collection._append(collection_i)
             return collection
         return collections
 
