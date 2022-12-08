@@ -588,7 +588,7 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([]), symmetric=False)
     if m2 is None:
         m2 = np.zeros(dim)
     if symmetric:
-        return 0.5 * (_KL_norm(m1, S1, m2, S2) + _KL_norm(m2, S2, m1, S1))
+        return _KL_norm(m1, S1, m2, S2) + _KL_norm(m2, S2, m1, S1)
     return _KL_norm(m1, S1, m2, S2)
 
 
