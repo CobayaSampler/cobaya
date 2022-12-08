@@ -9,6 +9,7 @@
 # Global
 import os
 import functools
+import warnings
 from copy import deepcopy
 from typing import Union, Sequence, Optional, Tuple, Iterable
 import numpy as np
@@ -423,6 +424,8 @@ class SampleCollection(BaseCollection):
                     self.log,
                     "The sum of likelihood's chi2's in the sample is not consistent."
                 )
+        if np.isclose(temperature, 1):
+            temperature = 1
         return temperature
 
     def _check_weights(
@@ -487,7 +490,7 @@ class SampleCollection(BaseCollection):
         return (
             self._data[OutPar.weight].to_numpy(dtype=np.float64) *
             detempering_weights_factor(
-                -self._data[OutPar.minuslogpost],
+                -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
                 self.temperature
             )
         )
@@ -795,7 +798,10 @@ class SampleCollection(BaseCollection):
             raise LoggedError(self.log, "Error thinning: %s", e) from e
         else:
             data = self._data.iloc[unique, :].copy()
-            data.iloc[:, 0] = counts
+            # Produces pandas warning (pandas<2.0). Safe to ignore. Delete later.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=FutureWarning)
+                data.iloc[:, 0] = counts
             data.reset_index(drop=True, inplace=True)
             if inplace:
                 self._data = data
