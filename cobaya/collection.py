@@ -566,6 +566,9 @@ class SampleCollection(BaseCollection):
     def __len__(self):
         return len(self._data) + (self._cache_last + 1)
 
+    def __bool__(self):
+        return len(self) != 0
+
     @property
     def n_last_out(self):
         """Index of the last point saved to the output."""
@@ -705,7 +708,7 @@ class SampleCollection(BaseCollection):
         :func:`SampleCollection.reset_temperature`, and call these methods on the returned
         Collection.
         """
-        if not len(self):  # pylint: disable=use-implicit-booleaness-not-len
+        if not self:
             raise LoggedError(self.log, "Collection is empty. Cannot compute mean.")
         weights_mean, _ = self._weights_for_stats(
             first, last, weights=weights, tempered=tempered)
@@ -743,7 +746,7 @@ class SampleCollection(BaseCollection):
         :func:`SampleCollection.reset_temperature`, and call these methods on the returned
         Collection.
         """
-        if not len(self):  # pylint: disable=use-implicit-booleaness-not-len
+        if not self:
             raise LoggedError(self.log, "Collection is empty. Cannot compute cov.")
         weights_cov, are_int = self._weights_for_stats(
             first, last, weights=weights, tempered=tempered)
