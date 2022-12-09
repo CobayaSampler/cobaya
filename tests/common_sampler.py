@@ -91,6 +91,9 @@ def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmp
             ignore_rows = 0
         results = MCSamplesFromCobaya(updated_info, products["sample"],
                                       ignore_rows=ignore_rows, name_tag="sample")
+        temperature = info["sampler"][sampler_name].get("temperature", 1)
+        if temperature != 1:
+            results.cool(temperature)
         clusters = None
         if "clusters" in products:
             clusters = [MCSamplesFromCobaya(

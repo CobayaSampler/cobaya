@@ -72,6 +72,21 @@ def remove_temperature(logpost, temperature):
     return apply_temperature(logpost, 1 / temperature)
 
 
+def apply_temperature_cov(cov, temperature):
+    """
+    Convert covariance matrix to that of ``probability^(1/temperature)`` posterior.
+    """
+    return cov * temperature
+
+
+def remove_temperature_cov(cov, temperature):
+    """
+    Convert covariance matrix of ``probability^(1/temperature)`` posterior to original
+    one.
+    """
+    return cov / temperature
+
+
 def compute_temperature(logpost, logprior, loglike, check=True):
     """
     Returns the temperature of a sample.
@@ -102,7 +117,7 @@ def detempering_weights_factor(tempered_logpost, temperature):
 
 
 class BaseCollection(HasLogger):
-    def __init__(self, model, name=None, temperature=1):
+    def __init__(self, model, name=None, temperature=None):
         self.name = name
         self.set_logger(name)
         self.sampled_params = list(model.parameterization.sampled_params())
@@ -154,7 +169,7 @@ class SampleCollection(BaseCollection):
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
                  extension=None, file_name=None, resuming=False, load=False,
-                 temperature=1, onload_skip=0, onload_thin=1):
+                 temperature=None, onload_skip=0, onload_thin=1):
         super().__init__(model, name)
         self.cache_size = cache_size
         self._data = None
@@ -226,6 +241,15 @@ class SampleCollection(BaseCollection):
         if len(self):
             try:
                 self.temperature = self._check_logps()
+                if temperature is not None and \
+                   not np.isclose(temperature, self.temperature):
+                    raise LoggedError(
+                        self.log,
+                        "Sample temperature appears to be %r, but the collection was "
+                        "explicitly initialized with temperature %r.",
+                        self.temperature,
+                        temperature,
+                    )
                 self._check_weights()
             except LoggedError as excpt:
                 raise LoggedError(
@@ -234,6 +258,8 @@ class SampleCollection(BaseCollection):
                     str(excpt)
                 ) from excpt
             self._drop_samples_null_weight()
+        else:
+            self.temperature = temperature if temperature is not None else 1
         # Prepare fast numpy cache
         self._icol = {col: i for i, col in enumerate(self.columns)}
         self._cache_reset()
@@ -679,6 +705,8 @@ class SampleCollection(BaseCollection):
         :func:`SampleCollection.reset_temperature`, and call these methods on the returned
         Collection.
         """
+        if not len(self):  # pylint: disable=use-implicit-booleaness-not-len
+            raise LoggedError(self.log, "Collection is empty. Cannot compute mean.")
         weights_mean, _ = self._weights_for_stats(
             first, last, weights=weights, tempered=tempered)
         return np.average(self[list(self.sampled_params) +
@@ -715,6 +743,8 @@ class SampleCollection(BaseCollection):
         :func:`SampleCollection.reset_temperature`, and call these methods on the returned
         Collection.
         """
+        if not len(self):  # pylint: disable=use-implicit-booleaness-not-len
+            raise LoggedError(self.log, "Collection is empty. Cannot compute cov.")
         weights_cov, are_int = self._weights_for_stats(
             first, last, weights=weights, tempered=tempered)
         weight_type_kwarg = "fweights" if are_int else "aweights"
@@ -794,6 +824,7 @@ class SampleCollection(BaseCollection):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
         return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()]\
                         .copy()
+
     def sampled_to_getdist_mcsamples(
             self,
             first: Optional[int] = None,

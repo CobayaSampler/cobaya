@@ -18,7 +18,8 @@ max_runs = 3
 
 
 @flaky(max_runs=max_runs, min_passes=1)
-def test_mcmc(tmpdir, packages_path=None):
+@pytest.mark.parametrize("temperature", (1, 2))
+def test_mcmc(tmpdir, temperature, packages_path=None):
     dimension = 3
     # Random initial proposal
     # cov = mpi.share(
@@ -31,9 +32,15 @@ def test_mcmc(tmpdir, packages_path=None):
         # Bad guess for covmat, so big burn in and max_tries
         "max_tries": 3000, "burn_in": 100 * dimension,
         # Proposal, relearn quickly as poor guess
-        "covmat": cov, "learn_proposal_Rminus1_max": 30}}
+        "covmat": cov, "learn_proposal_Rminus1_max": 30,
+        # Sampling temperature, 1 and >1 to be tested
+        "temperature": temperature
+    }}
 
     def check_gaussian(sampler_instance):
+        if not len(sampler_instance.collection) or \
+           not len(sampler_instance.collection[int(sampler_instance.n() / 2):]):
+            return
         proposer = KL_norm(
             S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
             S2=sampler_instance.proposer.get_covariance())

@@ -6,18 +6,19 @@
 """
 
 # Global
+import re
+import datetime
 from itertools import chain
+from typing import Sequence, Optional, Callable
 import numpy as np
 from pandas import DataFrame
-import datetime
-from typing import Sequence, Optional, Callable
-import re
 
 # Local
 from cobaya.sampler import CovmatSampler
 from cobaya.mpi import get_mpi_size
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
-from cobaya.collection import SampleCollection, OneSamplePoint
+from cobaya.collection import SampleCollection, OneSamplePoint, apply_temperature_cov, \
+    remove_temperature_cov
 from cobaya.conventions import OutPar, Extension, line_width, get_version
 from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
@@ -47,6 +48,7 @@ class MCMC(CovmatSampler):
     learn_every: NumberWithUnits
     output_every: NumberWithUnits
     callback_every: NumberWithUnits
+    temperature: float
     max_tries: NumberWithUnits
     max_samples: int
     drag: bool
@@ -97,6 +99,8 @@ class MCMC(CovmatSampler):
             self._quants_d_units.append(number)
             setattr(self, q, number)
         self.output_every = NumberWithUnits(self.output_every, "s", dtype=int)
+        if self.temperature is None:
+            self.temperature = 1
         if is_main_process():
             if self.output.is_resuming() and (
                     max(self.mpi_size or 0, 1) != mpi.size()):
@@ -108,7 +112,8 @@ class MCMC(CovmatSampler):
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + mpi.rank())
         self.collection = SampleCollection(
-            self.model, self.output, name=name, resuming=self.output.is_resuming())
+            self.model, self.output, name=name, resuming=self.output.is_resuming(),
+            temperature=self.temperature)
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
@@ -164,11 +169,11 @@ class MCMC(CovmatSampler):
             elif self.measure_speeds:
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
-        self.set_proposer_blocking()
-        self.set_proposer_initial_covmat(load=True)
-
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
+        # Set up blocked proposer
+        self.set_proposer_blocking()
+        self.set_proposer_initial_covmat(load=True)
         # Max #(learn+convergence checks) to wait,
         # in case one process dies/hangs without raising error
         self.been_waiting = 0
@@ -312,7 +317,8 @@ class MCMC(CovmatSampler):
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
                     line_width=line_width))
-        self.proposer.set_covariance(self._initial_covmat)
+        self.proposer.set_covariance(
+            apply_temperature_cov(self._initial_covmat, self.temperature))
 
     def _get_last_nondragging_block(self, blocks, speeds):
         # blocks and speeds are already sorted
@@ -523,7 +529,8 @@ class MCMC(CovmatSampler):
         elif logp_trial > logp_current:
             return True
         else:
-            return self._rng.standard_exponential() > (logp_current - logp_trial)
+            posterior_ratio = (logp_current - logp_trial) / self.temperature
+            return self._rng.standard_exponential() > posterior_ratio
 
     def process_accept_or_reject(self, accept_state, trial, trial_results):
         """Processes the acceptance/rejection of the new point."""
@@ -605,8 +612,8 @@ class MCMC(CovmatSampler):
         if more_than_one_process():
             # Compute and gather means and covs
             use_first = int(self.n() / 2)
-            mean = self.collection.mean(first=use_first)
-            cov = self.collection.cov(first=use_first)
+            mean = self.collection.mean(first=use_first, tempered=True)
+            cov = self.collection.cov(first=use_first, tempered=True)
             acceptance_rate = self.get_acceptance_rate(use_first)
             Ns, means, covs, acceptance_rates = mpi.array_gather(
                 [self.n(), mean, cov, acceptance_rate])
@@ -617,12 +624,15 @@ class MCMC(CovmatSampler):
             try:
                 acceptance_rate = self.get_acceptance_rate(cut)
                 Ns = np.ones(m - 1) * cut
+                ranges = [(i * cut, (i + 1) * cut - 1) for i in range(1, m)]
                 means = np.array(
-                    [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
-                     range(1, m)])
+                    [self.collection.mean(
+                        first=f, last=l, tempered=True)
+                     for f, l in ranges])
                 covs = np.array(
-                    [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
-                     range(1, m)])
+                    [self.collection.cov(
+                        first=f, last=l, tempered=True)
+                     for f, l in ranges])
             except always_stop_exceptions:
                 raise
             except Exception:
@@ -697,7 +707,8 @@ class MCMC(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
-                mcsamples = self.collection.sampled_to_getdist_mcsamples(first=use_first)
+                mcsamples = self.collection.sampled_to_getdist_mcsamples(
+                    first=use_first, tempered=True)
                 try:
                     bound = np.array([[
                         mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
@@ -713,7 +724,7 @@ class MCMC(CovmatSampler):
                 try:
                     mcsamples_list = [
                         self.collection.sampled_to_getdist_mcsamples(
-                            first=i * cut, last=(i + 1) * cut - 1)
+                            first=i * cut, last=(i + 1) * cut - 1, tempered=True)
                         for i in range(1, m)]
                 except always_stop_exceptions:
                     raise
@@ -767,7 +778,7 @@ class MCMC(CovmatSampler):
                     return
                 mean_of_covs = mpi.share(mean_of_covs)
                 try:
-                    self.proposer.set_covariance(mean_of_covs)
+                    self.proposer.set_covariance(mean_of_covs)  # is already tempered
                     self.mpi_info(" - Updated covariance matrix of proposal pdf.")
                     self.mpi_debug("%r", mean_of_covs)
                 except:
@@ -789,7 +800,8 @@ class MCMC(CovmatSampler):
     def write_checkpoint(self):
         if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
-            self.dump_covmat(self.proposer.get_covariance())
+            self.dump_covmat(remove_temperature_cov(
+                self.proposer.get_covariance(), self.temperature))
             checkpoint_info = {"sampler": {self.get_name(): dict([
                 ("converged", self.converged),
                 ("Rminus1_last", self.Rminus1_last),
