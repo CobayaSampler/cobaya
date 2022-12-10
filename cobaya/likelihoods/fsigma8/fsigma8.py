@@ -129,24 +129,61 @@ class fsigma8(Likelihood):
         Return a dictionary of requisite(s) to be computed by the (Bolztmann) theory code
         In our case, it is the quantity fsigma8 at the measured redshifts
         """
-        return {'fsigma8': {'z': self.data["z"].to_numpy()}}
+        z=self.data["z"].to_numpy()
+        requisites = {'gamma0': None,
+                      'Omega_b': {'z': z},
+                      'Omega_cdm': {'z': z},
+                      'Omega_nu_massive': {'z': z},
+                      'sigma8_z': {'z': z},
+                      'fsigma8': {'z': z},
+                      'Pk_interpolator': {
+                          'z': z,
+                          'k_max': 2.0,
+                          'vars_pairs': [["delta_tot", "delta_tot"]],
+                          'nonlinear': False},
+                      'Pk_grid': {
+                          'z': z,
+                          'k_max': 2.0,
+                          'vars_pairs': [["delta_tot", "delta_tot"]],
+                          'nonlinear': True}}
+        return requisites
 
     def theory_function(self, z):
         """
         Interface with the (Bolztmann) theory code to actually retrieve the requisite(s)
         """
-        return self.provider.get_fsigma8(z)
+        k_ref=2E-4
+        Omegam_z = self.provider.get_Omega_b(z)+self.provider.get_Omega_cdm(z)+self.provider.get_Omega_nu_massive(z)
+        f_z = Omegam_z**(self.provider.get_param('gamma0'))
+        sigma8_z = self.provider.get_sigma8_z(z)
+        Plin = self.provider.get_Pk_interpolator(var_pair=("delta_tot","delta_tot"),
+                                                 nonlinear=False,
+                                                 extrap_kmax=10.)
+        Pnonlin = self.provider.get_Pk_interpolator(var_pair=("delta_tot","delta_tot"),
+                                                    nonlinear=True,
+                                                    extrap_kmax=10.)
+        # Rescale sigma8_z to account for the possibility of gamma!=0.55
+        sigma8_z *= np.sqrt(Pnonlin.P(z,k_ref)/Plin.P(z,k_ref))
+        fsigma8_z = f_z*sigma8_z
+        if self.is_debug():
+            fsigma8_z_ref = self.provider.get_fsigma8(z)
+            self.log.debug("fsigma8_z vs. fsigma8_z_ref at z=%g:
+                           %g (fsigma8_gamma) ; %g (fsigma8_ref)",
+                           z, fsigma8_z, fsigma8_z_ref)
+        return fsigma8_z
 
     def logp(self, **params_values):
         """
         Compute the log-likelihood P(data|params_values), where params_value are sampled values of parameters
         """
-        theoretical_prediction = np.array([self.theory_function(z) for z in self.data["z"]])
+        theoretical_prediction = \
+            np.array([self.theory_function(z)
+                        for z in self.data["z"]])
         # If theoretical_prediction does not have shape [nr_z,] then uncomment this
         theoretical_prediction = theoretical_prediction.reshape((len(self.data["z"]),))
         if self.is_debug():
             for i, (z, theory) in enumerate(
                     zip(self.data["z"], theoretical_prediction)):
-                self.log.debug("fsigma8 at z=%g : %g (theo) ; %g (data)",
+                self.log.debug("fsigma8 at z=%g: %g (theo) ; %g (data)",
                                 z, theory, self.data.iloc[i, 1])
         return self.logpdf(theoretical_prediction)
