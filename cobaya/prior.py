@@ -659,8 +659,9 @@ class Prior(HasLogger):
             self.log.info(
                 "Reference values or pdfs for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters.")
-
-        where_ignore_ref = [r is np.nan or ignore_fixed and isinstance(r, numbers.Real)
+        # As a curiosity, `r is np.nan` was returning False after `r = np.nan` if
+        # it had been passed via MPI before the test, since this creates a "new" np.nan
+        where_ignore_ref = [np.isnan(r) or ignore_fixed and isinstance(r, numbers.Real)
                             for r in self.ref_pdf]
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
