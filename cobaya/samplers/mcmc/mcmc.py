@@ -847,6 +847,7 @@ class MCMC(CovmatSampler):
                     progress_file.write(self.progress.tail(1).to_string(
                         header=False, index=False, formatters=fmts) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")
+
     def converge_info_changed(self, old_info, new_info):
         """Whether convergence parameters have changed between two inputs."""
         converge_params = ['Rminus1_stop', "Rminus1_cl_stop", "Rminus1_cl_level",
