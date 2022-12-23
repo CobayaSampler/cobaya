@@ -62,7 +62,7 @@ def _get_targets(mcsamples_in):
 
 
 @mpi.sync_errors
-@pytest.mark.parametrize("temperature", (8, ))#1, 2))
+@pytest.mark.parametrize("temperature", (1, 2))
 def test_post_prior(tmpdir, temperature):
     """
     Swaps prior "gaussian" for "target".
@@ -101,8 +101,10 @@ def test_post_prior(tmpdir, temperature):
             mpi.share((new_mean, new_cov))
         else:
             new_mean, new_cov = mpi.share()
-        assert np.allclose(new_mean, target_mean)
-        assert np.allclose(new_cov, target_cov)
+        # Noisier with higher temperature
+        atol, rtol = (1e-8, 1e-5) if temperature == 1 else (5e-4, 1e-3)
+        assert np.allclose(new_mean, target_mean, atol=atol, rtol=rtol)
+        assert np.allclose(new_cov, target_cov, atol=atol, rtol=rtol)
 
 
 def test_post_likelihood():
