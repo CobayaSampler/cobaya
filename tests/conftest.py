@@ -20,6 +20,9 @@ def pytest_addoption(parser):
     parser.addoption("--skip-not-installed", action="store_true",
                      help="Skip tests for which dependencies of used components are not "
                           "installed.")
+    parser.addoption("--do-plots", action="store_true",
+                     help=("Does some plots to check the results of some tests visually. "
+                           "Plots are stored in the (tmp?) folder of the test results."))
 
 
 @pytest.fixture
@@ -65,6 +68,15 @@ def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
             pytest.xfail("Missing dependencies.")
         raise
 
+
+# Skip not installed #####################################################################
+
+@pytest.fixture
+def do_plots(request):
+    return request.config.getoption("--do-plots")
+
+
+# Other MPI-related ######################################################################
 
 if mpi.more_than_one_process():
     @pytest.fixture(scope="session", autouse=True)

@@ -19,7 +19,7 @@ max_runs = 3
 
 @flaky(max_runs=max_runs, min_passes=1)
 @pytest.mark.parametrize("temperature", (1, 2))
-def test_mcmc(tmpdir, temperature, packages_path=None):
+def test_mcmc(tmpdir, temperature, do_plots, packages_path=None):
     dimension = 3
     # Random initial proposal
     # cov = mpi.share(
@@ -56,7 +56,8 @@ def test_mcmc(tmpdir, temperature, packages_path=None):
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
     body_of_sampler_test(info_sampler, dimension=dimension, fixed=True,
-                         tmpdir=tmpdir, random_state=np.random.default_rng(1))
+                         tmpdir=tmpdir, do_plots=do_plots,
+                         random_state=np.random.default_rng(1))
 
 
 yaml_drag = r"""
