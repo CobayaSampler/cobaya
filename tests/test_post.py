@@ -62,26 +62,36 @@ def _get_targets(mcsamples_in):
 
 
 @mpi.sync_errors
-def test_post_prior(tmpdir):
+@pytest.mark.parametrize("temperature", (8, ))#1, 2))
+def test_post_prior(tmpdir, temperature):
+    """
+    Swaps prior "gaussian" for "target".
+
+    It also tests loading vs passing samples to post, and different MCMC temperatures.
+    """
     # Generate original chain
     info: InputDict = {
         "output": os.path.join(tmpdir, "gaussian"), "force": True,
-        "params": info_params, "sampler": info_sampler,
+        "params": info_params, "sampler": deepcopy(info_sampler),
         "likelihood": {"one": None}, "prior": {"gaussian": sampled_pdf}}
     info_post: InputDict = {
         "output": info["output"], "force": True,
         "post": {"suffix": "foo", 'skip': 0.1,
                  "remove": {"prior": {"gaussian": None}},
                  "add": {"prior": {"target": target_pdf_prior}}}}
+    if list(info["sampler"].keys())[0] == "mcmc":
+        if info["sampler"]["mcmc"] is None:
+            info["sampler"]["mcmc"] = {}
+        info["sampler"]["mcmc"]["temperature"] = temperature
     _, sampler = run(info)
     if mpi.is_main_process():
         mcsamples_in = loadMCSamples(info["output"], settings={'ignore_rows': 0.1})
+        mcsamples_in.cool(temperature)
         target_mean, target_cov = mpi.share(_get_targets(mcsamples_in))
     else:
         target_mean, target_cov = mpi.share()
-
-    for mem in [False, True]:
-        post(info_post, sample=sampler.products()["sample"] if mem else None)
+    for pass_chains in [False, True]:
+        post(info_post, sample=sampler.products()["sample"] if pass_chains else None)
         # Load with GetDist and compare
         if mpi.is_main_process():
             mcsamples = loadMCSamples(

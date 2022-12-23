@@ -153,6 +153,18 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     else:
         raise LoggedError(log, "No output from where to load from, "
                                "nor input collections given.")
+    # A note on tempered chains: detempering happens automatically when reweighting,
+    # which is done later in this function in most cases.
+    # But for the sake of robustness, we detemper all chains at init.
+    if mpi.is_main_process() and any(c.is_tempered for c in in_collections):
+        log.info("Starting from tempered chains. Will detemper before proceeding.")
+        # Let's make sure we work on a copy if the chain is going to be altered
+        already_copied = bool(output_in) or (sample is not None and (skip or thin != 1))
+        for i, collection in enumerate(in_collections):
+            if not already_copied:
+                collection = collection.copy()
+            collection.reset_temperature()
+            in_collections[i] = collection
     if any(len(c) <= 1 for c in in_collections):
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "
