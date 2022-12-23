@@ -103,18 +103,22 @@ class GaussLike2(Likelihood):
 
 @flaky(max_runs=max_runs, min_passes=1)
 @mpi.sync_errors
-def test_mcmc_drag_results():
+@pytest.mark.parametrize("temperature", (1, 2))
+def test_mcmc_drag_results(temperature):
     info: InputDict = yaml_load(yaml_drag)
     info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
+    info["sampler"]["mcmc"]["temperature"] = temperature
     updated_info, sampler = run(info)
     products = sampler.products()
     from getdist.mcsamples import MCSamplesFromCobaya
     products["sample"] = mpi.allgather(products["sample"])
-    gdample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.2)
-    assert abs(gdample.mean('a') - 0.2) < 0.03
-    assert abs(gdample.mean('b')) < 0.03
-    assert abs(gdample.std('a') - 0.293) < 0.03
-    assert abs(gdample.std('b') - 0.4) < 0.03
+    gdsample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.2)
+    if temperature != 1:
+        gdsample.cool(temperature)
+    assert abs(gdsample.mean('a') - 0.2) < 0.03
+    assert abs(gdsample.mean('b')) < 0.03
+    assert abs(gdsample.std('a') - 0.293) < 0.03
+    assert abs(gdsample.std('b') - 0.4) < 0.03
 
 
 yaml = r"""
