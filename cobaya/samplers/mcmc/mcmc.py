@@ -18,7 +18,7 @@ from cobaya.sampler import CovmatSampler
 from cobaya.mpi import get_mpi_size
 from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
 from cobaya.collection import SampleCollection, OneSamplePoint, apply_temperature_cov, \
-    remove_temperature_cov
+    remove_temperature_cov, remove_temperature
 from cobaya.conventions import OutPar, Extension, line_width, get_version
 from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
@@ -150,7 +150,8 @@ class MCMC(CovmatSampler):
             initial_point = (self.collection[self.collection.sampled_params]
                              .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
-                logpost=-self.collection[OutPar.minuslogpost].iloc[last],
+                logpost=-remove_temperature(
+                    self.collection[OutPar.minuslogpost].iloc[last], self.temperature),
                 logpriors=-(self.collection[self.collection.minuslogprior_names]
                             .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 loglikes=-0.5 * (self.collection[self.collection.chi2_names]
@@ -865,6 +866,11 @@ class MCMC(CovmatSampler):
         The sample ``SampleCollection`` containing the accepted steps.
         """
         products = {"sample": self.collection}
+        if self.temperature != 1:
+            self.mpi_warning(
+                "The MCMC chain(s) are stored with temperature != 1. "
+                "Keep that in mind when operating on them, or detemper (in-place) with "
+                "products['sample'].reset_temperature()'.")
         if is_main_process():
             products["progress"] = self.progress
         return products

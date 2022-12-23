@@ -238,7 +238,8 @@ class SampleCollection(BaseCollection):
             self.reset()
         # If loaded, check sample weights, consistent logp sums,
         # and temperature (ignores the given one)
-        if len(self):
+        samples_loaded = len(self) > 0
+        if samples_loaded:
             try:
                 self.temperature = self._check_logps()
                 if temperature is not None and \
@@ -258,6 +259,12 @@ class SampleCollection(BaseCollection):
                     str(excpt)
                 ) from excpt
             self._drop_samples_null_weight()
+            if self.is_tempered and not resuming:
+                self.log.warning(
+                    "The collection loaded has temperature != 1. "
+                    "Keep that in mind when operating on it, or detemper (in-place) with "
+                    "'SampleCollection.reset_temperature()'."
+                )
         else:
             self.temperature = temperature if temperature is not None else 1
         # Prepare fast numpy cache
@@ -629,7 +636,8 @@ class SampleCollection(BaseCollection):
             data = current_data
         # Avoids creating an unnecessary copy of the data, to save memory
         delattr(self, "_data")
-        self_copy = deepcopy(self)
+        self_copy = deepcopy(self)  # deletes logger (see HasLogger.__deepcopy___)
+        self_copy.set_logger()
         setattr(self, "_data", current_data)
         if empty:
             self_copy.reset()
