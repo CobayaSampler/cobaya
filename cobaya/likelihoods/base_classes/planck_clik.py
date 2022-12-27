@@ -173,7 +173,7 @@ class PlanckClik(Likelihood):
 
     @classmethod
     def install(cls, path=None, force=False, code=True, data=True,
-                no_progress_bars=False):
+                no_progress_bars=False, **_kwargs):
         name = cls.get_qualified_class_name()
         log = get_logger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}

@@ -85,7 +85,8 @@ def install(*infos, **kwargs):
             "The installation path has been written into the global config file: %s",
             os.path.join(get_config_path(), packages_path_config_file))
     kwargs_install = {"force": kwargs.get("force", False),
-                      "no_progress_bars": kwargs.get("no_progress_bars")}
+                      "no_progress_bars": kwargs.get("no_progress_bars"),
+                      "show_error": False}
     for what in (code_path, data_path):
         kwargs_install[what] = kwargs.get(what, True)
         spath = os.path.join(general_abspath, what)
@@ -210,6 +211,7 @@ def install(*infos, **kwargs):
                     continue
             # Do the install
             logger.info("Installing...")
+            kwargs_install['show_error'] = True
             try:
                 install_this = getattr(imported_class, "install", None)
                 success = install_this(path=general_abspath, **kwargs_install)
