@@ -867,7 +867,7 @@ class SampleCollection(BaseCollection):
         return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()]\
                         .copy()
 
-    def _sampled_as_getdist(
+    def _sampled_to_getdist(
             self,
             first: Optional[int] = None,
             last: Optional[int] = None,
@@ -875,7 +875,7 @@ class SampleCollection(BaseCollection):
     ) -> MCSamples:
         """
         Barebones interface with getdist. Internal use only!
-        Use :func:`SampleCollection.as_getdist` instead.
+        Use :func:`SampleCollection.to_getdist` instead.
         """
         names = list(self.sampled_params)
         weights, _ = self._weights_for_stats(first, last, tempered=tempered)
@@ -892,7 +892,7 @@ class SampleCollection(BaseCollection):
             )
         return mcsamples
 
-    def as_getdist(
+    def to_getdist(
             self,
             label: Optional[str] = None,
             model: Optional[Model] = None,

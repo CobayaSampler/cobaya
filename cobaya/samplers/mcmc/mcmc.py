@@ -734,7 +734,7 @@ class MCMC(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
-                mcsamples = self.collection._sampled_as_getdist(
+                mcsamples = self.collection._sampled_to_getdist(
                     first=use_first, tempered=True)
                 try:
                     bound = np.array([[
@@ -750,7 +750,7 @@ class MCMC(CovmatSampler):
             else:
                 try:
                     mcsamples_list = [
-                        self.collection._sampled_as_getdist(
+                        self.collection._sampled_to_getdist(
                             first=i * cut, last=(i + 1) * cut - 1, tempered=True)
                         for i in range(1, m)]
                 except always_stop_exceptions:
@@ -857,13 +857,13 @@ class MCMC(CovmatSampler):
 
     # Finally: returning the computed products ###########################################
 
-    def products(self, as_getdist=False):
+    def products(self, to_getdist=False):
         """
         Auxiliary function to define what should be returned in a scripted call.
 
         Parameters
         ----------
-        as_getdist: bool, default: True
+        to_getdist: bool, default: True
             If ``True``, returns all sample collections as :class:'getdist.MCSamples`.
 
         Returns
@@ -873,8 +873,8 @@ class MCMC(CovmatSampler):
             accepted steps under ``"sampler"``, and a progress report table under
             ``"progress"``.
         """
-        if as_getdist:
-            collection = self.collection.as_getdist(model=self.model)
+        if to_getdist:
+            collection = self.collection.to_getdist(model=self.model)
         else:
             collection = self.collection
         products = {"sample": collection}
