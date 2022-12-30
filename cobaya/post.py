@@ -20,7 +20,7 @@ from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     packages_path_input
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
-from cobaya.model import Model
+from cobaya.model import Model, DummyModel
 from cobaya.output import get_output
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, \
@@ -59,16 +59,6 @@ def value_or_list(lst: list):
         return lst[0]
     else:
         return lst
-
-
-# Dummy classes for loading chains for post processing
-
-class DummyModel:
-
-    def __init__(self, info_params, info_likelihood, info_prior=None):
-        self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
-        self.prior = [prior_1d_name] + list(info_prior or [])
-        self.likelihood = list(info_likelihood)
 
 
 @mpi.sync_state

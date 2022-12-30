@@ -22,8 +22,7 @@ from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
     derived_par_name_separator, minuslogprior_labels, chi2_labels, minuslogpost_label
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
-from cobaya.sampler import Sampler
-from cobaya.model import Model, LogPosterior
+from cobaya.model import Model, LogPosterior, DummyModel
 
 # Suppress getdist output
 chains.print_load_details = False
@@ -136,6 +135,30 @@ class BaseCollection(HasLogger):
         columns += [OutPar.chi2] + self.chi2_names
         self.temperature = temperature if temperature is not None else 1
         self.columns = columns
+        self._cache_aux_model_quantities(model)
+
+    def _cache_aux_model_quantities(self, model):
+        """
+        Stores some auxiliary Model-related variables to allow e.g. for interfacing other
+        codes without needing to use the Model again.
+
+        Can be called inside these interfaces in case the model has changed.
+        """
+        self._cached_labels = deepcopy(model.parameterization.labels())
+        self._cached_labels[OutPar.minuslogpost] = minuslogpost_label()
+        self._cached_labels.update(minuslogprior_labels(model.prior))
+        self._cached_labels.update(chi2_labels(model.likelihood))
+        self._cached_renames = deepcopy(model.parameterization.sampled_params_renames())
+        self._cached_ranges = None
+        if not isinstance(model, DummyModel):  # can happen during post-processing
+            self._cached_ranges = dict(zip(
+                self.sampled_params,
+                model.prior.bounds(confidence_for_unbounded=0.9999995)))  # 5 sigmas
+        for p, p_info in model.parameterization.derived_params_info().items():
+            mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
+            some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
+            if some_bound_specified:
+                self._cached_ranges[p] = [mini, maxi]
 
 
 def ensure_cache_dumped(method):
@@ -871,17 +894,17 @@ class SampleCollection(BaseCollection):
 
     def as_getdist(
             self,
-            sampler_or_model: Union[Sampler, Model],
-            label: Optional[str] = None
+            label: Optional[str] = None,
+            model: Optional[Model] = None,
     ) -> MCSamples:
         """
         Parameters
         ----------
-
-        sampler_or_model: :class:`cobaya.sampler.Sampler` or :class:`cobaya.model.Model`
-            `Sampler` or `Model` with which the sample was created.
         label: str, optional
             Legend label in ``GetDist`` plots (``name_tag`` in ``GetDist`` parlance).
+        model: :class:`cobaya.model.Model`, optional
+            `Model` with which the sample was created. Needed only if parameter labels or
+            aliases have changed since the collection was generated.
 
         Returns
         -------
@@ -893,44 +916,22 @@ class SampleCollection(BaseCollection):
         LoggedError
             Errors when processing the arguments.
         """
-        if isinstance(sampler_or_model, Model):
-            sampler, model = None, sampler_or_model
-        elif isinstance(sampler_or_model, Sampler):
-            sampler, model = sampler_or_model, sampler_or_model.model
-        else:
-            raise LoggedError(
-                self.log,
-                "Needs the either the sampler or model from which the collection was "
-                "generated as argument."
-            )
-        used_names = {p: p + ("*" if p not in self.sampled_params else "")
-                      for p in self.data.columns[2:]}
-        all_labels = deepcopy(model.parameterization.labels())
-        all_labels[OutPar.minuslogpost] = minuslogpost_label()
-        all_labels.update(minuslogprior_labels(model.prior))
-        all_labels.update(chi2_labels(model.likelihood))
-        used_labels = [all_labels[p] for p in used_names if p in all_labels]
-        ranges = dict(zip(
-            self.sampled_params,
-            model.prior.bounds(confidence_for_unbounded=0.9999995)))  # 5 sigmas
-        for p, p_info in model.parameterization.derived_params_info().items():
-            mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
-            some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
-            if some_bound_specified:
-                ranges[p] = [mini, maxi]
-        if sampler is not None:
-            used_sampler = {"mcmc": "mcmc", "polychord": "nested"}.get(str(sampler))
-        else:
-            used_sampler = self.sample_type
+        if isinstance(model, Model):
+            self._cache_aux_model_quantities(model)
+        elif model is not None:
+            LoggedError("Optional argument `model` must be a Cobaya Model instance.")
+        used_names_dict = {p: p + ("*" if p not in self.sampled_params else "")
+                           for p in self.data.columns[2:]}
         return MCSamples(
             samples=self[self.data.columns[2:]].to_numpy(np.float64, copy=True),
             weights=self[OutPar.weight].to_numpy(np.float64, copy=True),
             loglikes=self[OutPar.minuslogpost].to_numpy(np.float64, copy=True),
-            sampler=used_sampler,
-            names=used_names,
-            labels=used_labels,
-            ranges=ranges,
-            renames=deepcopy(model.parameterization.sampled_params_renames()),
+            sampler=deepcopy(self.sample_type),
+            names=list(used_names_dict.values()),
+            labels=[deepcopy(self._cached_labels[p]) for p in used_names_dict
+                    if p in self._cached_labels],
+            ranges=deepcopy(self._cached_ranges),
+            renames=deepcopy(self._cached_renames),
             name_tag=label,
             label=deepcopy(self.name),
             # ini=ini,

@@ -119,7 +119,7 @@ class MCMC(CovmatSampler):
         name = str(1 + mpi.rank())
         self.collection = SampleCollection(
             self.model, self.output, name=name, resuming=self.output.is_resuming(),
-            temperature=self.temperature)
+            temperature=self.temperature, sample_type="mcmc")
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
@@ -874,7 +874,7 @@ class MCMC(CovmatSampler):
             ``"progress"``.
         """
         if as_getdist:
-            collection = self.collection.as_getdist(self)
+            collection = self.collection.as_getdist(model=self.model)
         else:
             collection = self.collection
         products = {"sample": collection}

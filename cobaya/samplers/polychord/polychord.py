@@ -276,7 +276,8 @@ class polychord(Sampler):
         sample = np.atleast_2d(np.loadtxt(fname))
         if not sample.size:
             return None
-        collection = SampleCollection(self.model, self.output, name=str(name))
+        collection = SampleCollection(
+            self.model, self.output, name=str(name), sample_type="nested")
         for row in sample:
             collection.add(
                 row[2:2 + self.n_sampled],
