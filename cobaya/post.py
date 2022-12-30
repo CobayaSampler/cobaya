@@ -114,9 +114,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             in_collections = sample
         for i, collection in enumerate(in_collections):
             if skip:
-                if 0 < skip < 1:
-                    skip = int(round(skip * len(collection)))
-                collection = collection.filtered_copy(slice(skip, None))
+                collection = collection.skip_samples(skip)
             if thin != 1:
                 collection = collection.thin_samples(thin)
             in_collections[i] = collection

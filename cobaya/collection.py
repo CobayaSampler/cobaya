@@ -12,6 +12,7 @@ import functools
 import warnings
 from copy import deepcopy
 from typing import Union, Sequence, Optional, Tuple, Iterable
+from numbers import Number
 import numpy as np
 import pandas as pd
 from getdist import MCSamples, chains  # type: ignore
@@ -204,6 +205,7 @@ class SampleCollection(BaseCollection):
         self.sample_type = sample_type.lower() if sample_type is not None else sample_type
         self.cache_size = cache_size
         self._data = None
+        self._n = None
         # Create/load the main data frame and the tracking indices
         # Create the DataFrame structure
         if output:
@@ -823,11 +825,74 @@ class SampleCollection(BaseCollection):
         """Returns a copy of the collection with some condition ``where`` imposed."""
         return self._copy(self.data[where].reset_index(drop=True))
 
-    def thin_samples(self, thin, inplace=False) -> 'SampleCollection':
+    def skip_samples(self, skip: float, inplace: bool = False) -> 'SampleCollection':
+        """
+        Skips some initial samples, or an initial fraction of them.
+
+        For collections coming from a Nested Sampler, prints a warning and does nothing.
+
+        Parameters
+        ----------
+        skip: float
+            Specified the amount of initial samples to be skipped, either directly if
+            ``skip>1`` (rounded up to next integer), or as a fraction if ``0<skip<1``.
+
+        inplace: bool, default: False
+            If True, returns a copy of the collection.
+
+        Returns
+        -------
+        SampleCollection
+            The original collection with skipped initial samples (``inplace=True``) or
+            a copy of it (``inplace=False``).
+
+        Raises
+        ------
+        LoggedError
+            If badly defined ``skip`` value.
+        """
+        if self.sample_type == "nested":
+            self.log.warning(
+                "Cannot skip initial samples from Nested Sampling samples. Doing nothing"
+            )
+            return self if inplace else self.copy()
+        if not isinstance(skip, Number) or skip < 0:
+            raise LoggedError(
+                self.log,
+                "Number of fraction of skipped initial samples must be positive. Got %r",
+                skip
+            )
+        if 0 < skip < 1:
+            skip = int(np.round(skip * len(self)))
+        skip = int(np.round(skip))
+        if inplace:
+            self._data = self.data[skip:].reset_index(drop=True)
+            self._n = self._data.last_valid_index() + 1
+            return self
+        else:
+            return self.filtered_copy(slice(skip, None))
+
+    def thin_samples(self, thin: int, inplace: bool = False) -> 'SampleCollection':
         """
         Thins the sample collection by some factor ``thin>1``.
 
-        If ``inplace=False`` (default), returns a copy of the collection.
+        Parameters
+        ----------
+        thin: int
+            Thin factor, must be ``>1``.
+        inplace: bool, default: False
+            If True, returns a copy of the collection.
+
+        Returns
+        -------
+        SampleCollection
+            Thinned version of the original collection (``inplace=True``) or a copy of it
+            (``inplace=False``).
+
+        Raises
+        ------
+        LoggedError
+            If badly defined ``thin`` value.
         """
         if thin == 1:
             return self if inplace else self.copy()
