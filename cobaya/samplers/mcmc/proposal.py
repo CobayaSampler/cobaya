@@ -58,7 +58,8 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
-except ImportError:
+except (ImportError, SystemError):
+    # SystemError caused usually by incompatible numpy version
     from scipy.stats import special_ortho_group
 
     random_SO_N = special_ortho_group.rvs

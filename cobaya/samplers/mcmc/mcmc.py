@@ -28,7 +28,7 @@ from cobaya.yaml import yaml_dump_file
 from cobaya.model import LogPosterior
 from cobaya import mpi
 
-# Suppresses warnings about first defining attrs outside __init__. Needed for resuming.
+# Suppresses warnings about first defining attrs outside __init__ (needed for resuming).
 # pylint: disable=attribute-defined-outside-init
 
 
@@ -734,7 +734,7 @@ class MCMC(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
-                mcsamples = self.collection.sampled_to_getdist_mcsamples(
+                mcsamples = self.collection._sampled_as_getdist(
                     first=use_first, tempered=True)
                 try:
                     bound = np.array([[
@@ -750,7 +750,7 @@ class MCMC(CovmatSampler):
             else:
                 try:
                     mcsamples_list = [
-                        self.collection.sampled_to_getdist_mcsamples(
+                        self.collection._sampled_as_getdist(
                             first=i * cut, last=(i + 1) * cut - 1, tempered=True)
                         for i in range(1, m)]
                 except always_stop_exceptions:
@@ -857,15 +857,27 @@ class MCMC(CovmatSampler):
 
     # Finally: returning the computed products ###########################################
 
-    def products(self):
+    def products(self, as_getdist=False):
         """
         Auxiliary function to define what should be returned in a scripted call.
 
+        Parameters
+        ----------
+        as_getdist: bool, default: True
+            If ``True``, returns all sample collections as :class:'getdist.MCSamples`.
+
         Returns
         -------
-        The sample ``SampleCollection`` containing the accepted steps.
+        dict
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sampler"``, and a progress report table under
+            ``"progress"``.
         """
-        products = {"sample": self.collection}
+        if as_getdist:
+            collection = self.collection.as_getdist(self)
+        else:
+            collection = self.collection
+        products = {"sample": collection}
         if self.temperature != 1:
             self.mpi_warning(
                 "The MCMC chain(s) are stored with temperature != 1. "

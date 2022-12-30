@@ -19,10 +19,11 @@ from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
 
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
-    derived_par_name_separator
+    derived_par_name_separator, minuslogprior_labels, chi2_labels, minuslogpost_label
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
-from cobaya.model import LogPosterior
+from cobaya.sampler import Sampler
+from cobaya.model import Model, LogPosterior
 
 # Suppress getdist output
 chains.print_load_details = False
@@ -30,6 +31,9 @@ chains.print_load_details = False
 # Size of fast numpy cache
 # (used to avoid "setting" in Pandas too often, which is expensive)
 _default_cache_size = 200
+
+# Sample types, for the purposes of e.g. knowing whether skip/thin operations are allowed.
+sample_types = ["mcmc", "nested"]
 
 
 def check_index(i, imax):
@@ -169,8 +173,12 @@ class SampleCollection(BaseCollection):
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
                  extension=None, file_name=None, resuming=False, load=False,
-                 temperature=None, onload_skip=0, onload_thin=1):
+                 temperature=None, onload_skip=0, onload_thin=1, sample_type=None):
         super().__init__(model, name)
+        if sample_type is not None and (not isinstance(sample_type, str) or
+                                        not sample_type.lower() in sample_types):
+            raise LoggedError(self.log, "'sample_type' must be one of %r.", sample_types)
+        self.sample_type = sample_type.lower() if sample_type is not None else sample_type
         self.cache_size = cache_size
         self._data = None
         # Create/load the main data frame and the tracking indices
@@ -836,16 +844,15 @@ class SampleCollection(BaseCollection):
         return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()]\
                         .copy()
 
-    def sampled_to_getdist_mcsamples(
+    def _sampled_as_getdist(
             self,
             first: Optional[int] = None,
             last: Optional[int] = None,
             tempered: bool = False
     ) -> MCSamples:
         """
-        Basic interface with getdist -- internal use only!
-        (For analysis and plotting use `getdist.mcsamples.MCSamplesFromCobaya
-        <https://getdist.readthedocs.io/en/latest/mcsamples.html#getdist.mcsamples.loadMCSamples>`_.)
+        Barebones interface with getdist. Internal use only!
+        Use :func:`SampleCollection.as_getdist` instead.
         """
         names = list(self.sampled_params)
         weights, _ = self._weights_for_stats(first, last, tempered=tempered)
@@ -861,6 +868,74 @@ class SampleCollection(BaseCollection):
                 weights=weights, loglikes=minuslogposts, names=names,
             )
         return mcsamples
+
+    def as_getdist(
+            self,
+            sampler_or_model: Union[Sampler, Model],
+            label: Optional[str] = None
+    ) -> MCSamples:
+        """
+        Parameters
+        ----------
+
+        sampler_or_model: :class:`cobaya.sampler.Sampler` or :class:`cobaya.model.Model`
+            `Sampler` or `Model` with which the sample was created.
+        label: str, optional
+            Legend label in ``GetDist`` plots (``name_tag`` in ``GetDist`` parlance).
+
+        Returns
+        -------
+        :class:`getdist.MCSamples`
+            This collection's equivalent :class:`getdist.MCSamples` object.
+
+        Raises
+        ------
+        LoggedError
+            Errors when processing the arguments.
+        """
+        if isinstance(sampler_or_model, Model):
+            sampler, model = None, sampler_or_model
+        elif isinstance(sampler_or_model, Sampler):
+            sampler, model = sampler_or_model, sampler_or_model.model
+        else:
+            raise LoggedError(
+                self.log,
+                "Needs the either the sampler or model from which the collection was "
+                "generated as argument."
+            )
+        used_names = {p: p + ("*" if p not in self.sampled_params else "")
+                      for p in self.data.columns[2:]}
+        all_labels = deepcopy(model.parameterization.labels())
+        all_labels[OutPar.minuslogpost] = minuslogpost_label()
+        all_labels.update(minuslogprior_labels(model.prior))
+        all_labels.update(chi2_labels(model.likelihood))
+        used_labels = [all_labels[p] for p in used_names if p in all_labels]
+        ranges = dict(zip(
+            self.sampled_params,
+            model.prior.bounds(confidence_for_unbounded=0.9999995)))  # 5 sigmas
+        for p, p_info in model.parameterization.derived_params_info().items():
+            mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
+            some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
+            if some_bound_specified:
+                ranges[p] = [mini, maxi]
+        if sampler is not None:
+            used_sampler = {"mcmc": "mcmc", "polychord": "nested"}.get(str(sampler))
+        else:
+            used_sampler = self.sample_type
+        return MCSamples(
+            samples=self[self.data.columns[2:]].to_numpy(np.float64, copy=True),
+            weights=self[OutPar.weight].to_numpy(np.float64, copy=True),
+            loglikes=self[OutPar.minuslogpost].to_numpy(np.float64, copy=True),
+            sampler=used_sampler,
+            names=used_names,
+            labels=used_labels,
+            ranges=ranges,
+            renames=deepcopy(model.parameterization.sampled_params_renames()),
+            name_tag=label,
+            label=deepcopy(self.name),
+            # ini=ini,
+            # settings=settings
+        )
 
     # Saving and updating
     def _get_driver(self, method):
@@ -883,6 +958,12 @@ class SampleCollection(BaseCollection):
     # txt driver
     def _load__txt(self, skip=0):
         self.log.debug("Skipping %d rows", skip)
+        if bool(skip) and self.sample_type == "nested":
+            raise LoggedError(
+                self.log,
+                "Cannot skip samples from a sample of a nested sampler. "
+                "Would lead to a non-fair sample."
+            )
         self._data = load_DataFrame(self.file_name, skip=skip,
                                     root_file_name=self.root_file_name)
         self.log.info("Loaded %d sample points from '%s'", len(self._data),
