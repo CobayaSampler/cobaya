@@ -167,7 +167,7 @@ class fsigma8(Likelihood):
         fsigma8_z = f_z*sigma8_z
         if self.is_debug():
             fsigma8_z_ref = self.provider.get_fsigma8(z)
-            self.log.debug("fsigma8_z vs. fsigma8_z_ref at z=%g:
+            self.log.debug("fsigma8_z vs. fsigma8_z_ref at z=%g:\
                            %g (fsigma8_gamma) ; %g (fsigma8_ref)",
                            z, fsigma8_z, fsigma8_z_ref)
         return fsigma8_z
