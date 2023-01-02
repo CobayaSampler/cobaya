@@ -194,13 +194,16 @@ def random_cov(ranges, O_std_min=1e-2, O_std_max=1, n_modes=1,
 def info_random_gaussian_mixture(ranges, n_modes=1, input_params_prefix="",
                                  output_params_prefix="", O_std_min=1e-2, O_std_max=1,
                                  derived=False, mpi_aware=True,
-                                 random_state=None):
+                                 random_state=None, add_ref=False):
     """
     Wrapper around ``random_mean`` and ``random_cov`` to generate the likelihood and
     parameter info for a random Gaussian.
 
     If ``mpi_aware=True``, it draws the random stuff only once, and communicates it to
     the rest of the MPI processes.
+
+    If ``add_ref=True`` (default: False) adds a reference pdf for the input parameters,
+    provided that the gaussian mixture is unimodal (otherwise raises ``ValueError``).
     """
     cov: Any
     mean: Any
@@ -239,4 +242,10 @@ def info_random_gaussian_mixture(ranges, n_modes=1, input_params_prefix="",
             (tuple((output_params_prefix + "_%d" % i,
                     {"latex": r"\beta_{%i}" % i})
                    for i in range(dimension * n_modes)) if derived else ()))}
+    if add_ref:
+        if n_modes > 1:
+            raise ValueError("Cannot add a good reference pdf ('add_ref=True') for "
+                             "multimodal distributions")
+        for i, (p, v) in enumerate(info["params"].items()):
+            v["ref"] = {"dist": "norm", "loc": mean[0][i], "scale": np.sqrt(cov[0][i, i])}
     return info

@@ -458,8 +458,7 @@ class polychord(Sampler):
             return False
 
     @classmethod
-    def install(cls, path=None, force=False, code=False, data=False,
-                no_progress_bars=False):
+    def install(cls, path=None, code=False, no_progress_bars=False, **_kwargs):
         if not code:
             return True
         log = get_logger(__name__)
