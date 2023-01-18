@@ -251,7 +251,7 @@ class CAMB(BoltzmannBase):
 
     # Name of the Class repo/folder and version to download
     _camb_repo_name = "cmbant/CAMB"
-    _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
+    _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "numass")
     _camb_min_gcc_version = "6.4"
     _min_camb_version = '1.3.5'
 
