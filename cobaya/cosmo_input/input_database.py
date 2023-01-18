@@ -203,7 +203,7 @@ hubble = {
 }
 
 # Matter sector (minus light species)
-N_eff_std = 3.046
+N_eff_std = 3.044
 nu_mass_fac = 94.0708
 matter: InfoDict = {
     'omegab_h2, omegac_h2': {
@@ -260,19 +260,19 @@ for m in matter.values():
 # Neutrinos and other extra matter
 neutrinos: InfoDict = {
     'one_heavy_planck':
-        {'desc': 'Two massless nu and one with m=0.06. Neff=3.046',
+        {'desc': 'Two massless nu and one with m=0.06. Neff=3.044',
          'theory': {
              'camb': {
-                 'extra_args': {'num_massive_neutrinos': 1, 'nnu': 3.046},
+                 'extra_args': {'num_massive_neutrinos': 1, 'nnu': 3.044},
                  'params': {'mnu': 0.06}},
              'classy': {
                  'extra_args': {'N_ncdm': 1, 'N_ur': 2.0328},
                  'params': {'m_ncdm': {'value': 0.06, 'renames': 'mnu'}}}}},
     'varying_mnu':
-        {'desc': "Varying total mass of 3 degenerate nu's, with N_eff=3.046",
+        {'desc': "Varying total mass of 3 degenerate nu's, with N_eff=3.044",
          'theory': {
              'camb': {
-                 'extra_args': {'num_massive_neutrinos': 3, 'nnu': 3.046},
+                 'extra_args': {'num_massive_neutrinos': 3, 'nnu': 3.044},
                  'params': {'mnu': {'prior': {'min': 0, 'max': 5},
                                     'ref': {'dist': 'norm', 'loc': 0.02, 'scale': 0.1},
                                     'proposal': 0.03,
@@ -294,7 +294,7 @@ neutrinos: InfoDict = {
                      'mnu': 0.06,
                      'nnu': {
                          'prior': {'min': 0.05, 'max': 10},
-                         'ref': {'dist': 'norm', 'loc': 3.046, 'scale': 0.05},
+                         'ref': {'dist': 'norm', 'loc': 3.044, 'scale': 0.05},
                          'proposal': 0.05,
                          'latex': 'N_\\mathrm{eff}'}}},
              'classy':
@@ -319,7 +319,7 @@ neutrinos: InfoDict = {
                              'latex': '\\sum m_\\nu'},
                      'nnu': {
                          'prior': {'min': 0.05, 'max': 10},
-                         'ref': {'dist': 'norm', 'loc': 3.046, 'scale': 0.05},
+                         'ref': {'dist': 'norm', 'loc': 3.044, 'scale': 0.05},
                          'proposal': 0.05,
                          'latex': 'N_\\mathrm{eff}'}}}}}}
 # Dark Energy
