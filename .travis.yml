@@ -7,7 +7,7 @@ git:
 #testing
 env:
   global:
-    - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec,unbinned
+    - COBAYA_INSTALL_SKIP=polychord,planck_2015,unbinned
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
