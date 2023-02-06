@@ -568,7 +568,15 @@ def _fast_norm_logpdf(self, x):
     return self.dist._logpdf(x_) + self._cobaya_mlogscale
 
 
-def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
+def _KL_norm(m1, S1, m2, S2):
+    """Performs the Guassian KL computation, without input testing."""
+    dim = S1.shape[0]
+    S2inv = np.linalg.inv(S2)
+    return 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
+                  dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
+
+
+def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([]), symmetric=False):
     """Kullback-Leibler divergence between 2 gaussians."""
     S1, S2 = [np.atleast_2d(S) for S in [S1, S2]]
     assert S1.shape[0], "Must give at least S1"
@@ -579,10 +587,9 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
         S2 = np.identity(dim)
     if m2 is None:
         m2 = np.zeros(dim)
-    S2inv = np.linalg.inv(S2)
-    KL = 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
-                dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
-    return KL
+    if symmetric:
+        return _KL_norm(m1, S1, m2, S2) + _KL_norm(m2, S2, m1, S1)
+    return _KL_norm(m1, S1, m2, S2)
 
 
 def choleskyL(M, return_scale_free=False):
