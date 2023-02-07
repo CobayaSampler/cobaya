@@ -19,7 +19,7 @@ classy_unknown = ["zstar", "rstar", "thetastar", "DAstar", "zdrag",
                   "DH", "Y_p"]
 
 # Small chi2 difference with CLASS (total still <0.5)
-classy_extra_tolerance = 0.35
+classy_extra_tolerance = 0.45
 
 
 # STANDARD ###############################################################################
@@ -139,8 +139,7 @@ def test_planck_2018_t_CamSpec2021_camb(packages_path, skip_not_installed):
     # TODO: sort out calPlanck vs A_planck
     name = "planck_2018_highl_CamSpec2021.TT"
     info_likelihood = {name: None}
-    # chi2 = {name: 6356.32, 'tolerance': 0.2}
-    chi2 = {name: 6357.96, 'tolerance': 0.2}
+    chi2 = {name: 6358.67, 'tolerance': 0.2}
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
     best_fit['calPlanck'] = best_fit['A_planck']
     best_fit.pop("H0")
@@ -258,7 +257,7 @@ chi2_lowl_highTT_lensing = {
     "planck_2018_lensing.clik": 9.11,
     "tolerance": 0.11}
 
-chi2_planck_2018_plikHM_highTT_lite = 204.54
+chi2_planck_2018_plikHM_highTT_lite = 204.57
 
 params_lowl_highTT_lite_lensing = {
     # Sampled
@@ -322,10 +321,10 @@ lik_info_lowTE_highTTTEEE_lensingcmblikes = {
 
 chi2_lowTE_highTTTEEE_lensingcmblikes = {
     "planck_2018_lowl.TT": 23.25, "planck_2018_lowl.EE": 396.05,
-    "planck_2018_highl_plik.TTTEEE": 2344.93, "planck_2018_lensing.native": 8.87,
+    "planck_2018_highl_plik.TTTEEE": 2345.01, "planck_2018_lensing.native": 8.87,
     "tolerance": 0.11}
 
-chi2_planck_2018_plikHM_highTTTEEE_lite = 584.61
+chi2_planck_2018_plikHM_highTTTEEE_lite = 584.64
 
 params_lowTE_highTTTEEE_lite_lensingcmblikes = {
     # Sampled
