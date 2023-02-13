@@ -24,7 +24,7 @@ cache:
 # (Pre)Installation
 jobs:
   include:
-    - dist: bionic
+    - dist: focal
       name: "Minimum requisites for Cosmology: gcc-7, Python 3.8"
       addons:
         apt:
