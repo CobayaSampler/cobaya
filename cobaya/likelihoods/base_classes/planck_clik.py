@@ -25,10 +25,12 @@ The likelihoods from the Planck 2015 data release have been superseded
 by the 2018 ones, and will eventually be deprecated.
 """)
 
+clik_url = 'https://github.com/benabed/clik/archive/refs/heads/main.zip'
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
 last_version_supp_data_and_covmats = "v2.01"
-last_version_clik = "3.1"
+last_version_clik = "16.0"
+min_version_clik = "3.1"
 
 
 class PlanckClik(Likelihood):
@@ -54,7 +56,7 @@ class PlanckClik(Likelihood):
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " Upgrade with `cobaya-install planck_2018_lowl.TT "
-                "--upgrade`.")
+                             "--upgrade`.")
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find clik: {excpt}. "
@@ -148,9 +150,7 @@ class PlanckClik(Likelihood):
     @classmethod
     def is_compatible(cls):
         import platform
-        if platform.system() == "Windows":
-            return False
-        return True
+        return platform.system() != "Windows"
 
     @classmethod
     def is_installed(cls, reload=False, **kwargs):
@@ -270,7 +270,7 @@ def get_clik_source_folder(starting_path):
     return source_dir
 
 
-def get_clik_import_path(path, min_version=last_version_clik):
+def get_clik_import_path(path, min_version=min_version_clik):
     """
     Starting from the installation folder, returns the subdirectory from which the
     ``clik`` module must be imported.
@@ -279,7 +279,12 @@ def get_clik_import_path(path, min_version=last_version_clik):
     :class:`tools.VersionCheckError` if the installed version is too old.
     """
     clik_src_path = get_clik_source_folder(path)
-    installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[-1])
+    version_file = os.path.join(clik_src_path, 'svnversion')
+    if os.path.exists(version_file):
+        with open(version_file, 'r') as f:
+            installed_version = version.parse(f.readline().split("_")[-1])
+    else:
+        installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[-1])
     if installed_version < version.parse(min_version):
         raise VersionCheckError(
             f"Installed version of the Plack likelihood code 'clik' ({installed_version})"
@@ -345,8 +350,7 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    click_url = pla_url_prefix + '152000'
-    if not download_file(click_url, path, size=2369782, decompress=True,
+    if not download_file(clik_url, path, decompress=True,
                          no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
