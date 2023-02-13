@@ -93,7 +93,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.warning("Resuming not implemented for post-processing. Re-starting.")
     if not info.get("output") and info_post.get("output") \
             and not info.get("params"):
-        raise LoggedError(log, "The input dictionary must have be a full option "
+        raise LoggedError(log, "The input dictionary must be a full option "
                                "dictionary, or have an existing 'output' root to load "
                                "previous settings from ('output' to read from is in the "
                                "main block not under 'post'). ")

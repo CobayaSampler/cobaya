@@ -250,7 +250,7 @@ def install(*infos, **kwargs):
                              "This does not always mean that there was an actual error, "
                              "and is sometimes fixed simply by running the installer "
                              "again. If not, look closely at the error messages above, "
-                             "or re-run with --debug for more more verbose output. "
+                             "or re-run with --debug for more verbose output. "
                              "If you are unable to fix the issues above, "
                              "try installing the packages required by this "
                              "component manually.")

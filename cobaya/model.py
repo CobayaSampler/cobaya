@@ -279,7 +279,7 @@ class Model(HasLogger):
             params_values_array = np.atleast_1d(params_values)
             if params_values_array.shape[0] != self.prior.d():
                 raise LoggedError(
-                    self.log, "Wrong dimensionality: it's %d and it should be %d.",
+                    self.log, "Wrong dimensionality: it's %d, and it should be %d.",
                     len(params_values_array), self.prior.d())
         if len(params_values_array.shape) >= 2:
             raise LoggedError(
