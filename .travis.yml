@@ -43,8 +43,8 @@ jobs:
       env:
         - GCC_VERSION="ubuntu"
       python: "3.9"
-    - name: "Anaconda: focal LTS Python 3.10"
-      dist: focal
+    - name: "Anaconda: jammy LTS Python 3.10"
+      dist: jammy
       addons:
         apt:
           packages:
@@ -63,8 +63,7 @@ jobs:
       env:
         - GCC_VERSION="ubuntu"
       python: "3.11"
-  allow_failures:
-    - name: "Latest jammy Python 3.11"
+
 
 before_install:
   # Configure right compiler versions
