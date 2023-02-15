@@ -258,12 +258,9 @@ def get_clik_source_folder(starting_path):
     Raises ``FileNotFoundError`` if no clik install was found.
     """
     source_dir = starting_path
-    while True:
-        folders = [f for f in os.listdir(source_dir)
-                   if os.path.isdir(os.path.join(source_dir, f))]
-        if len(folders) > 1:
-            break
-        elif len(folders) == 0:
+    while len(folders := [f for f in os.listdir(source_dir)
+                          if os.path.isdir(os.path.join(source_dir, f))]) <= 1:
+        if len(folders) == 0:
             raise FileNotFoundError(
                 f"Could not find a clik installation under {starting_path}")
         source_dir = os.path.join(source_dir, folders[0])
@@ -323,10 +320,7 @@ def execute(command):
         process = Popen(command, stdout=PIPE, stderr=STDOUT)
         out = []
         assert process.stdout
-        while True:
-            nextline = process.stdout.readline()
-            if nextline == b"" and process.poll() is not None:
-                break
+        while (nextline := process.stdout.readline()) != b"" or process.poll() is None:
             sys.stdout.buffer.write(nextline)
             out.append(nextline)
             sys.stdout.flush()

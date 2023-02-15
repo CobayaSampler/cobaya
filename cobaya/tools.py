@@ -746,7 +746,7 @@ def deepcopy_where_possible(base: _R) -> _R:
     and to do that it works on a copy of it; but some of the values passed to cobaya
     may not be copyable (if they are not pickleable). This function provides a
     compromise solution. To allow dict comparisons and make the copy mutable it converts
-    MappingProxyType, OrderedDict and other Mapping types into plain dict.
+    MappingProxyType and other Mapping types into plain dict.
     """
     if isinstance(base, Mapping):
         _copy = {}
