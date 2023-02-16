@@ -23,11 +23,11 @@ class TT_native(InstallableLikelihood):
     _nbins = 0
 
 
-    data = {}
-    data['cov'] = np.zeros((251, 251))
-    data['cl2x'] = np.zeros((1000, 251, 3))
-    data['mu'] = np.zeros(251)
-    data['mu_sigma'] = np.zeros(251)
+    _data = {}
+    _data['cov'] = np.zeros((251, 251))
+    _data['cl2x'] = np.zeros((1000, 251, 3))
+    _data['mu'] = np.zeros(251)
+    _data['mu_sigma'] = np.zeros(251)
 
     @classmethod
     def get_bibtex(cls):
@@ -40,35 +40,35 @@ class TT_native(InstallableLikelihood):
     def initialize(self):
         if self.get_install_options() and self.packages_path:
             path = self.get_path(self.packages_path)
-            self.data['cov'][2:, 2:] = np.loadtxt(os.path.join(path, 'cov.txt'))
-            self.data['cl2x'][:, 2:, 0] = np.loadtxt(os.path.join(path, 'cl2x_1.txt')) 
-            self.data['cl2x'][:, 2:, 1] = np.loadtxt(os.path.join(path, 'cl2x_2.txt')) 
-            self.data['cl2x'][:, 2:, 2] = np.loadtxt(os.path.join(path, 'cl2x_3.txt')) 
-            self.data['mu'][2:] = np.loadtxt(os.path.join(path, 'mu.txt'))
-            self.data['mu_sigma'][2:] = np.loadtxt(os.path.join(path, 'mu_sigma.txt'))
-            _nbins = len(self.data['cl2x'][:, 0, 0])
+            self._data['cov'][2:, 2:] = np.loadtxt(os.path.join(path, 'cov.txt'))
+            self._data['cl2x'][:, 2:, 0] = np.loadtxt(os.path.join(path, 'cl2x_1.txt')) 
+            self._data['cl2x'][:, 2:, 1] = np.loadtxt(os.path.join(path, 'cl2x_2.txt')) 
+            self._data['cl2x'][:, 2:, 2] = np.loadtxt(os.path.join(path, 'cl2x_3.txt')) 
+            self._data['mu'][2:] = np.loadtxt(os.path.join(path, 'mu.txt'))
+            self._data['mu_sigma'][2:] = np.loadtxt(os.path.join(path, 'mu_sigma.txt'))
+            _nbins = len(self._data['cl2x'][:, 0, 0])
 
             # Bandlimit covariance matrix
             for l in range(self._lmin, self._lmax+1):
                 for k in range(self._lmin, self._lmax+1):
                     if abs(l-k) > self._delta_l:
-                        self.data[cov][l, k] = 0
+                        self._data[cov][l, k] = 0
 
             # Set up prior
-            self.data['prior'] = np.zeros((251, 2))
+            self._data['prior'] = np.zeros((251, 2))
             for l in range(self._lmin, self._lmax+1):
                 j = 0
-                while abs(self.data['cl2x'][j, l, 1] + 5) < 1e-4:
+                while abs(self._data['cl2x'][j, l, 1] + 5) < 1e-4:
                     j += 1
-                self.data['prior'][l, 0] = self.data['cl2x'][j+2, l, 0]
+                self._data['prior'][l, 0] = self._data['cl2x'][j+2, l, 0]
                 j = _nbins-1
-                while abs(self.data['cl2x'][j, l, 1] - 5) < 1e-4:
+                while abs(self._data['cl2x'][j, l, 1] - 5) < 1e-4:
                     j -= 1
-                self.data['prior'][l, 1] = self.data['cl2x'][j-2, l, 0]
+                self._data['prior'][l, 1] = self._data['cl2x'][j-2, l, 0]
 
-            np.savetxt('prior.txt', self.data['prior'])
+            np.savetxt('prior.txt', self._data['prior'])
 
-            self.data['offset'] = self.log_likelihood(self.data['mu_sigma'], init=True)
+            self._data['offset'] = self.log_likelihood(self._data['mu_sigma'], init=True)
                 
 
     def get_requirements(self):
@@ -77,33 +77,33 @@ class TT_native(InstallableLikelihood):
 
     def log_likelihood(self, cls_TT, init=False):
 
-        if (any(cls_TT[self._lmin:self._lmax+1] < self.data['prior'][self._lmin:self._lmax+1, 0]) or
-                any(cls_TT[self._lmin:self._lmax+1] > self.data['prior'][self._lmin:self._lmax+1, 1])):
+        if (any(cls_TT[self._lmin:self._lmax+1] < self._data['prior'][self._lmin:self._lmax+1, 0]) or
+                any(cls_TT[self._lmin:self._lmax+1] > self._data['prior'][self._lmin:self._lmax+1, 1])):
             return -1e30
 
         # Convert the cl's to Gaussianized variables
         x = np.zeros(self._lmax+1)
         for l in range(self._lmin, self._lmax+1):
-            x[l] = self._splint_gauss_br(self.data['cl2x'][:, l, 0],
-                                        self.data['cl2x'][:, l, 1],
-                                        self.data['cl2x'][:, l, 2],
+            x[l] = self._splint_gauss_br(self._data['cl2x'][:, l, 0],
+                                        self._data['cl2x'][:, l, 1],
+                                        self._data['cl2x'][:, l, 2],
                                         cls_TT[l])
-        logl = -0.5 * sum((x[self._lmin:self._lmax+1] - self.data['mu'][self._lmin:self._lmax+1]) * 
-                          np.dot(self.data['cov'][self._lmin:self._lmax+1, self._lmin:self._lmax+1],
-                                 (x[self._lmin:self._lmax+1] - self.data['mu'][self._lmin:self._lmax+1])))
+        logl = -0.5 * sum((x[self._lmin:self._lmax+1] - self._data['mu'][self._lmin:self._lmax+1]) * 
+                          np.dot(self._data['cov'][self._lmin:self._lmax+1, self._lmin:self._lmax+1],
+                                 (x[self._lmin:self._lmax+1] - self._data['mu'][self._lmin:self._lmax+1])))
 
         # Add Jacobian term
         for l in range(self._lmin, self._lmax+1):
-            dxdCl = self._splint_deriv_gauss_br(self.data['cl2x'][:, l, 0],
-                                               self.data['cl2x'][:, l, 1],
-                                               self.data['cl2x'][:, l, 2],
+            dxdCl = self._splint_deriv_gauss_br(self._data['cl2x'][:, l, 0],
+                                               self._data['cl2x'][:, l, 1],
+                                               self._data['cl2x'][:, l, 2],
                                                cls_TT[l])
             if dxdCl < 0:
                 return -1e30
             else:
                 logl += np.log(dxdCl)
         if not init:
-            logl -= self.data['offset']
+            logl -= self._data['offset']
 
         return logl
 
