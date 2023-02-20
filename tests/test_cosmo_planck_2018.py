@@ -24,15 +24,23 @@ classy_extra_tolerance = 0.45
 
 # STANDARD ###############################################################################
 
-def test_planck_2018_t_camb(packages_path, skip_not_installed):
+def test_planck_2018_t_camb(packages_path, skip_not_installed, native=False):
     best_fit = deepcopy(params_lowl_highTT_lensing)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT_lensing
+    chi2 = chi2_lowl_highTT_lensing.copy()
+    if native:
+        info_likelihood["planck_2018_lowl.TT_native"] = \
+            info_likelihood.pop("planck_2018_lowl.TT")
+        chi2["planck_2018_lowl.TT_native"] = chi2.pop("planck_2018_lowl.TT")
     info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT_lensing
-    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
-                 chi2_lowl_highTT_lensing, best_fit_derived,
-                 skip_not_installed=skip_not_installed)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
+                 best_fit_derived, skip_not_installed=skip_not_installed)
+
+
+def test_planck_2018_t_native_camb(packages_path, skip_not_installed):
+    test_planck_2018_t_camb(packages_path, skip_not_installed, True)
 
 
 def test_planck_2018_p_camb(packages_path, skip_not_installed, native=False):
