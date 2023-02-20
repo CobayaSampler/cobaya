@@ -16,7 +16,8 @@ class TT_native(InstallableLikelihood):
                        "github_release": "v1",
                        "asset": "planck_2018_lowT.zip",
                        "directory": "planck_2018_lowT_native"}
-
+    lmin = 2
+    lmax = 29
     type = "CMB"
     aliases = ["lowT"]
 
@@ -26,49 +27,47 @@ class TT_native(InstallableLikelihood):
         return TT.get_bibtex()
 
     def get_requirements(self):
-        return {'Cl': {'tt': self._lmax}}
+        return {'Cl': {'tt': self.lmax}}
 
     def get_can_support_params(self):
         return ['A_planck']
 
-    def initialize(self, lmin=2, lmax=29):
+    def initialize(self):
         if self.get_install_options() and self.packages_path:
-            if lmin < 2 or lmax > 200 or lmin >= lmax:
+            if self.lmin < 2 or self.lmax > 200 or self.lmin >= self.lmax:
                 raise LoggedError(
                     self.log, "lmin must be >= 2, lmax must be <= 200,\n"
                               "and lmin must be less than lmax.")
-            self._lmin = lmin
-            self._lmax = lmax
             #The inverse covariance matrix for the gaussian likelihood calculation
-            self._covinv = np.zeros((self._lmax - self._lmin + 1,
-                                     self._lmax - self._lmin + 1))
+            self._covinv = np.zeros((self.lmax - self.lmin + 1,
+                                     self.lmax - self.lmin + 1))
             # The average cl's for the gaussian likelihood calculation
-            self._mu = np.zeros(self._lmax - self._lmin + 1)
+            self._mu = np.zeros(self.lmax - self.lmin + 1)
             # The cl's used for offset calculation - hence the full range of ells
-            self._mu_sigma = np.zeros(self._lmax + 1)
+            mu_sigma = np.zeros(self.lmax + 1)
 
             # The txt files start at l=2, hence the index gymnastics
             path = self.get_path(self.packages_path)
             self._covinv[:, :] = np.loadtxt(
                 os.path.join(path, 'covinv.txt'))[
-                    self._lmin - 2:self._lmax + 1 - 2,
-                    self._lmin - 2:self._lmax + 1 - 2]
+                    self.lmin - 2:self.lmax + 1 - 2,
+                    self.lmin - 2:self.lmax + 1 - 2]
             self._mu[:] = np.loadtxt(
-                os.path.join(path, 'mu.txt'))[self._lmin - 2:self._lmax + 1 - 2]
-            self._mu_sigma[self._lmin:] = np.loadtxt(
-                os.path.join(path, 'mu_sigma.txt'))[self._lmin - 2:self._lmax + 1 - 2]
+                os.path.join(path, 'mu.txt'))[self.lmin - 2:self.lmax + 1 - 2]
+            mu_sigma[self.lmin:] = np.loadtxt(
+                os.path.join(path, 'mu_sigma.txt'))[self.lmin - 2:self.lmax + 1 - 2]
 
             # Spline info
             nbins = 1000
-            cl2x = np.zeros((nbins, self._lmax - self._lmin + 1, 2))
-            cl2x[:, :, 0] = np.loadtxt(os.path.join(path, 'cl2x_1.txt'))[:, self._lmin - 2:self._lmax + 1 - 2]
-            cl2x[:, :, 1] = np.loadtxt(os.path.join(path, 'cl2x_2.txt'))[:, self._lmin - 2:self._lmax + 1 - 2]
+            cl2x = np.zeros((nbins, self.lmax - self.lmin + 1, 2))
+            cl2x[:, :, 0] = np.loadtxt(os.path.join(path, 'cl2x_1.txt'))[:, self.lmin - 2:self.lmax + 1 - 2]
+            cl2x[:, :, 1] = np.loadtxt(os.path.join(path, 'cl2x_2.txt'))[:, self.lmin - 2:self.lmax + 1 - 2]
             self._spline = []
             self._spline_derivative = []
 
             # Set up prior and spline
-            self._prior_bounds = np.zeros((self._lmax + 1 - self._lmin, 2))
-            for i, l in enumerate(range(self._lmax - self._lmin + 1)):
+            self._prior_bounds = np.zeros((self.lmax + 1 - self.lmin, 2))
+            for l in range(self.lmax - self.lmin + 1):
                 j = 0
                 while abs(cl2x[j, l, 1] + 5) < 1e-4:
                     j += 1
@@ -81,11 +80,11 @@ class TT_native(InstallableLikelihood):
                     InterpolatedUnivariateSpline(cl2x[:, l, 0], cl2x[:, l, 1]))
                 self._spline_derivative.append(self._spline[-1].derivative())
 
-            self._offset = self.log_likelihood(self._mu_sigma, init=True)
+            self._offset = self.log_likelihood(mu_sigma, init=True)
 
 
     def log_likelihood(self, cls_TT, calib=1, init=False):
-        theory = cls_TT[self._lmin:self._lmax + 1] / calib ** 2
+        theory = cls_TT[self.lmin:self.lmax + 1] / calib ** 2
 
         if any(theory < self._prior_bounds[:, 0]) or any(theory > self._prior_bounds[:, 1]):
             return - np.inf
@@ -100,7 +99,7 @@ class TT_native(InstallableLikelihood):
             if dxdCl < 0:
                 return -np.inf
             logl += np.log(dxdCl)
-            delta = x - self._mu
+        delta = x - self._mu
         logl += -0.5 * self._covinv.dot(delta).dot(delta)
 
         if not init:
