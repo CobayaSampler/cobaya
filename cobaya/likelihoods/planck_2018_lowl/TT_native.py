@@ -28,6 +28,9 @@ class TT_native(InstallableLikelihood):
     def get_requirements(self):
         return {'Cl': {'tt': self._lmax}}
 
+    def get_can_support_params(self):
+        return ['A_planck']
+
     def initialize(self, lmin=2, lmax=29):
         if self.get_install_options() and self.packages_path:
             if lmin < 2 or lmax > 200 or lmin >= lmax:
