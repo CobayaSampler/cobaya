@@ -48,10 +48,12 @@ class TT_native(InstallableLikelihood):
 
             # The txt files start at l=2, hence the index gymnastics
             path = self.get_path(self.packages_path)
-            self._covinv[:, :] = np.loadtxt(
-                os.path.join(path, 'covinv.txt'))[
+
+            cov = np.loadtxt(
+                os.path.join(path, 'cov.txt'))[
                     self.lmin - 2:self.lmax + 1 - 2,
                     self.lmin - 2:self.lmax + 1 - 2]
+            self._covinv[:, :] = np.linalg.inv(cov)
             self._mu[:] = np.loadtxt(
                 os.path.join(path, 'mu.txt'))[self.lmin - 2:self.lmax + 1 - 2]
             mu_sigma[self.lmin:] = np.loadtxt(
