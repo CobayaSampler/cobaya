@@ -48,6 +48,7 @@ try:
         from PySide2.QtGui import QColor
         # noinspection PyUnresolvedReferences
         from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
+
         os.environ['QT_API'] = 'pyside2'
 
     for attribute in set_attributes:
@@ -403,6 +404,7 @@ def gui_script():
             "('Basic cosmology runs').")
 
     window = MainWindow()
+    window.show()
     sys.exit(app.exec_())
 
 
