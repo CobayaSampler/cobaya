@@ -15,8 +15,8 @@ from pandas import DataFrame
 
 # Local
 from cobaya.sampler import CovmatSampler
-from cobaya.mpi import get_mpi_size
-from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
+from cobaya.mpi import get_mpi_size, share_mpi, more_than_one_process, is_main_process, \
+    sync_processes
 from cobaya.collection import SampleCollection, OneSamplePoint, apply_temperature_cov, \
     remove_temperature_cov, remove_temperature
 from cobaya.conventions import OutPar, Extension, line_width, get_version
@@ -857,34 +857,59 @@ class MCMC(CovmatSampler):
 
     # Finally: returning the computed products ###########################################
 
-    def products(self, to_getdist=False):
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> dict:
         """
-        Auxiliary function to define what should be returned in a scripted call.
+        Returns the products of the sampling process.
 
         Parameters
         ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied previously to concatenation. Forces the return of a copy.
         to_getdist: bool, default: True
-            If ``True``, returns all sample collections as :class:'getdist.MCSamples`.
+            If ``True``, returns sample collections as :class:'getdist.MCSamples`.
 
         Returns
         -------
         dict
             A dictionary containing the :class:`cobaya.collection.SampleCollection` of
-            accepted steps under ``"sampler"``, and a progress report table under
+            accepted steps under ``"sample"``, and a progress report table under
             ``"progress"``.
         """
+        collection = self.collection.skip_samples(skip_samples, inplace=False)
+        if combined and more_than_one_process():
+            if not skip_samples:
+                self.mpi_warning(
+                    "When combining chains, it is recommended to remove some initial "
+                    "fraction, e.g. 'skip_samples=0.3'"
+                )
+            collections = mpi.gather(collection)
+            if is_main_process():
+                for collection in collections[1:]:
+                    collections[0]._append(collection)
+                collection = collections[0]
+            collection = mpi.share_mpi(collection)
         if to_getdist:
             collection = self.collection.to_getdist(model=self.model)
-        else:
-            collection = self.collection
         products = {"sample": collection}
         if self.temperature != 1:
             self.mpi_warning(
                 "The MCMC chain(s) are stored with temperature != 1. "
                 "Keep that in mind when operating on them, or detemper (in-place) with "
-                "products['sample'].reset_temperature()'.")
-        if is_main_process():
-            products["progress"] = self.progress
+                "products()['sample'].reset_temperature()'.")
+        products["progress"] = share_mpi(getattr(self, "progress", None))
         return products
 
     # Class methods

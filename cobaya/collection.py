@@ -851,6 +851,8 @@ class SampleCollection(BaseCollection):
         LoggedError
             If badly defined ``skip`` value.
         """
+        if skip == 0:
+            return self if inplace else self.copy()
         if self.sample_type == "nested":
             self.log.warning(
                 "Cannot skip initial samples from Nested Sampling samples. Doing nothing"
@@ -991,6 +993,7 @@ class SampleCollection(BaseCollection):
             samples=self[self.data.columns[2:]].to_numpy(np.float64, copy=True),
             weights=self[OutPar.weight].to_numpy(np.float64, copy=True),
             loglikes=self[OutPar.minuslogpost].to_numpy(np.float64, copy=True),
+            temperature=self.temperature,
             sampler=deepcopy(self.sample_type),
             names=list(used_names_dict.values()),
             labels=[deepcopy(self._cached_labels[p]) for p in used_names_dict

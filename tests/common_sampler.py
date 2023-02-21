@@ -79,27 +79,23 @@ def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmp
     info["output"] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)
-
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
-    products = sampler.products()
-    products["sample"] = mpi.gather(products["sample"])
+    if sampler_name == "mcmc":
+        ignore_rows = 0.5
+    else:
+        ignore_rows = 0
+    products = sampler.products(combined=True, skip_samples=ignore_rows)
     # Done! --> Tests
     if mpi.is_main_process():
-        if sampler_name == "mcmc":
-            ignore_rows = 0.5
-        else:
-            ignore_rows = 0
-        results = MCSamplesFromCobaya(updated_info, products["sample"],
-                                      ignore_rows=ignore_rows, name_tag="sample")
+        results = products["sample"].to_getdist(label="sample")
         temperature = info["sampler"][sampler_name].get("temperature", 1)
         if temperature != 1:
-            results.cool(temperature)
+            results.cool()
         clusters = None
         if "clusters" in products:
-            clusters = [MCSamplesFromCobaya(
-                updated_info, products["clusters"][i]["sample"],
-                name_tag="cluster %d" % (i + 1))
-                for i in products["clusters"]]
+            clusters = [
+                collection["sample"].to_getdist(label="cluster %d" % (i + 1))
+                for i, collection in products["clusters"].items()]
         # Plots!
         if do_plots and not is_travis():
             try:
