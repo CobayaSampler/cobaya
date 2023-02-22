@@ -14,6 +14,7 @@
 
 - Added CAMBspec NPIPE Planck 2020 likelihood (#271) ) (thanks @earosenberg)
 - Added native version of `planck_2018_lowl.EE`.
+- Added native version of `planck_2018_low.TT`. (thanks @eirikgje)
 - Added links to external likelihoods Planck PR4 Lensing, pyWMAP.
 - GUI now support PySide6
 - Fixed bug in BAO likelihood (#250, thanks @Pablo-Lemos)
