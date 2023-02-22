@@ -1353,8 +1353,8 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
-        if k not in ["params", "likelihood", "prior", "theory", packages_path_input,
-                     "timing", "stop_at_error", "auto_params", "debug"]:
+        if k not in {"params", "likelihood", "prior", "theory", packages_path_input,
+                     "timing", "stop_at_error", "auto_params", "debug"}:
             value = info.pop(k)  # type: ignore
             if value is not None and (not isinstance(value, Mapping) or value):
                 ignored_info.append(k)
