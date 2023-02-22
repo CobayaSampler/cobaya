@@ -403,6 +403,7 @@ base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
 cmb_precision = deepcopy(base_precision)
 cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
                               "lens_potential_accuracy": 1})
+
 default_mcmc_options = {"proposal_scale": 1.9,
                         "Rminus1_stop": 0.01, "Rminus1_cl_stop": 0.2}
 cmb_sampler_recommended: InfoDict = {"mcmc": dict(drag=True, oversample_power=0.4,
@@ -411,6 +412,16 @@ cmb_sampler_mcmc: InfoDict = {"mcmc": dict(drag=False, **default_mcmc_options)}
 
 like_cmb: InfoDict = {
     none: {},
+    "planck_NPIPE": {
+        "desc": "Planck NPIPE (no clik; polarized NPIPE CMB + lensing)",
+        "sampler": cmb_sampler_recommended,
+        "theory": {theo: {"extra_args": cmb_precision[theo]}
+                   for theo in ["camb", "classy"]},
+        "likelihood": {
+            "planck_2018_lowl.TT_native": None,
+            "planck_2018_lowl.EE_native": None,
+            "planck_NPIPE_highl_CamSpec.TTTEEE": None,
+            "planck_2018_lensing.native": None}},
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
         "sampler": cmb_sampler_recommended,
@@ -577,6 +588,10 @@ default_sampler = {"sampler": "MCMC dragging"}
 preset: InfoDict = dict([
     (none, {"desc": "(No preset chosen)"}),
     # Pure CMB #######################################################
+    ("planck_NPIPE_camb", {
+        "desc": "Planck NPIPE with CAMB (all native Python)",
+        "theory": "camb",
+        "like_cmb": "planck_NPIPE"}),
     ("planck_2018_camb", {
         "desc": "Planck 2018 with CAMB",
         "theory": "camb",
