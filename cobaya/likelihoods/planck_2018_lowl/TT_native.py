@@ -69,17 +69,17 @@ class TT_native(InstallableLikelihood):
 
             # Set up prior and spline
             self._prior_bounds = np.zeros((self.lmax + 1 - self.lmin, 2))
-            for l in range(self.lmax - self.lmin + 1):
+            for i in range(self.lmax - self.lmin + 1):
                 j = 0
-                while abs(cl2x[j, l, 1] + 5) < 1e-4:
+                while abs(cl2x[j, i, 1] + 5) < 1e-4:
                     j += 1
-                self._prior_bounds[l, 0] = cl2x[j + 2, l, 0]
+                self._prior_bounds[i, 0] = cl2x[j + 2, i, 0]
                 j = nbins - 1
-                while abs(cl2x[j, l, 1] - 5) < 1e-4:
+                while abs(cl2x[j, i, 1] - 5) < 1e-4:
                     j -= 1
-                self._prior_bounds[l, 1] = cl2x[j - 2, l, 0]
+                self._prior_bounds[i, 1] = cl2x[j - 2, i, 0]
                 self._spline.append(
-                    InterpolatedUnivariateSpline(cl2x[:, l, 0], cl2x[:, l, 1]))
+                    InterpolatedUnivariateSpline(cl2x[:, i, 0], cl2x[:, i, 1]))
                 self._spline_derivative.append(self._spline[-1].derivative())
 
             self._offset = self.log_likelihood(mu_sigma, init=True)
