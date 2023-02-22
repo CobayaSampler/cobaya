@@ -398,11 +398,17 @@ reionization = {
         'params': {}}}
 
 # EXPERIMENTS ############################################################################
-base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
+base_precision: InfoDict = {"camb": None,
                             "classy": {"non linear": "hmcode", "nonlinear_min_k_max": 20}}
 cmb_precision = deepcopy(base_precision)
-cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
-                              "lens_potential_accuracy": 1})
+cmb_precision["camb"] = {"lens_potential_accuracy": 1}
+
+planck_lss_precision = deepcopy(base_precision)
+planck_lss_precision["camb"] = {"halofit_version": "mead",
+                                "bbn_predictor": "PArthENoPE_880.2_standard.dat"}
+
+planck_precision = deepcopy(planck_lss_precision)
+planck_precision["camb"]["lens_potential_accuracy"] = 1
 
 default_mcmc_options = {"proposal_scale": 1.9,
                         "Rminus1_stop": 0.01, "Rminus1_cl_stop": 0.2}
@@ -425,7 +431,7 @@ like_cmb: InfoDict = {
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
         "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
             "planck_2018_lowl.TT": None,
@@ -435,7 +441,7 @@ like_cmb: InfoDict = {
     "planck_2018_bk18": {
         "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2018",
         "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
             "planck_2018_lowl.TT": None,
@@ -446,7 +452,7 @@ like_cmb: InfoDict = {
     "planck_2018_CMBmarged_lensing": {
         "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {"planck_2018_lensing.CMBMarged": None}}}
 
