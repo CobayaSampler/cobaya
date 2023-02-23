@@ -128,16 +128,41 @@ def install(*infos, **kwargs):
                 logger.info(
                     f"Component '{name_w_kind}' is a custom function. Nothing to do.")
                 continue
+            class_name = (info or {}).get("class")
+            if class_name:
+                logger.info(f"Class to be installed for this component: {class_name}")
+            python_path = info.pop("python_path", None)
+            package_install = info.get("package_install")
+            if package_install and not python_path:
+                repo = package_install.get("github_repository")
+                directory = package_install.get("directory", repo.split("/")[-1])
+                python_path = os.path.join(general_abspath, code_path, directory)
+
+            def _imported_class():
+                return get_component_class(
+                    component, kind=kind, component_path=python_path,
+                    class_name=class_name, logger=logger,
+                    allow_internal=not package_install)
+
             try:
-                class_name = (info or {}).get("class")
-                if class_name:
-                    logger.info(f"Class to be installed for this component: {class_name}")
-                imported_class = get_component_class(
-                    component, kind=kind, component_path=info.pop("python_path", None),
-                    class_name=class_name, logger=logger)
-                # Update the name if the kind was unknown
-                if not kind:
-                    name_w_kind = imported_class.get_kind() + ":" + component
+                try:
+                    imported_class = _imported_class()
+                except ComponentNotFoundError:
+                    if not package_install:
+                        raise
+                    if download_github_release(
+                            os.path.join(general_abspath, code_path), repo,
+                            package_install.get("github_release", "master"),
+                            directory=package_install.get("directory"),
+                            logger=logger):
+                        imported_class = _imported_class()
+                    else:
+                        logger.error(
+                            f"Package install failed for '{name_w_kind}'. Skipping.")
+                        unknown_components += [name_w_kind]
+                        continue
+                except Exception:
+                    raise
             except ComponentNotFoundError:
                 logger.error(
                     f"Component '{name_w_kind}' could not be identified. Skipping.")
@@ -152,6 +177,9 @@ def install(*infos, **kwargs):
                 if _skip_helper(imported_class.__name__.lower(), skip_keywords,
                                 skip_keywords_env, logger):
                     continue
+            # Update the name if the kind was unknown
+            if not kind:
+                name_w_kind = imported_class.get_kind() + ":" + component
             is_compatible = getattr(imported_class, "is_compatible", lambda: True)()
             if not is_compatible:
                 logger.error(f"Skipping '{name_w_kind}' "
@@ -405,6 +433,7 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
         download_directory = os.path.join(download_directory, directory or repo_name)
     else:
         url = (base_url + "/archive/" + release_name + ".tar.gz")
+
     if not os.path.exists(download_directory):
         os.makedirs(download_directory)
     if not download_file(url, download_directory, decompress=True,
