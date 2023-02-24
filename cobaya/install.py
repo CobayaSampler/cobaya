@@ -17,6 +17,7 @@ import tempfile
 import logging
 from itertools import chain
 from pkg_resources import parse_version  # type: ignore
+import importlib
 import requests  # type: ignore
 import tqdm  # type: ignore
 from typing import List, Mapping, Union
@@ -37,6 +38,45 @@ from cobaya.typing import InputDict
 _banner_symbol = "="
 _banner_length = 80
 _version_filename = "version.dat"
+
+
+def get_package_install(info, code_path, logger, python_path=None):
+    # attempt to install package if package_install download info is present
+    # similar to InstallableLikelihood install_options (could be refactored)
+    package_installer = None
+    package_install = info.get("package_install")
+    if package_install and not python_path:
+        if isinstance(package_install, str) and package_install == "pip":
+            package_install = {"pip": None}
+        if isinstance(package_install, Mapping) and "pip" in package_install:
+            def package_installer():
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install",
+                     *package_install['pip'].get("requirements", [])])
+        else:
+
+            directory = package_install.get("directory")
+            if repo := package_install.get("github_repository"):
+                directory = directory or repo.split("/")[-1]
+                python_path = os.path.join(code_path, directory)
+
+                def package_installer():
+                    return download_github_release(
+                        code_path, repo,
+                        package_install.get("github_release", "master"),
+                        directory=directory, logger=logger)
+            elif url := package_install.get("download_url"):
+                python_path = os.path.join(code_path, directory)
+                if not os.path.exists(python_path):
+                    os.makedirs(python_path)
+
+                def package_installer():
+                    logger.info("Downloading package from: %s...", url)
+                    return download_file(url, python_path, decompress=True, logger=logger)
+            else:
+                raise LoggedError(logger, "Invalid package_install: must define pip, "
+                                          "github_repository or download_url")
+    return package_installer, python_path
 
 
 def install(*infos, **kwargs):
@@ -132,11 +172,9 @@ def install(*infos, **kwargs):
             if class_name:
                 logger.info(f"Class to be installed for this component: {class_name}")
             python_path = info.pop("python_path", None)
-            package_install = info.get("package_install")
-            if package_install and not python_path:
-                repo = package_install.get("github_repository")
-                directory = package_install.get("directory", repo.split("/")[-1])
-                python_path = os.path.join(general_abspath, code_path, directory)
+            package_install, python_path = \
+                get_package_install(info, os.path.join(general_abspath, code_path),
+                                    logger, python_path)
 
             def _imported_class():
                 return get_component_class(
@@ -150,11 +188,8 @@ def install(*infos, **kwargs):
                 except ComponentNotFoundError:
                     if not package_install:
                         raise
-                    if download_github_release(
-                            os.path.join(general_abspath, code_path), repo,
-                            package_install.get("github_release", "master"),
-                            directory=package_install.get("directory"),
-                            logger=logger):
+                    if package_install():
+                        importlib.invalidate_caches()
                         imported_class = _imported_class()
                     else:
                         logger.error(
@@ -278,7 +313,7 @@ def install(*infos, **kwargs):
                              "This does not always mean that there was an actual error, "
                              "and is sometimes fixed simply by running the installer "
                              "again. If not, look closely at the error messages above, "
-                             "or re-run with --debug for more more verbose output. "
+                             "or re-run with --debug for more verbose output. "
                              "If you are unable to fix the issues above, "
                              "try installing the packages required by this "
                              "component manually.")

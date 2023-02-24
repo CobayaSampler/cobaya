@@ -170,7 +170,7 @@ def load_module(name, package=None, path=None, min_version=None,
         # Force reload if requested.
         # Use with care and only in install checks (e.g. for version upgrade checks):
         # will delete all references from previous imports!
-        if name in sys.modules and reload:
+        if reload and name in sys.modules:
             del sys.modules[name]
         module = import_module(name, package=package)
     if path and check_path:
