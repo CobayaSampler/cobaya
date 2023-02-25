@@ -50,9 +50,15 @@ def get_package_install(info, code_path, logger, python_path=None):
             package_install = {"pip": None}
         if isinstance(package_install, Mapping) and "pip" in package_install:
             def package_installer():
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install",
-                     *package_install['pip'].get("requirements", [])])
+                try:
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install",
+                         *package_install['pip'].get("requirements", [])],
+                        stdout=subprocess.DEVNULL)
+                    return True
+                except subprocess.CalledProcessError:
+                    logger.error("Could not install package using pip.")
+                    return False
         else:
 
             directory = package_install.get("directory")
@@ -71,7 +77,6 @@ def get_package_install(info, code_path, logger, python_path=None):
                     os.makedirs(python_path)
 
                 def package_installer():
-                    logger.info("Downloading package from: %s...", url)
                     return download_file(url, python_path, decompress=True, logger=logger)
             else:
                 raise LoggedError(logger, "Invalid package_install: must define pip, "

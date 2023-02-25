@@ -4,11 +4,11 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 3.6) and the Python package manager **pip** (version ≥ 20.0).
+The only pre-requisites are **Python** (version ≥ 3.8) and the Python package manager **pip** (version ≥ 20.0).
 
 .. warning::
 
-   Python 2 is no longer supported. Please use Python 3.
+   Python 2 and Python 3.6/3.7 are no longer supported. Please use Python 3.8+.
 
    In some systems, the Python 3 command may be ``python3`` instead of ``python``. In this documentation, the shell command ``python`` always means Python 3.
 

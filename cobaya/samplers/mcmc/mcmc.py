@@ -874,7 +874,7 @@ def plot_progress(progress, ax=None, index=None,
 
     Takes a ``progress`` instance (actually a ``pandas.DataFrame``,
     returned as part of the sampler ``products``),
-    a chain ``output`` prefix, or a list of any of those
+    a chain ``output`` prefix, or a list of those
     for plotting progress of several chains at once.
 
     You can use ``figure_kwargs`` and ``legend_kwargs`` to pass arguments to

@@ -10,7 +10,7 @@ import os
 import sys
 import time
 from itertools import chain
-from typing import List, Union, Optional, Tuple
+from typing import List, Union, Optional, Tuple, TypedDict
 import numpy as np
 
 from cobaya import mpi
@@ -31,17 +31,13 @@ from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
     InfoDict, PostDict
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
 
+class PostResultDict(TypedDict):
+    sample: Union[SampleCollection, List[SampleCollection]]
+    stats: ParamValuesDict
+    logpost_weight_offset: float
+    weights: Union[np.ndarray, List[np.ndarray]]
 
-    class PostResultDict(TypedDict):
-        sample: Union[SampleCollection, List[SampleCollection]]
-        stats: ParamValuesDict
-        logpost_weight_offset: float
-        weights: Union[np.ndarray, List[np.ndarray]]
-else:
-    globals()['PostResultDict'] = InfoDict
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
 
@@ -93,7 +89,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.warning("Resuming not implemented for post-processing. Re-starting.")
     if not info.get("output") and info_post.get("output") \
             and not info.get("params"):
-        raise LoggedError(log, "The input dictionary must have be a full option "
+        raise LoggedError(log, "The input dictionary must be a full option "
                                "dictionary, or have an existing 'output' root to load "
                                "previous settings from ('output' to read from is in the "
                                "main block not under 'post'). ")

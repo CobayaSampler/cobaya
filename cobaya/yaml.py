@@ -17,7 +17,6 @@ import yaml
 import numpy as np
 from yaml.resolver import BaseResolver
 from yaml.constructor import ConstructorError
-from collections import OrderedDict
 from typing import Mapping, Optional, Any
 
 # Local
@@ -192,7 +191,6 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
 
     CustomDumper.add_representer(dict, _dict_representer)
     CustomDumper.add_representer(Mapping, _dict_representer)
-    CustomDumper.add_representer(OrderedDict, _dict_representer)
 
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):

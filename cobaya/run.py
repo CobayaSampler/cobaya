@@ -66,7 +66,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         info: InputDict = load_info_overrides(
             info_or_yaml_or_file, override or {}, **flags)
         if info.get("post"):
-            if info.get("minimize"):
+            if info.get("minimize"):  # type: ignore
                 raise ValueError(
                     "``minimize`` option is incompatible with post-processing.")
             if isinstance(output, str) or output is False:
@@ -89,7 +89,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         # GetDist needs to know the original sampler, so don't overwrite if minimizer
         try:
             which_sampler = list(info["sampler"])[0]
-            if info.get("minimize"):
+            if info.get("minimize"):  # type: ignore
                 # Preserve options if "minimize" was already the sampler
                 if which_sampler.lower() != "minimize":
                     info["sampler"] = {"minimize": None}

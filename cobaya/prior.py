@@ -431,7 +431,7 @@ class Prior(HasLogger):
                            "parameters, Priors must be functions of input parameters. "
                            "Use a separate 'likelihood' for the prior if needed.")
                 else:
-                    err = ("Some of the arguments of the external prior '%s' cannot be "
+                    err = ("Some arguments of the external prior '%s' cannot be "
                            "found and don't have a default value either: %s")
                 raise LoggedError(self.log, err, name, list(unknown))
             self.external_dependence.update(params)
@@ -619,9 +619,7 @@ class Prior(HasLogger):
                                   ", a list of two numbers for normal mean and deviation,"
                                   "or a dict with parameters for a scipy distribution.")
         # Re-set the pointlike-ref property
-        if hasattr(self, "_ref_is_pointlike"):
-            delattr(self, "_ref_is_pointlike")
-        self.reference_is_pointlike
+        self._set_pointlike()
 
     @property
     def reference_is_pointlike(self) -> bool:
@@ -630,11 +628,14 @@ class Prior(HasLogger):
         :func:`Prior.reference` would always return the same.
         """
         if not hasattr(self, "_ref_is_pointlike"):
-            self._ref_is_pointlike = all(
-                # np.nan is a numbers.Number instance, but not a fixed ref (uses prior)
-                (isinstance(ref, numbers.Number) and ref is not np.nan)
-                for ref in self.ref_pdf)
+            self._set_pointlike()
         return self._ref_is_pointlike
+
+    def _set_pointlike(self):
+        self._ref_is_pointlike = all(
+            # np.nan is a numbers.Number instance, but not a fixed ref (uses prior)
+            (isinstance(ref, numbers.Number) and ref is not np.nan)
+            for ref in self.ref_pdf)
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
                   warn_if_no_ref=True, random_state=None) -> np.ndarray:

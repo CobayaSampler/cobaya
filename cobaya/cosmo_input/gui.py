@@ -48,6 +48,7 @@ try:
         from PySide2.QtGui import QColor
         # noinspection PyUnresolvedReferences
         from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
+
         os.environ['QT_API'] = 'pyside2'
 
     for attribute in set_attributes:
@@ -344,7 +345,6 @@ class DefaultsDialog(QWidget):
 
     def __init__(self, kind, component, parent=None):
         super().__init__()
-        self.clipboard = parent.clipboard
         self.setWindowTitle("%s : %s" % (kind, component))
         self.setGeometry(0, 0, 500, 500)
         # noinspection PyArgumentList
@@ -385,7 +385,7 @@ class DefaultsDialog(QWidget):
 
     @Slot()
     def copy_clipb(self):
-        self.clipboard.setText(self.display_tabs.currentWidget().toPlainText())
+        QApplication.clipboard().setText(self.display_tabs.currentWidget().toPlainText())
 
 
 # noinspection PyArgumentList
@@ -403,9 +403,8 @@ def gui_script():
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
 
-    clip = app.clipboard()
     window = MainWindow()
-    window.clipboard = clip
+    window.show()
     sys.exit(app.exec_())
 
 
