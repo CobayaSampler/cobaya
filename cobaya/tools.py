@@ -813,7 +813,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
          for this_cost in permuted_costs_per_param_per_block])
     total_costs = np.array(
         [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
-             .dot(permuted_costs_per_param_per_block[i])
+         .dot(permuted_costs_per_param_per_block[i])
          for i, o in enumerate(orderings)])
     i_optimal: int = np.argmin(total_costs)  # type: ignore
     optimal_ordering = orderings[i_optimal]
@@ -829,6 +829,8 @@ def find_with_regexp(regexp, root, walk_tree=False):
 
     Set walk_tree=True if there is more than one directory level (default: `False`).
     """
+    if isinstance(regexp, str):
+        regexp = re.compile(regexp)
     try:
         if walk_tree:
             files = []

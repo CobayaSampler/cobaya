@@ -20,68 +20,69 @@ from pkg_resources import parse_version  # type: ignore
 import importlib
 import requests  # type: ignore
 import tqdm  # type: ignore
-from typing import List, Mapping, Union
+from typing import List, Mapping, Union, Optional
 
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
 from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.tools import create_banner, warn_deprecation, \
     write_packages_path_in_config_file, get_config_path, VersionCheckError, \
-    resolve_packages_path, similar_internal_class_names
+    resolve_packages_path, similar_internal_class_names, find_with_regexp
 from cobaya.input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
     packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
-from cobaya.typing import InputDict
+from cobaya.typing import InputDict, InfoDict
 
 _banner_symbol = "="
 _banner_length = 80
 _version_filename = "version.dat"
 
 
-def get_package_install(info, code_path, logger, python_path=None):
+def do_package_install(component: str, package_install: Union[InfoDict, str],
+                       full_code_path: str, logger):
     # attempt to install package if package_install download info is present
     # similar to InstallableLikelihood install_options (could be refactored)
-    package_installer = None
-    package_install = info.get("package_install")
-    if package_install and not python_path:
-        if isinstance(package_install, str) and package_install == "pip":
-            package_install = {"pip": None}
-        if isinstance(package_install, Mapping) and "pip" in package_install:
-            def package_installer():
-                try:
-                    subprocess.check_call(
-                        [sys.executable, "-m", "pip", "install",
-                         *package_install['pip'].get("requirements", [])],
-                        stdout=subprocess.DEVNULL)
-                    return True
-                except subprocess.CalledProcessError:
-                    logger.error("Could not install package using pip.")
-                    return False
-        else:
+    component_root = component.split('.')[0]
+    directory = package_install.get("directory")
+    if package_install == "pip":
+        package_install = {"pip": None}
+    elif not isinstance(package_install, Mapping):
+        raise LoggedError(logger, "Invalid package_install: must be 'pip' or a "
+                                  "dictionary with download_url or github_repository")
+    package = package_install.get("pip") or component_root
+    cwd = None
+    if repo := package_install.get("github_repository"):
+        logger.info('Downloading code from github (%s)', repo)
+        directory = directory or repo.split("/")[-1]
+        if not download_github_release(
+                full_code_path, repo,
+                package_install.get("github_release", "master"),
+                directory=directory, logger=logger):
+            return False
+        cwd = os.path.join(full_code_path, directory)
+        package = '.'
 
-            directory = package_install.get("directory")
-            if repo := package_install.get("github_repository"):
-                directory = directory or repo.split("/")[-1]
-                python_path = os.path.join(code_path, directory)
+    elif url := package_install.get("download_url"):
+        logger.info('Downloding code from %s', url)
+        cwd = os.path.join(full_code_path, directory or component_root)
+        if not os.path.exists(cwd):
+            os.makedirs(cwd)
+        if not download_file(url, cwd, decompress=True, logger=logger):
+            return False
+        paths = find_with_regexp('setup\\.py', cwd, True)
+        if not paths:
+            raise LoggedError(logger, "No setup.py found in %s for %s", cwd, component)
+        cwd = os.path.dirname(paths[0])
+        package = '.'
 
-                def package_installer():
-                    return download_github_release(
-                        code_path, repo,
-                        package_install.get("github_release", "master"),
-                        directory=directory, logger=logger)
-            elif url := package_install.get("download_url"):
-                python_path = os.path.join(code_path, directory)
-                if not os.path.exists(python_path):
-                    os.makedirs(python_path)
+    elif "pip" not in package_install:
+        raise LoggedError(logger, "Invalid package_install: must define pip, "
+                                  "github_repository or download_url")
 
-                def package_installer():
-                    return download_file(url, python_path, decompress=True, logger=logger)
-            else:
-                raise LoggedError(logger, "Invalid package_install: must define pip, "
-                                          "github_repository or download_url")
-    return package_installer, python_path
+    logger.info('pip installing %s', component_root)
+    return not pip_install(package, logger=logger, cwd=cwd)
 
 
 def install(*infos, **kwargs):
@@ -177,9 +178,7 @@ def install(*infos, **kwargs):
             if class_name:
                 logger.info(f"Class to be installed for this component: {class_name}")
             python_path = info.pop("python_path", None)
-            package_install, python_path = \
-                get_package_install(info, os.path.join(general_abspath, code_path),
-                                    logger, python_path)
+            package_install = info.get("package_install")
 
             def _imported_class():
                 return get_component_class(
@@ -191,16 +190,19 @@ def install(*infos, **kwargs):
                 try:
                     imported_class = _imported_class()
                 except ComponentNotFoundError:
-                    if not package_install:
-                        raise
-                    if package_install():
-                        importlib.invalidate_caches()
-                        imported_class = _imported_class()
+                    if package_install:
+                        if do_package_install(component, package_install,
+                                              os.path.join(general_abspath, code_path),
+                                              logger):
+                            importlib.invalidate_caches()
+                            imported_class = _imported_class()
+                        else:
+                            logger.error(
+                                f"Package install failed for '{name_w_kind}'. Skipping.")
+                            unknown_components += [name_w_kind]
+                            continue
                     else:
-                        logger.error(
-                            f"Package install failed for '{name_w_kind}'. Skipping.")
-                        unknown_components += [name_w_kind]
-                        continue
+                        raise
                 except Exception:
                     raise
             except ComponentNotFoundError:
@@ -497,7 +499,7 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
     return True
 
 
-def pip_install(packages, upgrade=False, logger=None):
+def pip_install(packages, upgrade=False, logger=None, cwd=None):
     """
     Takes package name or list of them.
 
@@ -508,7 +510,7 @@ def pip_install(packages, upgrade=False, logger=None):
     cmd = [sys.executable, '-m', 'pip', 'install']
     if upgrade:
         cmd += ['--upgrade']
-    res = subprocess.call(cmd + packages)
+    res = subprocess.call(cmd + packages, cwd=cwd)
     if res:
         msg = f"pip: error installing packages '{packages}'"
         logger.error(msg) if logger else print(msg, file=sys.stderr)
