@@ -81,7 +81,7 @@ params:
 """
 
 
-def test_NPIPE_install(packages_path, skip_not_installed):
+def test_planck_NPIPE(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
     from cobaya.yaml import yaml_load
     info = yaml_load(yaml)
