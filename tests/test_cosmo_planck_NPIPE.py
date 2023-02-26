@@ -14,7 +14,7 @@ likelihood:
   planck_NPIPE_highl_CamSpec.TTTEEE: null
   planckpr4lensing:
     package_install:
-      github_repository: cmbant/planck_PR4_lensing
+      github_repository: carronj/planck_PR4_lensing
       min_version: 1.0.2
 params:
   logA:

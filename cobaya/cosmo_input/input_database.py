@@ -428,7 +428,7 @@ like_cmb: InfoDict = {
             "planck_2018_lowl.EE_native": None,
             "planck_NPIPE_highl_CamSpec.TTTEEE": None,
             "planckpr4lensing":
-                {'package_install': {'github_repository': 'cmbant/planck_PR4_lensing',
+                {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
                                      'min_version': '1.0.2'}}}},
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
