@@ -57,8 +57,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
         logger.info('Downloading code from github (%s)', repo)
         directory = directory or repo.split("/")[-1]
         if not download_github_release(
-                full_code_path, repo,
-                package_install.get("github_release", "master"),
+                full_code_path, repo, package_install.get("github_release"),
                 directory=directory, logger=logger):
             return False
         cwd = os.path.join(full_code_path, directory)
@@ -67,9 +66,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
     elif url := package_install.get("download_url"):
         logger.info('Downloding code from %s', url)
         cwd = os.path.join(full_code_path, directory or component_root)
-        if not os.path.exists(cwd):
-            os.makedirs(cwd)
-        if not download_file(url, cwd, decompress=True, logger=logger):
+        if not download_file(url, cwd, logger=logger):
             return False
         paths = find_with_regexp('setup\\.py', cwd, True)
         if not paths:
@@ -82,7 +79,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
                                   "github_repository or download_url")
 
     logger.info('pip installing %s', component_root)
-    return not pip_install(package, logger=logger, cwd=cwd)
+    return not pip_install(package, upgrade=True, logger=logger, cwd=cwd)
 
 
 def install(*infos, **kwargs):
@@ -178,18 +175,22 @@ def install(*infos, **kwargs):
             if class_name:
                 logger.info(f"Class to be installed for this component: {class_name}")
             python_path = info.pop("python_path", None)
-            package_install = info.get("package_install")
+            package_install = info.get("package_install") or {}
+            min_version = package_install.get('min_version')
 
             def _imported_class():
                 return get_component_class(
                     component, kind=kind, component_path=python_path,
-                    class_name=class_name, logger=logger,
+                    class_name=class_name, logger=logger, min_package_version=min_version,
                     allow_internal=not package_install)
 
             try:
                 try:
+                    if package_install and (
+                            kwargs_install["force"] or kwargs.get("upgrade")):
+                        raise ComponentNotFoundError(logger)
                     imported_class = _imported_class()
-                except ComponentNotFoundError:
+                except (ComponentNotFoundError, VersionCheckError):
                     if package_install:
                         if do_package_install(component, package_install,
                                               os.path.join(general_abspath, code_path),
@@ -254,7 +255,7 @@ def install(*infos, **kwargs):
                     is_old_version_msg = str(excpt)
             if has_been_installed:  # no VersionCheckError was raised
                 logger.info("External dependencies for this component already installed.")
-                if kwargs.get("test", False):
+                if kwargs.get("test"):
                     continue
                 if kwargs_install["force"] and not kwargs.get("skip_global"):
                     logger.info("Forcing re-installation, as requested.")
@@ -264,9 +265,9 @@ def install(*infos, **kwargs):
             elif is_old_version_msg:
                 logger.info(f"Version check failed: {is_old_version_msg}")
                 obsolete_components += [name_w_kind]
-                if kwargs.get("test", False):
+                if kwargs.get("test"):
                     continue
-                if not kwargs.get("upgrade", False) and not kwargs.get("force", False):
+                if not kwargs.get("upgrade") and not kwargs.get("force"):
                     logger.info("Skipping because '--upgrade' not requested.")
                     continue
             else:
@@ -275,7 +276,7 @@ def install(*infos, **kwargs):
                     logger.info(
                         "(If you expected this to be already installed, re-run "
                         "`cobaya-install` with --debug to get more verbose output.)")
-                if kwargs.get("test", False):
+                if kwargs.get("test"):
                     # We are only testing whether it was installed, so consider it failed
                     failed_components += [name_w_kind]
                     continue
@@ -371,8 +372,7 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
         return False
 
 
-def download_file(url, path, size=None, decompress=False, no_progress_bars=False,
-                  logger=None):
+def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
     """
     Downloads (and optionally decompresses) a file into a given path.
 
@@ -380,7 +380,6 @@ def download_file(url, path, size=None, decompress=False, no_progress_bars=False
     :param path: path to where the file should be downloaded.
     :param size: size in bytes of the file to download; can be used to show percentages
        when the url headers do not show the actual size.
-    :param decompress: decompress file if a compressed format extension found.
     :param no_progress_bars: no progress bars shown; use when output is saved into a text
        file (e.g. when running on a cluster).
     :param logger: logger to use for reporting information; a new logger is created if not
@@ -422,9 +421,9 @@ def download_file(url, path, size=None, decompress=False, no_progress_bars=False
                 "Error downloading %s' to folder '%s': %s", url, tmp_path, excpt)
             return False
         logger.debug('Got: %s', filename)
-        if not decompress:
-            return True
         extension = os.path.splitext(filename)[-1][1:]
+        if not os.path.exists(path):
+            os.makedirs(path)
         try:
             if extension == "zip":
                 from zipfile import ZipFile
@@ -443,7 +442,7 @@ def download_file(url, path, size=None, decompress=False, no_progress_bars=False
             return False
 
 
-def download_github_release(base_directory, repo_name, release_name, asset=None,
+def download_github_release(base_directory, repo_name, release_name=None, *, asset=None,
                             directory=None, no_progress_bars=False, logger=None):
     """
     Downloads a release (i.e. a tagged commit) or a release asset from a GitHub repo.
@@ -452,6 +451,7 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
        created if it does not exist.
     :param repo_name: repository name as ``user/repo``.
     :param release_name: name or tag of the release.
+                         If not set, uses latest default branch.
     :param asset: download just an asset (attached file) from a release.
     :param directory: name of the directory that will contain the asset or release, if
        different ``repo_name``.
@@ -469,6 +469,10 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
         github_user = "CobayaSampler"
     base_url = r"https://github.com/" + github_user + "/" + repo_name
     download_directory = base_directory
+    if not release_name:
+        data = requests.get(
+            "https://api.github.com/repos/" + github_user + "/" + repo_name).json()
+        release_name = (data or {}).get('default_branch', 'main')
     if asset:
         url = (base_url + "/releases/download/" + release_name + "/" + asset)
         # Assest would get decompressed in base directory
@@ -476,9 +480,7 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
     else:
         url = (base_url + "/archive/" + release_name + ".tar.gz")
 
-    if not os.path.exists(download_directory):
-        os.makedirs(download_directory)
-    if not download_file(url, download_directory, decompress=True,
+    if not download_file(url, download_directory,
                          no_progress_bars=no_progress_bars, logger=logger):
         return False
     # In releases, not assets, remove version number from directory name
@@ -499,7 +501,7 @@ def download_github_release(base_directory, repo_name, release_name, asset=None,
     return True
 
 
-def pip_install(packages, upgrade=False, logger=None, cwd=None):
+def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     """
     Takes package name or list of them.
 
@@ -510,7 +512,8 @@ def pip_install(packages, upgrade=False, logger=None, cwd=None):
     cmd = [sys.executable, '-m', 'pip', 'install']
     if upgrade:
         cmd += ['--upgrade']
-    res = subprocess.call(cmd + packages, cwd=cwd)
+    cmd += list(options)
+    res = subprocess.call(cmd + packages, **kwargs)
     if res:
         msg = f"pip: error installing packages '{packages}'"
         logger.error(msg) if logger else print(msg, file=sys.stderr)

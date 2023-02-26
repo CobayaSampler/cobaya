@@ -176,7 +176,7 @@ def load_module(name, package=None, path=None, min_version=None,
     if path and check_path:
         check_module_path(module, path)
     if min_version:
-        check_module_version(module, min_version)
+        check_module_version(module, str(min_version))
     return module
 
 

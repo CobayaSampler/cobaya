@@ -32,18 +32,20 @@ try:
         # noinspection PyUnresolvedReferences
         from PySide6.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
             QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
-            QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog, QTableWidget, \
-            QTableWidgetItem, QAbstractItemView
+            QFileDialog, QCheckBox, QLabel, QMenuBar, QDialog, QTableWidget, \
+            QTableWidgetItem, QAbstractItemView, QMainWindow
         # noinspection PyUnresolvedReferences
-        from PySide6.QtGui import QColor
+        from PySide6.QtGui import QColor, QAction
         # noinspection PyUnresolvedReferences
-        from PySide6.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
+        from PySide6.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings, QPoint
+
+        set_attributes = []
     except ImportError:
         # noinspection PyUnresolvedReferences
         from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
             QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
             QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog, QTableWidget, \
-            QTableWidgetItem, QAbstractItemView
+            QTableWidgetItem, QAbstractItemView, QMainWindow
         # noinspection PyUnresolvedReferences
         from PySide2.QtGui import QColor
         # noinspection PyUnresolvedReferences
@@ -175,10 +177,18 @@ class MainWindow(QWidget):
         self.read_settings()
         self.show()
 
+    def getScreen(self):
+        try:
+            return self.screen().availableGeometry()
+        except:
+            return QApplication.screenAt(
+                self.mapToGlobal(QPoint(self.width() // 2, 0))).availableGeometry()
+
     def read_settings(self):
+
         settings = get_settings()
         # noinspection PyArgumentList
-        screen = QApplication.desktop().screenGeometry()
+        screen = self.getScreen()
         h = min(screen.height() * 5 / 6., 900)
         size = QSize(min(screen.width() * 5 / 6., 1200), h)
         pos = settings.value("pos", None)
@@ -348,8 +358,7 @@ class DefaultsDialog(QWidget):
         self.setWindowTitle("%s : %s" % (kind, component))
         self.setGeometry(0, 0, 500, 500)
         # noinspection PyArgumentList
-        self.move(
-            QApplication.desktop().screenGeometry().center() - self.rect().center())
+        self.move(parent.getScreen().center() - self.rect().center())
         self.show()
         # Main layout
         self.layout = QVBoxLayout()
@@ -405,7 +414,7 @@ def gui_script():
 
     window = MainWindow()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

@@ -419,7 +419,7 @@ cmb_sampler_mcmc: InfoDict = {"mcmc": dict(drag=False, **default_mcmc_options)}
 like_cmb: InfoDict = {
     none: {},
     "planck_NPIPE": {
-        "desc": "Planck NPIPE (no clik; polarized NPIPE CMB + lensing)",
+        "desc": "Planck NPIPE (native; polarized NPIPE CMB + lensing)",
         "sampler": cmb_sampler_recommended,
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
@@ -427,7 +427,9 @@ like_cmb: InfoDict = {
             "planck_2018_lowl.TT_native": None,
             "planck_2018_lowl.EE_native": None,
             "planck_NPIPE_highl_CamSpec.TTTEEE": None,
-            "planck_2018_lensing.native": None}},
+            "planckpr4lensing":
+                {'package_install': {'github_repository': 'cmbant/planck_PR4_lensing',
+                                     'min_version': '1.0.2'}}}},
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
         "sampler": cmb_sampler_recommended,

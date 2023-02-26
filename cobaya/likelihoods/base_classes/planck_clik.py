@@ -213,7 +213,7 @@ class PlanckClik(Likelihood):
                 # (no actual effect if missing or wrong!)
                 size = {"1900": 314153370, "1903": 4509715660, "151902": 60293120,
                         "151905": 5476083302, "151903": 8160437862}.get(product_id)
-                if not download_file(url, paths["data"], size=size, decompress=True,
+                if not download_file(url, paths["data"], size=size,
                                      logger=log, no_progress_bars=no_progress_bars):
                     log.error("Not possible to download this likelihood.")
                     success = False
@@ -344,8 +344,7 @@ def install_clik(path, no_progress_bars=False):
         if exit_status:
             raise LoggedError(log, "Failed installing '%s'.", req)
     log.info("Downloading...")
-    if not download_file(clik_url, path, decompress=True,
-                         no_progress_bars=no_progress_bars, logger=log):
+    if not download_file(clik_url, path, no_progress_bars=no_progress_bars, logger=log):
         log.error("Not possible to download clik.")
         return False
     source_dir = get_clik_source_folder(path)

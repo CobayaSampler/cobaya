@@ -323,7 +323,8 @@ def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # Reserved attributes not necessarily already in default info:
             reserved = {"external", "class", "provides", "requires", "renames",
-                        "input_params", "output_params", "python_path", "aliases"}
+                        "input_params", "output_params", "python_path", "aliases",
+                        "package_install"}
             options_not_recognized = set(input_block[name]).difference(
                 chain(reserved, updated[name], annotations))
             if options_not_recognized:
