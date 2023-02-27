@@ -17,6 +17,7 @@ likelihood:
       github_repository: carronj/planck_PR4_lensing
       min_version: 1.0.2
 params:
+  tau: 0.05
   logA:
     prior:
       min: 1.61
@@ -30,7 +31,6 @@ params:
     drop: true
   As:
     value: 'lambda logA: 1e-10*np.exp(logA)'
-    latex: A_\mathrm{s}
   ns:
     prior:
       min: 0.8
@@ -39,8 +39,6 @@ params:
       dist: norm
       loc: 0.965
       scale: 0.004
-    proposal: 0.002
-    latex: n_\mathrm{s}
   theta_MC_100:
     prior:
       min: 0.5
@@ -49,17 +47,11 @@ params:
       dist: norm
       loc: 1.04109
       scale: 0.0004
-    proposal: 0.0002
-    latex: 100\theta_\mathrm{MC}
     drop: true
     renames: theta
-  cosmomc_theta:
+  thetastar:
     value: 'lambda theta_MC_100: 1.e-2*theta_MC_100'
     derived: false
-  H0:
-    latex: H_0
-    min: 20
-    max: 100
   ombh2:
     prior:
       min: 0.005
@@ -68,7 +60,6 @@ params:
       dist: norm
       loc: 0.0224
       scale: 0.0001
-    proposal: 0.0001
   omch2:
     prior:
       min: 0.001
@@ -81,7 +72,7 @@ params:
 """
 
 
-def test_planck_NPIPE(packages_path, skip_not_installed):
+def test_planck_NPIPE_install(packages_path):
     packages_path = process_packages_path(packages_path)
     from cobaya.yaml import yaml_load
     info = yaml_load(yaml)
@@ -90,9 +81,8 @@ def test_planck_NPIPE(packages_path, skip_not_installed):
     info['packages_path'] = packages_path
 
     model = get_model(info)
-    pars = [3.04920413, 0.96399503, 1.04240171, 0.02235048, 0.12121379,
+    pars = (3.04920413, 0.96399503, 1.04240171, 0.02235048, 0.12121379,
             0.99818025, 10.35947284, 18.67072461, 7.54932654, 0.83715482,
-            0.94987418, 1.23385364, 0.98781552, 1.013345]
+            0.94987418, 1.23385364, 0.98781552, 1.013345)
 
-    print(model.logposterior(pars))
-    assert np.isclose(model.logposterior(pars).logpost, -6584.6479, rtol=1e-4)
+    assert np.isclose(model.logposterior(pars).logpost, -5889.873, rtol=1e-4)

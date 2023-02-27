@@ -120,7 +120,7 @@ script:
   - pytest tests/ --cov -v -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
   - mv .coverage .coverage.pytest; mv covers/.cov* .
   # Test external cosmological likelihoods
-  - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install
+  - pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
   - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   - pip install ./planck_lensing_external --quiet
   - coverage run --parallel-mode -m unittest plancklensing.tests.test_likes

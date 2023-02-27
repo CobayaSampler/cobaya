@@ -204,7 +204,7 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
    In any of these methods, if you intend to switch between different versions or
    modifications of CAMB you should not install CAMB as python package using
-   ``python setup.py install``, as the official instructions suggest. It is not necessary
+   ``pip install``, as the official instructions suggest. It is not necessary
    if you indicate the path to your preferred installation as explained above.
 """
 
