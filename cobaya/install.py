@@ -34,6 +34,7 @@ from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
 from cobaya.typing import InputDict, InfoDict
+from cobaya.yaml import yaml_load_file
 
 _banner_symbol = "="
 _banner_length = 80
@@ -86,7 +87,7 @@ def install(*infos, **kwargs):
     """
     Installs the external packages required by the components mentioned in ``infos``.
 
-    ``infos`` can be input dictionaries or single component names.
+    ``infos`` can be input dictionaries, single component names, or names of yaml files
 
     :param force: force re-installation of apparently installed packages (default:
        ``False``).
@@ -109,6 +110,9 @@ def install(*infos, **kwargs):
         logger_setup(debug=debug)
         logger = get_logger("install")
     path = kwargs.get("path")
+    infos = [yaml_load_file(info)
+             if isinstance(info, str) and info.split('.')[-1] in Extension.yamls
+             else info for info in infos]
     infos_not_single_names = [info for info in infos if isinstance(info, Mapping)]
     if not path:
         path = resolve_packages_path(*infos_not_single_names)
@@ -147,7 +151,7 @@ def install(*infos, **kwargs):
     unknown_components = []  # could not be identified
     failed_components = []  # general errors
     obsolete_components = []  # older or unknown version already installed
-    skip_keywords_arg = set(kwargs.get("skip", []) or [])
+    skip_keywords_arg = set(kwargs.get("skip") or [])
     # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
     skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
     skip_keywords_env = set(

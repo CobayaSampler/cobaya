@@ -2,6 +2,7 @@
 
 ### General
 
+- Components in yaml files referring to external Python modules can now give `package_install` settings to specify whether installed from pip, github or URL when cobaya-install is run.
 - Deprecated `debug_file` in input, in favour of `debug: [filename]`.
 - `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
 - Warning for stuck chains not more tolerant of many fast prior rejections
@@ -16,7 +17,7 @@
 - Added native version of `planck_2018_lowl.EE`.
 - Added native version of `planck_2018_low.TT`. (thanks @eirikgje)
 - Added links to external likelihoods Planck PR4 Lensing, pyWMAP.
-- GUI now support PySide6
+- GUI now support PySide6 and inclues latest NPIPE fully Python likelihood configuration
 - Fixed bug in BAO likelihood (#250, thanks @Pablo-Lemos)
 - Added files for the BAO DR12 and DR16 LRG likelihoods (PR #235; thanks @markm42)
 - Test updates for CAMB 1.4 with updated constants, BBN model and neutrino nnu=3.044
