@@ -637,10 +637,10 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             except Exception as excpt:
                 try:
                     check_if_ComponentNotFoundError_and_raise(
-                        excpt, not_found_msg=
-                        _not_found_msg[:-1] + (
-                            " as internal, trying external." if allow_external
-                            else " as internal component."))
+                        excpt, not_found_msg=_not_found_msg[:-1]
+                                             + (" as internal, trying external."
+                                                if allow_external
+                                                else " as internal component."))
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. try external (if allowed)
     if allow_external:

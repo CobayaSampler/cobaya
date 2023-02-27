@@ -117,7 +117,7 @@ script:
   # mpi tests
   - mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report ;
   - mkdir covers; mv .coverage.* covers; ls -ltra covers
-  - pytest tests/ --cov -v -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
+  - pytest tests/ --cov -vv -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
   - mv .coverage .coverage.pytest; mv covers/.cov* .
   # Test external cosmological likelihoods
   - pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
