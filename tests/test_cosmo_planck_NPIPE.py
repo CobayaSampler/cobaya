@@ -18,57 +18,16 @@ likelihood:
       min_version: 1.0.2
 params:
   tau: 0.05
-  logA:
-    prior:
-      min: 1.61
-      max: 3.91
-    ref:
-      dist: norm
-      loc: 3.05
-      scale: 0.001
-    proposal: 0.001
-    latex: \log(10^{10} A_\mathrm{s})
-    drop: true
+  logA: 3.04920413
   As:
     value: 'lambda logA: 1e-10*np.exp(logA)'
-  ns:
-    prior:
-      min: 0.8
-      max: 1.2
-    ref:
-      dist: norm
-      loc: 0.965
-      scale: 0.004
-  theta_MC_100:
-    prior:
-      min: 0.5
-      max: 10
-    ref:
-      dist: norm
-      loc: 1.04109
-      scale: 0.0004
-    drop: true
-    renames: theta
+  ns: 0.96399503
+  theta_MC_100: 1.04240171
   thetastar:
     value: 'lambda theta_MC_100: 1.e-2*theta_MC_100'
     derived: false
-  ombh2:
-    prior:
-      min: 0.005
-      max: 0.1
-    ref:
-      dist: norm
-      loc: 0.0224
-      scale: 0.0001
-  omch2:
-    prior:
-      min: 0.001
-      max: 0.99
-    ref:
-      dist: norm
-      loc: 0.12
-      scale: 0.001
-    proposal: 0.0005
+  ombh2: 0.02235048
+  omch2: 0.12121379
 """
 
 
@@ -81,8 +40,7 @@ def test_planck_NPIPE_install(packages_path):
     info['packages_path'] = packages_path
 
     model = get_model(info)
-    pars = (3.04920413, 0.96399503, 1.04240171, 0.02235048, 0.12121379,
-            0.99818025, 10.35947284, 18.67072461, 7.54932654, 0.83715482,
+    pars = (0.99818025, 10.35947284, 18.67072461, 7.54932654, 0.83715482,
             0.94987418, 1.23385364, 0.98781552, 1.013345)
 
     assert np.isclose(model.logposterior(pars).logpost, -5889.873, rtol=1e-4)

@@ -180,10 +180,26 @@ Likelihoods, like Theory classes,  can also provide derived parameters. To do th
 Alternatively, you could implement the Theory-inherited ``calculate`` method,
 and set both ``state['logp']`` and ``state['derived']``.
 
+If you distribute your package on pypi or github, any user will have to install your package before using it. This can be done automatically from an input yaml file (using ``cobaya-install``) if the user specifies a ``package_install`` block. For example, the Planck NPIPE cosmology likelihoods can be used from a yaml block
+
+.. code:: yaml
+
+    likelihood:
+      planck_2018_lowl.TT_native: null
+      planck_2018_lowl.EE_native: null
+      planck_NPIPE_highl_CamSpec.TTTEEE: null
+      planckpr4lensing:
+        package_install:
+          github_repository: carronj/planck_PR4_lensing
+          min_version: 1.0.2
+
+Running ``cobaya-install`` on this input will download planckpr4lensing from
+github and then pip install it (since it is not an internal package provided with Cobaya, unlike the other likelihoods). The ``package_install`` block can instead use ``download_url`` for a zip download, or just "pip" to install from pypi. The options are the same as the ``install_options`` for installing likelihood data using the ``InstallableLikelihood`` class described below.
+
 InstallableLikelihood
 ---------------------
 
-This supports the default auto-installation. Just add a class-level string specifying installation options, e.g.
+This supports the default data auto-installation. Just add a class-level string specifying installation options, e.g.
 
 .. code:: python
 
@@ -284,4 +300,3 @@ Inheritance diagram for internal cosmology likelihoods
     :parts: 1
     :private-bases:
     :top-classes: cobaya.likelihood.Likelihood
-
