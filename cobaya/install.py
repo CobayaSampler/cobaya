@@ -126,7 +126,7 @@ def install(*infos, **kwargs):
     general_abspath = os.path.abspath(path)
     logger.info("Installing external packages at '%s'", general_abspath)
     # Set the installation path in the global config file
-    if not kwargs.get("no_set_global", False) and not kwargs.get("test", False):
+    if not kwargs.get("no_set_global") and not kwargs.get("test"):
         write_packages_path_in_config_file(general_abspath)
         logger.info(
             "The installation path has been written into the global config file: %s",

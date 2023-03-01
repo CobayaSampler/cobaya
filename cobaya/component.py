@@ -350,7 +350,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         :return: name string
         """
-        return self._name
+        return getattr(self, "_name", self.__class__.__name__)
 
     def __repr__(self):
         return self.get_name()
