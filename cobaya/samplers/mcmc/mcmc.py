@@ -9,7 +9,7 @@
 import re
 import datetime
 from itertools import chain
-from typing import Sequence, Optional, Callable
+from typing import Sequence, Optional, Callable, Union, TYPE_CHECKING
 import numpy as np
 from pandas import DataFrame
 
@@ -28,6 +28,11 @@ from cobaya.yaml import yaml_dump_file
 from cobaya.model import LogPosterior
 from cobaya import mpi
 
+# Avoid importing GetDist if not necessary
+if TYPE_CHECKING:
+    from getdist import MCSamples
+
+
 # Suppresses warnings about first defining attrs outside __init__ (needed for resuming).
 # pylint: disable=attribute-defined-outside-init
 
@@ -37,6 +42,7 @@ class MCMC(CovmatSampler):
     Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC)
     \cite{Lewis:2002ah,Lewis:2013hha}.
     """
+
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
         "burn_in", "callback_function", "callback_every", "max_tries", "output_every",
         "learn_every", "learn_proposal_Rminus1_max", "learn_proposal_Rminus1_max_early",
@@ -107,6 +113,8 @@ class MCMC(CovmatSampler):
         self.output_every = NumberWithUnits(self.output_every, "s", dtype=int)
         if self.temperature is None:
             self.temperature = 1
+        elif self.temperature < 1:
+            self.mpi_warning("Sampling temperatures <1 can lead to innacurate inference.")
         if is_main_process():
             if self.output.is_resuming() and (
                     max(self.mpi_size or 0, 1) != mpi.size()):
@@ -734,6 +742,7 @@ class MCMC(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
+                # pylint: disable=protected-access
                 mcsamples = self.collection._sampled_to_getdist(
                     first=use_first, tempered=True)
                 try:
@@ -750,6 +759,7 @@ class MCMC(CovmatSampler):
             else:
                 try:
                     mcsamples_list = [
+                        # pylint: disable=protected-access
                         self.collection._sampled_to_getdist(
                             first=i * cut, last=(i + 1) * cut - 1, tempered=True)
                         for i in range(1, m)]
@@ -857,6 +867,69 @@ class MCMC(CovmatSampler):
 
     # Finally: returning the computed products ###########################################
 
+    def samples(self,
+                combined: bool = False,
+                skip_samples: float = 0,
+                to_getdist: bool = False,
+                ) -> Union[SampleCollection, "MCSamples"]:
+        """
+        Returns the sample of accepted steps.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied previously to concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
+            this option and ``combined`` are ``True``, the latter is ignored and a
+            multi-chain :class:'getdist.MCSamples` object is created out of the chains of
+            all MPI processes.
+
+        Returns
+        -------
+        SampleCollection, getdist.MCSamples
+            The sample of accepted steps.
+        """
+        collection = self.collection.skip_samples(skip_samples, inplace=False)
+        if to_getdist:
+            collection = collection.to_getdist(model=self.model)
+        if combined and more_than_one_process():
+            collections = mpi.gather(collection)
+            if is_main_process():
+                if to_getdist:
+                    collections[0].loadChains(
+                        root=None,
+                        files_or_samples=[c.samples for c in collections],
+                        weights=[c.weights for c in collections],
+                        loglikes=[c.loglikes for c in collections],
+                    )
+                    collection = collections[0]
+                else:
+                    if not skip_samples:
+                        self.mpi_warning(
+                            "When combining chains, it is recommended to remove some "
+                            "initial fraction, e.g. 'skip_samples=0.3'"
+                        )
+                    for collection in collections[1:]:
+                        # pylint: disable=protected-access
+                        collections[0]._append(collection)
+                    collection = collections[0]
+            collection = mpi.share_mpi(collection)
+        if self.temperature != 1 and not to_getdist:
+            self.mpi_warning(
+                "The MCMC chain(s) are stored with temperature != 1. "
+                "Keep that in mind when operating on them, or detemper (in-place) with "
+                "products()['sample'].reset_temperature()'.")
+        return collection
+
     def products(
             self,
             combined: bool = False,
@@ -878,8 +951,11 @@ class MCMC(CovmatSampler):
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is
             applied previously to concatenation. Forces the return of a copy.
-        to_getdist: bool, default: True
-            If ``True``, returns sample collections as :class:'getdist.MCSamples`.
+        to_getdist: bool, default: False
+            If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
+            this option and ``combined`` are ``True``, the latter is ignored and a
+            multi-chain :class:'getdist.MCSamples` object is created out of the chains of
+            all MPI processes.
 
         Returns
         -------
@@ -888,27 +964,13 @@ class MCMC(CovmatSampler):
             accepted steps under ``"sample"``, and a progress report table under
             ``"progress"``.
         """
-        collection = self.collection.skip_samples(skip_samples, inplace=False)
-        if combined and more_than_one_process():
-            if not skip_samples:
-                self.mpi_warning(
-                    "When combining chains, it is recommended to remove some initial "
-                    "fraction, e.g. 'skip_samples=0.3'"
-                )
-            collections = mpi.gather(collection)
-            if is_main_process():
-                for collection in collections[1:]:
-                    collections[0]._append(collection)
-                collection = collections[0]
-            collection = mpi.share_mpi(collection)
-        if to_getdist:
-            collection = self.collection.to_getdist(model=self.model)
-        products = {"sample": collection}
-        if self.temperature != 1:
-            self.mpi_warning(
-                "The MCMC chain(s) are stored with temperature != 1. "
-                "Keep that in mind when operating on them, or detemper (in-place) with "
-                "products()['sample'].reset_temperature()'.")
+        products = {
+            "sample": self.samples(
+                combined=combined,
+                skip_samples=skip_samples,
+                to_getdist=to_getdist
+            )
+        }
         products["progress"] = share_mpi(getattr(self, "progress", None))
         return products
 
