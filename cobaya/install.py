@@ -103,6 +103,9 @@ def install(*infos, **kwargs):
        file (e.g. when running on a cluster) (default: ``False``).
     :param no_set_global: do not store the installation path for later runs (default:
        ``False``).
+
+    :return: ``True`` if all components are installed without skips, ``False`` if
+                  some components skipped, None (or exception raised) otherwise
     """
     debug = kwargs.get("debug", False)
     logger = kwargs.get("logger")
@@ -157,6 +160,7 @@ def install(*infos, **kwargs):
     skip_keywords_env = set(
         os.environ.get(install_skip_env, "").replace(",", " ").lower().split())
     skip_keywords = skip_keywords_arg.union(skip_keywords_env)
+    skipped = False
     # Combine all requested components and install them
     # NB: components mentioned by name may be repeated with those given in dict infos.
     #     That's OK, because the install check will skip them in the 2nd pass
@@ -169,6 +173,7 @@ def install(*infos, **kwargs):
                                 symbol=_banner_symbol, length=_banner_length), end="")
             print()
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, logger):
+                skipped = True
                 continue
             info = components_infos[component]
             if isinstance(info, str) or "external" in info:
@@ -223,6 +228,7 @@ def install(*infos, **kwargs):
             else:
                 if _skip_helper(imported_class.__name__.lower(), skip_keywords,
                                 skip_keywords_env, logger):
+                    skipped = True
                     continue
             # Update the name if the kind was unknown
             if not kind:
@@ -361,6 +367,7 @@ def install(*infos, **kwargs):
     if not unknown_components and not failed_components and not obsolete_components:
         logger.info("All requested components' dependencies correctly installed at "
                     f"{general_abspath}")
+        return not skipped
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):

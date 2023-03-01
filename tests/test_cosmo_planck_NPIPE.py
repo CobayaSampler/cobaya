@@ -1,6 +1,10 @@
 import numpy as np
-from cobaya.model import get_model
+import pytest
+
 from cobaya.install import install
+from cobaya.model import get_model
+from cobaya.yaml import yaml_load
+
 from .common import process_packages_path
 
 yaml = r"""
@@ -31,15 +35,14 @@ params:
 """
 
 
-def test_planck_NPIPE_install(packages_path):
+def test_planck_NPIPE_p_CamSpec_camb_install(packages_path):
     packages_path = process_packages_path(packages_path)
-    from cobaya.yaml import yaml_load
     info = yaml_load(yaml)
-    install(info, path=packages_path)
+    result = install(info, path=packages_path)
+    if result is False:
+        raise pytest.xfail("Some component(s) skipped")
 
-    info['packages_path'] = packages_path
-
-    model = get_model(info)
+    model = get_model(info, packages_path=packages_path)
     pars = (0.99818025, 10.35947284, 18.67072461, 7.54932654, 0.83715482,
             0.94987418, 1.23385364, 0.98781552, 1.013345)
 
