@@ -582,9 +582,9 @@ class Prior(HasLogger):
         """
         self.log.debug("Evaluating prior at %r", x)
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
-            logps = self._uniform_logp + (sum(logpdf(xi) for logpdf, xi in
-                                              zip(self._non_uniform_logpdf,
-                                                  x[self._non_uniform_indices]))
+            logps = self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
+                                               zip(self._non_uniform_logpdf,
+                                                   x[self._non_uniform_indices])])
                                           if len(self._non_uniform_indices) else 0)
         else:
             logps = -np.inf
@@ -654,8 +654,7 @@ class Prior(HasLogger):
                                   ", a list of two numbers for normal mean and deviation,"
                                   "or a dict with parameters for a scipy distribution.")
         # Re-set the pointlike-ref property
-        self._ref_is_pointlike = None
-        self.reference_is_pointlike  # pylint: disable=pointless-statement
+        self._set_pointlike()
 
     @property
     def reference_is_pointlike(self) -> bool:
@@ -663,12 +662,15 @@ class Prior(HasLogger):
         Whether there is a fixed reference point for all parameters, such that calls to
         :func:`Prior.reference` would always return the same.
         """
-        if self._ref_is_pointlike is None:
-            self._ref_is_pointlike = all(
-                # np.nan is a numbers.Number instance, but not a fixed ref (uses prior)
-                (isinstance(ref, numbers.Number) and ref is not np.nan)
-                for ref in self.ref_pdf)
+        if not hasattr(self, "_ref_is_pointlike"):
+            self._set_pointlike()
         return self._ref_is_pointlike
+
+    def _set_pointlike(self):
+        self._ref_is_pointlike = all(
+            # np.nan is a numbers.Number instance, but not a fixed ref (uses prior)
+            (isinstance(ref, numbers.Number) and not np.isnan(ref))
+            for ref in self.ref_pdf)
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
                   warn_if_no_ref=True, random_state=None) -> np.ndarray:
