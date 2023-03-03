@@ -20,11 +20,13 @@ cache:
     - /home/travis/build/CosmoPars/packages/data/des_data
     - /home/travis/build/CosmoPars/packages/data/planck_2018_pliklite_native
     - /home/travis/build/CosmoPars/packages/data/planck_2018_lowE_native
+    - /home/travis/build/CosmoPars/packages/data/planck_2018_lowT_native
 
 # (Pre)Installation
 jobs:
   include:
-    - dist: focal
+    - if: branch !~ ^test.*
+      dist: focal
       name: "Minimum requisites for Cosmology: gcc-7, Python 3.8"
       addons:
         apt:
@@ -34,7 +36,8 @@ jobs:
       env:
         - GCC_VERSION="7"
       python: "3.8"
-    - name: "Typical scenario: latest Ubuntu LTS"
+    - if: branch !~ ^test.*
+      name: "Typical scenario: latest Ubuntu LTS"
       dist: jammy
       addons:
         apt:
@@ -43,7 +46,8 @@ jobs:
       env:
         - GCC_VERSION="ubuntu"
       python: "3.9"
-    - name: "Anaconda: jammy LTS Python 3.10"
+    - if: branch !~ ^test.*
+      name: "Anaconda: jammy LTS Python 3.10"
       dist: jammy
       addons:
         apt:

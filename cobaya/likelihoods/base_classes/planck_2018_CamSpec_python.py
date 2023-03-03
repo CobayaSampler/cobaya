@@ -14,8 +14,6 @@ or other combination with TE and EE.
 Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500,
 or pass a dictionary of ranges for each spectrum.
 
-##TODO: calPlanck vs Aplanck
-
 """
 
 # Global
@@ -50,8 +48,12 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                        "github_release": "v1", "asset": "CamSpec2018.zip",
                        "directory": "planck_2018_CamSpec_native"}
 
-    bibtex_file = 'planck2018.bibtex'
     type = "CMB"
+
+    @classmethod
+    def get_bibtex(cls):
+        from cobaya.likelihoods.base_classes import Planck2018Clik
+        return Planck2018Clik.get_bibtex()
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units

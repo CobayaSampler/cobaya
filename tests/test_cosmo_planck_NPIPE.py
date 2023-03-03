@@ -13,8 +13,8 @@ theory:
     extra_args:
       lens_potential_accuracy: 1
 likelihood:
-  planck_2018_lowl.TT_native: null
-  planck_2018_lowl.EE_native: null
+  planck_2018_lowl.TT: null
+  planck_2018_lowl.EE: null
   planck_NPIPE_highl_CamSpec.TTTEEE: null
   planckpr4lensing:
     package_install:

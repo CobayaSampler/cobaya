@@ -16,11 +16,11 @@ import shutil
 import tempfile
 import logging
 from itertools import chain
-from pkg_resources import parse_version  # type: ignore
+from packaging import version
 import importlib
 import requests  # type: ignore
 import tqdm  # type: ignore
-from typing import List, Mapping, Union, Optional
+from typing import List, Mapping, Union
 
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
@@ -65,7 +65,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
         package = '.'
 
     elif url := package_install.get("download_url"):
-        logger.info('Downloding code from %s', url)
+        logger.info('Downloading code from %s', url)
         cwd = os.path.join(full_code_path, directory or component_root)
         if not download_file(url, cwd, logger=logger):
             return False
@@ -541,15 +541,15 @@ def check_gcc_version(min_version="6.4", error_returns=None):
     If an error is produced, returns ``error_returns``.
     """
     try:
-        version = subprocess.check_output(
+        ver = subprocess.check_output(
             "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
     except subprocess.CalledProcessError:
         return error_returns
     # Change in gcc >= 7: -dumpversion only dumps major version
-    if "." not in version:
-        version = subprocess.check_output(
+    if "." not in ver:
+        ver = subprocess.check_output(
             "gcc -dumpfullversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
-    return parse_version(str(min_version)) <= parse_version(version)
+    return version.parse(str(min_version)) <= version.parse(ver)
 
 
 # Command-line script ####################################################################

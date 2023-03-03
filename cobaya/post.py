@@ -7,7 +7,6 @@
 """
 
 import os
-import sys
 import time
 from itertools import chain
 from typing import List, Union, Optional, Tuple, TypedDict
@@ -29,7 +28,7 @@ from cobaya.prior import Prior
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
     str_to_list
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
-    InfoDict, PostDict
+    PostDict
 
 
 class PostResultDict(TypedDict):

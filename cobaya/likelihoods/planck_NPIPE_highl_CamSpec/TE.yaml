@@ -5,6 +5,6 @@ dataset_params:
 # Aliases for automatic covariance matrix
 aliases: [CamSpec_NPIPE_TE]
 speed: 160
-params: !defaults [params_calib_CamSpec_2021, params_TE_CamSpec, params_fixedcalEE]
+params: !defaults [../base_classes/planck_calib, params_TE_CamSpec, params_fixedcalEE]
 
 #prior: !defaults [prior_SZ_CamSpec]

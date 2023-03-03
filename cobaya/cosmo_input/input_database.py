@@ -424,8 +424,8 @@ like_cmb: InfoDict = {
         "theory": {theo: {"extra_args": cmb_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
-            "planck_2018_lowl.TT_native": None,
-            "planck_2018_lowl.EE_native": None,
+            "planck_2018_lowl.TT": None,
+            "planck_2018_lowl.EE": None,
             "planck_NPIPE_highl_CamSpec.TTTEEE": None,
             "planckpr4lensing":
                 {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
@@ -741,10 +741,9 @@ install_tests["likelihood"].update({"planck_2015_lowl": None,
                                     "planck_2018_highl_plik.TT_unbinned": None,
                                     "planck_2018_highl_plik.TT_lite_native": None,
                                     "planck_2018_highl_CamSpec.TT": None,
-                                    "planck_2018_highl_CamSpec.TT_native": None,
                                     "planck_2018_highl_CamSpec2021.TT": None,
-                                    "planck_2018_lowl.EE_native": None,
-                                    "planck_2018_lowl.TT_native": None
+                                    "planck_2018_lowl.EE": None,
+                                    "planck_2018_lowl.TT": None
                                     })
 
 # CONTENTS FOR COMBO-BOXED IN A GUI ######################################################

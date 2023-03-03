@@ -16,11 +16,14 @@
 - Added CAMBspec NPIPE Planck 2020 likelihood (#271) ) (thanks @earosenberg)
 - Added native version of `planck_2018_lowl.EE`.
 - Added native version of `planck_2018_low.TT`. (thanks @eirikgje)
+- Replaced default planck_2018_lowl.EE and planck_2018_low.TT with native versions
 - Added links to external likelihoods Planck PR4 Lensing, pyWMAP.
 - GUI now support PySide6 and inclues latest NPIPE fully Python likelihood configuration
 - Fixed bug in BAO likelihood (#250, thanks @Pablo-Lemos)
 - Added files for the BAO DR12 and DR16 LRG likelihoods (PR #235; thanks @markm42)
 - Test updates for CAMB 1.4 with updated constants, BBN model and neutrino nnu=3.044
+- Updated planck likelihoods to all load calibration parameter from same yaml
+- Removed clik version of planck 2018 CamSpec, defaults to native (avoids inconsistent calibration parameter naming)
 
 ## 3.2.1 – 2022-05-17
 

@@ -272,8 +272,8 @@ class CAMB(BoltzmannBase):
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " If you are using CAMB unmodified, upgrade with"
-                "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
-                "set the option `ignore_obsolete: True` for CAMB.")
+                             "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
+                             "set the option `ignore_obsolete: True` for CAMB.")
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find CAMB: {excpt}. "
@@ -710,7 +710,7 @@ class CAMB(BoltzmannBase):
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
-    def _get_z_dependent(self, quantity, z):
+    def _get_z_dependent(self, quantity, z, _pool=None):
         # Partially reimplemented because of sigma8_z, etc, use different pool
         pool = None
         if quantity in ["sigma8_z", "fsigma8"]:

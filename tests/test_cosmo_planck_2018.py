@@ -24,41 +24,41 @@ classy_extra_tolerance = 0.45
 
 # STANDARD ###############################################################################
 
-def test_planck_2018_t_camb(packages_path, skip_not_installed, native=False):
+def test_planck_2018_t_camb(packages_path, skip_not_installed, clik=False):
     best_fit = deepcopy(params_lowl_highTT_lensing)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT_lensing
     chi2 = chi2_lowl_highTT_lensing.copy()
-    if native:
-        info_likelihood["planck_2018_lowl.TT_native"] = \
+    if clik:
+        info_likelihood["planck_2018_lowl.TT_clik"] = \
             info_likelihood.pop("planck_2018_lowl.TT")
-        chi2["planck_2018_lowl.TT_native"] = chi2.pop("planck_2018_lowl.TT")
+        chi2["planck_2018_lowl.TT_clik"] = chi2.pop("planck_2018_lowl.TT")
     info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT_lensing
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  best_fit_derived, skip_not_installed=skip_not_installed)
 
 
-def test_planck_2018_t_native_camb(packages_path, skip_not_installed):
+def test_planck_2018_t_clik_camb(packages_path, skip_not_installed):
     test_planck_2018_t_camb(packages_path, skip_not_installed, True)
 
 
-def test_planck_2018_p_camb(packages_path, skip_not_installed, native=False):
+def test_planck_2018_p_camb(packages_path, skip_not_installed, clik=False):
     best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
     chi2 = chi2_lowTE_highTTTEEE_lensingcmblikes.copy()
-    if native:
-        info_likelihood["planck_2018_lowl.EE_native"] = \
+    if clik:
+        info_likelihood["planck_2018_lowl.EE_clik"] = \
             info_likelihood.pop("planck_2018_lowl.EE")
-        chi2["planck_2018_lowl.EE_native"] = chi2.pop("planck_2018_lowl.EE")
+        chi2["planck_2018_lowl.EE_clik"] = chi2.pop("planck_2018_lowl.EE")
     info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  best_fit_derived, skip_not_installed=skip_not_installed)
 
 
-def test_planck_2018_p_native_camb(packages_path, skip_not_installed):
+def test_planck_2018_p_clik_camb(packages_path, skip_not_installed):
     test_planck_2018_p_camb(packages_path, skip_not_installed, True)
 
 
@@ -122,14 +122,11 @@ def test_planck_2018_p_unbinned_camb(packages_path, skip_not_installed):
 
 # CamSpec ################################################################################
 
-def test_planck_2018_t_CamSpec_native_camb(packages_path, skip_not_installed, plik=False):
-    # TODO: sort out calPlacnk vs A_planck
-    name = "planck_2018_highl_CamSpec.TT" if plik \
-        else "planck_2018_highl_CamSpec.TT_native"
+def test_planck_2018_t_CamSpec_camb(packages_path, skip_not_installed):
+    name = "planck_2018_highl_CamSpec.TT"
     info_likelihood = {name: None}
     chi2 = {name: 7060.04, 'tolerance': 0.2}
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
-    best_fit['calPlanck'] = best_fit['A_planck']
     best_fit.update(
         {'aps100': 238.7887, 'aps143': 41.31762, 'aps217': 100.6226, 'acib217': 44.96003,
          'asz143': 5.886124,
@@ -144,12 +141,10 @@ def test_planck_2018_t_CamSpec_native_camb(packages_path, skip_not_installed, pl
 
 
 def test_planck_2018_t_CamSpec2021_camb(packages_path, skip_not_installed):
-    # TODO: sort out calPlanck vs A_planck
     name = "planck_2018_highl_CamSpec2021.TT"
     info_likelihood = {name: None}
     chi2 = {name: 6358.67, 'tolerance': 0.2}
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
-    best_fit['calPlanck'] = best_fit['A_planck']
     best_fit.pop("H0")
     best_fit.update(
         {'amp_143': 19.70529, 'amp_217': 15.25289, 'amp_143x217': 10.42223,
@@ -159,20 +154,11 @@ def test_planck_2018_t_CamSpec2021_camb(packages_path, skip_not_installed):
                  skip_not_installed=skip_not_installed)
 
 
-def test_planck_2018_t_CamSpec_clik_camb(packages_path, skip_not_installed):
-    test_planck_2018_t_CamSpec_native_camb(packages_path, plik=True,
-                                           skip_not_installed=skip_not_installed)
-
-
-def test_planck_2018_p_CamSpec_native_camb(packages_path, skip_not_installed, plik=False):
-    # TODO: sort out calPlacnk vs A_planck
-    name = "planck_2018_highl_CamSpec.TTTEEE" if plik \
-        else "planck_2018_highl_CamSpec.TTTEEE_native"
+def test_planck_2018_p_CamSpec_camb(packages_path, skip_not_installed):
+    name = "planck_2018_highl_CamSpec.TTTEEE"
     info_likelihood = {name: None}
     chi2 = {name: 11513.53, 'tolerance': 0.2}
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
-    if plik:
-        best_fit['calPlanck'] = best_fit.pop('A_planck')
     best_fit.update(
         {'aps100': 238.7887, 'aps143': 41.31762, 'aps217': 100.6226, 'acib217': 44.96003,
          'asz143': 5.886124,
@@ -187,12 +173,10 @@ def test_planck_2018_p_CamSpec_native_camb(packages_path, skip_not_installed, pl
 
 
 def test_planck_2018_p_CamSpec2021_camb(packages_path, skip_not_installed):
-    # TODO: sort out calPlanck vs A_planck
     name = "planck_2018_highl_CamSpec2021.TTTEEE"
     info_likelihood = {name: None}
     chi2 = {name: 10120.27, 'tolerance': 0.2}
     best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
-    best_fit['calPlanck'] = best_fit['A_planck']
     best_fit.pop("H0")
     best_fit.update(
         {'amp_143': 17.49600, 'amp_217': 13.13760, 'amp_143x217': 8.26404,
@@ -201,11 +185,6 @@ def test_planck_2018_p_CamSpec2021_camb(packages_path, skip_not_installed):
     info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  skip_not_installed=skip_not_installed)
-
-
-def test_planck_2018_p_CamSpec_clik_camb(packages_path, skip_not_installed):
-    test_planck_2018_p_CamSpec_native_camb(packages_path, plik=True,
-                                           skip_not_installed=skip_not_installed)
 
 
 # CMB-marged lensing #####################################################################

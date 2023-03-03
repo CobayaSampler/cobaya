@@ -9,4 +9,4 @@ aliases: [lowE]
 # Speed in evaluations/second
 speed: 4000
 
-params: !defaults [../planck_2018_highl_plik/params_calib]
+params: !defaults [../base_classes/planck_calib]
