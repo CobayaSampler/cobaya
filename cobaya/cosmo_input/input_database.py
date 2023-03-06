@@ -731,7 +731,7 @@ install_basic: InfoDict = {
         # Native first: avoids reinstalling clik code+data if supp data obsolete
         "planck_2018_lensing.native": None,
         "planck_2018_lowl.TT": None,
-        "bicep_keck_2018": None,
+        "planck_2018_lowl.EE": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}
@@ -742,8 +742,7 @@ install_tests["likelihood"].update({"planck_2015_lowl": None,
                                     "planck_2018_highl_plik.TT_lite_native": None,
                                     "planck_2018_highl_CamSpec.TT": None,
                                     "planck_2018_highl_CamSpec2021.TT": None,
-                                    "planck_2018_lowl.EE": None,
-                                    "planck_2018_lowl.TT": None
+                                    "bicep_keck_2018": None
                                     })
 
 # CONTENTS FOR COMBO-BOXED IN A GUI ######################################################

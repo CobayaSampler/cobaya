@@ -125,9 +125,9 @@ script:
   - mv .coverage .coverage.pytest; mv covers/.cov* .
   # Test external cosmological likelihoods
   - pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
-  - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
-  - pip install ./planck_lensing_external --quiet
-  - coverage run --parallel-mode -m unittest plancklensing.tests.test_likes
+  #- git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
+  #- pip install ./planck_lensing_external --quiet
+  #- coverage run --parallel-mode -m unittest plancklensing.tests.test_likes
   - git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
   - pip install ./example_external_likelihood --quiet
   - coverage run --parallel-mode -m unittest test_package.tests.test

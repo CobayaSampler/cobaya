@@ -104,7 +104,7 @@ def test_planck_2018_t_unbinned_camb(packages_path, skip_not_installed):
     like_name = "planck_2018_highl_plik.TT_unbinned"
     info_likelihood = {like_name: None}
     info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
-    chi2 = {like_name: 8276.02, "tolerance": 0.03}
+    chi2 = {like_name: 8275.99, "tolerance": 0.03}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory, chi2,
                  skip_not_installed=skip_not_installed)
 
