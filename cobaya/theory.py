@@ -90,7 +90,7 @@ class Theory(CobayaComponent):
                                                     Sequence[Tuple[str, InfoDict]]]:
         """
         Function called by Cobaya with the actual products that this component needs to
-        compute (i.e. the things this compononent can provide that are acutally used by
+        compute (i.e. the things this component can provide that are actually used by
         other components). The function can return conditional requirements that this
         component needs from other components in order to compute those things.
 

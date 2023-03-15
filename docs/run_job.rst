@@ -5,7 +5,7 @@ More time-consuming runs are usually run on a remote cluster, via a job queue. A
 
   cobaya-run-job --queue regular --walltime 12:00:00 [yaml_file].yaml
 
-This produces a job script for your speciifc yaml_file, and then submits it to the queue using default settings for your cluster.
+This produces a job script for your specific yaml_file, and then submits it to the queue using default settings for your cluster.
 
 To do this, it loads a template for your job submission script. This template can be specified via a command line argument, e.g. ::
 
@@ -77,7 +77,7 @@ The available placeholder variables are:
      - substituted by the command(s) that actually runs the job, calculated from ##RUN
 
 The ##RUN line in the template has the additional placeholders INI and INIBASE,
-which are sustituted by the name of the input yaml file, and the base name (without .yaml) respectively.
+which are substituted by the name of the input yaml file, and the base name (without .yaml) respectively.
 
 Optional arguments
 ===========================
@@ -95,4 +95,4 @@ Job control
 
 When you use cobaya-run-job, it stores the job details of this, and all other jobs started from the same directory, in a pickle file in your ./scripts directory (along with the generated and submitted job submission script). This can be used by two additional utility scripts `cobaya-running-jobs` which lists queued jobs, with optional filtering on whether actually running or queued.
 
-Use `cobaay-delete-jobs` to delete a job corresponding to a given input yaml base name, or to delete a range of job ids.
+Use `cobaya-delete-jobs` to delete a job corresponding to a given input yaml base name, or to delete a range of job ids.

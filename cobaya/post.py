@@ -231,7 +231,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # so that the likelihoods do not try to recompute them
     # But be careful to exclude *input* params that have a "derived: True" value
     # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
-    # Don't assign to derived parameters to theories, only likelihoods, so they can be
+    # Don't assign derived parameters to theories, only likelihoods, so they can be
     # recomputed if needed. If the theory does not need to be computed, it doesn't matter
     # if it is already assigned parameters in the usual way; likelihoods can get
     # the required derived parameters from the stored sample derived parameter inputs.
@@ -417,13 +417,14 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             importance_weights.extend(_weights)
             collection_out.reweight(_weights)
 
+        sampled_params = dummy_model_in.parameterization.sampled_params()
+
         for i, point in collection_in.data.iterrows():
             all_params = point.to_dict()
             for p in remove_params:
                 all_params.pop(p, None)
             log.debug("Point: %r", point)
-            sampled = np.array([all_params[param] for param in
-                                dummy_model_in.parameterization.sampled_params()])
+            sampled = np.array([all_params[param] for param in sampled_params])
             all_params = out_func_parameterization.to_input(all_params).copy()
 
             # Add/remove priors
@@ -453,9 +454,10 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
             loglikes_add, output_derived = model_add._loglikes_input_params(
-                all_params, return_output_params=True)
-            loglikes_add = dict(zip(chi2_names_add, loglikes_add))
-            output_derived = dict(zip(model_add.output_params, output_derived))
+                all_params, return_output_params=True, as_dict=True)
+            loglikes_add = dict(zip(chi2_names_add, loglikes_add.values()))
+            output_derived = {_p: output_derived[_p] for _p in
+                              model_add.output_params}
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                             for name in collection_out.chi2_names]
             if is_debug(log):

@@ -297,12 +297,9 @@ class Parameterization(HasLogger):
         if self._wrapped_derived_funcs:
             for p, (func, args, to_set) in self._wrapped_derived_funcs.items():
                 for arg in to_set:
-                    val = self._input.get(arg)
-                    if val is None:
-                        val = output_params_values.get(arg)
-                        if val is None:
+                    if (val := self._input.get(arg)) is None:
+                        if (val := output_params_values.get(arg)) is None:
                             val = self._derived.get(arg)
-
                     args[arg] = val
                 self._derived[p] = self._call_param_func(p, func, args)
         return self._derived

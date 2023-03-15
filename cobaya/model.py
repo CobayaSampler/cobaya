@@ -342,7 +342,7 @@ class Model(HasLogger):
             return_derived: bool = True, return_output_params: bool = False,
             as_dict: bool = False, make_finite: bool = False, cached: bool = True
     ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
-               Tuple[Dict[str, float], Dict[str, float]]]:
+    Tuple[Dict[str, float], Dict[str, float]]]:
         """
         Takes a dict of input parameters, computes the likelihood pipeline, and returns
         the log-likelihoods and derived parameters.
@@ -426,7 +426,7 @@ class Model(HasLogger):
                  as_dict: bool = False, make_finite: bool = False,
                  return_derived: bool = True, cached: bool = True
                  ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
-                            Tuple[Dict[str, float], Dict[str, float]]]:
+    Tuple[Dict[str, float], Dict[str, float]]]:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -594,7 +594,7 @@ class Model(HasLogger):
     def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
                         logposterior_as_dict: bool = False, random_state=None,
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
-                                   Tuple[np.ndarray, dict]]:
+    Tuple[np.ndarray, dict]]:
         """
         Finds a point with finite posterior, sampled from the reference pdf.
 
@@ -1072,19 +1072,18 @@ class Model(HasLogger):
                 output_assign[p] = [self.likelihood[like]]
         self._chi2_names = tuple(chi2_names.items())
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
-        unassigned_output = [p for p, assigned in output_assign.items() if not assigned]
-        if unassigned_output:
+        if unassigned_output := [p for p, assigned
+                                 in output_assign.items() if not assigned]:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",
                 unassigned_output)
         # Check that output parameters are assigned exactly once
-        multiassigned_output = {p: assigned for p, assigned in output_assign.items()
-                                if len(assigned) > 1}
-        if multiassigned_output:
+        if multi_assigned_output := {p: assigned for p, assigned in output_assign.items()
+                                     if len(assigned) > 1}:
             raise LoggedError(
                 self.log,
                 "Output params can only be computed by one likelihood/theory, "
-                "but some were claimed by more than one: %r.", multiassigned_output)
+                "but some were claimed by more than one: %r.", multi_assigned_output)
         # Finished! Assign and update infos
         for assign, option in ((input_assign, "input_params"),
                                (output_assign, "output_params")):
