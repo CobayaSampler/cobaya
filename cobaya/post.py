@@ -273,8 +273,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     "it is probably safer to explore it directly.")
 
     mlprior_names_add = minuslogprior_names(add.get("prior") or [])
-    chi2_names_add = [get_chi2_name(name) for name in add["likelihood"] if
-                      name != "one"]
+
     out_combined["likelihood"].pop("one", None)
 
     add_theory = add.get("theory")
@@ -455,9 +454,11 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # Add/remove likelihoods and/or (re-)calculate derived parameters
             loglikes_add, output_derived = model_add._loglikes_input_params(
                 all_params, return_output_params=True, as_dict=True)
-            loglikes_add = dict(zip(chi2_names_add, loglikes_add.values()))
+            loglikes_add = {get_chi2_name(name): loglikes_add[name] for name in
+                            model_add.likelihood if name != "one"}
             output_derived = {_p: output_derived[_p] for _p in
                               model_add.output_params}
+
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                             for name in collection_out.chi2_names]
             if is_debug(log):
