@@ -395,8 +395,7 @@ class Model(HasLogger):
                         component.current_logp)  # type: ignore
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
-        if as_dict:
-            loglikes = dict(zip(self.likelihood, loglikes))
+        return_likes = dict(zip(self.likelihood, loglikes)) if as_dict else loglikes
         if return_derived or return_output_params:
             if not compute_success:
                 return_params_names = (
@@ -418,8 +417,8 @@ class Model(HasLogger):
                     self.log.debug("Computed derived parameters: %s", derived_dict)
                     return_params = (derived_dict if as_dict
                                      else list(derived_dict.values()))
-            return loglikes, return_params
-        return loglikes
+            return return_likes, return_params
+        return return_likes
 
     def loglikes(self,
                  params_values: Optional[Union[Dict[str, float], Sequence[float]]] = None,
