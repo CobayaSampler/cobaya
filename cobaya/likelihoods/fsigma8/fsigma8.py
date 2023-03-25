@@ -6,13 +6,11 @@
 
 This code provides a simple Gaussian likelihood for measurements of LSS growth, :math:`f\sigma_8`, as a function of redshifts
 
-Available datasets are:
-
-[list of datasets]
+Available datasets are described in arxiv:2302.01331
 
 You can find them and/or add your own at:
 
-[data location]
+./data/
 
 Input data files:
 
