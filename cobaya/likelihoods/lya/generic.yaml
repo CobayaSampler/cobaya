@@ -1,0 +1,15 @@
+# Mean of the 2D Gaussian
+measurements_file: /full/path/to/myLYA.dat
+# Covariance of the 2D Gaussian
+cov_file: /full/path/to/myLYA.cov         # either this one,
+# Covariance inverse of the 2D Gaussian
+invcov_file: /full/path/to/myLYA_inv.cov  # or this one!
+# Fiducial pivot wavenumber and redshift with which data have been compressed
+# Pivot wavenumber in s/km
+k_pivot: 0.009
+# Pivot redshift
+z_pivot: 3.0
+
+# [Optional] Speed in evaluations/second
+# (will be measured automatically if not specified)
+speed: 2500

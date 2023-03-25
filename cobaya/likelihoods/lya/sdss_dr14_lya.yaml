@@ -1,0 +1,14 @@
+# SDSS-DR14 (BOSS+eBOSS) Lyman alpha 1D flux, Chabanier et al. 2019
+# https://arxiv.org/abs/1812.03554
+
+path: null
+# Mean of the 2D Gaussian
+measurements_file: data/SDSS_DR14_deltaL2_neff.dat
+# Covariance of the 2D Gaussian
+cov_file: data/SDSS_DR14_deltaL2_neff_covtot.txt
+# Pivot wavenumber in s/km
+k_pivot: 0.009
+# Pivot redshift
+z_pivot: 3.0
+# Speed in evaluations/second
+speed: 2000
