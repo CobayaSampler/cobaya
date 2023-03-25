@@ -1,12 +1,12 @@
 """
 .. module:: fsigma8
 
-:Synopsis: Growth of LSS, fsigma8, measurements at individual redshifts
+:Synopsis: Measurements of fsigma8 --- a proxy for large-scale structure growth rate --- at individual redshifts
 :Author: Minh Nguyen
 
-This code provides a simple Gaussian likelihood for measurements of LSS growth, :math:`f\sigma_8`, as a function of redshifts
+This code provides a Gaussian likelihood for measurements of the linear LSS growth (rate), :math:`f\sigma_8`, at different redshifts
 
-Available datasets are described in arxiv:2302.01331
+Available datasets are described in arxiv:2302.01331 and arxiv:2212.05003
 
 You can find them and/or add your own at:
 
