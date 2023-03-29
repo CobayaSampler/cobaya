@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from getdist import MCSamples
 
 
-# Suppresses warnings about first defining attrs outside __init__ (needed for resuming).
+# Suppresses warnings about first defining attrs outside __init__
 # pylint: disable=attribute-defined-outside-init
 
 
@@ -886,7 +886,7 @@ class MCMC(CovmatSampler):
         skip_samples: int or float, default: 0
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is
-            applied previously to concatenation. Forces the return of a copy.
+            applied before concatenation. Forces the return of a copy.
         to_getdist: bool, default: False
             If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
             this option and ``combined`` are ``True``, the latter is ignored and a

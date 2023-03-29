@@ -582,20 +582,22 @@ class Prior(HasLogger):
         """
         self.log.debug("Evaluating prior at %r", x)
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
+            # Apparently faster to sum list than generator (for short enough lists)
             logps = self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
                                                zip(self._non_uniform_logpdf,
                                                    x[self._non_uniform_indices])])
                                           if len(self._non_uniform_indices) else 0)
         else:
             logps = -np.inf
-
-        self.log.debug("Got logpriors = %r", logps)
+        self.log.debug("Got logpriors (internal) = %r", logps)
         return logps
 
     def logps_external(self, input_params) -> List[float]:
         """Evaluates the logprior using the external prior only."""
-        return [ext.logp(**{p: input_params[p] for p in ext.params})
-                for ext in self.external.values()]
+        logps = [ext.logp(**{p: input_params[p] for p in ext.params})
+                 for ext in self.external.values()]
+        self.log.debug("Got logpriors (external) = %r", logps)
+        return logps
 
     def covmat(self, ignore_external=False):
         """
