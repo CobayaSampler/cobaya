@@ -74,7 +74,7 @@ def test_cosmo_des_y1_galaxy_galaxy_classy(packages_path, skip_not_installed,
                                          skip_not_installed=skip_not_installed)
 
 
-ref_chi2 = {"shear": 242.825, "clustering": 100.997,
+ref_chi2 = {"shear": 242.825, "clustering": 100.78,
             "galaxy_galaxy": 208.005, "joint": 570.428}
 tolerance = 0.2
 

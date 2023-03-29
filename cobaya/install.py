@@ -211,10 +211,10 @@ def install(*infos, **kwargs):
                     continue
             # Do the install
             logger.info("Installing...")
-            kwargs_install['show_error'] = True
+            install_args = dict(kwargs_install, show_error=True)
             try:
                 install_this = getattr(imported_class, "install", None)
-                success = install_this(path=general_abspath, **kwargs_install)
+                success = install_this(path=general_abspath, **install_args)
             except Exception:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 logger.error("An unknown error occurred. Delete the external packages "

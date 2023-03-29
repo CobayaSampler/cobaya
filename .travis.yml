@@ -57,23 +57,18 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.7"
-    - name: "Latest: gcc-11, Python 3.10 Anaconda (conda-forge)"
-      dist: focal
+    - name: "Latest jammy Python 3.11"
+      dist: jammy
       addons:
         apt:
-          sources:
-            - sourceline: "ppa:ubuntu-toolchain-r/test"
           packages:
-            - gcc-11
-            - gfortran-11
-            - g++-11
+            - gfortran
       env:
-        - GCC_VERSION="11"
-        - PYDIST="ANACONDA"
-        - ANACONDA_CHANNEL="conda-forge"
-      python: "3.10"
+        - COBAYA_INSTALL_SKIP=polychord,planck_2018,planck_2015,unbinned
+        - GCC_VERSION="ubuntu"
+      python: "3.11"
   allow_failures:
-    - name: "Latest: gcc-11, Python 3.10 Anaconda (conda-forge)"
+    - name: "Latest jammy Python 3.11"
 
 before_install:
   # Configure right compiler versions
@@ -118,7 +113,8 @@ script:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report
-  - pip install numba
+  # numba can speed things, but makes for some messy logs
+  # - pip install numba
   # Cosmology tests:
   - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
