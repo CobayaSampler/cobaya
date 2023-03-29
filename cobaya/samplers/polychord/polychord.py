@@ -22,7 +22,7 @@ from cobaya.tools import read_dnumber, get_external_function, find_with_regexp, 
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import get_logger, NoLogging
+from cobaya.log import get_logger, NoLogging, LoggedError
 from cobaya.install import download_github_release
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
