@@ -28,7 +28,7 @@ _default_length = 80
 
 # Cobaya's own bib info
 cobaya_desc = cleandoc(r"""
-The posterior has been explored/maximized/reweighted using Cobaya \cite{torrado:2020xyz}.
+The posterior has been explored/maximized/reweighted using Cobaya \cite{torrado:2020dgo}.
 """)
 
 cobaya_bib = r"""

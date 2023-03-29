@@ -20,7 +20,6 @@ from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
 from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
-from cobaya.collection import SampleCollection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic, \
     has_non_yaml_reproducible
 from cobaya.component import get_component_class
@@ -524,6 +523,8 @@ class Output(HasLogger):
         """
         self.check_lock()
         filenames = self.find_collections(name=name, extension=extension)
+        # pylint: disable=import-outside-toplevel
+        from cobaya.collection import SampleCollection
         collections = [
             SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
                              load=True, onload_skip=skip, onload_thin=thin)
@@ -531,7 +532,7 @@ class Output(HasLogger):
         if concatenate and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
-                collection.append(collection_i)
+                collection._append(collection_i)
             return collection
         return collections
 

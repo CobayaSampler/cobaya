@@ -182,6 +182,23 @@ E.g. if a likelihood depends of parameters ``a``, ``b`` and ``c`` and the cost o
 
    If automatic learning of the proposal covariance is enabled, after some checkpoint the proposed steps will mix parameters from different blocks, but *always towards faster ones*. Thus, it is important to specify your blocking in **ascending order of speed**, when not prevented by the architecture of your likelihood (e.g. due to internal caching of intermediate results that require some particular order of parameter variation).
 
+
+.. _mcmc_tempered:
+
+Tempered MCMC
+-------------
+
+Some times it is convenient to sample from a power-reduced (or softened), *tempered* version of the posterior. This produces Monte Carlo samples with more points towards the tails of the distribution, which is useful when e.g. estimating a quantity by weighting with samples with their probability, or to be able to do more robust :doc:`importance reweighting <post>`.
+
+By setting a value greater than 1 for the ``temperature`` option, the ``mcmc`` sampler will produce a chain sampled from :math:`p^{1/t}`, where :math:`p` is the posterior and :math:`t` is the temperature. The resulting :class:`~collection.SampleCollection` and output file will contain as weights and log-posterior those of the tempered posterior :math:`p^{1/t}` (this is done like this because it is advantageous to retain integer weights, and keeps weights consistent between parallel chains). The original prior- and likelihood-related values in the sample/output are preserved.
+
+Despite storing the tempered log-posterior, methods producing statistics such as :func:`~collection.SampleCollection.mean()` and :func:`~collection.SampleCollection.cov()` will return the results corresponding to the original posterior, unless they are called with ``tempered=True``.
+
+To convert the sample into one of the original posterior (i.e. have weights and log-posterior of the original posterior) call the :func:`~collection.SampleCollection.reset_temperature()` method, possibly on a copy produced with the :func:`~collection.SampleCollection.copy()` method.
+
+GetDist can load tempered samples as normally, and will retain the temperature. To convert a tempered GetDist sampleinto one of the original posterior, call its ``.cool(temperature)`` method.
+
+
 .. _mcmc_convergence:
 
 Convergence checks
@@ -277,23 +294,38 @@ As sampler products, every MPI process receives its own chain via the :meth:`~.m
 
 .. code:: python
 
-    all_chains = comm.gather(mcmc.products()["sample"], root=0)
+    # Run from all MPI processes at once.
+    # Returns the combined chain for all of them.
 
-    # Pass all of them to GetDist in rank = 0
+    # As cobaya.collections.SampleCollection
+    full_chain = mcmc.samples(combined=True, skip_samples=0.33)
 
-    if rank == 0:
-        from getdist.mcsamples import MCSamplesFromCobaya
-        gd_sample = MCSamplesFromCobaya(upd_info, all_chains)
+    # As GetDist MCSamples (multiple chains kept internally)
+    full_chain = mcmc.samples(combined=True, skip_samples=0.33, to_getdist=True)
 
-    # Manually concatenate them in rank = 0 for some custom manipulation,
-    # skipping 1st 3rd of each chain
+.. note::
 
-    copy_and_skip_1st_3rd = lambda chain: chain[int(len(chain) / 3):]
-    if rank == 0:
-        full_chain = copy_and_skip_1st_3rd(all_chains[0])
-        for chain in all_chains[1:]:
-            full_chain.append(copy_and_skip_1st_3rd(chain))
-        # The combined chain is now `full_chain`
+   For Cobaya v3.2.2 and older, or if one prefers to do it by hand:
+
+    .. code:: python
+
+        all_chains = comm.gather(mcmc.products()["sample"], root=0)
+
+        # Pass all of them to GetDist in rank = 0
+
+        if rank == 0:
+            from getdist.mcsamples import MCSamplesFromCobaya
+            gd_sample = MCSamplesFromCobaya(upd_info, all_chains)
+
+        # Manually concatenate them in rank = 0 for some custom manipulation,
+        # skipping 1st 3rd of each chain
+
+        copy_and_skip_1st_3rd = lambda chain: chain[int(len(chain) / 3):]
+        if rank == 0:
+            full_chain = copy_and_skip_1st_3rd(all_chains[0])
+            for chain in all_chains[1:]:
+                full_chain.append(copy_and_skip_1st_3rd(chain))
+            # The combined chain is now `full_chain`
 
 
 Options and defaults

@@ -6,18 +6,19 @@
 """
 
 # Global
+import re
+import datetime
 from itertools import chain
+from typing import Sequence, Optional, Callable, Union, TYPE_CHECKING
 import numpy as np
 from pandas import DataFrame
-import datetime
-from typing import Sequence, Optional, Callable
-import re
 
 # Local
 from cobaya.sampler import CovmatSampler
-from cobaya.mpi import get_mpi_size
-from cobaya.mpi import more_than_one_process, is_main_process, sync_processes
-from cobaya.collection import SampleCollection, OneSamplePoint
+from cobaya.mpi import get_mpi_size, share_mpi, more_than_one_process, is_main_process, \
+    sync_processes
+from cobaya.collection import SampleCollection, OneSamplePoint, apply_temperature_cov, \
+    remove_temperature_cov, remove_temperature
 from cobaya.conventions import OutPar, Extension, line_width, get_version
 from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
@@ -27,12 +28,21 @@ from cobaya.yaml import yaml_dump_file
 from cobaya.model import LogPosterior
 from cobaya import mpi
 
+# Avoid importing GetDist if not necessary
+if TYPE_CHECKING:
+    from getdist import MCSamples
+
+
+# Suppresses warnings about first defining attrs outside __init__
+# pylint: disable=attribute-defined-outside-init
+
 
 class MCMC(CovmatSampler):
     r"""
     Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC)
     \cite{Lewis:2002ah,Lewis:2013hha}.
     """
+
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
         "burn_in", "callback_function", "callback_every", "max_tries", "output_every",
         "learn_every", "learn_proposal_Rminus1_max", "learn_proposal_Rminus1_max_early",
@@ -48,6 +58,7 @@ class MCMC(CovmatSampler):
     learn_every: NumberWithUnits
     output_every: NumberWithUnits
     callback_every: NumberWithUnits
+    temperature: float
     max_tries: NumberWithUnits
     max_samples: int
     drag: bool
@@ -67,6 +78,7 @@ class MCMC(CovmatSampler):
     oversample_power: float
 
     def set_instance_defaults(self):
+        """Ensure that checkpoint attributes are initialized correctly."""
         super().set_instance_defaults()
         # checkpoint variables
         self.converged = False
@@ -74,8 +86,10 @@ class MCMC(CovmatSampler):
         self.Rminus1_last = np.inf
 
     def initialize(self):
-        """Initializes the sampler:
-        creates the proposal distribution and draws the initial sample."""
+        """
+        Initializes the sampler: creates the proposal distribution and draws the initial
+        sample.
+        """
         if not self.model.prior.d():
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
@@ -98,6 +112,10 @@ class MCMC(CovmatSampler):
             self._quants_d_units.append(number)
             setattr(self, q, number)
         self.output_every = NumberWithUnits(self.output_every, "s", dtype=int)
+        if self.temperature is None:
+            self.temperature = 1
+        elif self.temperature < 1:
+            self.mpi_warning("Sampling temperatures <1 can lead to innacurate inference.")
         if is_main_process():
             if self.output.is_resuming() and (
                     max(self.mpi_size or 0, 1) != mpi.size()):
@@ -109,7 +127,8 @@ class MCMC(CovmatSampler):
         # One collection per MPI process: `name` is the MPI rank + 1
         name = str(1 + mpi.rank())
         self.collection = SampleCollection(
-            self.model, self.output, name=name, resuming=self.output.is_resuming())
+            self.model, self.output, name=name, resuming=self.output.is_resuming(),
+            temperature=self.temperature, sample_type="mcmc")
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
@@ -138,9 +157,10 @@ class MCMC(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                .iloc[last]).to_numpy(dtype=np.float64, copy=True)
+                             .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
-                logpost=-self.collection[OutPar.minuslogpost].iloc[last],
+                logpost=-remove_temperature(
+                    self.collection[OutPar.minuslogpost].iloc[last], self.temperature),
                 logpriors=-(self.collection[self.collection.minuslogprior_names]
                             .iloc[last].to_numpy(dtype=np.float64, copy=True)),
                 loglikes=-0.5 * (self.collection[self.collection.chi2_names]
@@ -156,8 +176,8 @@ class MCMC(CovmatSampler):
                                            random_state=self._rng)
             # If resuming but no existing chain, assume failed run and ignore blocking
             # if speeds measurement requested
-            if self.output.is_resuming() and not len(self.collection) \
-                    and self.measure_speeds:
+            if self.output.is_resuming() and not self.collection \
+               and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
                 self.mpi_warning(
@@ -165,11 +185,11 @@ class MCMC(CovmatSampler):
             elif self.measure_speeds:
                 n = None if self.measure_speeds is True else int(self.measure_speeds)
                 self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
-        self.set_proposer_blocking()
-        self.set_proposer_initial_covmat(load=True)
-
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
+        # Set up blocked proposer
+        self.set_proposer_blocking()
+        self.set_proposer_initial_covmat(load=True)
         # Max #(learn+convergence checks) to wait,
         # in case one process dies/hangs without raising error
         self.been_waiting = 0
@@ -186,6 +206,7 @@ class MCMC(CovmatSampler):
 
     @property
     def i_last_slow_block(self):
+        """Block-index of the last block considered slow, if binary fast/slow split."""
         if self.drag:
             return next(i for i, o in enumerate(self.oversampling_factors) if o != 1) - 1
         self.log.warning("`i_last_slow_block` is only well defined when dragging.")
@@ -193,33 +214,44 @@ class MCMC(CovmatSampler):
 
     @property
     def slow_blocks(self):
+        """Parameter blocks which are considered slow, in binary fast/slow splits."""
         return self.blocks[:1 + self.i_last_slow_block]
 
     @property
     def slow_params(self):
+        """Parameters which are considered slow, in binary fast/slow splits."""
         return list(chain(*self.slow_blocks))
 
     @property
     def n_slow(self):
+        """Number of parameters which are considered slow, in binary fast/slow splits."""
         return len(self.slow_params)
 
     @property
     def fast_blocks(self):
+        """Parameter blocks which are considered fast, in binary fast/slow splits."""
         return self.blocks[self.i_last_slow_block + 1:]
 
     @property
     def fast_params(self):
+        """Parameters which are considered fast, in binary fast/slow splits."""
         return list(chain(*self.fast_blocks))
 
     @property
     def n_fast(self):
+        """Number of parameters which are considered fast, in binary fast/slow splits."""
         return len(self.fast_params)
 
     def get_acceptance_rate(self, first=0, last=None):
+        """
+        Computes the current acceptance rate, optionally only for ``[first:last]``
+        subchain.
+        """
         return (((last or self.n()) - (first or 0)) /
                 self.collection[OutPar.weight][first:last].sum())
 
     def set_proposer_blocking(self):
+        """Sets up the blocked proposer."""
         if self.blocking:
             # Includes the case in which we are resuming
             self.blocks, self.oversampling_factors = \
@@ -269,10 +301,16 @@ class MCMC(CovmatSampler):
             for f, b in zip(self.oversampling_factors, self.blocks):
                 self.mpi_info("* %" + "%d" % max_width + "d : %r", f, b)
             if self.oversample_thin:
-                self.current_point.output_thin = int(np.round(sum(
-                    len(b) * o for b, o in zip(self.blocks, self.oversampling_factors)) /
-                                                              self.model.prior.d()))
-
+                self.current_point.output_thin = int(
+                    np.round(
+                        sum(
+                            len(b) * o for b, o in zip(
+                                self.blocks,
+                                self.oversampling_factors,
+                            )
+                        ) / self.model.prior.d()
+                    )
+                )
         # Save blocking in updated info, in case we want to resume
         self._updated_info["blocking"] = list(zip(self.oversampling_factors, self.blocks))
         sampled_params_list = list(self.model.parameterization.sampled_params())
@@ -294,6 +332,7 @@ class MCMC(CovmatSampler):
             number.set_scale(self.cycle_length // self.current_point.output_thin)
 
     def set_proposer_initial_covmat(self, load=False):
+        """Creates/loads an initial covariance matrix and sets it in the Proposer."""
         if load:
             # Build the initial covariance matrix of the proposal, or load from checkpoint
             self._initial_covmat, where_nan = self._load_covmat(
@@ -313,7 +352,8 @@ class MCMC(CovmatSampler):
                           columns=self.model.parameterization.sampled_params(),
                           index=self.model.parameterization.sampled_params()).to_string(
                     line_width=line_width))
-        self.proposer.set_covariance(self._initial_covmat)
+        self.proposer.set_covariance(
+            apply_temperature_cov(self._initial_covmat, self.temperature))
 
     def _get_last_nondragging_block(self, blocks, speeds):
         # blocks and speeds are already sorted
@@ -367,7 +407,7 @@ class MCMC(CovmatSampler):
                             # the covmat of the proposal
                             if self.check_ready() and state.set(mpi.State.READY):
                                 self.log.info(
-                                    self._msg_ready + " (waiting for the rest...)")
+                                    "%s (waiting for the rest...)", self._msg_ready)
                             if state.all_ready():
                                 self.mpi_info("All chains are r%s", self._msg_ready[1:])
                                 self.check_convergence_and_learn_proposal()
@@ -397,9 +437,10 @@ class MCMC(CovmatSampler):
         Returns the total number of accepted steps taken, including or not burn-in steps
         depending on the value of the `burn_in` keyword.
         """
-        return len(self.collection) + (0 if not burn_in
-                                       else self.burn_in.value - self.burn_in_left //
-                                            self.current_point.output_thin + 1)
+        return len(self.collection) + (
+            0 if not burn_in else (
+                self.burn_in.value -
+                self.burn_in_left // self.current_point.output_thin + 1))
 
     def get_new_sample_metropolis(self):
         """
@@ -408,8 +449,9 @@ class MCMC(CovmatSampler):
         as the current state; if it is rejected increases the weight of the current state
         by 1.
 
-        Returns:
-           ``True`` for an accepted step, ``False`` for a rejected one.
+        Returns
+        -------
+        ``True`` for an accepted step, ``False`` for a rejected one.
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
@@ -427,8 +469,9 @@ class MCMC(CovmatSampler):
         as the current state; if it is rejected increases the weight of the current state
         by 1.
 
-        Returns:
-           ``True`` for an accepted step, ``False`` for a rejected one.
+        Returns
+        -------
+        ``True`` for an accepted step, ``False`` for a rejected one.
         """
         # Prepare starting and ending points *in the SLOW subspace*
         # "start_" and "end_" mean here the extremes in the SLOW subspace
@@ -468,20 +511,17 @@ class MCMC(CovmatSampler):
             proposal_start_logpost = self.model.logposterior(
                 proposal_start_point, return_derived=bool(derived),
                 _no_check=True).logpost
-
             if proposal_start_logpost != -np.inf:
                 proposal_end_point = current_end_point + delta_fast
                 proposal_end = self.model.logposterior(
                     proposal_end_point, return_derived=bool(derived), _no_check=True)
-
                 if proposal_end.logpost != -np.inf:
                     # create the interpolated probability and do a Metropolis test
-
                     frac = i_step / (1 + self.drag_interp_steps)
-                    proposal_interp_logpost = ((1 - frac) * proposal_start_logpost
-                                               + frac * proposal_end.logpost)
-                    current_interp_logpost = ((1 - frac) * current_start_logpost
-                                              + frac * current_end.logpost)
+                    proposal_interp_logpost = ((1 - frac) * proposal_start_logpost +
+                                               frac * proposal_end.logpost)
+                    current_interp_logpost = ((1 - frac) * current_start_logpost +
+                                              frac * current_end.logpost)
                     accept_drag = self.metropolis_accept(proposal_interp_logpost,
                                                          current_interp_logpost)
                     if accept_drag:
@@ -516,15 +556,16 @@ class MCMC(CovmatSampler):
         """
         Symmetric-proposal Metropolis-Hastings test.
 
-        Returns:
-           ``True`` or ``False``.
+        Returns
+        -------
+        ``True`` or ``False``.
         """
         if logp_trial == -np.inf:
             return False
-        elif logp_trial > logp_current:
+        if logp_trial > logp_current:
             return True
-        else:
-            return self._rng.standard_exponential() > (logp_current - logp_trial)
+        posterior_ratio = (logp_current - logp_trial) / self.temperature
+        return self._rng.standard_exponential() > posterior_ratio
 
     def process_accept_or_reject(self, accept_state: bool, trial: np.ndarray,
                                  trial_results: LogPosterior):
@@ -615,8 +656,8 @@ class MCMC(CovmatSampler):
         if more_than_one_process():
             # Compute and gather means and covs
             use_first = int(self.n() / 2)
-            mean = self.collection.mean(first=use_first)
-            cov = self.collection.cov(first=use_first)
+            mean = self.collection.mean(first=use_first, tempered=True)
+            cov = self.collection.cov(first=use_first, tempered=True)
             acceptance_rate = self.get_acceptance_rate(use_first)
             Ns, means, covs, acceptance_rates = mpi.array_gather(
                 [self.n(), mean, cov, acceptance_rate])
@@ -627,15 +668,18 @@ class MCMC(CovmatSampler):
             try:
                 acceptance_rate = self.get_acceptance_rate(cut)
                 Ns = np.ones(m - 1) * cut
+                ranges = [(i * cut, (i + 1) * cut - 1) for i in range(1, m)]
                 means = np.array(
-                    [self.collection.mean(first=i * cut, last=(i + 1) * cut - 1) for i in
-                     range(1, m)])
+                    [self.collection.mean(
+                        first=f, last=l, tempered=True)
+                     for f, l in ranges])
                 covs = np.array(
-                    [self.collection.cov(first=i * cut, last=(i + 1) * cut - 1) for i in
-                     range(1, m)])
+                    [self.collection.cov(
+                        first=f, last=l, tempered=True)
+                     for f, l in ranges])
             except always_stop_exceptions:
                 raise
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 self.log.info("Not enough points in chain to check convergence. "
                               "Waiting for next checkpoint.")
                 return
@@ -646,9 +690,9 @@ class MCMC(CovmatSampler):
                 datetime.datetime.now().isoformat()
             acceptance_rate = (np.average(acceptance_rates, weights=Ns)
                                if acceptance_rates is not None else acceptance_rate)
-            self.log.info(" - Acceptance rate: %.3f" +
-                          (" = avg(%r)" % list(acceptance_rates)
-                           if acceptance_rates is not None else ""), acceptance_rate)
+            accpt_multi_str = (" = avg(%r)" % list(acceptance_rates)
+                               if acceptance_rates is not None else "")
+            self.log.info(" - Acceptance rate: %.3f%s", acceptance_rate, accpt_multi_str)
             self.progress.at[self.i_learn, "acceptance_rate"] = acceptance_rate
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
@@ -689,10 +733,11 @@ class MCMC(CovmatSampler):
                     condition_number = Rminus1 / min(np.abs(eigvals))
                     self.log.debug(" - Condition number = %g", condition_number)
                     self.log.debug(" - Eigenvalues = %r", eigvals)
+                    accpt_multi_str = \
+                        " = sum(%r)" % list(Ns) if more_than_one_process() else ""
                     self.log.info(
-                        " - Convergence of means: R-1 = %f after %d accepted steps" % (
-                            Rminus1, sum(Ns)) +
-                        (" = sum(%r)" % list(Ns) if more_than_one_process() else ""))
+                        " - Convergence of means: R-1 = %f after %d accepted steps%s",
+                        Rminus1, sum(Ns), accpt_multi_str)
                     # Have we converged in means?
                     # (criterion must be fulfilled twice in a row)
                     converged_means = max(Rminus1, self.Rminus1_last) < self.Rminus1_stop
@@ -707,7 +752,9 @@ class MCMC(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
-                mcsamples = self.collection.sampled_to_getdist_mcsamples(first=use_first)
+                # pylint: disable=protected-access
+                mcsamples = self.collection._sampled_to_getdist(
+                    first=use_first, tempered=True)
                 try:
                     bound = np.array([[
                         mcsamples.confidence(i, limfrac=self.Rminus1_cl_level / 2.,
@@ -715,19 +762,20 @@ class MCMC(CovmatSampler):
                         for i in range(self.model.prior.d())]
                         for which in [False, True]]).T
                     success_bounds = True
-                except:
+                except Exception:  # pylint: disable=broad-except
                     bound = None
                     success_bounds = False
                 bounds = np.array(mpi.gather(bound))
             else:
                 try:
                     mcsamples_list = [
-                        self.collection.sampled_to_getdist_mcsamples(
-                            first=i * cut, last=(i + 1) * cut - 1)
+                        # pylint: disable=protected-access
+                        self.collection._sampled_to_getdist(
+                            first=i * cut, last=(i + 1) * cut - 1, tempered=True)
                         for i in range(1, m)]
                 except always_stop_exceptions:
                     raise
-                except:
+                except Exception:  # pylint: disable=broad-except
                     self.log.info("Not enough points in chain to check c.l. convergence. "
                                   "Waiting for next checkpoint.")
                     return
@@ -740,7 +788,7 @@ class MCMC(CovmatSampler):
                                 for which in [False, True]]).T
                         for mcs in mcsamples_list]
                     success_bounds = True
-                except:
+                except Exception:  # pylint: disable=broad-except
                     bounds = None
                     success_bounds = False
             if is_main_process():
@@ -750,12 +798,14 @@ class MCMC(CovmatSampler):
                     self.log.debug(" - normalized std's of bounds = %r", Rminus1_cl)
                     Rminus1_cl = np.max(Rminus1_cl)
                     self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
+                    accpt_multi_str = \
+                        " = sum(%r)" % list(Ns) if more_than_one_process() else ""
                     self.log.info(
-                        " - Convergence of bounds: R-1 = %f after %d " % (
-                            Rminus1_cl,
-                            (sum(Ns) if more_than_one_process() else self.n())) +
-                        "accepted steps" + (" = sum(%r)" % list(
-                            Ns) if more_than_one_process() else ""))
+                        " - Convergence of bounds: R-1 = %f after %d accepted steps%s",
+                        Rminus1_cl,
+                        sum(Ns) if more_than_one_process() else self.n(),
+                        accpt_multi_str,
+                    )
                     if Rminus1_cl < self.Rminus1_cl_stop:
                         self.converged = True
                         self.log.info("The run has converged!")
@@ -777,16 +827,17 @@ class MCMC(CovmatSampler):
                     return
                 mean_of_covs = mpi.share(mean_of_covs)
                 try:
-                    self.proposer.set_covariance(mean_of_covs)
+                    self.proposer.set_covariance(mean_of_covs)  # is already tempered
                     self.mpi_info(" - Updated covariance matrix of proposal pdf.")
                     self.mpi_debug("%r", mean_of_covs)
-                except:
+                except Exception:  # pylint: disable=broad-except
                     self.mpi_debug("Updating covariance matrix failed unexpectedly. "
                                    "waiting until next covmat learning attempt.")
         # Save checkpoint info
         self.write_checkpoint()
 
     def do_output(self, date_time):
+        """Writes/updates the output products of the chain."""
         self.collection.out_update()
         msg = "Progress @ %s : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
         msg += "%d steps taken" % self.n_steps_raw
@@ -797,9 +848,11 @@ class MCMC(CovmatSampler):
         self.log.info(msg)
 
     def write_checkpoint(self):
+        """Writes/updates the checkpoint file."""
         if is_main_process() and self.output:
             checkpoint_filename = self.checkpoint_filename()
-            self.dump_covmat(self.proposer.get_covariance())
+            self.dump_covmat(remove_temperature_cov(
+                self.proposer.get_covariance(), self.temperature))
             checkpoint_info = {"sampler": {self.get_name(): dict([
                 ("converged", self.converged),
                 ("Rminus1_last", self.Rminus1_last),
@@ -811,35 +864,130 @@ class MCMC(CovmatSampler):
             if not self.progress.empty:
                 with open(self.progress_filename(), "a",
                           encoding="utf-8") as progress_file:
-                    fmts = {"N": lambda x: "{:9d}".format(x)}
-                    # TODO: next one is ignored when added to the dict
-                    #        "acceptance_rate": lambda x: "{:15.8g}".format(x)}
+                    fmts = {"N": "{:9d}".format}
                     progress_file.write(self.progress.tail(1).to_string(
                         header=False, index=False, formatters=fmts) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")
 
     def converge_info_changed(self, old_info, new_info):
+        """Whether convergence parameters have changed between two inputs."""
         converge_params = ['Rminus1_stop', "Rminus1_cl_stop", "Rminus1_cl_level",
                            "max_samples"]
         return any(old_info.get(p) != new_info.get(p) for p in converge_params)
 
     # Finally: returning the computed products ###########################################
 
-    def products(self):
+    def samples(self,
+                combined: bool = False,
+                skip_samples: float = 0,
+                to_getdist: bool = False,
+                ) -> Union[SampleCollection, "MCSamples"]:
         """
-        Auxiliary function to define what should be returned in a scripted call.
+        Returns the sample of accepted steps.
 
-        Returns:
-           The sample ``SampleCollection`` containing the accepted steps.
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied before concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
+            this option and ``combined`` are ``True``, the latter is ignored and a
+            multi-chain :class:'getdist.MCSamples` object is created out of the chains of
+            all MPI processes.
+
+        Returns
+        -------
+        SampleCollection, getdist.MCSamples
+            The sample of accepted steps.
         """
-        products = {"sample": self.collection}
-        if is_main_process():
-            products["progress"] = self.progress
+        collection = self.collection.skip_samples(skip_samples, inplace=False)
+        if to_getdist:
+            collection = collection.to_getdist(model=self.model)
+        if combined and more_than_one_process():
+            collections = mpi.gather(collection)
+            if is_main_process():
+                if to_getdist:
+                    collections[0].loadChains(
+                        root=None,
+                        files_or_samples=[c.samples for c in collections],
+                        weights=[c.weights for c in collections],
+                        loglikes=[c.loglikes for c in collections],
+                    )
+                    collection = collections[0]
+                else:
+                    if not skip_samples:
+                        self.mpi_warning(
+                            "When combining chains, it is recommended to remove some "
+                            "initial fraction, e.g. 'skip_samples=0.3'"
+                        )
+                    for collection in collections[1:]:
+                        # pylint: disable=protected-access
+                        collections[0]._append(collection)
+                    collection = collections[0]
+            collection = mpi.share_mpi(collection)
+        if self.temperature != 1 and not to_getdist:
+            self.mpi_warning(
+                "The MCMC chain(s) are stored with temperature != 1. "
+                "Keep that in mind when operating on them, or detemper (in-place) with "
+                "products()['sample'].reset_temperature()'.")
+        return collection
+
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> dict:
+        """
+        Returns the products of the sampling process.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied previously to concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
+            this option and ``combined`` are ``True``, the latter is ignored and a
+            multi-chain :class:'getdist.MCSamples` object is created out of the chains of
+            all MPI processes.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sample"``, and a progress report table under
+            ``"progress"``.
+        """
+        products = {
+            "sample": self.samples(
+                combined=combined,
+                skip_samples=skip_samples,
+                to_getdist=to_getdist
+            )
+        }
+        products["progress"] = share_mpi(getattr(self, "progress", None))
         return products
 
     # Class methods
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
+        """Returns regexps for the output files created by this sampler."""
         regexps = [output.collection_regexp(name=None)]
         if minimal:
             return [(r, None) for r in regexps]
@@ -850,6 +998,9 @@ class MCMC(CovmatSampler):
 
     @classmethod
     def get_version(cls):
+        """
+        Returns the version string of this samples (since it is built-in, that of Cobaya).
+        """
         return get_version()
 
     @classmethod
@@ -880,11 +1031,11 @@ def plot_progress(progress, ax=None, index=None,
     You can use ``figure_kwargs`` and ``legend_kwargs`` to pass arguments to
     ``matplotlib.pyplot.figure`` and ``matplotlib.pyplot.legend`` respectively.
 
-    Return a subplots axes array. Display with ``matplotlib.pyplot.show()``.
+    Returns a subplots axes array. Display with ``matplotlib.pyplot.show()``.
 
     """
     if ax is None:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt  # pylint: disable=import-outside-toplevel
         # noinspection PyTypeChecker
         fig, ax = plt.subplots(nrows=2, sharex=True, **figure_kwargs)
     if isinstance(progress, DataFrame):
@@ -896,8 +1047,9 @@ def plot_progress(progress, ax=None, index=None,
             progress = load_DataFrame(progress)
             # 1-based
             progress.index = np.arange(1, len(progress) + 1)
-        except:
-            raise ValueError("Cannot load progress file %r" % progress)
+        except Exception as excpt:
+            raise ValueError(
+                "Cannot load progress file %r: %s" % (progress, str(excpt))) from excpt
     elif hasattr(type(progress), "__iter__"):
         # Assume is a list of progress'es
         for i, p in enumerate(progress):

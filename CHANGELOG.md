@@ -1,3 +1,15 @@
+## 3.X.Y – 202Y-MM-DD
+
+### General
+
+- `Prior.bounds()` can now return bounds at particular confidence levels when passed `confidence<1`.
+- `SampleCollection` slicing now allows for advanced pandas slicing, e.g. `samples[samples["param"] > value]`.
+- Fixed bug when setting reference pdf in MPI runs (thanks @schoeneberg!)
+
+### MCMC
+
+- Added tempered sampling.
+
 ## 3.2.2 – 2022-11-03
 
 ### General
