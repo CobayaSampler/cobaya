@@ -112,10 +112,6 @@ def load_input(input_file: str) -> InputDict:
                        "output")
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
-        # MARKED FOR DEPRECATION IN v3.2
-        if info.get("debug_file") and info.get("debug"):
-            info["debug"] = info.pop("debug_file")
-        # END OF DEPRECATION BLOCK
         for out in ("output", "debug"):
             if isinstance(info.get(out), str):
                 if not info[out].startswith("/"):
@@ -501,9 +497,6 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     myname = inspect.stack()[0][3]
     ignorable = {"debug", "resume", "force", packages_path_input,
                  "test", "version", "stop_at_error"}
-    # MARKED FOR DEPRECATION IN v3.2
-    ignorable.add("debug_file")
-    # END OF DEPRECATION BLOCK
     ignore = set() if strict else ignorable
     ignore = ignore.union(ignore_blocks or [])
     if set(info for info in info_old if info_old[info] is not None) - ignore \

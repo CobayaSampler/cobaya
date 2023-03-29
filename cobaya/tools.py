@@ -985,12 +985,6 @@ def resolve_packages_path(infos=None):
         infos = []
     elif isinstance(infos, Mapping):
         infos = [infos]
-    # MARKED FOR DEPRECATION IN v3.0
-    for info in infos:
-        if info.get("modules"):
-            raise LoggedError(log, "The input field 'modules' has been deprecated."
-                                   "Please use instead %r", packages_path_input)
-    # END OF DEPRECATION BLOCK
     paths = set(os.path.realpath(p) for p in
                 [info.get(packages_path_input) for info in infos] if p)
     if len(paths) == 1:
@@ -1002,13 +996,6 @@ def resolve_packages_path(infos=None):
                  "Maybe specify one via a command line argument '-%s [...]'?",
             packages_path_arg[0])
     path_env = os.environ.get(packages_path_env)
-    # MARKED FOR DEPRECATION IN v3.0
-    old_env = "COBAYA_MODULES"
-    path_old_env = os.environ.get(old_env)
-    if path_old_env and not path_env:
-        raise LoggedError(log, "The env var %r has been deprecated in favor of %r",
-                          old_env, packages_path_env)
-    # END OF DEPRECATION BLOCK
     if path_env:
         return path_env
     return load_packages_path_from_config_file()

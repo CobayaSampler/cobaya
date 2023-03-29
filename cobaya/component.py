@@ -315,16 +315,6 @@ class CobayaComponent(HasLogger, HasDefaults):
         for k, value in info.items():
             self.validate_info(k, value, annotations)
             try:
-                # MARKED FOR DEPRECATION IN v3.0
-                # NB: cannot ever raise an error, since users may use "path_install" for
-                #     their own purposes. When considered *fully* deprecated, simply
-                #     remove this whole block.
-                if k == "path_install":
-                    self.log.warning(
-                        "*DEPRECATION*: `path_install` will be deprecated "
-                        "in the next version. Please use `packages_path` instead.")
-                    setattr(self, packages_path_input, value)
-                # END OF DEPRECATION BLOCK
                 setattr(self, k, value)
             except AttributeError:
                 raise AttributeError("Cannot set {} attribute for {}!".format(k, self))

@@ -708,13 +708,6 @@ class Model(HasLogger):
         # set of requirement names that may be required derived parameters
         requirements_are_params: Set[str] = set()
         for component in components:
-            # MARKED FOR DEPRECATION IN v3.0
-            if hasattr(component, "add_theory"):
-                raise LoggedError(self.log,
-                                  "Please remove add_theory from %r and return "
-                                  "requirement dictionary from get_requirements() "
-                                  "instead" % component)
-            # END OF DEPRECATION BLOCK
             component.initialize_with_params()
             requirements[component] = \
                 _tidy_requirements(component.get_requirements(), component)
@@ -1341,11 +1334,8 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     info = load_info_overrides(info_or_yaml_or_file, override or {}, **flags)
     # MARKED FOR DEPRECATION IN v3.2
     if info.get("debug_file"):
-        print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
-              "save the debug output to a file, use 'debug: [filename]'.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        if info.get("debug"):
-            info["debug"] = info.pop("debug_file")
+        raise LoggedError("'debug_file' has been deprecated. If you want to "
+                          "save the debug output to a file, use 'debug: [filename]'.")
     # END OF DEPRECATION BLOCK
     logger_setup(info.get("debug"))
     # Inform about ignored info keys

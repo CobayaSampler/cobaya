@@ -73,11 +73,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     info = load_input_dict(info_or_yaml_or_file)
     # MARKED FOR DEPRECATION IN v3.2
     if info.get("debug_file"):
-        print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
-              "save the debug output to a file, use 'debug: [filename]'.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        if info.get("debug"):
-            info["debug"] = info.pop("debug_file")
+        raise LoggedError("'debug_file' has been deprecated. If you want to "
+                          "save the debug output to a file, use 'debug: [filename]'.")
     # END OF DEPRECATION BLOCK
     logger_setup(info.get("debug"))
     log = get_logger(__name__)
