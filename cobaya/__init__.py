@@ -13,7 +13,7 @@ if sys.version_info < (3, 8):
     sys.exit(1)
 
 __author__ = "Jesus Torrado and Antony Lewis"
-__version__ = "3.2.2"
+__version__ = "3.3"
 __obsolete__ = False
-__year__ = "2022"
+__year__ = "2023"
 __url__ = "https://cobaya.readthedocs.io"
