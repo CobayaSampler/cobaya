@@ -112,10 +112,6 @@ def load_input(input_file: str) -> InputDict:
                        "output")
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
-        # MARKED FOR DEPRECATION IN v3.2
-        if info.get("debug_file") and info.get("debug"):
-            info["debug"] = info.pop("debug_file")
-        # END OF DEPRECATION BLOCK
         for out in ("output", "debug"):
             if isinstance(info.get(out), str):
                 if not info[out].startswith("/"):
@@ -265,7 +261,7 @@ def add_aggregated_chi2_params(param_info, all_types):
 _Dict = TypeVar('_Dict', InputDict, ModelDict)
 
 
-def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
+def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) -> _Dict:
     """
     Creates an updated info starting from the defaults for each component and updating it
     with the input info.
@@ -314,16 +310,22 @@ def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
                         component_base_classes[block].get_defaults())
             else:
                 component_path = input_block[name].get("python_path")
-                default_class_info, annotations = get_default_info(
-                    name, block, class_name=input_block[name].get("class"),
-                    component_path=component_path, input_options=input_block[name],
-                    return_undefined_annotations=True)
+                try:
+                    default_class_info, annotations = get_default_info(
+                        name, block, class_name=input_block[name].get("class"),
+                        component_path=component_path, input_options=input_block[name],
+                        return_undefined_annotations=True)
+                except ComponentNotFoundError:
+                    if strict:
+                        raise
+                    default_class_info, annotations = {}, {}
             updated[name] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)
             # Reserved attributes not necessarily already in default info:
             reserved = {"external", "class", "provides", "requires", "renames",
-                        "input_params", "output_params", "python_path", "aliases"}
+                        "input_params", "output_params", "python_path", "aliases",
+                        "package_install"}
             options_not_recognized = set(input_block[name]).difference(
                 chain(reserved, updated[name], annotations))
             if options_not_recognized:
@@ -495,9 +497,6 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     myname = inspect.stack()[0][3]
     ignorable = {"debug", "resume", "force", packages_path_input,
                  "test", "version", "stop_at_error"}
-    # MARKED FOR DEPRECATION IN v3.2
-    ignorable.add("debug_file")
-    # END OF DEPRECATION BLOCK
     ignore = set() if strict else ignorable
     ignore = ignore.union(ignore_blocks or [])
     if set(info for info in info_old if info_old[info] is not None) - ignore \

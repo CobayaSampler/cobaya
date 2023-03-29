@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from copy import deepcopy
 
-from cobaya.cosmo_input import base_precision, planck_base_model, create_input
+from cobaya.cosmo_input import planck_lss_precision, planck_base_model, create_input
 from cobaya.model import get_model
 from cobaya.tools import recursive_update, check_2d
 
@@ -21,7 +21,7 @@ redshifts = [100, 10, 1, 0]
 def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_installed):
     planck_base_model_prime = deepcopy(planck_base_model)
     planck_base_model_prime["hubble"] = "H"  # intercompatibility CAMB/CLASS
-    info_theory = {theo: {"extra_args": base_precision[theo]}}
+    info_theory = {theo: {"extra_args": planck_lss_precision[theo]}}
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     info = recursive_update(info, {"theory": info_theory, "likelihood": {"one": None}})
     info["packages_path"] = process_packages_path(packages_path)

@@ -170,13 +170,13 @@ def load_module(name, package=None, path=None, min_version=None,
         # Force reload if requested.
         # Use with care and only in install checks (e.g. for version upgrade checks):
         # will delete all references from previous imports!
-        if name in sys.modules and reload:
+        if reload and name in sys.modules:
             del sys.modules[name]
         module = import_module(name, package=package)
     if path and check_path:
         check_module_path(module, path)
     if min_version:
-        check_module_version(module, min_version)
+        check_module_version(module, str(min_version))
     return module
 
 
@@ -755,7 +755,7 @@ def deepcopy_where_possible(base: _R) -> _R:
     and to do that it works on a copy of it; but some of the values passed to cobaya
     may not be copyable (if they are not pickleable). This function provides a
     compromise solution. To allow dict comparisons and make the copy mutable it converts
-    MappingProxyType, OrderedDict and other Mapping types into plain dict.
+    MappingProxyType and other Mapping types into plain dict.
     """
     if isinstance(base, Mapping):
         _copy = {}
@@ -822,7 +822,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
          for this_cost in permuted_costs_per_param_per_block])
     total_costs = np.array(
         [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
-             .dot(permuted_costs_per_param_per_block[i])
+         .dot(permuted_costs_per_param_per_block[i])
          for i, o in enumerate(orderings)])
     i_optimal: int = np.argmin(total_costs)  # type: ignore
     optimal_ordering = orderings[i_optimal]
@@ -838,6 +838,8 @@ def find_with_regexp(regexp, root, walk_tree=False):
 
     Set walk_tree=True if there is more than one directory level (default: `False`).
     """
+    if isinstance(regexp, str):
+        regexp = re.compile(regexp)
     try:
         if walk_tree:
             files = []
@@ -992,12 +994,6 @@ def resolve_packages_path(infos=None):
         infos = []
     elif isinstance(infos, Mapping):
         infos = [infos]
-    # MARKED FOR DEPRECATION IN v3.0
-    for info in infos:
-        if info.get("modules"):
-            raise LoggedError(log, "The input field 'modules' has been deprecated."
-                                   "Please use instead %r", packages_path_input)
-    # END OF DEPRECATION BLOCK
     paths = set(os.path.realpath(p) for p in
                 [info.get(packages_path_input) for info in infos] if p)
     if len(paths) == 1:
@@ -1009,13 +1005,6 @@ def resolve_packages_path(infos=None):
                  "Maybe specify one via a command line argument '-%s [...]'?",
             packages_path_arg[0])
     path_env = os.environ.get(packages_path_env)
-    # MARKED FOR DEPRECATION IN v3.0
-    old_env = "COBAYA_MODULES"
-    path_old_env = os.environ.get(old_env)
-    if path_old_env and not path_env:
-        raise LoggedError(log, "The env var %r has been deprecated in favor of %r",
-                          old_env, packages_path_env)
-    # END OF DEPRECATION BLOCK
     if path_env:
         return path_env
     return load_packages_path_from_config_file()

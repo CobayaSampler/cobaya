@@ -2,7 +2,7 @@
 from copy import deepcopy
 
 from .common_cosmo import body_of_test
-from cobaya.cosmo_input import cmb_precision
+from cobaya.cosmo_input import planck_precision
 
 # Generating plots in Travis
 import matplotlib
@@ -11,7 +11,7 @@ matplotlib.use('agg')
 
 # Downgrade of Planck 2018 precision/model
 
-cmb_precision = deepcopy(cmb_precision)
+cmb_precision = deepcopy(planck_precision)
 cmb_precision["camb"].update({
     "halofit_version": "takahashi",
     "bbn_predictor": "BBN_fitting_parthenope"
@@ -37,7 +37,7 @@ def test_planck_2015_t_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowl_highTT)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lowl_highTT, best_fit_derived,
@@ -48,7 +48,7 @@ def test_planck_2015_p_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowTEB_highTTTEEE)
     best_fit.pop("H0")
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = derived_lowTEB_highTTTEEE
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lowTEB_highTTTEEE, best_fit_derived,
@@ -59,7 +59,7 @@ def test_planck_2015_l_camb(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("H0")
     info_likelihood = lik_info_lensing
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = derived_lensing
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lensing, best_fit_derived,
@@ -74,7 +74,7 @@ def test_planck_2015_l2_camb(packages_path, skip_not_installed):
     info_likelihood = {lik_name: lik_info_lensing[clik_name]}
     chi2_lensing_cmblikes = deepcopy(chi2_lensing)
     chi2_lensing_cmblikes[lik_name] = chi2_lensing[clik_name]
-    info_theory = {"camb": {"extra_args": cmb_precision["camb"]}}
+    info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = derived_lensing
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_lensing_cmblikes, best_fit_derived,
@@ -85,7 +85,7 @@ def test_planck_2015_t_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowl_highTT)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowl_highTT
-    info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
+    info_theory = {"classy": {"extra_args": planck_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowl_highTT)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)
@@ -100,7 +100,7 @@ def test_planck_2015_p_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowTEB_highTTTEEE)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowTEB_highTTTEEE
-    info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
+    info_theory = {"classy": {"extra_args": planck_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowTEB_highTTTEEE)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)
@@ -115,7 +115,7 @@ def test_planck_2015_l_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lensing)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lensing
-    info_theory = {"classy": {"extra_args": cmb_precision["classy"]}}
+    info_theory = {"classy": {"extra_args": planck_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lensing)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)

@@ -66,7 +66,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         info: InputDict = load_info_overrides(
             info_or_yaml_or_file, override or {}, **flags)
         if info.get("post"):
-            if info.get("minimize"):
+            if info.get("minimize"):  # type: ignore
                 raise ValueError(
                     "``minimize`` option is incompatible with post-processing.")
             if isinstance(output, str) or output is False:
@@ -77,19 +77,16 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             info["output"] = output or None
         # MARKED FOR DEPRECATION IN v3.2
         if info.get("debug_file"):
-            print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
-                  "save the debug output to a file, use 'debug: [filename]'.")
-            # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            if info.get("debug"):
-                info["debug"] = info.pop("debug_file")
+            raise LoggedError("'debug_file' has been deprecated. If you want to "
+                              "save the debug output to a file, use 'debug: [filename]'.")
         # END OF DEPRECATION BLOCK
         logger_setup(info.get("debug"))
         logger_run = get_logger(run.__name__)
-        # 1. Prepare output driver, if requested by defining an output_prefix
+        # 1. Prepare output driver, if requested by defining an output prefix
         # GetDist needs to know the original sampler, so don't overwrite if minimizer
         try:
             which_sampler = list(info["sampler"])[0]
-            if info.get("minimize"):
+            if info.get("minimize"):  # type: ignore
                 # Preserve options if "minimize" was already the sampler
                 if which_sampler.lower() != "minimize":
                     info["sampler"] = {"minimize": None}

@@ -215,9 +215,9 @@ class BoltzmannBase(Theory):
                 #                 "Source %r requested twice with different specification"
                 #                 ": %r vs %r.", source, window, self.sources[source])
                 self._must_provide[k].update(v)
-            elif k in ["Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
+            elif k in {"Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
                        "angular_diameter_distance", "comoving_radial_distance",
-                       "sigma8_z", "fsigma8"]:
+                       "sigma8_z", "fsigma8"}:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
                 if not isinstance(v, Iterable) or "z" not in v:

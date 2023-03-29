@@ -9,6 +9,6 @@ aliases: [plikHM_TT]
 # Speed in evaluations/second
 speed: 50
 
-params: !defaults [params_calib, params_calib_temp, params_TT]
+params: !defaults [../base_classes/planck_calib, params_calib_temp, params_TT]
 
 prior: !defaults [prior_SZ]

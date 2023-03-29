@@ -7,10 +7,9 @@
 """
 
 import os
-import sys
 import time
 from itertools import chain
-from typing import List, Union, Optional, Tuple
+from typing import List, Union, Optional, Tuple, TypedDict
 import numpy as np
 
 from cobaya import mpi
@@ -29,19 +28,15 @@ from cobaya.prior import Prior
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
     str_to_list
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
-    InfoDict, PostDict
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
+    PostDict
 
 
-    class PostResultDict(TypedDict):
-        sample: Union[SampleCollection, List[SampleCollection]]
-        stats: ParamValuesDict
-        logpost_weight_offset: float
-        weights: Union[np.ndarray, List[np.ndarray]]
-else:
-    globals()['PostResultDict'] = InfoDict
+class PostResultDict(TypedDict):
+    sample: Union[SampleCollection, List[SampleCollection]]
+    stats: ParamValuesDict
+    logpost_weight_offset: float
+    weights: Union[np.ndarray, List[np.ndarray]]
+
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
 
@@ -68,11 +63,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     info = load_input_dict(info_or_yaml_or_file)
     # MARKED FOR DEPRECATION IN v3.2
     if info.get("debug_file"):
-        print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
-              "save the debug output to a file, use 'debug: [filename]'.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        if info.get("debug"):
-            info["debug"] = info.pop("debug_file")
+        raise LoggedError("'debug_file' has been deprecated. If you want to "
+                          "save the debug output to a file, use 'debug: [filename]'.")
     # END OF DEPRECATION BLOCK
     logger_setup(info.get("debug"))
     log = get_logger(__name__)
@@ -83,7 +75,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.warning("Resuming not implemented for post-processing. Re-starting.")
     if not info.get("output") and info_post.get("output") \
             and not info.get("params"):
-        raise LoggedError(log, "The input dictionary must have be a full option "
+        raise LoggedError(log, "The input dictionary must be a full option "
                                "dictionary, or have an existing 'output' root to load "
                                "previous settings from ('output' to read from is in the "
                                "main block not under 'post'). ")
@@ -236,7 +228,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # so that the likelihoods do not try to recompute them
     # But be careful to exclude *input* params that have a "derived: True" value
     # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
-    # Don't assign to derived parameters to theories, only likelihoods, so they can be
+    # Don't assign derived parameters to theories, only likelihoods, so they can be
     # recomputed if needed. If the theory does not need to be computed, it doesn't matter
     # if it is already assigned parameters in the usual way; likelihoods can get
     # the required derived parameters from the stored sample derived parameter inputs.
@@ -278,8 +270,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     "it is probably safer to explore it directly.")
 
     mlprior_names_add = minuslogprior_names(add.get("prior") or [])
-    chi2_names_add = [get_chi2_name(name) for name in add["likelihood"] if
-                      name != "one"]
+
     out_combined["likelihood"].pop("one", None)
 
     add_theory = add.get("theory")
@@ -422,13 +413,14 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             importance_weights.extend(_weights)
             collection_out.reweight(_weights)
 
+        sampled_params = dummy_model_in.parameterization.sampled_params()
+
         for i, point in collection_in.data.iterrows():
             all_params = point.to_dict()
             for p in remove_params:
                 all_params.pop(p, None)
             log.debug("Point: %r", point)
-            sampled = np.array([all_params[param] for param in
-                                dummy_model_in.parameterization.sampled_params()])
+            sampled = np.array([all_params[param] for param in sampled_params])
             all_params = out_func_parameterization.to_input(all_params).copy()
 
             # Add/remove priors
@@ -458,9 +450,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
             loglikes_add, output_derived = model_add._loglikes_input_params(
-                all_params, return_output_params=True)
-            loglikes_add = dict(zip(chi2_names_add, loglikes_add))
-            output_derived = dict(zip(model_add.output_params, output_derived))
+                all_params, return_output_params=True, as_dict=True)
+            loglikes_add = {get_chi2_name(name): loglikes_add[name] for name in
+                            model_add.likelihood if name != "one"}
+            output_derived = {_p: output_derived[_p] for _p in
+                              model_add.output_params}
+
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                             for name in collection_out.chi2_names]
             if is_debug(log):

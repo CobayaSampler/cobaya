@@ -154,16 +154,6 @@ class LikelihoodExternalFunction(Likelihood):
         else:
             required_args = argspec.args
         self.params = {p: None for p in required_args if p not in ignore_args}
-        # MARKED FOR DEPRECATION IN v3.0
-        if "_derived" in argspec.args:
-            raise LoggedError(
-                self.log, "The use of a `_derived` argument to deal with derived "
-                          "parameters has been deprecated. From now on please list your "
-                          "derived parameters in a list as the value of %r in the "
-                          "likelihood info (see documentation) and have your function "
-                          "return a tuple `(logp, {derived_param_1: value_1, ...})`.",
-                "output_params")
-        # END OF DEPRECATION BLOCK
         if self.output_params:
             self.output_params = str_to_list(self.output_params) or []
         # Required quantities from other components
@@ -174,16 +164,6 @@ class LikelihoodExternalFunction(Likelihood):
                           "it needs to accept a keyword argument %r.", "requires",
                 self._self_arg)
         self._requirements = info.get("requires") or {}
-        # MARKED FOR DEPRECATION IN v3.0
-        if "_theory" in argspec.args:
-            raise LoggedError(
-                self.log, "The use of a `_theory` argument to deal with requirements has "
-                          "been deprecated. From now on please indicate your requirements"
-                          " as the value of field %r in the likelihood info (see "
-                          "documentation) and have your function take a parameter "
-                          "`_self`.", "requires")
-        # END OF DEPRECATION BLOCK
-
         self._optional_args = \
             [p for p, val in chain(zip(argspec.args[-len(argspec.defaults):],
                                        argspec.defaults) if argspec.defaults else [],
@@ -270,7 +250,7 @@ class LikelihoodCollection(ComponentCollection):
                 assert isinstance(info, Mapping)
                 like_class: type = get_component_class(
                     name, kind="likelihood",
-                    component_path=info.get("python_path", None),
+                    component_path=info.get("python_path"),
                     class_name=info.get("class"), logger=self.log)
                 self.add_instance(name, like_class(info, packages_path=packages_path,
                                                    timing=timing, standalone=False,

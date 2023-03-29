@@ -398,11 +398,18 @@ reionization = {
         'params': {}}}
 
 # EXPERIMENTS ############################################################################
-base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
+base_precision: InfoDict = {"camb": None,
                             "classy": {"non linear": "hmcode", "nonlinear_min_k_max": 20}}
 cmb_precision = deepcopy(base_precision)
-cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
-                              "lens_potential_accuracy": 1})
+cmb_precision["camb"] = {"lens_potential_accuracy": 1}
+
+planck_lss_precision = deepcopy(base_precision)
+planck_lss_precision["camb"] = {"halofit_version": "mead",
+                                "bbn_predictor": "PArthENoPE_880.2_standard.dat"}
+
+planck_precision = deepcopy(planck_lss_precision)
+planck_precision["camb"]["lens_potential_accuracy"] = 1
+
 default_mcmc_options = {"proposal_scale": 1.9,
                         "Rminus1_stop": 0.01, "Rminus1_cl_stop": 0.2}
 cmb_sampler_recommended: InfoDict = {"mcmc": dict(drag=True, oversample_power=0.4,
@@ -411,10 +418,22 @@ cmb_sampler_mcmc: InfoDict = {"mcmc": dict(drag=False, **default_mcmc_options)}
 
 like_cmb: InfoDict = {
     none: {},
+    "planck_NPIPE": {
+        "desc": "Planck NPIPE (native; polarized NPIPE CMB + lensing)",
+        "sampler": cmb_sampler_recommended,
+        "theory": {theo: {"extra_args": cmb_precision[theo]}
+                   for theo in ["camb", "classy"]},
+        "likelihood": {
+            "planck_2018_lowl.TT": None,
+            "planck_2018_lowl.EE": None,
+            "planck_NPIPE_highl_CamSpec.TTTEEE": None,
+            "planckpr4lensing":
+                {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
+                                     'min_version': '1.0.2'}}}},
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
         "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
             "planck_2018_lowl.TT": None,
@@ -424,7 +443,7 @@ like_cmb: InfoDict = {
     "planck_2018_bk18": {
         "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2018",
         "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
             "planck_2018_lowl.TT": None,
@@ -435,7 +454,7 @@ like_cmb: InfoDict = {
     "planck_2018_CMBmarged_lensing": {
         "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {"planck_2018_lensing.CMBMarged": None}}}
 
@@ -577,6 +596,10 @@ default_sampler = {"sampler": "MCMC dragging"}
 preset: InfoDict = dict([
     (none, {"desc": "(No preset chosen)"}),
     # Pure CMB #######################################################
+    ("planck_NPIPE_camb", {
+        "desc": "Planck NPIPE with CAMB (all native Python)",
+        "theory": "camb",
+        "like_cmb": "planck_NPIPE"}),
     ("planck_2018_camb", {
         "desc": "Planck 2018 with CAMB",
         "theory": "camb",
@@ -708,7 +731,7 @@ install_basic: InfoDict = {
         # Native first: avoids reinstalling clik code+data if supp data obsolete
         "planck_2018_lensing.native": None,
         "planck_2018_lowl.TT": None,
-        "bicep_keck_2018": None,
+        "planck_2018_lowl.EE": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}
@@ -718,10 +741,8 @@ install_tests["likelihood"].update({"planck_2015_lowl": None,
                                     "planck_2018_highl_plik.TT_unbinned": None,
                                     "planck_2018_highl_plik.TT_lite_native": None,
                                     "planck_2018_highl_CamSpec.TT": None,
-                                    "planck_2018_highl_CamSpec.TT_native": None,
                                     "planck_2018_highl_CamSpec2021.TT": None,
-                                    "planck_2018_lowl.EE_native": None,
-                                    "planck_2018_lowl.TT_native": None
+                                    "bicep_keck_2018": None
                                     })
 
 # CONTENTS FOR COMBO-BOXED IN A GUI ######################################################

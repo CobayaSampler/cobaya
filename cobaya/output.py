@@ -146,16 +146,9 @@ class Output(HasLogger):
 
     @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
                         "_resuming", "prefix_regexp_str", "log"))
-    def __init__(self, prefix, resume=resume_default, force=False, infix=None,
-                 output_prefix=None):
+    def __init__(self, prefix, resume=resume_default, force=False, infix=None):
         self.name = "output"
         self.set_logger(self.name)
-        # MARKED FOR DEPRECATION IN v3.0
-        # -- also remove output_prefix kwarg above
-        if output_prefix is not None:
-            raise LoggedError(self.log, "`output_prefix` has been deprecated. "
-                                        "Please use `prefix` instead.")
-        # END OF DEPRECATION BLOCK
         self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (
@@ -387,7 +380,7 @@ class Output(HasLogger):
                 info.pop("debug", None)
                 info.pop("force", None)
                 info.pop("resume", None)
-                # make sure the dumped output_prefix does only contain the file prefix,
+                # make sure the dumped output prefix does only contain the file prefix,
                 # not the folder, since it's already been placed inside it
                 info["output"] = self.updated_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
@@ -581,11 +574,6 @@ def get_output(*args, **kwargs) -> Output:
     Auxiliary function to retrieve the output driver
     (e.g. whether to get the MPI-wrapped one, or a dummy output driver).
     """
-    # MARKED FOR DEPRECATION IN v3.0
-    if kwargs.get("output_prefix") is not None:
-        raise ValueError("DEPRECATION: `output_prefix` has been deprecated. "
-                         "Please use `prefix` instead.")
-    # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
         return Output(*args, **kwargs)
     else:

@@ -93,17 +93,6 @@ class MCMC(CovmatSampler):
         if not self.model.prior.d():
             raise LoggedError(self.log, "No parameters being varied for sampler")
         self.log.debug("Initializing")
-        # MARKED FOR DEPRECATION IN v3.0
-        if getattr(self, "oversample", None) is not None:
-            raise LoggedError(self.log, "`oversample` has been deprecated. "
-                                        "Oversampling is now requested by setting "
-                                        "`oversample_power` > 0.")
-        # END OF DEPRECATION BLOCK
-        # MARKED FOR DEPRECATION IN v3.0
-        if getattr(self, "check_every", None) is not None:
-            raise LoggedError(self.log, "`check_every` has been deprecated. "
-                                        "Please use `learn_every` instead.")
-        # END OF DEPRECATION BLOCK
         if self.callback_every is None:
             self.callback_every = self.learn_every
         self._quants_d_units = []
@@ -283,12 +272,6 @@ class MCMC(CovmatSampler):
                                  "speed ratio and fast-to-slow ratio not large enough.")
         # Define proposer and other blocking-related quantities
         if self.drag:
-            # MARKED FOR DEPRECATION IN v3.0
-            if getattr(self, "drag_limits", None) is not None:
-                raise LoggedError(self.log, "`drag_limits` has been deprecated. "
-                                            "Use 'oversample_power' to control the amount"
-                                            " of dragging steps.")
-            # END OF DEPRECATION BLOCK
             self.get_new_sample = self.get_new_sample_dragging
             self.mpi_info("Dragging with number of interpolating steps:")
             max_width = len(str(self.drag_interp_steps))
@@ -1025,7 +1008,7 @@ def plot_progress(progress, ax=None, index=None,
 
     Takes a ``progress`` instance (actually a ``pandas.DataFrame``,
     returned as part of the sampler ``products``),
-    a chain ``output`` prefix, or a list of any of those
+    a chain ``output`` prefix, or a list of those
     for plotting progress of several chains at once.
 
     You can use ``figure_kwargs`` and ``legend_kwargs`` to pass arguments to

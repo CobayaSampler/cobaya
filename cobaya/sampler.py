@@ -331,17 +331,6 @@ class Sampler(CobayaComponent):
         self._entropy = ss.entropy  # for debugging store for reproducibility
         self._rng = default_rng(ss)
 
-    # MARKED FOR DEPRECATION IN v3.0
-    def __getitem__(self, k):
-        raise LoggedError(
-            self.log,
-            "NB: the variables returned by `cobaya.run` have changed: "
-            "they were `(updated_info, sampler_products)` and they are now "
-            "`(updated_info, sampler)`. You can access the sampler products (the old "
-            "return value) as `sampler.products()` and the `Model` used as "
-            "`sampler.model`.")
-    # END OF DEPRECATION BLOCK
-
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
         """

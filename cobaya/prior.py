@@ -436,7 +436,7 @@ class Prior(HasLogger):
                            "parameters, Priors must be functions of input parameters. "
                            "Use a separate 'likelihood' for the prior if needed.")
                 else:
-                    err = ("Some of the arguments of the external prior '%s' cannot be "
+                    err = ("Some arguments of the external prior '%s' cannot be "
                            "found and don't have a default value either: %s")
                 raise LoggedError(self.log, err, name, list(unknown))
             self.external_dependence.update(params)

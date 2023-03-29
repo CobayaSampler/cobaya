@@ -9,4 +9,4 @@ aliases: [plikHM_EE]
 # Speed in evaluations/second
 speed: 100
 
-params: !defaults [params_calib, params_calib_pol, params_EE]
+params: !defaults [../base_classes/planck_calib, params_calib_pol, params_EE]

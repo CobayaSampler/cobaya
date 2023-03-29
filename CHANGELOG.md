@@ -1,14 +1,25 @@
-## 3.X.Y – 202Y-MM-DD
+## 3.3 – 2023-03-29
 
 ### General
 
+- Minimum Python version updated to 3.8
 - `Prior.bounds()` can now return bounds at particular confidence levels when passed `confidence<1`.
 - `SampleCollection` slicing now allows for advanced pandas slicing, e.g. `samples[samples["param"] > value]`.
 - Fixed bug when setting reference pdf in MPI runs (thanks @schoeneberg!)
+- Components in yaml files referring to external Python modules can now give `package_install` settings to specify whether installed from pip, github or URL when cobaya-install is run.
+- Fix for `post` when likelihoods return different number of derived parameters (#285) (thanks @zhaoruiyang98)
 
 ### MCMC
 
 - Added tempered sampling.
+- `products` method revamped; can produce GetDist chains directly.
+
+### Cosmology
+
+- Replaced default planck_2018_lowl.EE and planck_2018_low.TT with native versions, and using GitHub-hosted clik version.
+- Updated planck likelihoods to all load calibration parameter from same yaml
+- Removed clik version of planck 2018 CamSpec, defaults to native (avoids inconsistent calibration parameter naming)
+- GUI inclues latest NPIPE fully Python likelihood configuration
 
 ## 3.2.2 – 2022-11-03
 

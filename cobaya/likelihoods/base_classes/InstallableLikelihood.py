@@ -65,8 +65,7 @@ class InstallableLikelihood(Likelihood):
         i.e. ``cls.get_path(cls.get_path(path)) = cls.get_path(path)``.
         """
         opts = cls.get_install_options()
-        repo = opts.get("directory", opts.get("github_repository", None))
-        if repo:
+        if repo := opts.get("directory", opts.get("github_repository")):
             data_path = repo.split('/')[-1]
         else:
             data_path = opts.get("data_path", cls.__name__)
@@ -84,25 +83,22 @@ class InstallableLikelihood(Likelihood):
         installation.
         """
         if kwargs.get("data", True):
-            path = kwargs["path"]
-            path = cls.get_path(path)  # ensure full install path passed
-            opts = cls.get_install_options()
-            if not opts:
+            path = cls.get_path(kwargs["path"])  # ensure full install path passed
+            if not (opts := cls.get_install_options()):
                 return True
-            elif not (os.path.exists(path) and len(os.listdir(path)) > 0):
+            elif not os.path.exists(path) or not len(os.listdir(path)):
                 log = get_logger(cls.get_qualified_class_name())
                 (log.error if kwargs.get("show_error") is not False else log.info)(
                     "The given installation path does not exist: '%s'", path)
                 return False
-            elif opts.get("github_release"):
+            elif release := opts.get("github_release"):
                 try:
                     with open(os.path.join(path, _version_filename), "r") as f:
                         ver = f.readlines()[0]
                 except FileNotFoundError:  # old install: no version file
                     ver = '0.0'
-                installed_version = version.parse(ver)
-                min_version = version.parse(opts.get("github_release"))
-                if installed_version < min_version:
+                if ((installed_version := version.parse(ver)) <
+                        (min_version := version.parse(release))):
                     raise VersionCheckError(
                         f"Installed version ({installed_version}) "
                         f"older than minimum required one ({min_version}).")
@@ -116,17 +112,15 @@ class InstallableLikelihood(Likelihood):
         if not data:
             return True
         log = get_logger(cls.get_qualified_class_name())
-        opts = cls.get_install_options()
-        if not opts:
+        if not (opts := cls.get_install_options()):
             log.info("No install options. Nothing to do.")
             return True
-        repo = opts.get("github_repository", None)
-        if repo:
+        if repo := opts.get("github_repository"):
             from cobaya.install import download_github_release
             log.info("Downloading %s data..." % repo)
             return download_github_release(
-                os.path.join(path, "data"), repo, opts.get("github_release", "master"),
-                asset=opts.get("asset", None), directory=opts.get("directory", None),
+                os.path.join(path, "data"), repo, opts.get("github_release"),
+                asset=opts.get("asset"), directory=opts.get("directory"),
                 no_progress_bars=no_progress_bars, logger=log)
         else:
             full_path = cls.get_path(path)
@@ -137,7 +131,7 @@ class InstallableLikelihood(Likelihood):
             url = opts["download_url"]
             log.info("Downloading likelihood data file: %s...", url)
             from cobaya.install import download_file
-            if not download_file(url, full_path, decompress=True, logger=log,
+            if not download_file(url, full_path, logger=log,
                                  no_progress_bars=no_progress_bars):
                 return False
             log.info("Likelihood data downloaded and uncompressed correctly.")
