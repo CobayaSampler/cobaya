@@ -166,7 +166,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
 
 def plot_sample(sample, params):
     import getdist.plots as gdplt
-    gdsamples = sample.as_getdist_mcsamples()
+    gdsamples = sample._sampled_to_getdist()
     gdplot = gdplt.getSubplotPlotter()
     gdplot.triangle_plot(gdsamples, params, filled=True)
     gdplot.export("test.png")

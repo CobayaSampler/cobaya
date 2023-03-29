@@ -394,10 +394,17 @@ class NumberWithUnits:
                 val = float(x)
                 if dtype == int and np.isfinite(val):
                     # in case ints are given in exponential notation, make int(float())
-                    return int(val)
+                    if val == 0:
+                        return val
+                    sign = 1 if val > 0 else -1
+                    return sign * int(max(abs(val), 1))
                 return val
-            except ValueError:
-                raise LoggedError(log, "Could not convert '%r' to a number.", x)
+            except ValueError as excpt:
+                raise LoggedError(
+                    log,
+                    "Could not convert '%r' to a number.",
+                    x
+                ) from excpt
 
         if isinstance(n_with_unit, str):
             n_with_unit = n_with_unit.lower()
@@ -418,6 +425,7 @@ class NumberWithUnits:
         self.set_scale(scale if scale is not None else 1)
 
     def set_scale(self, scale):
+        """Applies a numerical value for the scale, updating the attr. `value`."""
         if self.unit:
             self.scale = scale
             self.value = self.unit_value * scale
@@ -588,6 +596,7 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([]), symmetric=False)
     if m2 is None:
         m2 = np.zeros(dim)
     if symmetric:
+        # pylint: disable=arguments-out-of-order
         return _KL_norm(m1, S1, m2, S2) + _KL_norm(m2, S2, m1, S1)
     return _KL_norm(m1, S1, m2, S2)
 

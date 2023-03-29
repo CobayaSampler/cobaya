@@ -19,7 +19,7 @@ from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     packages_path_input
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
-from cobaya.model import Model
+from cobaya.model import Model, DummyModel
 from cobaya.output import get_output
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, \
@@ -54,16 +54,6 @@ def value_or_list(lst: list):
         return lst[0]
     else:
         return lst
-
-
-# Dummy classes for loading chains for post processing
-
-class DummyModel:
-
-    def __init__(self, info_params, info_likelihood, info_prior=None):
-        self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
-        self.prior = [prior_1d_name] + list(info_prior or [])
-        self.likelihood = list(info_likelihood)
 
 
 @mpi.sync_state
@@ -116,9 +106,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             in_collections = sample
         for i, collection in enumerate(in_collections):
             if skip:
-                if 0 < skip < 1:
-                    skip = int(round(skip * len(collection)))
-                collection = collection.filtered_copy(slice(skip, None))
+                collection = collection.skip_samples(skip)
             if thin != 1:
                 collection = collection.thin_samples(thin)
             in_collections[i] = collection
@@ -145,6 +133,18 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     else:
         raise LoggedError(log, "No output from where to load from, "
                                "nor input collections given.")
+    # A note on tempered chains: detempering happens automatically when reweighting,
+    # which is done later in this function in most cases.
+    # But for the sake of robustness, we detemper all chains at init.
+    if mpi.is_main_process() and any(c.is_tempered for c in in_collections):
+        log.info("Starting from tempered chains. Will detemper before proceeding.")
+    # Let's make sure we work on a copy if the chain is going to be altered
+    already_copied = bool(output_in) or (sample is not None and (skip or thin != 1))
+    for i, collection in enumerate(in_collections):
+        if not already_copied:
+            collection = collection.copy()
+        collection.reset_temperature()
+        in_collections[i] = collection
     if any(len(c) <= 1 for c in in_collections):
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "

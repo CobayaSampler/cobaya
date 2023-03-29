@@ -8,13 +8,13 @@
 # Global
 import os
 import sys
-import numpy as np
 import logging
 import inspect
 from itertools import chain
 from typing import Any, Callable
 from tempfile import gettempdir
 import re
+import numpy as np
 
 # Local
 from cobaya.tools import read_dnumber, get_external_function, find_with_regexp, \
@@ -22,11 +22,15 @@ from cobaya.tools import read_dnumber, get_external_function, find_with_regexp, 
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError, get_logger, NoLogging
+from cobaya.log import get_logger, NoLogging, LoggedError
 from cobaya.install import download_github_release
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, Extension
+
+
+# Suppresses warnings about first defining attrs outside __init__
+# pylint: disable=attribute-defined-outside-init
 
 
 class polychord(Sampler):
@@ -59,9 +63,8 @@ class polychord(Sampler):
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
+        install_path = self.get_path(self.packages_path) if self.packages_path else None
         try:
-            install_path = (lambda _p: self.get_path(_p) if _p else None)(
-                self.packages_path)
             self.pc = load_external_module(
                 "pypolychord", path=self.path, install_path=install_path,
                 min_version=self._pc_repo_version,
@@ -70,7 +73,7 @@ class polychord(Sampler):
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find PolyChord: {excpt}. "
-                           "To install it, run `cobaya-install polychord`"))
+                           "To install it, run `cobaya-install polychord`")) from excpt
         with NoLogging(logging.CRITICAL):
             settings = load_external_module(
                 "pypolychord.settings", path=self.path, install_path=install_path,
@@ -81,7 +84,7 @@ class polychord(Sampler):
         self.n_priors = len(self.model.prior)
         self.n_likes = len(self.model.likelihood)
         self.nDims = self.model.prior.d()
-        self.nDerived = (self.n_derived + self.n_priors + self.n_likes)
+        self.nDerived = self.n_derived + self.n_priors + self.n_likes
         if self.logzero is None:
             self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
@@ -185,11 +188,18 @@ class polychord(Sampler):
         # Done!
         if is_main_process():
             self.log.debug("Calling PolyChord with arguments:")
-            for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
+            for p, v in inspect.getmembers(self.pc_settings, lambda a: not callable(a)):
                 if not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
+        self.logZ, self.logZstd = np.nan, np.nan
+        self._frac_unphysical = np.nan
+        self.collection = None
+        self.clusters = None
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
+        """
+        Preprocess output for the callback function and calls it, if present.
+        """
         if self.callback_function is None:
             return
         # Store live and dead points and evidence computed so far
@@ -221,7 +231,7 @@ class polychord(Sampler):
         if self.callback_function is not None:
             try:
                 self.callback_function_callable(self)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
@@ -258,7 +268,7 @@ class polychord(Sampler):
 
     def dump_paramnames(self, prefix):
         labels = self.model.parameterization.labels()
-        with open(prefix + ".paramnames", "w") as f_paramnames:
+        with open(prefix + ".paramnames", "w", encoding="utf-8-sig") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
                 f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.parameterization.derived_params():
@@ -266,7 +276,7 @@ class polychord(Sampler):
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
                     "logprior" + derived_par_name_separator + p,
-                    r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+                    r"\log\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + derived_par_name_separator + p,
@@ -276,7 +286,8 @@ class polychord(Sampler):
         sample = np.atleast_2d(np.loadtxt(fname))
         if not sample.size:
             return None
-        collection = SampleCollection(self.model, self.output, name=str(name))
+        collection = SampleCollection(
+            self.model, self.output, name=str(name), sample_type="nested")
         for row in sample:
             collection.add(
                 row[2:2 + self.n_sampled],
@@ -292,7 +303,7 @@ class polychord(Sampler):
         """
         Correction for the fraction of the prior that is unphysical -- see issue #77
         """
-        if not hasattr(self, "_frac_unphysical"):
+        if np.isnan(self._frac_unphysical):
             with open(self.raw_prefix + ".prior_info", "r", encoding="utf-8-sig") as pf:
                 lines = list(pf.readlines())
             get_value_str = lambda line: line[line.find("=") + 1:]
@@ -305,7 +316,7 @@ class polychord(Sampler):
             self.log.debug(
                 "Correcting for unphysical region fraction: %g", self._frac_unphysical)
             self.logZ += np.log(self._frac_unphysical)
-            if hasattr(self, "clusters"):
+            if self.clusters is not None:
                 for cluster in self.clusters.values():
                     cluster["logZ"] += np.log(self._frac_unphysical)
 
@@ -356,13 +367,14 @@ class polychord(Sampler):
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
             self._correct_unphysical_fraction()
             if self.output:
-                out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
-                if getattr(self, "clusters", None):
+                out_evidences = {"logZ": self.logZ, "logZstd": self.logZstd}
+                if self.clusters is not None:
                     out_evidences["clusters"] = {}
                     for i in sorted(list(self.clusters)):
-                        out_evidences["clusters"][i] = dict(
-                            logZ=self.clusters[i]["logZ"],
-                            logZstd=self.clusters[i]["logZstd"])
+                        out_evidences["clusters"][i] = {
+                            "logZ": self.clusters[i]["logZ"],
+                            "logZstd": self.clusters[i]["logZstd"],
+                        }
                 fname = os.path.join(self.output.folder,
                                      self.output.prefix + Extension.evidence)
                 yaml_dump_file(fname, out_evidences, comment="log-evidence",
@@ -439,7 +451,7 @@ class polychord(Sampler):
 
     @classmethod
     def is_compatible(cls):
-        import platform
+        import platform  # pylint: disable=import-outside-toplevel
         if platform.system() == "Windows":
             return False
         return True
@@ -471,7 +483,7 @@ class polychord(Sampler):
             log.error("Could not download PolyChord.")
             return False
         log.info("Compiling (Py)PolyChord...")
-        from subprocess import Popen, PIPE
+        from subprocess import Popen, PIPE  # pylint: disable=import-outside-toplevel
         # Needs to re-define os' PWD,
         # because MakeFile calls it and is not affected by the cwd of Popen
         cwd = os.path.join(path, "code",

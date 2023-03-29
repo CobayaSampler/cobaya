@@ -8,16 +8,16 @@
 # Global
 import os
 import dataclasses
-import numpy as np
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
     Union, List, Any, Dict, Set, Tuple
+import numpy as np
 
 # Local
 from cobaya.conventions import overhead_time, get_chi2_name, \
-    packages_path_input
+    packages_path_input, prior_1d_name
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_info_overrides
@@ -1306,6 +1306,15 @@ class Model(HasLogger):
 
         for component, speed in zip(self.components, measured_speeds):
             component.set_measured_speed(speed)
+
+
+class DummyModel:
+    """Dummy class for loading chains for post processing."""
+
+    def __init__(self, info_params, info_likelihood, info_prior=None):
+        self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
+        self.prior = [prior_1d_name] + list(info_prior or [])
+        self.likelihood = list(info_likelihood)
 
 
 def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],

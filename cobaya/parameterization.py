@@ -251,6 +251,10 @@ class Parameterization(HasLogger):
     def derived_params(self) -> ParamValuesDict:
         return self._derived.copy()
 
+    def derived_params_info(self) -> ExpandedParamsDict:
+        return {p: deepcopy_where_possible(info) for p, info
+                in self._infos.items() if p in self._derived}
+
     def sampled_input_dependence(self) -> Dict[str, List[str]]:
         return deepcopy(self._sampled_input_dependence)
 

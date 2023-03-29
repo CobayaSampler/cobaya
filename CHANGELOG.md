@@ -3,6 +3,9 @@
 ### General
 
 - Minimum Python version updated to 3.8
+- `Prior.bounds()` can now return bounds at particular confidence levels when passed `confidence<1`.
+- `SampleCollection` slicing now allows for advanced pandas slicing, e.g. `samples[samples["param"] > value]`.
+- Fixed bug when setting reference pdf in MPI runs (thanks @schoeneberg!)
 - Components in yaml files referring to external Python modules can now give `package_install` settings to specify whether installed from pip, github or URL when cobaya-install is run.
 - Fix for `post` when likelihoods return different number of derived parameters (#285) (thanks @zhaoruiyang98)
 

@@ -66,12 +66,28 @@ def get_minuslogpior_name(piname):
     return OutPar.minuslogprior + derived_par_name_separator + piname
 
 
+def get_minuslogprior_label(p):
+    return r"-\log\pi_\mathrm{" + str(p).replace("_", r"\ ") + "}"
+
+
 def minuslogprior_names(prior):
     return [get_minuslogpior_name(piname) for piname in prior]
 
 
+def minuslogprior_labels(prior):
+    return {piname: get_minuslogprior_label(piname) for piname in prior}
+
+
 def chi2_names(likes):
-    return [get_chi2_name(likname) for likname in likes]
+    return [get_chi2_name(likename) for likename in likes]
+
+
+def chi2_labels(likes):
+    return {likename: get_chi2_label(likename) for likename in likes}
+
+
+def minuslogpost_label():
+    return r"-\log p"
 
 
 # Output files

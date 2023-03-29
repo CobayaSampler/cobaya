@@ -16,14 +16,13 @@ radial function mixed with an exponential, which is quite robust to wrong width 
 See https://arxiv.org/abs/1304.4473
 """
 
-# Global
-import numpy as np
-from itertools import chain
 import logging
+from itertools import chain
 
-# Local
-from cobaya.tools import choleskyL
+import numpy as np
+
 from cobaya.log import LoggedError, HasLogger
+from cobaya.tools import choleskyL
 
 
 class IndexCycler:
@@ -58,14 +57,14 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
-except ImportError:
+except (ImportError, SystemError):
+    # SystemError caused usually by incompatible numpy version
     from scipy.stats import special_ortho_group
 
     random_SO_N = special_ortho_group.rvs
     numba = None
 else:
     import warnings
-
 
     def random_SO_N(dim, random_state):
         """
@@ -87,11 +86,9 @@ else:
         _rvs(dim, xx, H)
         return H
 
-
     logging.getLogger('numba').setLevel(logging.ERROR)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-
 
         @numba.njit("void(int64,float64[::1],float64[:,::1])")
         def _rvs(dim, xx, H):
@@ -115,7 +112,7 @@ else:
 class RandDirectionProposer(IndexCycler):
     def propose_vec(self, scale: float = 1):
         """
-        propose a random n-dimension vector for n>1
+        Propose a random n-dimension vector for n>1
 
         :param scale: units for the distance
         :return: array with vector
@@ -242,8 +239,8 @@ class BlockedProposer(HasLogger):
 
     def get_proposal_fast(self, P):
         self.nsamples_fast += 1
-        current_iblock_fast = self.iblock_of_j[self.parameter_cycler_slow.n
-                                               + self.parameter_cycler_fast.next()]
+        current_iblock_fast = self.iblock_of_j[self.parameter_cycler_slow.n +
+                                               self.parameter_cycler_fast.next()]
         self.get_block_proposal(P, current_iblock_fast)
 
     def get_block_proposal(self, P, iblock):

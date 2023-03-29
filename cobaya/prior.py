@@ -342,10 +342,10 @@ Just give it a try and it should work fine, but, in case you need the details:
 """
 
 # Global
-import numpy as np
 import numbers
 from types import MethodType
 from typing import Sequence, NamedTuple, Callable, Optional, Mapping, List
+import numpy as np
 
 # Local
 from cobaya.conventions import prior_1d_name
@@ -392,9 +392,13 @@ class Prior(HasLogger):
             self._bounds[i] = [-np.inf, np.inf]
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
-            except AttributeError:
-                raise LoggedError(self.log, "No bounds defined for parameter '%s' "
-                                            "(maybe not a scipy 1d pdf).", p)
+            except AttributeError as excpt:
+                raise LoggedError(
+                    self.log,
+                    "No bounds defined for parameter '%s' "
+                    "(maybe not a scipy 1d pdf).",
+                    p
+                ) from excpt
         self._uniform_indices = np.array(
             [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == 'uniform'],
             dtype=int)
@@ -407,6 +411,7 @@ class Prior(HasLogger):
         self._uniform_logp = -np.sum(np.log(self._upper_limits[self._uniform_indices] -
                                             self._lower_limits[self._uniform_indices]))
         # Set the reference pdf's
+        self._ref_is_pointlike: Optional[bool] = None
         self.set_reference({p: v.get("ref") for p, v in sampled_params_info.items()})
         # Process the external prior(s):
         self.external = {}
@@ -456,38 +461,68 @@ class Prior(HasLogger):
     def __len__(self):
         return 1 + len(self.external)
 
-    def bounds(self, confidence_for_unbounded=1):
+    def bounds(
+            self, confidence: float = 1, confidence_for_unbounded: float = 1
+    ) -> np.ndarray:
         """
-        For unbounded parameters, if ``confidence_for_unbounded < 1`` given, the
-        returned interval contains the requested confidence level interval with equal
-        areas around the median.
+        Returns a list of bounds ``[min, max]`` per parameter, containing confidence
+        intervals of a certain ``confidence`` level, centered around the median, by
+        default (``confidence=1`` the full parameter range).
 
-        Returns:
-           An array of bounds ``[min,max]`` for the parameters, in the order given by the
-           input.
+        For unbounded parameters, if ``confidence=1``, one can specify some value slightly
+        smaller than 1 for ``confidence_for_unbounded``, in order to ensure that all
+        bounds returned are finite.
 
         NB: If an external prior has been defined, the bounds given in the 'prior'
         sub-block of that particular parameter's info may not be faithful to the
-        externally defined prior.
+        externally defined prior. A warning will be raised in that case.
+
+        Parameters
+        ----------
+        confidence : float, default 1
+            Probability mass contained within the returned bounds. Capped at 1.
+
+        confidence_for_unbounded : float, default 1
+            Confidence level applied to the unbounded parameters if ``confidence=1``;
+            ignored otherwise.
+
+        Returns
+        -------
+        bounds : 2-d array [[param1_min, param1_max], ...]
+            Array of bounds ``[min,max]`` for the parameters, in the order given by the
+            input.
+
+        Raises
+        ------
+        LoggedError
+            If some parameters do not have bounds defined.
         """
+        if confidence < 1:
+            return np.array([pdf.interval(confidence) for pdf in self.pdf])
+        # Else, confidence >= 1:
         if confidence_for_unbounded >= 1:
             return self._bounds
-        bounds = self._bounds.copy()
-        infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
-        try:
-            if infs:
-                self.mpi_warning("There are unbounded parameters (%r). Prior bounds "
-                                 "are given at %s confidence level. Beware of "
-                                 "likelihood modes at the edge of the prior",
-                                 [self.params[ix] for ix in infs],
-                                 confidence_for_unbounded)
-                bounds[infs] = [
-                    self.pdf[i].interval(confidence_for_unbounded) for i in infs]
-            return bounds
-        except AttributeError:
-            raise LoggedError(
-                self.log,
-                "Some parameter names (positions %r) have no bounds defined.", infs)
+        else:
+            bounds = self._bounds.copy()
+            infs = list(set(np.argwhere(np.isinf(bounds)).T[0]))
+            try:
+                if infs:
+                    self.mpi_warning(
+                        "There are unbounded parameters (%r). Prior bounds "
+                        "are given at %s confidence level. Beware of "
+                        "likelihood modes at the edge of the prior",
+                        [self.params[ix] for ix in infs],
+                        confidence_for_unbounded
+                    )
+                    bounds[infs] = [
+                        self.pdf[i].interval(confidence_for_unbounded) for i in infs]
+                return bounds
+            except AttributeError as excpt:
+                raise LoggedError(
+                    self.log,
+                    "Some parameter names (positions %r) have no bounds defined.",
+                    infs
+                ) from excpt
 
     def sample(self, n=1, ignore_external=False, random_state=None):
         """
@@ -547,20 +582,22 @@ class Prior(HasLogger):
         """
         self.log.debug("Evaluating prior at %r", x)
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
+            # Apparently faster to sum list than generator (for short enough lists)
             logps = self._uniform_logp + (sum([logpdf(xi) for logpdf, xi in
                                                zip(self._non_uniform_logpdf,
                                                    x[self._non_uniform_indices])])
                                           if len(self._non_uniform_indices) else 0)
         else:
             logps = -np.inf
-
-        self.log.debug("Got logpriors = %r", logps)
+        self.log.debug("Got logpriors (internal) = %r", logps)
         return logps
 
     def logps_external(self, input_params) -> List[float]:
         """Evaluates the logprior using the external prior only."""
-        return [ext.logp(**{p: input_params[p] for p in ext.params})
-                for ext in self.external.values()]
+        logps = [ext.logp(**{p: input_params[p] for p in ext.params})
+                 for ext in self.external.values()]
+        self.log.debug("Got logpriors (external) = %r", logps)
+        return logps
 
     def covmat(self, ignore_external=False):
         """
@@ -634,7 +671,7 @@ class Prior(HasLogger):
     def _set_pointlike(self):
         self._ref_is_pointlike = all(
             # np.nan is a numbers.Number instance, but not a fixed ref (uses prior)
-            (isinstance(ref, numbers.Number) and ref is not np.nan)
+            (isinstance(ref, numbers.Number) and not np.isnan(ref))
             for ref in self.ref_pdf)
 
     def reference(self, max_tries=np.inf, warn_if_tries="10d", ignore_fixed=False,
@@ -660,9 +697,13 @@ class Prior(HasLogger):
             self.log.info(
                 "Reference values or pdfs for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters.")
-
-        where_ignore_ref = [r is np.nan or ignore_fixed and isinstance(r, numbers.Real)
-                            for r in self.ref_pdf]
+        # As a curiosity, `r is np.nan` was returning False after `r = np.nan` if
+        # it had been passed via MPI before the test, since this creates a "new" np.nan
+        # NB: isinstance(np.nan, numers.Real) --> True
+        where_ignore_ref = [
+            isinstance(r, numbers.Real) and (np.isnan(r) or ignore_fixed)
+            for r in self.ref_pdf
+        ]
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
         ref_sample = np.empty(len(self.ref_pdf))
