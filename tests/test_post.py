@@ -47,7 +47,7 @@ info_params: ParamsDict = dict([
     ("b", {"prior": _range, "ref": ref_pdf, "proposal": sigma}),
     ("a_plus_b", {"derived": lambda a, b: a + b})])
 
-info_sampler = {"mcmc": {"Rminus1_stop": 0.5, "Rminus1_cl_stop": 0.5, "seed": 1}}
+info_sampler = {"mcmc": {"Rminus1_stop": 0.25, "Rminus1_cl_stop": 0.5, "seed": 1}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
 
 
