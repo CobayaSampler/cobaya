@@ -265,7 +265,7 @@ def add_aggregated_chi2_params(param_info, all_types):
 _Dict = TypeVar('_Dict', InputDict, ModelDict)
 
 
-def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
+def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) -> _Dict:
     """
     Creates an updated info starting from the defaults for each component and updating it
     with the input info.
@@ -314,10 +314,15 @@ def update_info(info: _Dict, add_aggr_chi2=True) -> _Dict:
                         component_base_classes[block].get_defaults())
             else:
                 component_path = input_block[name].get("python_path")
-                default_class_info, annotations = get_default_info(
-                    name, block, class_name=input_block[name].get("class"),
-                    component_path=component_path, input_options=input_block[name],
-                    return_undefined_annotations=True)
+                try:
+                    default_class_info, annotations = get_default_info(
+                        name, block, class_name=input_block[name].get("class"),
+                        component_path=component_path, input_options=input_block[name],
+                        return_undefined_annotations=True)
+                except ComponentNotFoundError:
+                    if strict:
+                        raise
+                    default_class_info, annotations = {}, {}
             updated[name] = default_class_info or {}
             # Update default options with input info
             # Consistency is checked only up to first level! (i.e. subkeys may not match)

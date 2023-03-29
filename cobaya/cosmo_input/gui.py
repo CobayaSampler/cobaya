@@ -40,6 +40,7 @@ try:
         from PySide6.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings, QPoint
 
         set_attributes = []
+        exec_method_name = "exec"
     except ImportError:
         # noinspection PyUnresolvedReferences
         from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
@@ -52,7 +53,7 @@ try:
         from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
 
         os.environ['QT_API'] = 'pyside2'
-
+        exec_method_name = "exec_"
     for attribute in set_attributes:
         # noinspection PyArgumentList
         QApplication.setAttribute(getattr(Qt, attribute))
@@ -414,7 +415,7 @@ def gui_script():
 
     window = MainWindow()
     window.show()
-    sys.exit(app.exec())
+    sys.exit(getattr(app, exec_method_name)())
 
 
 if __name__ == '__main__':

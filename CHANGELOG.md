@@ -1,8 +1,26 @@
+## 3.3 – 2023-03-29
+
+### General
+
+- Minimum Python version updated to 3.8
+- Components in yaml files referring to external Python modules can now give `package_install` settings to specify whether installed from pip, github or URL when cobaya-install is run.
+
+### MCMC
+
+- Added tempered sampling.
+- `products` method revamped; can produce GetDist chains directly.
+
+### Cosmology
+
+- Replaced default planck_2018_lowl.EE and planck_2018_low.TT with native versions, and using GitHub-hosted clik version.
+- Updated planck likelihoods to all load calibration parameter from same yaml
+- Removed clik version of planck 2018 CamSpec, defaults to native (avoids inconsistent calibration parameter naming)
+- GUI inclues latest NPIPE fully Python likelihood configuration
+
 ## 3.2.2 – 2022-11-03
 
 ### General
 
-- Components in yaml files referring to external Python modules can now give `package_install` settings to specify whether installed from pip, github or URL when cobaya-install is run.
 - Deprecated `debug_file` in input, in favour of `debug: [filename]`.
 - `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
 - Warning for stuck chains not more tolerant of many fast prior rejections
@@ -16,14 +34,11 @@
 - Added CAMBspec NPIPE Planck 2020 likelihood (#271) ) (thanks @earosenberg)
 - Added native version of `planck_2018_lowl.EE`.
 - Added native version of `planck_2018_low.TT`. (thanks @eirikgje)
-- Replaced default planck_2018_lowl.EE and planck_2018_low.TT with native versions
 - Added links to external likelihoods Planck PR4 Lensing, pyWMAP.
-- GUI now support PySide6 and inclues latest NPIPE fully Python likelihood configuration
+- GUI now support PySide6
 - Fixed bug in BAO likelihood (#250, thanks @Pablo-Lemos)
 - Added files for the BAO DR12 and DR16 LRG likelihoods (PR #235; thanks @markm42)
 - Test updates for CAMB 1.4 with updated constants, BBN model and neutrino nnu=3.044
-- Updated planck likelihoods to all load calibration parameter from same yaml
-- Removed clik version of planck 2018 CamSpec, defaults to native (avoids inconsistent calibration parameter naming)
 
 ## 3.2.1 – 2022-05-17
 
