@@ -11,8 +11,7 @@ from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
     get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
-from cobaya.conventions import packages_path_input, kinds, cobaya_package, \
-    reserved_attributes
+from cobaya.conventions import kinds, cobaya_package, reserved_attributes
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.mpi import is_main_process
 

@@ -401,8 +401,7 @@ class Model(HasLogger):
                 return_params_names = (
                     self.output_params if return_output_params else self.derived_params)
                 if as_dict:
-                    return_params = dict(
-                        zip(return_params_names, [np.nan] * len(return_params_names)))
+                    return_params = dict.fromkeys(return_params_names, np.nan)
                 else:
                     return_params = [np.nan] * len(return_params_names)
             else:
@@ -1342,7 +1341,7 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
              "stop_at_error": stop_at_error}
     info = load_info_overrides(info_or_yaml_or_file, override or {}, **flags)
     # MARKED FOR DEPRECATION IN v3.2
-    if info.get("debug_file"):
+    if info.get("debug_file"):  # type: ignore
         raise LoggedError("'debug_file' has been deprecated. If you want to "
                           "save the debug output to a file, use 'debug: [filename]'.")
     # END OF DEPRECATION BLOCK

@@ -62,7 +62,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          ) -> Tuple[InputDict, PostResultDict]:
     info = load_input_dict(info_or_yaml_or_file)
     # MARKED FOR DEPRECATION IN v3.2
-    if info.get("debug_file"):
+    if info.get("debug_file"):  # type: ignore
         raise LoggedError("'debug_file' has been deprecated. If you want to "
                           "save the debug output to a file, use 'debug: [filename]'.")
     # END OF DEPRECATION BLOCK

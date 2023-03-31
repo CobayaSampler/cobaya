@@ -122,7 +122,7 @@ def test_post_likelihood():
         info_params_local["dummy"] = 0
         dummy_loglike_add = 0.1
         dummy_loglike_remove = 0.01
-        info = {
+        info: InputDict = {
             "output": None, "force": True,
             "params": info_params_local, "sampler": info_sampler,
             "likelihood": {

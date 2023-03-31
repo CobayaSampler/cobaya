@@ -4,7 +4,6 @@ import numpy as np
 from itertools import chain
 import os
 from scipy.stats import multivariate_normal
-from getdist.mcsamples import MCSamplesFromCobaya
 
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.typing import InputDict, SamplersDict

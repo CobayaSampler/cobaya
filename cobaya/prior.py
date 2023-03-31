@@ -633,7 +633,7 @@ class Prior(HasLogger):
                               f"Cannot set reference pdf for parameter(s) {unknown}: "
                               "not sampled parameters.")
         for i, p in enumerate(self.params):
-            # The next if ensures correct behavious in "update call",
+            # The next if ensures correct behaviour in "update call",
             # where not mentioning a parameter and making its ref None are different
             # (not changing vs setting to prior)
             if p not in ref_info:

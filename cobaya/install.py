@@ -486,7 +486,7 @@ def download_github_release(base_directory, repo_name, release_name=None, *, ass
         release_name = (data or {}).get('default_branch', 'main')
     if asset:
         url = (base_url + "/releases/download/" + release_name + "/" + asset)
-        # Assest would get decompressed in base directory
+        # Asset would get decompressed in base directory
         download_directory = os.path.join(download_directory, directory or repo_name)
     else:
         url = (base_url + "/archive/" + release_name + ".tar.gz")
