@@ -97,6 +97,8 @@ def install(*infos, **kwargs):
     :param skip_global: skip installation of already-available Python modules (default:
        ``False``).
     :param debug: produce verbose debug output  (default: ``False``).
+    :param path: optional path where to install the packages
+                 (defaults to any packages_path entry given in the info dictionaries).
     :param code: set to ``False`` to skip code packages (default: ``True``).
     :param data: set to ``False`` to skip data packages (default: ``True``).
     :param no_progress_bars: no progress bars shown; use when output is saved into a text

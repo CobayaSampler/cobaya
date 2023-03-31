@@ -732,7 +732,6 @@ install_basic: InfoDict = {
         "planck_2018_lensing.native": None,
         "planck_2018_lowl.TT": None,
         "planck_2018_lowl.EE": None,
-        "planck_2018_highl_plik.TTTEEE": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None}}
