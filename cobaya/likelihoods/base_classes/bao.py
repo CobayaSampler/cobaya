@@ -406,7 +406,21 @@ class BAO(InstallableLikelihood):
             return self.provider.get_Hubble(z, units="km/s/Mpc") * self.rs()
         # Diff Linear Growth Rate times present amplitude
         elif observable == "f_sigma8":
-            return self.provider.get_fsigma8(z)
+            # return self.provider.get_fsigma8(z)
+            k_ref=2E-4
+            Omegam_z = self.provider.get_Omega_b(z)+self.provider.get_Omega_cdm(z)+self.provider.get_Omega_nu_massive(z)
+            f_z = Omegam_z**(self.provider.get_param('gamma0'))
+            sigma8_z = self.provider.get_sigma8_z(z)
+            Plin = self.provider.get_Pk_interpolator(var_pair=("delta_tot","delta_tot"),
+                                                    nonlinear=False,
+                                                    extrap_kmax=10.)
+            Pnonlin = self.provider.get_Pk_interpolator(var_pair=("delta_tot","delta_tot"),
+                                                        nonlinear=True,
+                                                        extrap_kmax=10.)
+            # Rescale sigma8_z to account for the possibility of gamma!=0.55
+            sigma8_z *= np.sqrt(Pnonlin.P(z,k_ref)/Plin.P(z,k_ref))
+            fsigma8_z = f_z*sigma8_z
+            return fsigma8_z
         # Anisotropy (Alcock-Paczynski) parameter
         elif observable == "F_AP":
             return ((1 + z) * self.provider.get_angular_diameter_distance(z) *
