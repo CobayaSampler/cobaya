@@ -196,9 +196,6 @@ class BlockedProposer(HasLogger):
                               "The blocks do not contain all the parameter indices.")
         # Prepare indices for the cycler, repeated if there is oversampling
         self.n_block = np.array([len(b) for b in parameter_blocks])
-        indices_repeated = list(chain(
-            *[list(chain(*[[p] * o for p in block]))
-              for block, o in zip(parameter_blocks, oversampling_factors)]))
         # Mapping between internal indices, sampler parameter indices and blocks:
         # let i=0,1,... be the indices of the parameters for the sampler,
         # and j=0,1,... be the indices of the parameters as the proposer manages them
@@ -215,6 +212,8 @@ class BlockedProposer(HasLogger):
         # Starting j index of each block
         self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
                         for iblock, b in enumerate(parameter_blocks)]
+        indices_repeated = list(chain(*[list(range(self.j_start[iblock], self.j_start[iblock] + nb)) * o for (
+            iblock, nb), o in zip(enumerate(self.n_block), oversampling_factors)]))
         # Parameter cyclers, cycling over the j's
         self.parameter_cycler = CyclicIndexRandomizer(indices_repeated, random_state)
         # These ones are used by fast dragging only
