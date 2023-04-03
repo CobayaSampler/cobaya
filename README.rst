@@ -1,5 +1,9 @@
 This is a fork of the Cobaya framework (see its orignal README below). Here, we added a simple fsigma8(z) likelihood for our analysis in: https://arxiv.org/abs/2302.01331. If you use the likelihood, please consider citing our paper.
 
+**NOTE #1**: The full implementation considers a gamma(z) = gamma0 + gamma1*(z**2)/(1+z). Remember to fix gamma1=0 if you want to consider only the standard growth-index gamma(z) = gamma0 = const. case.
+
+**NOTE #2**: Please pay attention to Eqs. (3)-(4) in our paper for the normalization convention adopted by the companion (modified) CAMB version we provide: CAMB_GammaPrime_Growth
+
 *Cobaya*, a code for Bayesian analysis in Cosmology
 ===================================================
 

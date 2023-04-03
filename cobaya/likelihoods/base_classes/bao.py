@@ -360,10 +360,22 @@ class BAO(InstallableLikelihood):
                 "rdrag": None},
             "f_sigma8": {
                 "fsigma8": {"z": zs.get("f_sigma8", None)},
+                "gamma0": None,
+                "gamma1": None,
+                "Omega_b": {"z": zs.get("f_sigma8", None)},
+                "Omega_cdm": {"z": zs.get("f_sigma8", None)},
+                "Omega_nu_massive": {"z": zs.get("f_sigma8", None)},
+                "sigma8_z": {"z": zs.get("f_sigma8", None)},
+                "Pk_interpolator": {
+                    "z": zs.get("f_sigma8", None),
+                    "k_max": 2.0,
+                    "vars_pairs": [["delta_tot", "delta_tot"]],
+                    "nonlinear": False}
             },
             "F_AP": {
                 "angular_diameter_distance": {"z": zs.get("F_AP", None)},
-                "Hubble": {"z": zs.get("F_AP", None)}}}
+                "Hubble": {"z": zs.get("F_AP", None)}}
+            }
         obs_used_not_implemented = np.unique([obs for obs in self.data["observable"]
                                               if obs not in theory_reqs])
         if len(obs_used_not_implemented):
@@ -372,7 +384,7 @@ class BAO(InstallableLikelihood):
                           " implemented yet. Did you mean any of %s? "
                           "If you didn't, please, open an issue in github.",
                 obs_used_not_implemented, list(theory_reqs))
-        requisites = {}
+        requisites={}
         if self.has_type:
             for obs in self.data["observable"].unique():
                 requisites.update(theory_reqs[obs])
@@ -409,7 +421,7 @@ class BAO(InstallableLikelihood):
             # return self.provider.get_fsigma8(z)
             k_ref=2E-4
             Omegam_z = self.provider.get_Omega_b(z)+self.provider.get_Omega_cdm(z)+self.provider.get_Omega_nu_massive(z)
-            f_z = Omegam_z**(self.provider.get_param('gamma0'))
+            f_z = Omegam_z**(self.provider.get_param('gamma0')+self.provider.get_param('gamma1')*(z**2)/(1.+z))
             sigma8_z = self.provider.get_sigma8_z(z)
             Plin = self.provider.get_Pk_interpolator(var_pair=("delta_tot","delta_tot"),
                                                     nonlinear=False,
@@ -442,6 +454,7 @@ class BAO(InstallableLikelihood):
             chi2 = self.interpolator3D(np.array([x, y, z])[:, 0])
             return chi2
         else:
+            print(self.data["z"])
             theory = np.array([self.theory_fun(z, obs) for z, obs
                                in zip(self.data["z"], self.data["observable"])]).T[0]
             if self.is_debug():
