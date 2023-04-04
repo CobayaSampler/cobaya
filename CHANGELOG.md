@@ -1,3 +1,8 @@
+## 3.3.1 – 2023-04-04
+
+- Updates for Pandas 2 compatibility
+- Fixed bug in MCMC oversampling and simplified proposal code (#288) (thanks @JiangJQ2000)
+
 ## 3.3 – 2023-03-29
 
 ### General
