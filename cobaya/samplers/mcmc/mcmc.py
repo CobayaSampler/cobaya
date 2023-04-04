@@ -847,7 +847,7 @@ class MCMC(CovmatSampler):
             if not self.progress.empty:
                 with open(self.progress_filename(), "a",
                           encoding="utf-8") as progress_file:
-                    fmts = {"N": "{:9d}".format}
+                    fmts = {"N": "{:9f}".format}
                     progress_file.write(self.progress.tail(1).to_string(
                         header=False, index=False, formatters=fmts) + "\n")
             self.log.debug("Dumped checkpoint and progress info, and current covmat.")
