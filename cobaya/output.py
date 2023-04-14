@@ -92,6 +92,7 @@ class FileLock:
             raise LoggedError(self.log,
                               "File %s is locked by another process, you are running "
                               "with MPI disabled but may have more than one process. "
+                              "Make sure that you have mpi4py installed and working."
                               "Note that --test should not be used with MPI.")
         if mpi.get_mpi():
             import mpi4py

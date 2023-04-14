@@ -55,12 +55,12 @@ class PlanckClik(Likelihood):
                 not_installed_level="debug")
         except VersionCheckError as excpt:
             raise VersionCheckError(
-                str(excpt) + " Upgrade with `cobaya-install planck_2018_lowl.TT "
-                             "--upgrade`.")
+                str(excpt) + " Upgrade with `cobaya-install "
+                             "planck_2018_highl_plik.TTTEEE --upgrade`.")
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
-                self.log, (f"Could not find clik: {excpt}. "
-                           "To install it, run `cobaya-install planck_2018_lowl.TT`"))
+                self.log, (f"Could not find clik: {excpt}. To install it, "
+                           f"run `cobaya-install planck_2018_highl_plik.TTTEEE`"))
         # Loading the likelihood data
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         if not os.path.isabs(self.clik_file):
@@ -284,7 +284,7 @@ def get_clik_import_path(path, min_version=min_version_clik):
         installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[-1])
     if installed_version < version.parse(min_version):
         raise VersionCheckError(
-            f"Installed version of the Plack likelihood code 'clik' ({installed_version})"
+            f"Installed version of the Planck likelihood code 'clik' ({installed_version})"
             f" older than minimum required one ({last_version_clik}).")
     elif installed_version > version.parse(last_version_clik):
         raise ValueError("This should not happen: min version needs update.")
