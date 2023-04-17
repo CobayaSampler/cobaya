@@ -23,6 +23,7 @@ class EE(InstallableLikelihood):
     _lmax = 29
     _nstepsEE = 3000
     _stepEE = 0.0001
+    _table_file_name = 'prob_table.txt'
 
     @classmethod
     def get_bibtex(cls):
@@ -32,7 +33,7 @@ class EE(InstallableLikelihood):
     def initialize(self):
         if self.get_install_options() and self.packages_path:
             path = self.get_path(self.packages_path)
-            self.probEE = np.loadtxt(os.path.join(path, 'prob_table.txt'))
+            self.probEE = np.loadtxt(os.path.join(path, self._table_file_name))
 
     def get_can_support_params(self):
         return ['A_planck']
