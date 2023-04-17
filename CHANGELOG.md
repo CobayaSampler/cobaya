@@ -1,3 +1,7 @@
+## 3.3.1 –
+
+- added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
+
 ## 3.3.1 – 2023-04-04
 
 - Updates for Pandas 2 compatibility
