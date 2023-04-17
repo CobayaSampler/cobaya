@@ -15,4 +15,6 @@ class EE_sroll2(EE):
 
     _table_file_name = 'sroll2_prob_table.txt'
 
-    bibtex_file = 'EE_sroll2.bibtex'
+    @classmethod
+    def get_bibtex(cls):
+        return cls.get_associated_file_content('.bibtex')
