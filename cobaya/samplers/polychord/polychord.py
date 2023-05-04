@@ -393,19 +393,39 @@ class polychord(Sampler):
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
 
-    def products(self):
+    def products(
+            self,
+            to_getdist: bool = False,
+            **kwargs,
+    ) -> dict:
         """
-        Auxiliary function to define what should be returned in a scripted call.
+        Returns the products of the sampling process.
+
+        Parameters
+        ----------
+        to_getdist: bool, default: True
+            If ``True``, returns sample collections as :class:'getdist.MCSamples`.
 
         Returns:
            The sample ``SampleCollection`` containing the sequentially
            discarded live points.
         """
+        if kwargs.get("skip_samples"):
+            self.mpi_warning(
+                "Initial samples should not be skipped in nested sampling. Ignoring."
+            )
         if is_main_process():
+            collection = self.collection
+            if to_getdist:
+                collection = self.collection.to_getdist(model=self.model)
             products = {
-                "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+                "sample": collection, "logZ": self.logZ, "logZstd": self.logZstd}
             if self.pc_settings.do_clustering:
-                products.update({"clusters": self.clusters})
+                clusters = self.clusters
+                if to_getdist:
+                    for c in clusters.values():
+                        c["sample"] = c["sample"].to_getdist(model=self.model)
+                products.update({"clusters": clusters})
             return products
         else:
             return {}
