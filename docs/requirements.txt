@@ -2,3 +2,6 @@
 -e .
 sphinxcontrib-programoutput
 sphinx-autodoc-typehints
+sphinx<7
+sphinx_rtd_theme
+sphinxcontrib-jquery

@@ -39,7 +39,9 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.graphviz',
-    'sphinxcontrib.programoutput'
+    'sphinxcontrib.programoutput',
+    'sphinx_rtd_theme',
+    'sphinxcontrib.jquery'
 ]
 
 inheritance_graph_attrs = dict(rankdir="LR", size='""')
