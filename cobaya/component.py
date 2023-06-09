@@ -1,10 +1,9 @@
 import os
 import time
 import inspect
-import pkg_resources
 from inspect import cleandoc
 from packaging import version
-from importlib import import_module
+from importlib import import_module, resources
 from typing import Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
@@ -169,7 +168,7 @@ class HasDefaults:
         """
         filename = cls.__dict__.get('bibtex_file')
         if filename:
-            bib = pkg_resources.resource_string(cls.__module__, filename).decode("utf-8")
+            bib = cls.get_text_file_content(filename)
         else:
             bib = cls.get_associated_file_content('.bibtex')
         if bib:
@@ -180,16 +179,30 @@ class HasDefaults:
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext, file_root=None) -> Optional[str]:
-        # handle extracting package files when may be inside a zipped package so files
-        # not accessible directly
+    def get_associated_file_content(cls, ext: str,
+                                    file_root: Optional[str] = None) -> Optional[str]:
+        """
+        Return the content of the associated file, if it exists.
+
+        This function handles extracting package files when they may be
+        inside a zipped package and thus not directly accessible.
+
+        Returns:
+            The content of the file as a string, if it exists and can be read. None otherwise.
+        """
+
+        return cls.get_text_file_content((file_root or cls.get_file_base_name()) + ext)
+
+    @classmethod
+    def get_text_file_content(cls, file_name: str) -> Optional[str]:
+        """
+        Return the content of a file in the directory of the module, if it exists.
+        """
+        package = inspect.getmodule(cls).__package__
         try:
-            string = pkg_resources.resource_string(
-                cls.__module__, (file_root or cls.get_file_base_name()) + ext)
+            return resources.read_text(package, file_name)
         except Exception:
             return None
-        else:
-            return string.decode("utf-8")
 
     @classmethod
     def get_class_options(cls, input_options=empty_dict) -> InfoDict:
