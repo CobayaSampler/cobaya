@@ -601,7 +601,7 @@ class MCMC(CovmatSampler):
                     max_tries_now, self.current_point, self.current_point.results,
                     trial, trial_results)
             elif self.current_point.weight > max_tries_now and \
-                    not getattr(self, '_prior_tries_warning'):
+                    not hasattr(self, '_prior_tries_warning'):
                 self.log.warning("Proposal has been rejected %s times", max_tries_now)
                 self._prior_tries_warning = True
 
