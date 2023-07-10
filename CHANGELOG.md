@@ -1,5 +1,7 @@
 ## 3.3.1 –
 
+- updated CAMB min version to 1.5, fixing bug with Cobaya sampling
+- added startup warning if initial points are very over-dispersed compared to the proposal covariance
 - added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
 
 ## 3.3.1 – 2023-04-04
