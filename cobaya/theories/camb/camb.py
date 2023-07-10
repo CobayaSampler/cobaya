@@ -604,7 +604,7 @@ class CAMB(BoltzmannBase):
                     if collector.post:
                         state[product] = collector.post(*state[product])
                 else:
-                    state[product] = results
+                    state[product] = results.copy()
         except self.camb.baseconfig.CAMBError as e:
             if self.stop_at_error:
                 self.log.error(
