@@ -6,6 +6,7 @@ Common tools for testing external priors and likelihoods.
 import os
 import shutil
 from random import random
+from typing import Mapping
 import numpy as np
 from copy import deepcopy
 import scipy.stats as stats
@@ -36,6 +37,24 @@ gaussian_str = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
 gaussian_func = lambda y: eval(gaussian_str)(y)
 assert gaussian_func(0.1) == stats.norm.logpdf(0.1, loc=0, scale=0.2)
 
+
+class HalfRing():
+
+    def __init__(self):
+        self.logp_func = half_ring_func
+
+    def logp_args(self, x, y):
+        return self.logp_func(x, y)
+
+    def logp_kwargs(self, x=None, y=None):
+        return self.logp_func(x, y)
+
+    def logp_unnamed_kwargs(self, **kwargs):
+        return self.logp_func(**kwargs)
+
+
+half_ring_instance = HalfRing()
+
 # Info for the different tests
 
 info_string = {"half_ring": half_ring_str}
@@ -44,6 +63,11 @@ info_mixed = {"half_ring": half_ring_func, "gaussian_y": gaussian_str}
 info_import = {"half_ring": "import_module('.common_external','tests').half_ring_func"}
 info_derived = {"half_ring": {
     "external": half_ring_func_derived, "output_params": ["r", "theta"]}}
+info_method_args = {"half_ring": {"external": half_ring_instance.logp_args}}
+info_method_kwargs = {"half_ring": {"external": half_ring_instance.logp_kwargs}}
+info_method_unnamed_kwargs = {
+    "half_ring": {
+        "external": half_ring_instance.logp_unnamed_kwargs, "input_params": ["x", "y"]}}
 
 
 # Common part of all tests
@@ -136,8 +160,13 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         # Transform the likelihood info to the "external" convention and add defaults
         info_likelihood = deepcopy(info["likelihood"])
         for lik, value in list(info_likelihood.items()):
-            if not hasattr(value, "get"):
-                info_likelihood[lik] = {"external": value}
+            if not isinstance(value, Mapping):
+                info_likelihood[lik] = {"external": info["likelihood"][lik]}
+            # We need to restore the original non-copied callable/method for comparison
+            original_like = info["likelihood"][lik]["external"] \
+                if isinstance(info["likelihood"][lik], Mapping) \
+                   else info["likelihood"][lik]
+            info_likelihood[lik]["external"] = original_like
             info_likelihood[lik].update({k: v for k, v in
                                          Likelihood.get_defaults().items()
                                          if k not in info_likelihood[lik]})

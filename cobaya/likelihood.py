@@ -150,9 +150,13 @@ class LikelihoodExternalFunction(Likelihood):
         self.input_params = str_to_list(self.input_params)
         ignore_args = [self._self_arg]
         if argspec.defaults:
-            required_args = argspec.args[:-len(argspec.defaults)]
+            required_args = set(argspec.args[:-len(argspec.defaults)])
         else:
-            required_args = argspec.args
+            required_args = set(argspec.args)
+        # Allows for passing a class method
+        # (Do not mistake for the use of _self to get quantities from provider, see below)
+        if hasattr(self.external_function, "__self__"):
+            required_args.remove("self")
         self.params = {p: None for p in required_args if p not in ignore_args}
         if self.output_params:
             self.output_params = str_to_list(self.output_params) or []
@@ -171,7 +175,9 @@ class LikelihoodExternalFunction(Likelihood):
              if p not in ignore_args and
              (isinstance(val, numbers.Number) or val is None)]
         self._args = set(chain(self._optional_args, self.params))
-        if argspec.varkw:
+        has_unnamed_args = bool(argspec.varkw)
+        # NB: we do not check for argspec.varargs bc unnamed args are not supported
+        if has_unnamed_args:
             self._args.update(self.input_params)
         self.log.info("Initialized external likelihood.")
 
