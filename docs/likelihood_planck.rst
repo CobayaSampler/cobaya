@@ -14,6 +14,7 @@ The Planck 2018 baseline likelihoods defined here are:
 
 - ``planck_2018_lowl.TT``: low-:math:`\ell` temperature (native python implementation)
 - ``planck_2018_lowl.EE``: low-:math:`\ell` EE polarization (native python implementation)
+- ``planck_2018_lowl.[TT|EE]_clik``: original clik versions of the above
 - ``planck_2018_highl_plik.[TT|TTTEEE]``: ``plikHM`` high-:math:`\ell` temperature|temperature+polarization
 - ``planck_2018_highl_plik.[TT|TTTEEE]_unbinned``: unbinned versions of the previous ones
 - ``planck_2018_highl_plik.[TT|TTTEEE]_lite``: faster nuisance-marginalized versions of the previous (binned) ones
@@ -26,7 +27,7 @@ The Planck 2018 baseline likelihoods defined here are:
 Other more recent Planck likelihoods are:
 
 - ``planck_NPIPE_highl_CamSpec.[TT|TE|EE|TTEE|TTTEEE]``: latest native python NPIPE (PR4) CamSpec high-:math:`\ell` likelihoods
--  ``planckpr4lensing.[PlanckPR4Lensing|PlanckPR4LensingMarged]``: NPIPE lensing; pip install from `GitHub <https://github.com/carronj/planck_PR4_lensing>`_
+- ``planckpr4lensing.[PlanckPR4Lensing|PlanckPR4LensingMarged]``: NPIPE lensing; pip install from `GitHub <https://github.com/carronj/planck_PR4_lensing>`_
 - ``planck_2018_highl_CamSpec2021.[TT|TTTEEE]``: native Python versions of high-:math:`\ell` ``CamSpec`` likelihoods (from `arXiv 1910.00483 <https://arxiv.org/abs/1910.00483>`_).
 - ``planck_2018_lowl.EE_sroll2``: low-:math:`\ell` EE polarization from 2019 Sroll2 analysis (native python)
 
