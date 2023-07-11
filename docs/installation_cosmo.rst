@@ -14,17 +14,12 @@ To install a basic set of cosmology requisites (CAMB, CLASS, Planck, BAO, SN), i
 
    $ cobaya-install cosmo -p /path/to/packages
 
-This does not install the Planck 2018 **clik** likelihoods, the original packages can then be installed using e.g.
+This does not install the Planck 2018 **clik** likelihoods, just the more recent NPIPE (PR4) native python version.
+The original packages can then be installed using e.g.
 
 .. code:: bash
 
    $ cobaya-install planck_2018_highl_plik.TTTEEE
-
-or for the NPIPE (PR4) CamSpec likelihood (pure python, can be easier to install)
-
-.. code:: bash
-
-   $ cobaya-install planck_NPIPE_highl_CamSpec.TTTEEE
 
 If you have your input .yaml file that you want to run set up, you can also install just the likelihoods you need  using
 
