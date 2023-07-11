@@ -727,15 +727,11 @@ for name, pre in preset.items():
 # BASIC INSTALLATION #####################################################################
 install_basic: InfoDict = {
     "theory": theory,
-    "likelihood": {
+    "likelihood": dict(like_cmb["planck_NPIPE"]["likelihood"], **{
         # Native first: avoids reinstalling clik code+data if supp data obsolete
-        "planck_2018_lensing.native": None,
-        "planck_2018_lowl.TT": None,
-        "planck_2018_lowl.EE": None,
-        "planck_NPIPE_highl_CamSpec.TTTEEE": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
-        "des_y1.joint": None}}
+        "des_y1.joint": None})}
 
 install_tests = deepcopy(install_basic)
 install_tests["likelihood"].update({"planck_2015_lowl": None,
