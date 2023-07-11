@@ -1,6 +1,16 @@
-## 3.3.1 –
+## 3.3.2 – 2023-XX-YY
 
-- added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
+### General
+
+- Class instance methods can now be used as external likelihoods.
+
+### PolyChord
+
+- `products` method revamped; can produce GetDist chains directly.
+
+### Cosmology
+
+- Added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
 
 ## 3.3.1 – 2023-04-04
 
