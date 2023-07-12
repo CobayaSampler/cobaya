@@ -21,7 +21,8 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, Iterable, Dict
+from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, Iterable, \
+    Dict, Callable
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
@@ -765,6 +766,9 @@ def deepcopy_where_possible(base: _R) -> _R:
     if isinstance(base, (HasLogger, type)):
         return base  # type: ignore
     else:
+        # Special case: instance methods can be copied, but should not be.
+        if isinstance(base, Callable) and hasattr(base, "__self__"):
+            return base
         try:
             return deepcopy(base)
         except:

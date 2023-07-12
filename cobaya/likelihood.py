@@ -143,16 +143,25 @@ class AbsorbUnusedParamsLikelihood(Likelihood):
 class LikelihoodExternalFunction(Likelihood):
     def __init__(self, info, name, timing=None):
         Theory.__init__(self, info, name=name, timing=timing, standalone=False)
+        self.input_params = str_to_list(self.input_params)
         # Store the external function and assign its arguments
         self.external_function = get_external_function(info["external"], name=name)
         self._self_arg = "_self"
         argspec = getfullargspec(self.external_function)
-        self.input_params = str_to_list(self.input_params)
+        # NB: unnamed args are not supported
+        has_unnamed_args = bool(argspec.varargs)
+        if has_unnamed_args:
+            raise LoggedError(
+                self.log, "External likelihoods with unnamed args are not supported.")
         ignore_args = [self._self_arg]
         if argspec.defaults:
-            required_args = argspec.args[:-len(argspec.defaults)]
+            required_args = set(argspec.args[:-len(argspec.defaults)])
         else:
-            required_args = argspec.args
+            required_args = set(argspec.args)
+        # Allows for passing a class method
+        # (Do not mistake for the use of _self to get quantities from provider, see below)
+        if hasattr(self.external_function, "__self__"):
+            required_args.remove("self")
         self.params = {p: None for p in required_args if p not in ignore_args}
         if self.output_params:
             self.output_params = str_to_list(self.output_params) or []
@@ -171,7 +180,9 @@ class LikelihoodExternalFunction(Likelihood):
              if p not in ignore_args and
              (isinstance(val, numbers.Number) or val is None)]
         self._args = set(chain(self._optional_args, self.params))
-        if argspec.varkw:
+        # If has unnamed kwargs, assume these are the ones declared in input_params
+        has_unnamed_kwargs = bool(argspec.varkw)
+        if has_unnamed_kwargs:
             self._args.update(self.input_params)
         self.log.info("Initialized external likelihood.")
 
