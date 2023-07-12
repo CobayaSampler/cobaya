@@ -608,7 +608,7 @@ class CAMB(BoltzmannBase):
                                        "at this time.")
                     else:
                         sigma8 = results.get_sigma8_0()
-                        results.Params.InitPower.As *= params_values_dict["sigma8"]**2/sigma8**2
+                        results.Params.InitPower.As *= params_values_dict["sigma8"]**2 / sigma8**2
                         results.power_spectra_from_transfer()
             for product, collector in self.collectors.items():
                 if collector:
