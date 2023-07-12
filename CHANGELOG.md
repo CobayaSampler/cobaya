@@ -3,6 +3,7 @@
 ### General
 
 - Class instance methods can now be used as external likelihoods.
+- Fix _prior_tries_warning bug
 
 ### PolyChord
 
@@ -10,7 +11,11 @@
 
 ### Cosmology
 
-- Added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
+- updated CAMB min version to 1.5, fixing bug with Cobaya sampling
+- cobaya-install cosmo now installs set of Planck NPIPE (PR4) python likelihoods
+- added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
+- added startup warning if initial points are very over-dispersed compared to the proposal covariance
+- Requesting CAMBdata from camb now copy for exact initial power spectrum/non-linear model
 
 ## 3.3.1 – 2023-04-04
 

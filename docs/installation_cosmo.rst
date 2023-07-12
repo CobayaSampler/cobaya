@@ -8,11 +8,25 @@ To keep it light, maintainable and easily extensible, **cobaya** does not includ
 Installing a basic set of codes and likelihoods
 -----------------------------------------------
 
-To install a comprehensive set of cosmology requisites (CAMB, CLASS, Planck, BICEP-Keck, BAO, SN), in a ``/path/to/packages`` folders of your choice:
+To install a basic set of cosmology requisites (CAMB, CLASS, Planck, BAO, SN), in a ``/path/to/packages`` folders of your choice:
 
 .. code:: bash
 
    $ cobaya-install cosmo -p /path/to/packages
+
+This does not install the Planck 2018 **clik** likelihoods, just the more recent NPIPE (PR4) native python version.
+The original packages can then be installed using e.g.
+
+.. code:: bash
+
+   $ cobaya-install planck_2018_highl_plik.TTTEEE
+
+If you have your input .yaml file that you want to run set up, you can also install just the likelihoods you need  using
+
+.. code:: bash
+
+   $ cobaya-install MyFile.yaml
+
 
 If this fails (see last printed message), keep on reading this section. Otherwise, you can go straight to :doc:`cosmo_basic_runs`.
 

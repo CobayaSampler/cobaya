@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.1.3 or higher.
+It requires CAMB 1.5 or higher.
 
 .. note::
 
@@ -253,7 +253,7 @@ class CAMB(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.3.5'
+    _min_camb_version = '1.5.0'
 
     file_base_name = 'camb'
     external_primordial_pk: bool
@@ -604,7 +604,7 @@ class CAMB(BoltzmannBase):
                     if collector.post:
                         state[product] = collector.post(*state[product])
                 else:
-                    state[product] = results
+                    state[product] = results.copy()
         except self.camb.baseconfig.CAMBError as e:
             if self.stop_at_error:
                 self.log.error(

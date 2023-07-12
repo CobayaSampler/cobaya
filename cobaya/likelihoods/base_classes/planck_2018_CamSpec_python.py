@@ -14,6 +14,8 @@ or other combination with TE and EE.
 Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500,
 or pass a dictionary of ranges for each spectrum.
 
+It is used by the 2018 and more recent CamSpec Planck likelihoods.
+
 """
 
 # Global

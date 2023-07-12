@@ -146,7 +146,7 @@ class MCMC(CovmatSampler):
         if self.output.is_resuming() and len(self.collection):
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
-                             .iloc[last]).to_numpy(dtype=np.float64, copy=True)
+            .iloc[last]).to_numpy(dtype=np.float64, copy=True)
             results = LogPosterior(
                 logpost=-remove_temperature(
                     self.collection[OutPar.minuslogpost].iloc[last], self.temperature),
@@ -166,7 +166,7 @@ class MCMC(CovmatSampler):
             # If resuming but no existing chain, assume failed run and ignore blocking
             # if speeds measurement requested
             if self.output.is_resuming() and not self.collection \
-               and self.measure_speeds:
+                    and self.measure_speeds:
                 self.blocking = None
             if self.measure_speeds and self.blocking:
                 self.mpi_warning(
@@ -179,6 +179,22 @@ class MCMC(CovmatSampler):
         # Set up blocked proposer
         self.set_proposer_blocking()
         self.set_proposer_initial_covmat(load=True)
+
+        if not self.output.is_resuming() and more_than_one_process():
+            # sanity check whether initial dispersion of points is plausible given the
+            # covariance being used
+            initial_mean = np.mean(np.array(mpi.allgather(initial_point)), axis=0)
+            delta = initial_point - initial_mean
+            diag, rot = np.linalg.eigh(self.proposer.get_covariance())
+            max_dist = np.max(np.abs(rot.T.dot(delta)) / np.sqrt(diag))
+            self.log.debug("Max dist to start mean: %s", max_dist)
+            max_dist = mpi.gather(max_dist)
+            if mpi.is_main_process() and np.max(max_dist) > 12:
+                self.mpi_warning(
+                    "The initial points are widely dispersed compared to "
+                    "the proposal covariance, it may take a long time to "
+                    "burn in (max dist to start mean: %s)", max_dist)
+
         # Max #(learn+convergence checks) to wait,
         # in case one process dies/hangs without raising error
         self.been_waiting = 0
@@ -422,8 +438,8 @@ class MCMC(CovmatSampler):
         """
         return len(self.collection) + (
             0 if not burn_in else (
-                self.burn_in.value -
-                self.burn_in_left // self.current_point.output_thin + 1))
+                    self.burn_in.value -
+                    self.burn_in_left // self.current_point.output_thin + 1))
 
     def get_new_sample_metropolis(self):
         """
@@ -655,11 +671,11 @@ class MCMC(CovmatSampler):
                 means = np.array(
                     [self.collection.mean(
                         first=f, last=l, tempered=True)
-                     for f, l in ranges])
+                        for f, l in ranges])
                 covs = np.array(
                     [self.collection.cov(
                         first=f, last=l, tempered=True)
-                     for f, l in ranges])
+                        for f, l in ranges])
             except always_stop_exceptions:
                 raise
             except Exception:  # pylint: disable=broad-except

@@ -111,7 +111,9 @@ class FileLock:
                           + ("Your current mpi4py config is:"
                              "\n %s" % mpi4py.get_config()
                              if mpi4py is not None else
-                             "mpi4py is NOT currently installed."), self.lock_file)
+                             "mpi4py is NOT currently installed.")
+                          + "\nIf this is a lock issue you can disable this check by"
+                            "setting env COBAYA_USE_FILE_LOCKING=False.", self.lock_file)
 
     def check_error(self):
         if self.lock_error_file and os.path.exists(self.lock_error_file):
@@ -449,8 +451,8 @@ class Output(HasLogger):
         """
         if name is None:
             name = (datetime.datetime.now().isoformat().replace("T", "")
-                        .replace(":", "").replace(".", "")
-                        .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
+                    .replace(":", "").replace(".", "")
+                    .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
         file_name = os.path.join(
             self.folder,
             self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +

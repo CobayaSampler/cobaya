@@ -1,32 +1,41 @@
-CMB from Planck 2018
-====================
+CMB from Planck
+==================
 
-Family of Planck CMB likelihoods. Contains interfaces to the official ``clik`` code and some
-native ones. You can find a description of the different likelihoods in the
+Family of Planck CMB likelihoods. Contains interfaces to the official 2018 ``clik`` code and some
+native ones, including more recent NPIPE (PR4) results that can be run without clik.
+You can find a description of the different original likelihoods in the
 `Planck wiki <https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/CMB_spectrum_%26_Likelihood_Code>`_.
 
 .. |br| raw:: html
 
    <br />
 
-The Planck 2018 likelihoods defined here are:
+The Planck 2018 baseline likelihoods defined here are:
 
-- ``planck_2018_lowl.TT``: low-:math:`\ell` temperature
-- ``planck_2018_lowl.EE``: low-:math:`\ell` EE polarization
+- ``planck_2018_lowl.TT``: low-:math:`\ell` temperature (native python implementation)
+- ``planck_2018_lowl.EE``: low-:math:`\ell` EE polarization (native python implementation)
+- ``planck_2018_lowl.[TT|EE]_clik``: original clik versions of the above
 - ``planck_2018_highl_plik.[TT|TTTEEE]``: ``plikHM`` high-:math:`\ell` temperature|temperature+polarization
 - ``planck_2018_highl_plik.[TT|TTTEEE]_unbinned``: unbinned versions of the previous ones
 - ``planck_2018_highl_plik.[TT|TTTEEE]_lite``: faster nuisance-marginalized versions of the previous (binned) ones
 - ``planck_2018_highl_plik.[TT|TTTEEE]_lite_native``: Python native versions of the nuisance-marginalizes ones  (more customizable)
 - ``planck_2018_highl_CamSpec.[TT|TTTEEE][_native]``: ``clik`` and native Python versions of the alternative high-:math:`\ell` ``CamSpec`` likelihoods.
-- ``planck_2018_highl_CamSpec2021.[TT|TTTEEE]``: native Python versions of updated high-:math:`\ell` ``CamSpec`` likelihoods (following `arXiv 1910.00483 <https://arxiv.org/abs/1910.00483>`_).
 - ``planck_2018_lensing.clik``: lensing temperature+polarisation-based; official ``clik`` code.
 - ``planck_2018_lensing.native``: lensing temperature+polarisation-based; native Python version (more customizable)
 - ``planck_2018_lensing.CMBMarged``: CMB-marginalized, temperature+polarisation-based lensing likelihood; native Python version (more customizable). Do not combine with any of the ones above!
 
+Other more recent Planck likelihoods are:
+
+- ``planck_NPIPE_highl_CamSpec.[TT|TE|EE|TTEE|TTTEEE]``: latest native python NPIPE (PR4) CamSpec high-:math:`\ell` likelihoods
+- ``planckpr4lensing.[PlanckPR4Lensing|PlanckPR4LensingMarged]``: NPIPE lensing; pip install from `GitHub <https://github.com/carronj/planck_PR4_lensing>`_
+- ``planck_2018_highl_CamSpec2021.[TT|TTTEEE]``: native Python versions of high-:math:`\ell` ``CamSpec`` likelihoods (from `arXiv 1910.00483 <https://arxiv.org/abs/1910.00483>`_).
+- ``planck_2018_lowl.EE_sroll2``: low-:math:`\ell` EE polarization from 2019 Sroll2 analysis (native python)
+
+The combination of planck_2018_lowl.TT, planck_2018_lowl.E,planck_NPIPE_highl_CamSpec.TTTEEE and pr4lensing can be run using the pure python without installing the 2018 clik likelihood package.
 
 .. note::
 
-   **If you use any of these likelihoods, please cite them as:**
+   **If you use any of these likelihoods, please cite and other relevant papers:**
    |br|
    Planck Collaboration, `Planck 2018 results. V. CMB power spectra and likelihoods`
    `(arXiv:1907.12875) <https://arxiv.org/abs/1907.12875>`_
@@ -89,8 +98,8 @@ of this section.
 
 .. note::
 
-   By default, the ``gfortran`` compiler will be used, and the ``cfitsio`` library will be
-   downloaded and compiled automatically.
+   For the 2018 clik likelihoods, by default the ``gfortran`` compiler will be used,
+   and the ``cfitsio`` library will be downloaded and compiled automatically.
 
    If the installation fails, make sure that the packages ``liblapack3`` and
    ``liblapack-dev`` are installed in the system (in Debian/Ubuntu, simply do
@@ -111,7 +120,7 @@ and give **absolute** paths for each *clik file*, e.g.:
 .. code-block:: yaml
 
    likelihood:
-     planck_2018_lowl.TT:
+     planck_2018_lowl.TT_clik:
        clik_file: /your/path/to/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik
      planck_2018_highl_plik.TTTEEE:
        clik_file: /your/path/to/plc_3.0/hi_l/plik/plik_rd12_HM_v22b_TTTEEE.clik
