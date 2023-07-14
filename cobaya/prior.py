@@ -699,7 +699,7 @@ class Prior(HasLogger):
                 "Sampling from the prior instead for those parameters.")
         # As a curiosity, `r is np.nan` was returning False after `r = np.nan` if
         # it had been passed via MPI before the test, since this creates a "new" np.nan
-        # NB: isinstance(np.nan, numers.Real) --> True
+        # NB: isinstance(np.nan, numbers.Real) --> True
         where_ignore_ref = [
             isinstance(r, numbers.Real) and (np.isnan(r) or ignore_fixed)
             for r in self.ref_pdf

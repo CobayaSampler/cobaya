@@ -728,7 +728,8 @@ for name, pre in preset.items():
 install_basic: InfoDict = {
     "theory": theory,
     "likelihood": dict(like_cmb["planck_NPIPE"]["likelihood"], **{
-        # Native first: avoids reinstalling clik code+data if supp data obsolete
+        # 2018 lensing ensured covmat database also installed
+        "planck_2018_lensing.native": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
         "des_y1.joint": None})}

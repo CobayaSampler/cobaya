@@ -220,7 +220,7 @@ class BoltzmannBase(Theory):
                        "sigma8_z", "fsigma8"}:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
-                if not isinstance(v, Iterable) or "z" not in v:
+                if not isinstance(v, Mapping) or "z" not in v:
                     raise LoggedError(
                         self.log,
                         f"The value in the dictionary of requisites {k} must be a "
