@@ -338,6 +338,14 @@ class CAMB(BoltzmannBase):
                 and set(self.input_params).intersection({'r', 'At'}):
             self.extra_attrs["WantTensors"] = True
             self.extra_attrs["Accuracy.AccurateBB"] = True
+        if "sigma8" in self.input_params and "As" in self.input_params:
+            raise LoggedError(self.log,
+                              "Both As and sigma8 have been provided as input. "
+                              "This will likely cause ill-defined outputs.")
+        if "sigma8" in self.input_params and not self.external_primordial_pk:
+            self.extra_attrs["WantTransfer"] = True
+            self.needs_perts = True
+            self.add_to_redshifts([0.])
 
     def get_can_support_params(self):
         params = self.power_params + self.nonlin_params
@@ -600,7 +608,7 @@ class CAMB(BoltzmannBase):
                     args.update(self.nonlin_args)
                     results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
-                if "sigma8" in params_values_dict and "As" not in params_values_dict:
+                if "sigma8" in params_values_dict:
                     if not isinstance(results.Params.InitPower,
                                       self.camb.initialpower.InitialPowerLaw):
                         self.log.debug("Using sigma8 as input parameter is only "
@@ -784,10 +792,6 @@ class CAMB(BoltzmannBase):
         return self.camb.__version__
 
     def set(self, params_values_dict, state):
-        if "sigma8" in self.input_params:
-            self.extra_attrs["WantTransfer"] = True
-            self.needs_perts = True
-            self.add_to_redshifts([0.])
         # Prepare parameters to be passed: this is called from the CambTransfers instance
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         # Generate and save

@@ -5,6 +5,10 @@ import numpy as np
 from cobaya.model import get_model
 from cobaya.tools import load_module
 from cobaya.component import ComponentNotInstalledError
+from cobaya.log import LoggedError, NoLogging
+
+import pytest
+import logging
 
 
 cosmology_params = {
@@ -58,3 +62,18 @@ def test_CAMB_sigma8_input(skip_not_installed):
 
     assert np.isclose(sigma8, model_as.provider.get_param("sigma8"))
     assert np.allclose(pk_s8, pk_as)
+
+
+def test_CAMB_As_and_sigma8_input_error(skip_not_installed):
+    power_params_s8 = {
+        'sigma8': 0.78,
+        'omegam': None,
+        's8': {'derived': 'lambda sigma8, omegam: sigma8*np.sqrt(omegam/0.3)'},
+        'As': 2.1e-9,
+    }
+    
+    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
+        model_s8 = _get_model(
+            {**cosmology_params, **power_params_s8},
+            skip_not_installed)
+        model_s8.loglike({})
