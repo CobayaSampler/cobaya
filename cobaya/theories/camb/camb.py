@@ -338,9 +338,20 @@ class CAMB(BoltzmannBase):
                 and set(self.input_params).intersection({'r', 'At'}):
             self.extra_attrs["WantTensors"] = True
             self.extra_attrs["Accuracy.AccurateBB"] = True
+        if "sigma8" in self.input_params and "As" in self.input_params:
+            raise LoggedError(self.log,
+                              "Both As and sigma8 have been provided as input. "
+                              "This will likely cause ill-defined outputs.")
+        if "sigma8" in self.input_params and not self.external_primordial_pk:
+            self.extra_attrs["WantTransfer"] = True
+            self.needs_perts = True
+            self.add_to_redshifts([0.])
 
     def get_can_support_params(self):
-        return self.power_params + self.nonlin_params
+        params = self.power_params + self.nonlin_params
+        if not self.external_primordial_pk:
+            params += ["sigma8"]
+        return params
 
     def get_allow_agnostic(self):
         return False
@@ -597,6 +608,16 @@ class CAMB(BoltzmannBase):
                     args.update(self.nonlin_args)
                     results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
+                if "sigma8" in params_values_dict:
+                    if not isinstance(results.Params.InitPower,
+                                      self.camb.initialpower.InitialPowerLaw):
+                        self.log.debug("Using sigma8 as input parameter is only "
+                                       "supported for power law initial power spectra "
+                                       "at this time.")
+                    else:
+                        sigma8 = results.get_sigma8_0()
+                        results.Params.InitPower.As *= params_values_dict["sigma8"]**2 / sigma8**2
+                        results.power_spectra_from_transfer()
             for product, collector in self.collectors.items():
                 if collector:
                     state[product] = \
@@ -642,6 +663,8 @@ class CAMB(BoltzmannBase):
         # Specific calls, if general ones fail:
         if p == "sigma8":
             return intermediates.results.get_sigma8_0()
+        if p == "As":
+            return intermediates.results.Params.InitPower.As
         try:
             return getattr(intermediates.camb_params, p)
         except AttributeError:
@@ -755,6 +778,8 @@ class CAMB(BoltzmannBase):
                     and f not in ['Alens', 'num_nu_massless']:
                 fields.append(f)
         fields += ['omega_de', 'sigma8']  # only parameters from CAMBdata
+        if not self.external_primordial_pk:
+            fields += ['As']
         properties = get_properties(self.camb.CAMBparams)
         names = self.camb.model.derived_names + properties + fields + params_derived
         for name, mapped in self.renames.items():
