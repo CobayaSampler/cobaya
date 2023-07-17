@@ -338,14 +338,27 @@ class CAMB(BoltzmannBase):
                 and set(self.input_params).intersection({'r', 'At'}):
             self.extra_attrs["WantTensors"] = True
             self.extra_attrs["Accuracy.AccurateBB"] = True
-        if "sigma8" in self.input_params and "As" in self.input_params:
-            raise LoggedError(self.log,
-                              "Both As and sigma8 have been provided as input. "
-                              "This will likely cause ill-defined outputs.")
-        if "sigma8" in self.input_params and not self.external_primordial_pk:
+
+        if "sigma8" in self.input_params:
+            if "As" in self.input_params:
+                raise LoggedError(self.log,
+                                  "Both As and sigma8 have been provided as input. "
+                                  "This will likely cause ill-defined outputs.")
             self.extra_attrs["WantTransfer"] = True
-            self.needs_perts = True
             self.add_to_redshifts([0.])
+
+    def initialize_with_provider(self, provider):
+        if "sigma8" in self.input_params or "As" in self.output_params:
+            if not self.needs_perts:
+                raise LoggedError(self.log, "Using sigma8 as input or As as output "
+                                            "but not using any power spectrum results")
+            if (power_model := self.extra_args.get('initial_power_model')) and not \
+                    isinstance(self.camb.CAMBparams.make_class_named(power_model),
+                               self.camb.initialpower.InitialPowerLaw):
+                raise LoggedError(self.log, "Using sigma8 as an input and As as an "
+                                            "output is only supported for power law "
+                                            "initial power spectra.")
+        super().initialize_with_provider(provider)
 
     def get_can_support_params(self):
         params = self.power_params + self.nonlin_params
@@ -609,15 +622,10 @@ class CAMB(BoltzmannBase):
                     results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
                 if "sigma8" in params_values_dict:
-                    if not isinstance(results.Params.InitPower,
-                                      self.camb.initialpower.InitialPowerLaw):
-                        self.log.debug("Using sigma8 as input parameter is only "
-                                       "supported for power law initial power spectra "
-                                       "at this time.")
-                    else:
-                        sigma8 = results.get_sigma8_0()
-                        results.Params.InitPower.As *= params_values_dict["sigma8"]**2 / sigma8**2
-                        results.power_spectra_from_transfer()
+                    sigma8 = results.get_sigma8_0()
+                    results.Params.InitPower.As *= params_values_dict[
+                                                       "sigma8"] ** 2 / sigma8 ** 2
+                    results.power_spectra_from_transfer()
             for product, collector in self.collectors.items():
                 if collector:
                     state[product] = \
@@ -795,8 +803,7 @@ class CAMB(BoltzmannBase):
         # Prepare parameters to be passed: this is called from the CambTransfers instance
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         # Generate and save
-        self.log.debug("Setting parameters: %r and %r",
-                       dict(args), dict(self.extra_args))
+        self.log.debug("Setting parameters: %r and %r", args, self.extra_args)
         try:
             if not self._base_params:
                 base_args = args.copy()

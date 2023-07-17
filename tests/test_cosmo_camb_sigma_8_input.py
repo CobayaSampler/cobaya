@@ -12,7 +12,7 @@ import logging
 
 
 cosmology_params = {
-    'ombh2': 0.022, 'omch2': 0.12, 
+    'ombh2': 0.022, 'omch2': 0.12,
     'H0': 68,
     'ns': 0.96,
     'mnu': 0.06, 'nnu': 3.046
@@ -57,7 +57,7 @@ def test_CAMB_sigma8_input(skip_not_installed):
         {**cosmology_params, "As": As_from_sigma8},
         skip_not_installed)
     model_as.loglike({})
-    
+
     k, z, pk_as = model_as.provider.get_Pk_grid()
 
     assert np.isclose(sigma8, model_as.provider.get_param("sigma8"))
@@ -71,8 +71,8 @@ def test_CAMB_As_and_sigma8_input_error(skip_not_installed):
         's8': {'derived': 'lambda sigma8, omegam: sigma8*np.sqrt(omegam/0.3)'},
         'As': 2.1e-9,
     }
-    
-    with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
+
+    with pytest.raises(LoggedError), NoLogging(logging.ERROR):
         model_s8 = _get_model(
             {**cosmology_params, **power_params_s8},
             skip_not_installed)
