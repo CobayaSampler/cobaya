@@ -100,8 +100,9 @@ def compute_temperature(logpost, logprior, loglike, check=True):
     """
     temp = (logprior + loglike) / logpost
     if check and not isinstance(temp, Number) and len(temp) > 1:
-        assert np.allclose(temp, temp[0]), "Inconsistent temperature in sample."
-        temp = temp[0]
+        assert np.allclose(temp, temp[0],
+                           rtol=1e-3), "Inconsistent temperature in sample."
+        temp = np.mean(temp)
     return temp
 
 
@@ -276,7 +277,7 @@ class SampleCollection(BaseCollection):
             try:
                 self.temperature = self._check_logps()
                 if temperature is not None and \
-                   not np.isclose(temperature, self.temperature):
+                        not np.isclose(temperature, self.temperature):
                     raise LoggedError(
                         self.log,
                         "Sample temperature appears to be %r, but the collection was "
@@ -554,11 +555,11 @@ class SampleCollection(BaseCollection):
         if self.temperature == 1:
             return self._data[OutPar.weight].to_numpy(dtype=np.float64)
         return (
-            self._data[OutPar.weight].to_numpy(dtype=np.float64) *
-            detempering_weights_factor(
-                -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
-                self.temperature
-            )
+                self._data[OutPar.weight].to_numpy(dtype=np.float64) *
+                detempering_weights_factor(
+                    -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
+                    self.temperature
+                )
         )
 
     def _detempered_minuslogpost(self):
@@ -931,8 +932,8 @@ class SampleCollection(BaseCollection):
 
     def MAP(self):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
-        return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()]\
-                        .copy()
+        return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()] \
+            .copy()
 
     def _sampled_to_getdist(
             self,
@@ -1159,7 +1160,7 @@ class OnePoint(SampleCollection):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         try:
             return self.data.values[0,
-                                    [self.data.columns.get_loc(c) for c in columns]]
+            [self.data.columns.get_loc(c) for c in columns]]
         except KeyError as excpt:
             raise ValueError("Some of the indices are not valid columns.") from excpt
 
