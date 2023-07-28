@@ -99,6 +99,7 @@ before_install:
     python -m pip install --upgrade pip setuptools wheel;
     pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
     fi
+  - pip install "Cython<3"
   - python --version
 
 script:
