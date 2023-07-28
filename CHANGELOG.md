@@ -1,9 +1,10 @@
-## 3.3.2 – 2023-XX-YY
+## 3.3.2 – 2023-07-28
 
 ### General
 
 - Class instance methods can now be used as external likelihoods.
 - Fix _prior_tries_warning bug
+- Fix over-stringent temperature test reading in chains
 
 ### PolyChord
 

@@ -11,7 +11,7 @@ import os
 import functools
 import warnings
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple, Iterable
+from typing import Union, Sequence, Optional, Tuple
 from numbers import Number
 import numpy as np
 import pandas as pd

@@ -1,15 +1,10 @@
-from .common import process_packages_path
 from .conftest import install_test_wrapper
-import os
 import numpy as np
 from cobaya.model import get_model
-from cobaya.tools import load_module
-from cobaya.component import ComponentNotInstalledError
 from cobaya.log import LoggedError, NoLogging
 
 import pytest
 import logging
-
 
 cosmology_params = {
     'ombh2': 0.022, 'omch2': 0.12,
@@ -18,19 +13,20 @@ cosmology_params = {
     'mnu': 0.06, 'nnu': 3.046
 }
 
+
 def _get_model(params, skip_not_installed):
     info = {
         'params': params,
         'likelihood':
             {'one':
-                {'requires':
-                    {"Pk_grid":
-                        {'k_max': 10, 'z': 0},
-                     "As": None,
-                     "sigma8": None
-                    }
-                }
-            },
+                 {'requires':
+                      {"Pk_grid":
+                           {'k_max': 10, 'z': 0},
+                       "As": None,
+                       "sigma8": None
+                       }
+                  }
+             },
         'theory': {'camb': {'stop_at_error': True,
                             'extra_args': {'num_massive_neutrinos': 1,
                                            'halofit_version': 'mead'}}}}

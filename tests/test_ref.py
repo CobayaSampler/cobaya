@@ -72,7 +72,7 @@ def test_ref():
     assert not model.prior.reference_is_pointlike
 
 
-# Tests MPI-awareness of the referece, when using it to get the initial point of mcmc
+# Tests MPI-awareness of the reference, when using it to get the initial point of mcmc
 @pytest.mark.mpi
 @mpi.sync_errors
 def test_ref_mcmc_initial_point():
