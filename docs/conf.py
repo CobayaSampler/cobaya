@@ -63,9 +63,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-from cobaya import __name__, __author__, __version__, __year__
+from cobaya.package import __name__ as __cobaya_name__, __author__, __version__, __year__
 
-project = __name__
+project = __cobaya_name__
 copyright = __year__ + " " + __author__
 author = __author__
 

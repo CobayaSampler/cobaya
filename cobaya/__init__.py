@@ -1,4 +1,5 @@
 import sys
+from cobaya.package import __author__, __version__, __obsolete__, __year__, __url__
 from cobaya.likelihood import Likelihood
 from cobaya.theory import Theory
 from cobaya.run import run
@@ -12,8 +13,3 @@ if sys.version_info < (3, 8):
     print('Cobaya requires Python 3.8+, please upgrade.')
     sys.exit(1)
 
-__author__ = "Jesus Torrado and Antony Lewis"
-__version__ = "3.3.2"
-__obsolete__ = False
-__year__ = "2023"
-__url__ = "https://cobaya.readthedocs.io"
