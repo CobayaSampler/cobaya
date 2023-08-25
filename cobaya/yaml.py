@@ -19,24 +19,16 @@ from typing import Mapping, Optional, Any
 import numpy as np
 
 # ReadTheDocs: conflict with name of module
-# --> remove current folder from import
+# --> remove current folder from import paths
 if os.environ.get("READTHEDOCS"):
-    import yaml  # to force adding the module to the namespace
+    from importlib import reload
+    import yaml  # to force adding the module to the namespace, so we can use reload
     sys_path_copy = copy(sys.path)
-    sys.path = [p for p in sys.path
-                if p and os.path.realpath(p) != os.path.realpath(os.path.dirname(__file__))]
-    from importlib import reload, invalidate_caches
-    invalidate_caches()
+    sys.path = [
+        p for p in sys.path
+        if p and os.path.realpath(p) != os.path.realpath(os.path.dirname(__file__))]
     reload(yaml)
     pyyaml = yaml
-#    from importlib import import_module
-#    this_module = yaml
-#    del yaml
-#    try:
-#        pyyaml = import_module("yaml", package="yaml")
-#    except Exception as e:
-#        raise ValueError(str(e), "000", sys.path, "111", sys_path_copy)
-#    yaml = this_module
     sys.path = sys_path_copy
 else:
     import yaml as pyyaml
