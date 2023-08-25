@@ -12,10 +12,21 @@ Customization of YAML's loaded and dumper:
 """
 # Global
 import os
+import sys
 import re
+from copy import copy
 from typing import Mapping, Optional, Any
-import yaml as pyyaml
 import numpy as np
+
+# ReadTheDocs: conflict with name of module
+# --> remove current folder from import
+if os.environ.get("READTHEDOCS"):
+    sys_path_copy = copy(sys.path)
+    sys.path = [p for p in sys.path if p]
+    import yaml as pyyaml
+    sys.path = sys_path_copy
+else:
+    import yaml as pyyaml
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
