@@ -22,10 +22,11 @@ import numpy as np
 # --> remove current folder from import
 if os.environ.get("READTHEDOCS"):
     sys_path_copy = copy(sys.path)
-    sys.path = [p for p in sys.path if p]
-    from importlib import reload, invalidate_caches
-    invalidate_caches()
-    pyyaml = reload("yaml")
+    sys.path = [p for p in sys.path
+                if p and os.path.realpath(p) != os.path.realpath(os.dirname(__file__))]
+    print("000", sys.path)
+    from importlib import import_module
+    pyyaml = import_module("yaml", package="yaml")
     sys.path = sys_path_copy
 else:
     import yaml as pyyaml
