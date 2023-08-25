@@ -14,7 +14,7 @@ Customization of YAML's loaded and dumper:
 import os
 import re
 from typing import Mapping, Optional, Any
-import yaml
+import yaml as pyyaml
 import numpy as np
 
 # Local
@@ -39,7 +39,7 @@ class OutputError(Exception):
 
 # Custom loader ##########################################################################
 
-class ScientificLoader(yaml.Loader):
+class ScientificLoader(pyyaml.Loader):
     pass
 
 
@@ -66,7 +66,7 @@ def _construct_defaults(loader, node):
             "'!defaults' directive can only be used when loading from a file.")
     try:
         defaults_files = [loader.construct_scalar(node)]
-    except yaml.constructor.ConstructorError:
+    except pyyaml.constructor.ConstructorError:
         defaults_files = loader.construct_sequence(node)
     folder = loader.current_folder
     loaded_defaults: InfoDict = {}
@@ -98,7 +98,7 @@ def no_duplicates_constructor(loader, node, deep=False):
 
 
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
-DefaultsLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+DefaultsLoader.add_constructor(pyyaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                                no_duplicates_constructor)
 
 path_matcher = re.compile(r'\$\{([^}^{]+)\}')
@@ -133,11 +133,11 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
         DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
         DefaultsLoader.yaml_root_name = \
             os.path.splitext(os.path.basename(file_name))[0] if file_name else None
-        return yaml.load(text_stream, DefaultsLoader)
+        return pyyaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
-    except yaml.constructor.ConstructorError as excpt:
+    except pyyaml.constructor.ConstructorError as excpt:
         raise InputImportError(errstr + ':\n' + str(excpt)) from excpt
-    except (yaml.YAMLError, TypeError) as excpt_2:
+    except (pyyaml.YAMLError, TypeError) as excpt_2:
         mark = getattr(excpt_2, "problem_mark", None)
         if mark is not None:
             line = 1 + mark.line
@@ -193,14 +193,14 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     - Numpy scalars are dumped as numbers, preserving type
     """
 
-    class CustomDumper(yaml.Dumper):
+    class CustomDumper(pyyaml.Dumper):
         pass
 
     # Make sure dicts preserve order when dumped
     # (This is still needed even for CPython 3!)
     def _dict_representer(dumper, data):
         return dumper.represent_mapping(
-            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
+            pyyaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
 
     CustomDumper.add_representer(dict, _dict_representer)
     CustomDumper.add_representer(Mapping, _dict_representer)
@@ -208,14 +208,14 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
         return dumper.represent_sequence(
-            yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
+            pyyaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
 
     CustomDumper.add_representer(tuple, _tuple_representer)
 
     # Numpy arrays and numbers
     def _numpy_array_representer(dumper, data):
         return dumper.represent_sequence(
-            yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
+            pyyaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
 
     CustomDumper.add_representer(np.ndarray, _numpy_array_representer)
 
@@ -233,13 +233,13 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     # (prints True instead of nothing because some functions try cast values to bool)
     # noinspection PyUnusedLocal
     def _null_representer(dumper, _):
-        return dumper.represent_scalar('tag:yaml.org,2002:bool', 'true')
+        return dumper.represent_scalar('tag:pyyaml.org,2002:bool', 'true')
 
     CustomDumper.add_representer(type(lambda: None), _null_representer)
     CustomDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return yaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
+    return pyyaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
 
 
 def yaml_dump_file(file_name: str, data, comment=None, error_if_exists=True):
