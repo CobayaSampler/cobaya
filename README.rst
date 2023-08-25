@@ -88,7 +88,7 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
    :height: 150px
    :width: 150px
 
-.. image:: ./img/logo_ttk.png
+.. image:: https://raw.githubusercontent.com/CobayaSampler/cobaya/master/img/logo_ttk.png
    :alt: RWTH Aachen
    :target: https://www.particle-theory.rwth-aachen.de/
    :height: 150px
