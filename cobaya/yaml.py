@@ -23,7 +23,7 @@ import numpy as np
 if os.environ.get("READTHEDOCS"):
     sys_path_copy = copy(sys.path)
     sys.path = [p for p in sys.path
-                if p and os.path.realpath(p) != os.path.realpath(os.dirname(__file__))]
+                if p and os.path.realpath(p) != os.path.realpath(os.path.dirname(__file__))]
     print("000", sys.path)
     from importlib import import_module
     pyyaml = import_module("yaml", package="yaml")
