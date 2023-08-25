@@ -24,10 +24,15 @@ if os.environ.get("READTHEDOCS"):
     sys_path_copy = copy(sys.path)
     sys.path = [p for p in sys.path
                 if p and os.path.realpath(p) != os.path.realpath(os.path.dirname(__file__))]
-    print("000", sys.path)
     from importlib import import_module
-    pyyaml = import_module("yaml", package="yaml")
+    this_module = yaml
+    del yaml
+    try:
+        pyyaml = import_module("yaml", package="yaml")
+    except Exception as e:
+        raise ValueError(str(e), "000", sys.path, "111", sys_path_copy)
     sys.path = sys_path_copy
+    yaml = this_module
 else:
     import yaml as pyyaml
 
