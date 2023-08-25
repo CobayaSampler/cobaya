@@ -23,9 +23,9 @@ import numpy as np
 if os.environ.get("READTHEDOCS"):
     sys_path_copy = copy(sys.path)
     sys.path = [p for p in sys.path if p]
-    from importlib import import_module, invalidate_caches
+    from importlib import reload, invalidate_caches
     invalidate_caches()
-    pyyaml = import_module("yaml", package="yaml")
+    pyyaml = reload("yaml")
     sys.path = sys_path_copy
 else:
     import yaml as pyyaml
