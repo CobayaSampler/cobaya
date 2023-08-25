@@ -41,7 +41,7 @@ docs = [
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "cobaya.package.__version__"}
+version = {attr = "cobaya.__version__"}
 
 [tool.setuptools.package-data]
 cobaya = ["*.yaml", "*.bibtex"]
