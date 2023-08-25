@@ -1,5 +1,4 @@
 import sys
-from cobaya.package import __author__, __version__, __obsolete__, __year__, __url__
 from cobaya.likelihood import Likelihood
 from cobaya.theory import Theory
 from cobaya.run import run
