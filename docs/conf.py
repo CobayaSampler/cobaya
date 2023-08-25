@@ -47,8 +47,6 @@ extensions = [
     'sphinxcontrib.jquery'
 ]
 
-inheritance_graph_attrs = dict(rankdir="LR", size='""')
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates', 'theme_customisation']
 
@@ -89,10 +87,14 @@ version = fields["__version__"]
 release = version
 
 from cobaya.tools import get_available_internal_classes
-from sphinx.ext import inheritance_diagram
 from cobaya.likelihood import Likelihood
 from cobaya.theory import Theory
 from cobaya.sampler import Sampler
+
+# Config of the inheritance diagram
+
+from sphinx.ext import inheritance_diagram
+inheritance_graph_attrs = dict(rankdir="LR", size='""')
 
 # change inheritance diagram to pull all internal component classes
 bases = (Likelihood, Theory, Sampler)
