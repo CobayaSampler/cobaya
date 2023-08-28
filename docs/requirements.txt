@@ -1,7 +1,0 @@
---index-url https://pypi.python.org/simple/
--e .
-sphinxcontrib-programoutput
-sphinx-autodoc-typehints
-sphinx<7
-sphinx_rtd_theme
-sphinxcontrib-jquery

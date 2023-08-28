@@ -12,6 +12,7 @@ if sys.version_info < (3, 8):
     print('Cobaya requires Python 3.8+, please upgrade.')
     sys.exit(1)
 
+
 __author__ = "Jesus Torrado and Antony Lewis"
 __version__ = "3.3.2"
 __obsolete__ = False
