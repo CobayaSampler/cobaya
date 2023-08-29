@@ -19,7 +19,6 @@
 import os
 import sys
 import ast
-import yaml
 
 project = "cobaya"
 
