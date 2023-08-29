@@ -112,7 +112,7 @@ class FileLock:
                              "\n %s" % mpi4py.get_config()
                              if mpi4py is not None else
                              "mpi4py is NOT currently installed.")
-                          + "\nIf this is a lock issue you can disable this check by"
+                          + "\nIf this is a lock issue you can disable this check by "
                             "setting env COBAYA_USE_FILE_LOCKING=False.", self.lock_file)
 
     def check_error(self):
