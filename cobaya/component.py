@@ -200,7 +200,12 @@ class HasDefaults:
         """
         package = inspect.getmodule(cls).__package__
         try:
-            return resources.read_text(package, file_name)
+            if os.path.split(str(file_name))[0]:
+                raise ValueError(f"{file_name} must be a bare file name, without path.")
+            with (resources.files(package) / file_name).open(
+                    "r", encoding="utf-8", errors="strict") as fp:
+                text_content = fp.read()
+            return text_content
         except Exception:
             return None
 
