@@ -419,7 +419,7 @@ class BAO(InstallableLikelihood):
         if self.use_grid_2d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
-            chi2 = float(self.interpolator(x, y)[0])
+            chi2 = self.interpolator(x, y)[0][0]
             return chi2
         elif self.use_grid_3d:
             x = self.theory_fun(self.redshift, self.observable_1)

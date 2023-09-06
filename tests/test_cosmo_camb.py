@@ -15,7 +15,7 @@ def get_camb(packages_path):
     try:
         return load_module("camb", path=os.path.join(process_packages_path(packages_path),
                                                      "code", "CAMB"))
-    except ModuleNotFoundError:
+    except (ModuleNotFoundError, SystemExit):
         raise ComponentNotInstalledError('camb')
 
 

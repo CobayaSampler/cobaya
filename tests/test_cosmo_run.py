@@ -10,6 +10,7 @@ from cobaya.tools import deepcopy_where_possible
 from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
 from cobaya.log import NoLogging
 from .common import process_packages_path
+from .conftest import install_test_wrapper
 
 pytestmark = pytest.mark.mpi
 
@@ -87,12 +88,12 @@ def test_cosmo_run_not_found():
 
 
 @mpi.sync_errors
-def test_cosmo_run_resume_post(tmpdir, packages_path=None):
+def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
     # only vary As, so fast chain. Chain does not need to converge (tested elsewhere).
     info['output'] = os.path.join(tmpdir, 'testchain')
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)
-    run(info, force=True)
+    install_test_wrapper(skip_not_installed, run, info, force=True)
     # note that continuing from files leads to text-file precision at read in, so a mix of
     # precision in the output SampleCollection returned from run
     run(info, resume=True, override={'sampler': {'mcmc': {'Rminus1_stop': 0.2}}})
