@@ -139,48 +139,67 @@ script.
 Manual installation (or using your own version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you are planning to modify CLASS or use an already modified version,
-you should not use the automatic installation script. Use the method below instead.
-
-CLASS's python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
-shell produces an error, install it with ``python -m pip install cython``.
+You may prefer to install CLASS manually e.g. if you are planning to modify it.
 
 .. note::
-   The fast way, assuming you are installing all your cosmological codes under
-   ``/path/to/cosmo/``:
+
+   *Pre-requisite*: CLASS' Python wrapper needs `Cython <https://cython.org/>`_, which you
+   can install with
 
    .. code:: bash
 
-      $ cd /path/to/cosmo/
-      $ git clone https://github.com/lesgourg/class_public.git
-      $ mv class_public CLASS
-      $ cd CLASS
-      $ make
+      $ python -m pip install 'cython<3'
 
-   If the **second** line produces an error (because you don't have ``git`` installed),
-   try
+   In particular the version restriction is due to `this issue
+   <https://github.com/lesgourg/class_public/issues/531>`_.
+
+To download and install CLASS manually in a folder called ``CLASS`` under
+``/path/to/cosmo``, simply do:
+
+.. code:: bash
+
+   $ cd /path/to/cosmo/
+   $ git clone https://github.com/lesgourg/class_public.git CLASS --depth=1
+   $ cd CLASS
+   $ make
+
+If the **second** line produces an error (because you don't have ``git`` installed),
+download the latest snapshot from `here
+<https://github.com/lesgourg/class_public/archive/master.zip>`_, decompress it, rename the
+resulting ``class_public-master`` folder to ``CLASS`` (optional) and run the ``make``
+command from there.
+
+.. note::
+
+   If CLASS seems to compile and install correctly, but you cannot import it from Python
+   manually, or Cobaya fails to import it, it may be that the CLASS installation script is
+   not using the right Python version. To fix that, if your preferred Python command is
+   e.g. ``python3``, re-do the ``make`` step as
 
    .. code:: bash
 
-      $ cd /path/to/cosmo/
-      $ wget https://github.com/lesgourg/class_public/archive/master.zip
-      $ unzip master.zip
-      $ rm master.zip
-      $ mv class_public-master CLASS
-      $ cd CLASS
-      $ make
+      $ PYTHON=python3 make
 
 If the instructions above failed, follow those in the
-`official CLASS web page <http://class-code.net/>`_ to get CLASS compiled with the Python
-interface ready.
+`official CLASS web page <https://class-code.net/>`_.
+
+Finally, in order for Cobaya to use this CLASS installation, you must specify the path to
+it in the ``classy`` input block (otherwise a system-wide CLASS may be used instead):
+
+.. code:: yaml
+
+    theory:
+      classy:
+        path: /path/to/cosmo/CLASS
 """
 
 # Global
 import sys
 import os
-import numpy as np
+import platform
 from copy import deepcopy
 from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
+import numpy as np
 
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
@@ -225,22 +244,24 @@ class classy(BoltzmannBase):
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
+        install_path = None
+        if self.packages_path is not None:
+            install_path = self.get_path(self.packages_path)
+        min_version = None if self.ignore_obsolete else self._classy_repo_version
         try:
-            install_path = (lambda p: self.get_path(p) if p else None)(self.packages_path)
-            min_version = None if self.ignore_obsolete else self._classy_repo_version
             self.classy_module = load_external_module(
                 "classy", path=self.path, install_path=install_path,
                 min_version=min_version, get_import_path=self.get_import_path,
                 logger=self.log, not_installed_level="debug")
-        except VersionCheckError as excpt:
+        except VersionCheckError as vc_excpt:
             raise VersionCheckError(
-                str(excpt) + " If you are using CLASS unmodified, upgrade with"
+                str(vc_excpt) + " If you are using CLASS unmodified, upgrade with"
                 "`cobaya-install classy --upgrade`. If you are using a modified CLASS, "
-                "set the option `ignore_obsolete: True` for CLASS.")
-        except ComponentNotInstalledError as excpt:
+                "set the option `ignore_obsolete: True` for CLASS.") from vc_excpt
+        except ComponentNotInstalledError as ni_excpt:
             raise ComponentNotInstalledError(
-                self.log, (f"Could not find CLASS: {excpt}. "
-                           "To install it, run `cobaya-install classy`"))
+                self.log, (f"Could not find CLASS: {ni_excpt}. "
+                           "To install it, run `cobaya-install classy`")) from ni_excpt
         self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
@@ -372,8 +393,9 @@ class classy(BoltzmannBase):
                 try:
                     method = {("delta_tot", "delta_tot"): "sigma",
                               ("delta_nonu", "delta_nonu"): "sigma_cb"}[pair]
-                except KeyError:
-                    raise LoggedError(self.log, f"sigma(R,z) not implemented for {pair}")
+                except KeyError as excpt:
+                    raise LoggedError(
+                        self.log, f"sigma(R,z) not implemented for {pair}") from excpt
                 self.collectors[k] = Collector(
                     method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
                     args_names=["R", "z"], arg_array=[[0], [1]],
@@ -504,7 +526,7 @@ class classy(BoltzmannBase):
             else:
                 self.log.debug("Computation of cosmological products failed. "
                                "Assigning 0 likelihood and going on. "
-                               "The output of the CLASS error was %s" % e)
+                               "The output of the CLASS error was %s", e)
             return False
         # CLASS not correctly initialized, or input parameters not correct
         except self.classy_module.CosmoSevereError:
@@ -620,9 +642,12 @@ class classy(BoltzmannBase):
         which_error = "lensed" if lensed else "unlensed"
         try:
             cls = deepcopy(self.current_state[which_key])
-        except:
-            raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
-                                        "have requested them?", which_error)
+        except Exception as excpt:
+            raise LoggedError(
+                self.log,
+                "No %s Cl's were computed. Are you sure that you have requested them?",
+                which_error
+            ) from excpt
         # unit conversion and ell_factor
         ells_factor = \
             ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
@@ -692,7 +717,6 @@ class classy(BoltzmannBase):
 
     @classmethod
     def is_compatible(cls):
-        import platform
         if platform.system() == "Windows":
             return False
         return True
