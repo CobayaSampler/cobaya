@@ -294,12 +294,12 @@ def get_clik_import_path(path, min_version=min_version_clik):
 def load_clik(*args, **kwargs):
     """
     Just a wrapper around :func:`component.load_external_module`, that checks that we are
-    not being fooled by the wrong `clik <https://pypi.org/project/click/>`_.
+    not being fooled by the wrong `clik <https://pypi.org/project/clik/>`_.
     """
     clik = load_external_module(*args, **kwargs)
     if not hasattr(clik, "try_lensing"):
         raise ComponentNotInstalledError(
-            kwargs.get("logger"), "Loaded wrong clik: `https://pypi.org/project/click/`")
+            kwargs.get("logger"), "Loaded wrong clik: `https://pypi.org/project/clik/`")
     return clik
 
 
