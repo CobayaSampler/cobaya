@@ -64,9 +64,25 @@ the manual case.
 The products that you can request and later retrieve are listed in
 :func:`~theories.cosmo.BoltzmannBase.must_provide`.
 
-If you would like to access a CLASS result that is not accessible that way, you can access
-directly the return value of the `python CLASS interface
-<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_
+For scalar parameters, you can add them as derived parameters in your input file. In
+principle, you can add most of the parameters that you can retrieve manually in the CLASS
+Python wrapper (the ones appearing inside the definition of the
+``get_current_derived_parameters()`` function of the `python CLASS interface
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_). If any of
+them does not work (usually because it has been added to CLASS since Cobaya was last
+updated), you can still add them as derived parameters in you input as long as you add
+them also to the ``classy`` block as
+
+.. code:: yaml
+
+   theory:
+     classy:
+       [...]
+       output_params: ["param1", "param2", ...]
+
+If you would like to access a CLASS result that is not accessible in any of these ways,
+you can access directly the return value of the `python CLASS interface
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_ functions
 ``get_background()``, ``get_thermodynamics()``, ``get_primordial()``,
 ``get_perturbations()`` and  ``get_sources()``. To do that add to the requisites
 ``{get_CLASS_[...]: None}`` respectively, and retrieve it with
@@ -615,13 +631,16 @@ class classy(BoltzmannBase):
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
         requested_and_extra = dict.fromkeys(set(requested).union(self.derived_extra))
-        # Parameters with their own getters
+        # Parameters with their own getters or different CLASS internal names
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
         if "Omega_nu" in requested_and_extra:
             requested_and_extra["Omega_nu"] = self.classy.Omega_nu
         if "T_cmb" in requested_and_extra:
             requested_and_extra["T_cmb"] = self.classy.T_cmb()
+        if "theta_s_100" in requested_and_extra:
+            requested_and_extra["theta_s_100"] = \
+                self.classy.get_current_derived_parameters(["100*theta_s"])["100*theta_s"]
         # Get the rest using the general derived param getter
         # No need for error control: classy.get_current_derived_parameters is passed
         # every derived parameter not excluded before, and cause an error, indicating
@@ -697,8 +716,10 @@ class classy(BoltzmannBase):
         self.classy.empty()
 
     def get_can_provide_params(self):
-        names = ['Omega_Lambda', 'Omega_cdm', 'Omega_b', 'Omega_m', 'rs_drag', 'z_reio',
-                 'YHe', 'Omega_k', 'age', 'sigma8']
+        names = ["h", "H0", "Omega_Lambda", "Omega_cdm", "Omega_b", "Omega_m", "Omega_k",
+                 "rs_drag", "tau_reio", "z_reio", "z_rec", "tau_rec", "m_ncdm_tot",
+                 "Neff", "YHe", "age", "conformal_age", "sigma8", "sigma8_cb",
+                 "theta_s_100"]
         for name, mapped in self.renames.items():
             if mapped in names:
                 names.append(name)
