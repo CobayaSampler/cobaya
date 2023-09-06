@@ -654,10 +654,17 @@ class classy(BoltzmannBase):
         units_factor = self._cmb_unit_factor(
             units, self.current_state['derived_extra']['T_cmb'])
         for cl in cls:
-            if cl not in ['pp', 'ell']:
-                cls[cl][2:] *= units_factor ** 2 * ells_factor
-        if lensed and "pp" in cls and ell_factor:
-            cls['pp'][2:] *= ells_factor ** 2 * (2 * np.pi)
+            if cl == "ell":
+                continue
+            units_power = float(sum(cl.count(p) for p in ["t", "e", "b"]))
+            cls[cl][2:] *= units_factor**units_power
+            if ell_factor:
+                if "p" not in cl:
+                    cls[cl][2:] *= ells_factor
+                elif cl == "pp" and lensed:
+                    cls[cl][2:] *= ells_factor ** 2 * (2 * np.pi)
+                elif "p" in cl and lensed:
+                    cls[cl][2:] *= ells_factor ** (3 / 2) * np.sqrt(2 * np.pi)
         return cls
 
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):

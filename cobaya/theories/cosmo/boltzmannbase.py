@@ -329,8 +329,9 @@ class BoltzmannBase(Theory):
         The ``muK2`` and ``K2`` options use the model's CMB temperature.
 
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
-        :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
-        the lensing potential ``pp`` spectrum).
+        :math:`\ell(\ell+1)/(2\pi)` (or by :math:`[\ell(\ell+1)]^2/(2\pi)` in the case of
+        the lensing potential ``pp`` spectrum, and :math:`[\ell(\ell+1)]^{3/2}/(2\pi)` for
+        the the cross spectra ``tp`` and ``ep``).
         """
 
     @abstract
