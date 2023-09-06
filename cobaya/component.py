@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import inspect
 from inspect import cleandoc
@@ -202,6 +203,9 @@ class HasDefaults:
         try:
             if os.path.split(str(file_name))[0]:
                 raise ValueError(f"{file_name} must be a bare file name, without path.")
+            # NB: resources.read_text is considered deprecated from 3.9, and will fail
+            if sys.version_info < (3, 9):
+                return resources.read_text(package, file_name)
             with (resources.files(package) / file_name).open(
                     "r", encoding="utf-8", errors="strict") as fp:
                 text_content = fp.read()
