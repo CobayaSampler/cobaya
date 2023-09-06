@@ -1,3 +1,13 @@
+## 3.X.Y – YYYY-MM-DD
+
+### Cosmology
+
+#### CLASS
+
+- Updated manual installation instructions and fixed some dependencies.
+- Made more derived parameters available, and documented how to access even more.
+- Fixed #292: wrong normalization for the Cl cross-spectra (thanks @carlosggarcia)
+
 ## 3.3.2 – 2023-07-28
 
 ### General
