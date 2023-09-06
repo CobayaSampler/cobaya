@@ -10,7 +10,7 @@ all the individual likelihoods.
 
 Likelihoods inherit from :class:`~theory.Theory`, adding an additional method
 to return the likelihood. As with all theories, likelihoods cache results, and the
-function :meth:`LikelihoodInterface.current_logp` is used by :class:`model.Model` to
+property :meth:`LikelihoodInterface.current_logp` is used by :class:`model.Model` to
 calculate the total likelihood. The default Likelihood implementation does the actual
 calculation of the log likelihood in the `logp` function, which is then called
 by :meth:`Likelihood.calculate` to save the result into the current state.
@@ -26,8 +26,8 @@ class can be used as and when needed.
 from time import sleep
 from typing import Mapping, Optional, Union, Dict
 from itertools import chain
-import numpy as np
 import numbers
+import numpy as np
 
 # Local
 from cobaya.typing import LikesDict, LikeDictIn, ParamValuesDict, empty_dict
@@ -44,8 +44,8 @@ class LikelihoodInterface:
     the current parameters), or likelihoods can directly inherit from :class:`Likelihood`
     instead.
 
-    The current_logp property returns the current state's logp, and does not normally
-    need to be changed.
+    The current_logp property returns the current state's logp as a scalar, and does not
+    normally need to be changed.
     """
 
     current_state: Dict
@@ -53,11 +53,15 @@ class LikelihoodInterface:
     @property
     def current_logp(self) -> float:
         """
-        Gets log likelihood for the current point
+        Gets log likelihood for the current point.
 
-        :return:  log likelihood from the current state
+        :return:  log likelihood from the current state as a scalar
         """
-        return self.current_state["logp"]
+        value = self.current_state["logp"]
+        # Unfortunately, numpy arrays are not derived from Sequence, so the test is ugly
+        if hasattr(value, "__len__"):
+            value = value[0]
+        return value
 
 
 def is_LikelihoodInterface(class_instance):
@@ -74,9 +78,11 @@ def is_LikelihoodInterface(class_instance):
 
 
 class Likelihood(Theory, LikelihoodInterface):
-    """Base class for likelihoods. Extends from :class:`LikelihoodInterface` and the
+    """
+    Base class for likelihoods. Extends from :class:`LikelihoodInterface` and the
     general :class:`~theory.Theory` class by adding functions to return likelihoods
-    functions (logp function for a given point)."""
+    functions (logp function for a given point).
+    """
 
     type: Optional[Union[list, str]] = []
 
@@ -90,10 +96,16 @@ class Likelihood(Theory, LikelihoodInterface):
                          packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
 
+    # MARKED FOR DEPRECATION IN v3.3
     @property
     def theory(self):
-        # for backwards compatibility
+        self.log.warning(
+            "The 'theory' attribute of likelihoods will be deprecated soon. "
+            "Please use the equivalent 'provider' attribute instead."
+        )
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
         return self.provider
+        # END OF DEPRECATION BLOCK
 
     def logp(self, **params_values):
         """
@@ -141,8 +153,18 @@ class AbsorbUnusedParamsLikelihood(Likelihood):
 
 
 class LikelihoodExternalFunction(Likelihood):
-    def __init__(self, info, name, timing=None):
-        Theory.__init__(self, info, name=name, timing=timing, standalone=False)
+    def __init__(self,
+                 info: LikeDictIn,
+                 name: Optional[str] = None,
+                 timing: Optional[bool] = None,
+                 **kwargs):
+        if kwargs:
+            self.log.warning(
+                "The following kwargs are ignored for external likelihood functions: %r",
+                kwargs
+            )
+        super().__init__(info, name=name, timing=timing,
+                         packages_path=None, initialize=True, standalone=False)
         self.input_params = str_to_list(self.input_params)
         # Store the external function and assign its arguments
         self.external_function = get_external_function(info["external"], name=name)
@@ -202,7 +224,7 @@ class LikelihoodExternalFunction(Likelihood):
             params_values[self._self_arg] = self
         try:
             return_value = self.external_function(**params_values)
-        except:
+        except Exception:
             self.log.debug("External function failed at evaluation.")
             raise
         bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
@@ -213,8 +235,8 @@ class LikelihoodExternalFunction(Likelihood):
                     if _derived is not None:
                         _derived.update(return_value[1])
                         params_values["_derived"] = _derived
-                except:
-                    raise LoggedError(self.log, bad_return_msg)
+                except (AttributeError, TypeError, IndexError) as excpt:
+                    raise LoggedError(self.log, bad_return_msg) from excpt
         elif self.output_params:
             raise LoggedError(self.log, bad_return_msg)
         else:  # no return.__len__ and output_params expected
@@ -236,7 +258,7 @@ class LikelihoodCollection(ComponentCollection):
         # Get the individual likelihood classes
         for name, info in info_likelihood.items():
             if isinstance(name, Theory):
-                name, info = name.get_name(), info
+                name = name.get_name()
             if isinstance(info, Theory):
                 self.add_instance(name, info)
             elif isinstance(info, Mapping) and "external" in info:
