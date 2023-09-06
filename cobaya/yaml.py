@@ -12,26 +12,12 @@ Customization of YAML's loaded and dumper:
 """
 # Global
 import os
-import sys
 import re
-from copy import copy
-from typing import Mapping, Optional, Any
+import yaml
 import numpy as np
-
-# ReadTheDocs: conflict with name of module
-# --> remove current folder from import paths
-if os.environ.get("READTHEDOCS"):
-    from importlib import reload
-    import yaml  # to force adding the module to the namespace, so we can use reload
-    sys_path_copy = copy(sys.path)
-    sys.path = [
-        p for p in sys.path
-        if p and os.path.realpath(p) != os.path.realpath(os.path.dirname(__file__))]
-    reload(yaml)
-    pyyaml = yaml
-    sys.path = sys_path_copy
-else:
-    import yaml as pyyaml
+from yaml.resolver import BaseResolver
+from yaml.constructor import ConstructorError
+from typing import Mapping, Optional, Any
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
@@ -55,7 +41,7 @@ class OutputError(Exception):
 
 # Custom loader ##########################################################################
 
-class ScientificLoader(pyyaml.Loader):
+class ScientificLoader(yaml.Loader):
     pass
 
 
@@ -82,7 +68,7 @@ def _construct_defaults(loader, node):
             "'!defaults' directive can only be used when loading from a file.")
     try:
         defaults_files = [loader.construct_scalar(node)]
-    except pyyaml.constructor.ConstructorError:
+    except ConstructorError:
         defaults_files = loader.construct_sequence(node)
     folder = loader.current_folder
     loaded_defaults: InfoDict = {}
@@ -92,10 +78,9 @@ def _construct_defaults(loader, node):
             dfilename += next(ext for ext in [""] + list(Extension.yamls)
                               if (os.path.basename(dfilename) + ext
                                   in os.listdir(os.path.dirname(dfilename))))
-        except StopIteration as excpt:
-            raise InputSyntaxError(
-                "Mentioned non-existent defaults file '%s', "
-                "searched for in folder '%s'." % (dfile, folder)) from excpt
+        except StopIteration:
+            raise InputSyntaxError("Mentioned non-existent defaults file '%s', "
+                                   "searched for in folder '%s'." % (dfile, folder))
         this_loaded_defaults = yaml_load_file(dfilename)
         loaded_defaults = recursive_update(loaded_defaults, this_loaded_defaults)
     return loaded_defaults
@@ -114,7 +99,7 @@ def no_duplicates_constructor(loader, node, deep=False):
 
 
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
-DefaultsLoader.add_constructor(pyyaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+DefaultsLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                                no_duplicates_constructor)
 
 path_matcher = re.compile(r'\$\{([^}^{]+)\}')
@@ -135,7 +120,6 @@ def path_constructor(loader, node):
 
     return (env_val or '') + value[match.end():]
 
-
 DefaultsLoader.add_implicit_resolver('!path', path_matcher, None)
 DefaultsLoader.add_constructor('!path', path_constructor)
 
@@ -149,12 +133,12 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
         DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
         DefaultsLoader.yaml_root_name = \
             os.path.splitext(os.path.basename(file_name))[0] if file_name else None
-        return pyyaml.load(text_stream, DefaultsLoader)
+        return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
-    except pyyaml.constructor.ConstructorError as excpt:
-        raise InputImportError(errstr + ':\n' + str(excpt)) from excpt
-    except (pyyaml.YAMLError, TypeError) as excpt_2:
-        mark = getattr(excpt_2, "problem_mark", None)
+    except yaml.constructor.ConstructorError as e:
+        raise InputImportError(errstr + ':\n' + str(e))
+    except (yaml.YAMLError, TypeError) as exception:
+        mark = getattr(exception, "problem_mark", None)
         if mark is not None:
             line = 1 + mark.line
             column = 1 + mark.column
@@ -168,8 +152,8 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
             errorline = (signal + sep + lines[line - 1] +
                          signal_right + "column %s" % column)
             post = ((("\n" + " " * len(signal) + sep).join(
-                [""] +
-                lines[line + 1 - 1:min(line + 1 + context - 1, len(lines))]))) + "\n"
+                [""] + lines[
+                       line + 1 - 1:min(line + 1 + context - 1, len(lines))]))) + "\n"
             bullet = "\n- "
             raise InputSyntaxError(
                 errstr + " at line %d, column %d." % (line, column) +
@@ -178,18 +162,15 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
                 bullet.join([
                     "inconsistent indentation", "'=' instead of ':'",
                     "no space after ':'", "a missing ':'", "an empty group",
-                    "'\' in a double-quoted string (\") not starting by 'r\"'."])) \
-                from excpt_2
+                    "'\' in a double-quoted string (\") not starting by 'r\"'."]))
         else:
-            raise InputSyntaxError(errstr) from excpt_2
+            raise InputSyntaxError(errstr)
 
 
 def yaml_load_file(file_name: Optional[str], yaml_text: Optional[str] = None) -> InfoDict:
-    """
-    Wrapper to load a yaml file.
+    """Wrapper to load a yaml file.
 
-    Manages !defaults directive.
-    """
+    Manages !defaults directive."""
     if yaml_text is None:
         assert file_name
         with open(file_name, "r", encoding="utf-8-sig") as file:
@@ -209,14 +190,14 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     - Numpy scalars are dumped as numbers, preserving type
     """
 
-    class CustomDumper(pyyaml.Dumper):
+    class CustomDumper(yaml.Dumper):
         pass
 
     # Make sure dicts preserve order when dumped
     # (This is still needed even for CPython 3!)
     def _dict_representer(dumper, data):
         return dumper.represent_mapping(
-            pyyaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
 
     CustomDumper.add_representer(dict, _dict_representer)
     CustomDumper.add_representer(Mapping, _dict_representer)
@@ -224,14 +205,14 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):
         return dumper.represent_sequence(
-            pyyaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
+            BaseResolver.DEFAULT_SEQUENCE_TAG, list(data))
 
     CustomDumper.add_representer(tuple, _tuple_representer)
 
     # Numpy arrays and numbers
     def _numpy_array_representer(dumper, data):
         return dumper.represent_sequence(
-            pyyaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
+            BaseResolver.DEFAULT_SEQUENCE_TAG, data.tolist())
 
     CustomDumper.add_representer(np.ndarray, _numpy_array_representer)
 
@@ -248,14 +229,14 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     # Dummy representer that prints True for non-representable python objects
     # (prints True instead of nothing because some functions try cast values to bool)
     # noinspection PyUnusedLocal
-    def _null_representer(dumper, _):
+    def _null_representer(dumper, data):
         return dumper.represent_scalar('tag:yaml.org,2002:bool', 'true')
 
     CustomDumper.add_representer(type(lambda: None), _null_representer)
     CustomDumper.add_multi_representer(object, _null_representer)
 
     # Dump!
-    return pyyaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
+    return yaml.dump(info, stream, CustomDumper, allow_unicode=True, **kwds)
 
 
 def yaml_dump_file(file_name: str, data, comment=None, error_if_exists=True):

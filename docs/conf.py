@@ -19,6 +19,7 @@
 import os
 import sys
 import ast
+import yaml
 
 project = "cobaya"
 
@@ -94,6 +95,7 @@ from cobaya.sampler import Sampler
 # Config of the inheritance diagram
 
 from sphinx.ext import inheritance_diagram
+
 inheritance_graph_attrs = dict(rankdir="LR", size='""')
 
 # change inheritance diagram to pull all internal component classes
