@@ -15,12 +15,13 @@ import traceback
 import shutil
 import tempfile
 import logging
+from copy import deepcopy
 from itertools import chain
-from packaging import version
 import importlib
+from typing import List, Mapping, Union
 import requests  # type: ignore
 import tqdm  # type: ignore
-from typing import List, Mapping, Union
+from packaging import version
 
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
@@ -526,6 +527,12 @@ def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     if upgrade:
         cmd += ['--upgrade']
     cmd += list(options)
+    # Assume that if the user has installed Cobaya on the system-wide Python,
+    # then it is OK to overwrite system packages:
+    kwargs = deepcopy(kwargs)
+    if "env" not in kwargs:
+        kwargs["env"] = {}
+    kwargs["env"].update({"PIP_BREAK_SYSTEM_PACKAGES": "1"})
     res = subprocess.call(cmd + packages, **kwargs)
     if res:
         msg = f"pip: error installing packages '{packages}'"

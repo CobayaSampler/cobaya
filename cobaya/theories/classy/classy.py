@@ -740,7 +740,9 @@ class classy(BoltzmannBase):
             log.info("Code not requested. Nothing to do.")
             return True
         log.info("Installing pre-requisites...")
-        exit_status = pip_install("cython")
+        # TODO: remove version restriction below when this issue is fixed:
+        # https://github.com/lesgourg/class_public/issues/531
+        exit_status = pip_install("cython<3")
         if exit_status:
             log.error("Could not install pre-requisite: cython")
             return False
