@@ -174,13 +174,13 @@ hubble = {
                         'extra_args': {'theta_H0_range': [H0_min, H0_max]}},
                    'classy': {
                        'params': {
-                           'theta_s_1e2': {'prior': {'min': 0.5, 'max': 10},
+                           'theta_s_100': {'prior': {'min': 0.5, 'max': 10},
                                            'ref': {'dist': 'norm', 'loc': 1.0416,
                                                    'scale': 0.0004},
                                            'proposal': 0.0002,
                                            'latex': '100\\theta_\\mathrm{s}',
                                            'drop': True}, '100*theta_s': {
-                               'value': 'lambda theta_s_1e2: theta_s_1e2',
+                               'value': 'lambda theta_s_100: theta_s_100',
                                'derived': False},
                            'H0': {'latex': 'H_0'}}}}},
     'sound_horizon_lensonly': {
