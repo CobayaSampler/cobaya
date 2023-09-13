@@ -196,6 +196,38 @@ If you distribute your package on pypi or github, any user will have to install 
 Running ``cobaya-install`` on this input will download planckpr4lensing from
 github and then pip install it (since it is not an internal package provided with Cobaya, unlike the other likelihoods). The ``package_install`` block can instead use ``download_url`` for a zip download, or just "pip" to install from pypi. The options are the same as the ``install_options`` for installing likelihood data using the ``InstallableLikelihood`` class described below.
 
+Automatically showing bibliography
+----------------------------------
+
+You can store bibliography information together with your class, so that it is shown when
+using the ``cobaya-bib`` script, as explained in :ref:`this section <citations>`. To do
+that, you can simply include the corresponding bibtex code in a file named as your class
+with ``.bibtex`` extension placed in the same folder as the module defining the class.
+
+As an alternative, you can implement a ``get_bibtex`` class method in your class that
+returns the bibtex code:
+
+.. code:: python
+
+    @classmethod
+    def get_bibtex(cls):
+        from inspect import cleandoc  # to remove indentation
+        return cleandoc(r"""
+            # Your bibtex code here! e.g.:
+            @article{Torrado:2020dgo,
+                author = "Torrado, Jesus and Lewis, Antony",
+                 title = "{Cobaya: Code for Bayesian Analysis of hierarchical physical models}",
+                 eprint = "2005.05290",
+                 archivePrefix = "arXiv",
+                 primaryClass = "astro-ph.IM",
+                 reportNumber = "TTK-20-15",
+                 doi = "10.1088/1475-7516/2021/05/057",
+                 journal = "JCAP",
+                 volume = "05",
+                 pages = "057",
+                 year = "2021"
+            }""")
+
 InstallableLikelihood
 ---------------------
 
