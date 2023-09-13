@@ -632,10 +632,10 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     if allow_internal:
         # If unknown type, loop recursive call with all possible types
         if kind is None:
-            for kind in kinds:
+            for this_kind in kinds:
                 try:
                     return get_component_class(
-                        name, kind, allow_external=False, allow_internal=True,
+                        name, this_kind, allow_external=False, allow_internal=True,
                         logger=logger, not_found_level="debug")
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. check all kinds.
