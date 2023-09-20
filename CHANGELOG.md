@@ -1,10 +1,84 @@
-## 3.X.Y – 2022-XX-YY
+## 3.X.Y – YYYY-MM-DD
+
+### Cosmology
+
+#### CLASS
+
+- Updated manual installation instructions and fixed some dependencies.
+- Made more derived parameters available, and documented how to access even more.
+- Fixed #292: wrong normalization for the Cl cross-spectra (thanks @carlosggarcia)
+
+## 3.3.2 – 2023-07-28
 
 ### General
 
-- GUI now support PySide6
+- Class instance methods can now be used as external likelihoods.
+- Fix _prior_tries_warning bug
+- Fix over-stringent temperature test reading in chains
+
+### PolyChord
+
+- `products` method revamped; can produce GetDist chains directly.
+
+### Cosmology
+
+- updated CAMB min version to 1.5, fixing bug with Cobaya sampling
+- cobaya-install cosmo now installs set of Planck NPIPE (PR4) python likelihoods
+- added planck_2018_lowl.EE_sroll2 low-E Planck likelihood
+- added startup warning if initial points are very over-dispersed compared to the proposal covariance
+- Requesting CAMBdata from camb now a copy for exact initial power spectrum/non-linear model
+- CAMB now supports using sigma8 as an input parameter (thanks @tilmantroester)
+
+## 3.3.1 – 2023-04-04
+
+- Updates for Pandas 2 compatibility
+- Fixed bug in MCMC oversampling and simplified proposal code (#288) (thanks @JiangJQ2000)
+
+## 3.3 – 2023-03-29
+
+### General
+
+- Minimum Python version updated to 3.8
+- `Prior.bounds()` can now return bounds at particular confidence levels when passed `confidence<1`.
+- `SampleCollection` slicing now allows for advanced pandas slicing, e.g. `samples[samples["param"] > value]`.
+- Fixed bug when setting reference pdf in MPI runs (thanks @schoeneberg!)
+- Components in yaml files referring to external Python modules can now give `package_install` settings to specify whether installed from pip, github or URL when cobaya-install is run.
+- Fix for `post` when likelihoods return different number of derived parameters (#285) (thanks @zhaoruiyang98)
+
+### MCMC
+
+- Added tempered sampling.
+- `products` method revamped; can produce GetDist chains directly.
+
+### Cosmology
+
+- Replaced default planck_2018_lowl.EE and planck_2018_low.TT with native versions, and using GitHub-hosted clik version.
+- Updated planck likelihoods to all load calibration parameter from same yaml
+- Removed clik version of planck 2018 CamSpec, defaults to native (avoids inconsistent calibration parameter naming)
+- GUI inclues latest NPIPE fully Python likelihood configuration
+
+## 3.2.2 – 2022-11-03
+
+### General
+
 - Deprecated `debug_file` in input, in favour of `debug: [filename]`.
 - `Prior` now has method `set_reference`, to update the reference pdf's if needed (MPI-aware).
+- Warning for stuck chains not more tolerant of many fast prior rejections
+- Environment variables supported in input .yaml files, and {YAML_ROOT} placeholder for paths.
+- Improved error messages for .yaml boolean options and install logs
+- Fixes for max_tries .inf and old version checks
+- fix for 'KeyError: _manual' bug caused by unmet requirements. #275 (thanks @HTJense)
+
+### Cosmology
+
+- Added CAMBspec NPIPE Planck 2020 likelihood (#271) ) (thanks @earosenberg)
+- Added native version of `planck_2018_lowl.EE`.
+- Added native version of `planck_2018_low.TT`. (thanks @eirikgje)
+- Added links to external likelihoods Planck PR4 Lensing, pyWMAP.
+- GUI now support PySide6
+- Fixed bug in BAO likelihood (#250, thanks @Pablo-Lemos)
+- Added files for the BAO DR12 and DR16 LRG likelihoods (PR #235; thanks @markm42)
+- Test updates for CAMB 1.4 with updated constants, BBN model and neutrino nnu=3.044
 
 ## 3.2.1 – 2022-05-17
 

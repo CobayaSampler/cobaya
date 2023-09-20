@@ -1,13 +1,12 @@
 language: python
 os: linux
-dist: bionic
 git:
   depth: false
 
 #testing
 env:
   global:
-    - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec,unbinned
+    - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
@@ -21,59 +20,54 @@ cache:
     - /home/travis/build/CosmoPars/packages/data/des_data
     - /home/travis/build/CosmoPars/packages/data/planck_2018_pliklite_native
     - /home/travis/build/CosmoPars/packages/data/planck_2018_lowE_native
+    - /home/travis/build/CosmoPars/packages/data/planck_2018_lowT_native
 
 # (Pre)Installation
 jobs:
   include:
-    - name: "Minimum requisites for Cosmology: gcc-6, Python 3.6"
+    - if: branch !~ ^test.*
+      dist: focal
+      name: "Minimum requisites for Cosmology: gcc-7, Python 3.8"
       addons:
         apt:
           packages:
-            - gcc-6
-            - gfortran-6
+            - gcc-7
+            - gfortran-7
       env:
-        - GCC_VERSION="6"
-      python: "3.6"
-    - name: "Typical scenario: latest Ubuntu LTS"
-      dist: focal
+        - GCC_VERSION="7"
+      python: "3.8"
+    - if: branch !~ ^test.*
+      name: "Typical scenario: latest Ubuntu LTS"
+      dist: jammy
       addons:
         apt:
           packages:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.8"
-    - name: "Anaconda: gcc-8, Python 3.7"
+      python: "3.9"
+    - if: branch !~ ^test.*
+      name: "Anaconda: jammy LTS Python 3.10"
+      dist: jammy
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
           packages:
-            - gcc-8
-            - gfortran-8
-            - g++-8
+            - gfortran
       env:
-        - GCC_VERSION="8"
+        - GCC_VERSION="ubuntu"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
-      python: "3.7"
-    - name: "Latest: gcc-11, Python 3.10 Anaconda (conda-forge)"
-      dist: focal
+      python: "3.10"
+    - name: "Latest jammy Python 3.11"
+      dist: jammy
       addons:
         apt:
-          sources:
-            - sourceline: "ppa:ubuntu-toolchain-r/test"
           packages:
-            - gcc-11
-            - gfortran-11
-            - g++-11
+            - gfortran
       env:
-        - GCC_VERSION="11"
-        - PYDIST="ANACONDA"
-        - ANACONDA_CHANNEL="conda-forge"
-      python: "3.10"
-  allow_failures:
-    - name: "Latest: gcc-11, Python 3.10 Anaconda (conda-forge)"
+        - GCC_VERSION="ubuntu"
+      python: "3.11"
+
 
 before_install:
   # Configure right compiler versions
@@ -86,9 +80,6 @@ before_install:
     fi
   - if [[ "$GCC_VERSION" == "11" ]]; then
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.5;
-    fi
-  - if [[ "$GCC_VERSION" == "6" ]]; then
-    export COBAYA_INSTALL_SKIP=$COBAYA_INSTALL_SKIP,polychord;
     fi
   - gfortran --version
   # Install rest of system requisites
@@ -103,11 +94,12 @@ before_install:
     conda info -a;
     conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked pytest-cov flaky dill coverage flake8;
     source activate test-environment;
-    pip install mpi4py;
+    conda install -c conda-forge mpi4py openmpi;
     else
+    python -m pip install --upgrade pip setuptools wheel;
     pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
     fi
-  - python -m pip install --upgrade pip
+  - pip install "Cython<3"
   - python --version
 
 script:
@@ -118,7 +110,8 @@ script:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report
-  - pip install numba
+  # numba can speed things, but makes for some messy logs
+  # - pip install numba
   # Cosmology tests:
   - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
@@ -126,18 +119,16 @@ script:
     git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
     python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py build ;
     fi
-  # mpi tests [not sure why it hangs in py3.6]
-  - if [[ "$GCC_VERSION" != "6" ]]; then
-    mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report ;
-    fi;
+  # mpi tests
+  - mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report ;
   - mkdir covers; mv .coverage.* covers; ls -ltra covers
-  - pytest tests/ --cov -v -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
+  - pytest tests/ --cov -vv -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
   - mv .coverage .coverage.pytest; mv covers/.cov* .
   # Test external cosmological likelihoods
-  - python $COBAYA_PACKAGES_PATH/code/CAMB/setup.py install
-  - git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
-  - pip install ./planck_lensing_external --quiet
-  - coverage run --parallel-mode -m unittest plancklensing.tests.test_likes
+  - pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
+  #- git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
+  #- pip install ./planck_lensing_external --quiet
+  #- coverage run --parallel-mode -m unittest plancklensing.tests.test_likes
   - git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
   - pip install ./example_external_likelihood --quiet
   - coverage run --parallel-mode -m unittest test_package.tests.test
@@ -153,8 +144,7 @@ deploy: # only if it builds and if the commit has been tagged
     secure: FVCgqGT0sMJyvlY3sJFBwvO4RycAbWbVyHl4p9CG7XRSSgVOLGy9RZjAJkX8dJjH06fPNdQDYfkkj1PV8I42y0n4uqKkQ9RB63Yq6skbuuzjXLGQK9Xop10/1GDBhMHietDibzl8ZIuJyibdFYsc3rM/j8QcKjOYpDe10jO8K+dZaXsgAvqHk4P3d3ScG1u+X+wr8K6qik21YbTpiILS0LdUxmP4DWQw/7NKGWDX1b7sImRmvQfO20KuPTMu8pPz9ThZyPl6zEPgtKi2sQej5sgDlfim/heYk4W8Bf7bggS8GLseffssL5ru96eNUWT1OSbxnsEFqyyYepngNHPpvifflvtCiFU+3f7rzzcgYqmybhdM4ZEOk0pL5y/NS/rHn/1iW7Cqxs+GfUCbr9fWuBgKmVuDqEfvtSu83U1x6zz9C3R259Oe6n0vXfCGSfJqiHhsW8wuXx+bODyDaMAUn+gRSCLuqJVQzdcYwF2pGFf1WUH5iTQItUHZjYbAIXdnSqDKnvGalNDJdNsF3vwNEdbe8hFqfHMMzG73ZkkLOCjDW+mswIKYJUflxIyOdRqtB+XE056dA+c8Zwc4ktg4iss/O3ZBtUVPmba/ivpyYm7Fk8EUN/zY+24NK4iKk6z543rfx2w+wNXAuQiwgN2f+JshqI8kzTuCxPTgf2N49ME=
   on:
     tags: true
-    python: '3.8'
-    condition: "$GCC_VERSION != 6"
+    python: '3.10'
     branch: master
     repo: CobayaSampler/cobaya
 ###############################################################################

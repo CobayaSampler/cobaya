@@ -79,8 +79,8 @@ def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     """
     packages_path = packages_path or info.get(packages_path_input)
     if not packages_path:
-        raise LoggedError(log, "Needs a path to the external packages installation.")
-    updated_info = update_info(info)
+        raise LoggedError(log, "Needs a path to the external packages' installation.")
+    updated_info = update_info(info, strict=False)
     for p, pinfo in list(updated_info["params"].items()):
         if not is_sampled_param(pinfo):
             updated_info["params"].pop(p)

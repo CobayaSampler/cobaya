@@ -670,14 +670,11 @@ class BinWindows:
 def last_top_comment(fname):
     result = None
     with open(fname, encoding="utf-8-sig") as f:
-        x = f.readline()
-        while x:
-            x = x.strip()
-            if x:
+        while x := f.readline():
+            if x := x.strip():
                 if x[0] != '#':
                     return result
                 result = x[1:].strip()
-            x = f.readline()
     return None
 
 

@@ -5,7 +5,6 @@ from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, NoLogging
 from cobaya.typing import InputDict
-from .common import process_packages_path
 
 debug = False
 
@@ -125,8 +124,7 @@ def _test_loglike(theories):
                               cached=False) == 8, "non-derived loglike failed for %s" % th
 
 
-def test_dependencies(packages_path):
-    info['packages_path'] = process_packages_path(packages_path)
+def test_dependencies():
     theories = [('A', A), ('B', B)]
     _test_loglike(theories)
     _test_loglike([('A', A), ('B', B2)])
@@ -257,7 +255,7 @@ def _test_loglike2(theories):
         assert model.loglike()[0] == 20., "fail conditional dependency for %s" % th
 
 
-def test_conditional_dependencies(packages_path):
+def test_conditional_dependencies():
     theories = [('A', A), ('D', D)]
     _test_loglike2(theories)
 

@@ -90,7 +90,7 @@ class Theory(CobayaComponent):
                                                     Sequence[Tuple[str, InfoDict]]]:
         """
         Function called by Cobaya with the actual products that this component needs to
-        compute (i.e. the things this compononent can provide that are acutally used by
+        compute (i.e. the things this component can provide that are actually used by
         other components). The function can return conditional requirements that this
         component needs from other components in order to compute those things.
 
@@ -102,13 +102,6 @@ class Theory(CobayaComponent):
         """
         # reset states whenever requirements change
         self._states.clear()
-        # MARKED FOR DEPRECATION IN v3.0
-        # This code will only run if needs() is defined but not must_provide()
-        if hasattr(self, "needs"):
-            raise LoggedError(
-                self.log,
-                "The .needs() method has been deprecated in favour of .must_provide()")
-        # END OF DEPRECATION BLOCK
         return None
 
     def calculate(self, state, want_derived=True, **params_values_dict):
@@ -296,16 +289,6 @@ class Theory(CobayaComponent):
         # list of labels that classify this component
         # not usually used for Theory, can be used for aggregated chi2 in likelihoods
         return str_to_list(getattr(self, "type", []) or [])
-
-    # MARKED FOR DEPRECATION IN v3.1
-    def get_current_derived(self):
-        self.log.warning("'Theory.get_current_derived()' method will soon be deprecated "
-                         "in favour of 'Theory.current_derived' attribute. Please, "
-                         "rename your call.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        return self.current_derived
-
-    # END OF DEPRECATION BLOCK
 
     def get_provider(self):
         """

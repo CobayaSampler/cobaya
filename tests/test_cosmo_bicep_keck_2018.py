@@ -2,11 +2,11 @@
 
 from copy import deepcopy
 from .common_cosmo import body_of_test
-from cobaya.cosmo_input import cmb_precision
+from cobaya.cosmo_input import planck_precision
 
-camb_extra = deepcopy(cmb_precision["camb"])
+camb_extra = deepcopy(planck_precision["camb"])
 camb_extra.update({"halofit_version": "takahashi"})
-classy_extra = deepcopy(cmb_precision["classy"])
+classy_extra = deepcopy(planck_precision["classy"])
 classy_extra.update({"non linear": "halofit"})
 classy_extra.update({"nonlinear_min_k_max": 20})
 

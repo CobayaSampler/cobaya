@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.1.3 or higher.
+It requires CAMB 1.5 or higher.
 
 .. note::
 
@@ -204,7 +204,7 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 
    In any of these methods, if you intend to switch between different versions or
    modifications of CAMB you should not install CAMB as python package using
-   ``python setup.py install``, as the official instructions suggest. It is not necessary
+   ``pip install``, as the official instructions suggest. It is not necessary
    if you indicate the path to your preferred installation as explained above.
 """
 
@@ -253,7 +253,7 @@ class CAMB(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = '1.3.5'
+    _min_camb_version = '1.5.0'
 
     file_base_name = 'camb'
     external_primordial_pk: bool
@@ -272,8 +272,8 @@ class CAMB(BoltzmannBase):
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " If you are using CAMB unmodified, upgrade with"
-                "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
-                "set the option `ignore_obsolete: True` for CAMB.")
+                             "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
+                             "set the option `ignore_obsolete: True` for CAMB.")
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log, (f"Could not find CAMB: {excpt}. "
@@ -339,8 +339,32 @@ class CAMB(BoltzmannBase):
             self.extra_attrs["WantTensors"] = True
             self.extra_attrs["Accuracy.AccurateBB"] = True
 
+        if "sigma8" in self.input_params:
+            if "As" in self.input_params:
+                raise LoggedError(self.log,
+                                  "Both As and sigma8 have been provided as input. "
+                                  "This will likely cause ill-defined outputs.")
+            self.extra_attrs["WantTransfer"] = True
+            self.add_to_redshifts([0.])
+
+    def initialize_with_provider(self, provider):
+        if "sigma8" in self.input_params or "As" in self.output_params:
+            if not self.needs_perts:
+                raise LoggedError(self.log, "Using sigma8 as input or As as output "
+                                            "but not using any power spectrum results")
+            if (power_model := self.extra_args.get('initial_power_model')) and not \
+                    isinstance(self.camb.CAMBparams.make_class_named(power_model),
+                               self.camb.initialpower.InitialPowerLaw):
+                raise LoggedError(self.log, "Using sigma8 as an input and As as an "
+                                            "output is only supported for power law "
+                                            "initial power spectra.")
+        super().initialize_with_provider(provider)
+
     def get_can_support_params(self):
-        return self.power_params + self.nonlin_params
+        params = self.power_params + self.nonlin_params
+        if not self.external_primordial_pk:
+            params += ["sigma8"]
+        return params
 
     def get_allow_agnostic(self):
         return False
@@ -597,6 +621,11 @@ class CAMB(BoltzmannBase):
                     args.update(self.nonlin_args)
                     results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
+                if "sigma8" in params_values_dict:
+                    sigma8 = results.get_sigma8_0()
+                    results.Params.InitPower.As *= params_values_dict[
+                                                       "sigma8"] ** 2 / sigma8 ** 2
+                    results.power_spectra_from_transfer()
             for product, collector in self.collectors.items():
                 if collector:
                     state[product] = \
@@ -604,7 +633,7 @@ class CAMB(BoltzmannBase):
                     if collector.post:
                         state[product] = collector.post(*state[product])
                 else:
-                    state[product] = results
+                    state[product] = results.copy()
         except self.camb.baseconfig.CAMBError as e:
             if self.stop_at_error:
                 self.log.error(
@@ -642,6 +671,8 @@ class CAMB(BoltzmannBase):
         # Specific calls, if general ones fail:
         if p == "sigma8":
             return intermediates.results.get_sigma8_0()
+        if p == "As":
+            return intermediates.results.Params.InitPower.As
         try:
             return getattr(intermediates.camb_params, p)
         except AttributeError:
@@ -710,7 +741,7 @@ class CAMB(BoltzmannBase):
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
-    def _get_z_dependent(self, quantity, z):
+    def _get_z_dependent(self, quantity, z, _pool=None):
         # Partially reimplemented because of sigma8_z, etc, use different pool
         pool = None
         if quantity in ["sigma8_z", "fsigma8"]:
@@ -755,6 +786,8 @@ class CAMB(BoltzmannBase):
                     and f not in ['Alens', 'num_nu_massless']:
                 fields.append(f)
         fields += ['omega_de', 'sigma8']  # only parameters from CAMBdata
+        if not self.external_primordial_pk:
+            fields += ['As']
         properties = get_properties(self.camb.CAMBparams)
         names = self.camb.model.derived_names + properties + fields + params_derived
         for name, mapped in self.renames.items():
@@ -770,8 +803,7 @@ class CAMB(BoltzmannBase):
         # Prepare parameters to be passed: this is called from the CambTransfers instance
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         # Generate and save
-        self.log.debug("Setting parameters: %r and %r",
-                       dict(args), dict(self.extra_args))
+        self.log.debug("Setting parameters: %r and %r", args, self.extra_args)
         try:
             if not self._base_params:
                 base_args = args.copy()

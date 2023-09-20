@@ -8,16 +8,16 @@
 # Global
 import os
 import dataclasses
-import numpy as np
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
 from typing import NamedTuple, Sequence, Mapping, Iterable, Optional, \
     Union, List, Any, Dict, Set, Tuple
+import numpy as np
 
 # Local
 from cobaya.conventions import overhead_time, get_chi2_name, \
-    packages_path_input
+    packages_path_input, prior_1d_name
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_info_overrides
@@ -279,7 +279,7 @@ class Model(HasLogger):
             params_values_array = np.atleast_1d(params_values)
             if params_values_array.shape[0] != self.prior.d():
                 raise LoggedError(
-                    self.log, "Wrong dimensionality: it's %d and it should be %d.",
+                    self.log, "Wrong dimensionality: it's %d, and it should be %d.",
                     len(params_values_array), self.prior.d())
         if len(params_values_array.shape) >= 2:
             raise LoggedError(
@@ -386,24 +386,22 @@ class Model(HasLogger):
                 outpar_dict.update(component.current_derived)
             if like_index is not None:
                 try:
-                    loglikes[like_index] = float(component.current_logp)  # type: ignore
-                except TypeError:
+                    loglikes[like_index] = component.current_logp
+                except TypeError as type_excpt:
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
                         "but %r instead.", component,
-                        component.current_logp)  # type: ignore
+                        component.current_logp) from type_excpt
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
-        if as_dict:
-            loglikes = dict(zip(self.likelihood, loglikes))
+        return_likes = dict(zip(self.likelihood, loglikes)) if as_dict else loglikes
         if return_derived or return_output_params:
             if not compute_success:
                 return_params_names = (
                     self.output_params if return_output_params else self.derived_params)
                 if as_dict:
-                    return_params = dict(
-                        zip(return_params_names, [np.nan] * len(return_params_names)))
+                    return_params = dict.fromkeys(return_params_names, np.nan)
                 else:
                     return_params = [np.nan] * len(return_params_names)
             else:
@@ -418,8 +416,8 @@ class Model(HasLogger):
                     self.log.debug("Computed derived parameters: %s", derived_dict)
                     return_params = (derived_dict if as_dict
                                      else list(derived_dict.values()))
-            return loglikes, return_params
-        return loglikes
+            return return_likes, return_params
+        return return_likes
 
     def loglikes(self,
                  params_values: Optional[Union[Dict[str, float], Sequence[float]]] = None,
@@ -650,13 +648,13 @@ class Model(HasLogger):
         self.__exit__()
 
     def get_versions(self, add_version_field=False):
-        return dict(theory=self.theory.get_versions(add_version_field=add_version_field),
-                    likelihood=self.likelihood.get_versions(
-                        add_version_field=add_version_field))
+        return {"theory": self.theory.get_versions(add_version_field=add_version_field),
+                "likelihood": self.likelihood.get_versions(
+                    add_version_field=add_version_field)}
 
     def get_speeds(self, ignore_sub=False):
-        return dict(theory=self.theory.get_speeds(ignore_sub=ignore_sub),
-                    likelihood=self.likelihood.get_speeds(ignore_sub=ignore_sub))
+        return {"theory": self.theory.get_speeds(ignore_sub=ignore_sub),
+                "likelihood": self.likelihood.get_speeds(ignore_sub=ignore_sub)}
 
     def _set_component_order(self, components, dependencies):
         dependence_order: List[Theory] = []
@@ -709,13 +707,6 @@ class Model(HasLogger):
         # set of requirement names that may be required derived parameters
         requirements_are_params: Set[str] = set()
         for component in components:
-            # MARKED FOR DEPRECATION IN v3.0
-            if hasattr(component, "add_theory"):
-                raise LoggedError(self.log,
-                                  "Please remove add_theory from %r and return "
-                                  "requirement dictionary from get_requirements() "
-                                  "instead" % component)
-            # END OF DEPRECATION BLOCK
             component.initialize_with_params()
             requirements[component] = \
                 _tidy_requirements(component.get_requirements(), component)
@@ -741,8 +732,10 @@ class Model(HasLogger):
         # Add requirements requested by hand
         manual_theory = Theory(name='_manual')
         if manual_requirements:
-            self._manual_requirements = getattr(self, "_manual_requirements", []) \
-                                        + _tidy_requirements(manual_requirements)
+            self._manual_requirements = (
+                getattr(self, "_manual_requirements", []) +
+                _tidy_requirements(manual_requirements)
+            )
             requirements[manual_theory] = deepcopy(self._manual_requirements)
 
         # ## 2. Assign each requirement to a provider ##
@@ -767,7 +760,7 @@ class Model(HasLogger):
                         # If failed requirement was manually added,
                         # remove from list, or it will still fail in the next call too
                         requirements[manual_theory] = [
-                            req for req in requirements[manual_theory]
+                            req for req in requirements.get(manual_theory, [])
                             if req.name != requirement.name]
                         raise LoggedError(self.log,
                                           "Requirement %s of %r is not provided by any "
@@ -969,12 +962,13 @@ class Model(HasLogger):
                     for p in getattr(component, option):
                         try:
                             assign[p] += [component]
-                        except KeyError:
+                        except KeyError as excpt:
                             if not derived_param:
                                 raise LoggedError(
                                     self.log,
                                     "Parameter '%s' needed as input for '%s', "
-                                    "but not provided.", p, component.get_name())
+                                    "but not provided.", p, component.get_name()
+                                ) from excpt
                 # 2. Is there a params prefix?
                 elif getattr(component, prefix, None) is not None:
                     for p in assign:
@@ -1072,19 +1066,18 @@ class Model(HasLogger):
                 output_assign[p] = [self.likelihood[like]]
         self._chi2_names = tuple(chi2_names.items())
         # Check that there are no unassigned parameters (with the exception of aggr chi2)
-        unassigned_output = [p for p, assigned in output_assign.items() if not assigned]
-        if unassigned_output:
+        if unassigned_output := [p for p, assigned
+                                 in output_assign.items() if not assigned]:
             raise LoggedError(
                 self.log, "Could not find whom to assign output parameters %r.",
                 unassigned_output)
         # Check that output parameters are assigned exactly once
-        multiassigned_output = {p: assigned for p, assigned in output_assign.items()
-                                if len(assigned) > 1}
-        if multiassigned_output:
+        if multi_assigned_output := {p: assigned for p, assigned in output_assign.items()
+                                     if len(assigned) > 1}:
             raise LoggedError(
                 self.log,
                 "Output params can only be computed by one likelihood/theory, "
-                "but some were claimed by more than one: %r.", multiassigned_output)
+                "but some were claimed by more than one: %r.", multi_assigned_output)
         # Finished! Assign and update infos
         for assign, option in ((input_assign, "input_params"),
                                (output_assign, "output_params")):
@@ -1176,11 +1169,11 @@ class Model(HasLogger):
             # Split them so that "adding the next block to the slow ones" has max cost
             log_differences = np.log(costs_per_block[:-1]) - np.log(costs_per_block[1:])
             i_last_slow: int = np.argmax(log_differences)  # type: ignore
-            blocks_split = (lambda l: [list(chain(*l[:i_last_slow + 1])),
-                                       list(chain(*l[i_last_slow + 1:]))])(blocks_sorted)
+            blocks_split = (lambda L: [list(chain(*L[:i_last_slow + 1])),
+                                       list(chain(*L[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
-                    [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
-                    [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
+                [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
+                [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
             footprints_split = np.clip(np.array(footprints_split), 0, 1)  # type: ignore
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
@@ -1198,8 +1191,8 @@ class Model(HasLogger):
             # NB: the int() below forces the copy of the factors.
             #     Otherwise the yaml_representer prints references to a single object.
             oversample_factors = (
-                    [int(oversample_factors[0])] * (1 + i_last_slow) +
-                    [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
+                [int(oversample_factors[0])] * (1 + i_last_slow) +
+                [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
             self.mpi_debug("Doing slow/fast split. The oversampling factors for "
                            "the fast blocks should be interpreted as a global one "
                            "for all of them")
@@ -1223,9 +1216,11 @@ class Model(HasLogger):
         """
         try:
             oversampling_factors, blocks = zip(*list(blocking))
-        except:
+        except (TypeError, ValueError) as excpt:
             raise LoggedError(
-                self.log, "Manual blocking not understood. Check documentation.")
+                self.log,
+                "Manual blocking not understood. Check documentation."
+            ) from excpt
         sampled_params = list(self.sampled_dependence)
         check = are_different_params_lists(list(chain(*blocks)), sampled_params)
         duplicate = check.pop("duplicate_A", None)
@@ -1317,6 +1312,15 @@ class Model(HasLogger):
             component.set_measured_speed(speed)
 
 
+class DummyModel:
+    """Dummy class for loading chains for post processing."""
+
+    def __init__(self, info_params, info_likelihood, info_prior=None):
+        self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
+        self.prior = [prior_1d_name] + list(info_prior or [])
+        self.likelihood = list(info_likelihood)
+
+
 def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
               debug: Optional[bool] = None,
               stop_at_error: Optional[bool] = None,
@@ -1342,19 +1346,16 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
              "stop_at_error": stop_at_error}
     info = load_info_overrides(info_or_yaml_or_file, override or {}, **flags)
     # MARKED FOR DEPRECATION IN v3.2
-    if info.get("debug_file"):
-        print("*WARNING* 'debug_file' will soon be deprecated. If you want to "
-              "save the debug output to a file, use 'debug: [filename]'.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        if info.get("debug"):
-            info["debug"] = info.pop("debug_file")
+    if info.get("debug_file"):  # type: ignore
+        raise LoggedError("'debug_file' has been deprecated. If you want to "
+                          "save the debug output to a file, use 'debug: [filename]'.")
     # END OF DEPRECATION BLOCK
     logger_setup(info.get("debug"))
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
-        if k not in ["params", "likelihood", "prior", "theory", packages_path_input,
-                     "timing", "stop_at_error", "auto_params", "debug"]:
+        if k not in {"params", "likelihood", "prior", "theory", packages_path_input,
+                     "timing", "stop_at_error", "auto_params", "debug"}:
             value = info.pop(k)  # type: ignore
             if value is not None and (not isinstance(value, Mapping) or value):
                 ignored_info.append(k)

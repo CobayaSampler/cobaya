@@ -2,12 +2,11 @@ from copy import deepcopy
 from types import MappingProxyType
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
-from cobaya.cosmo_input import base_precision
+from cobaya.cosmo_input import planck_lss_precision
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
-
-info_camb = MappingProxyType({"camb": {"extra_args": base_precision["camb"]}})
-info_classy = MappingProxyType({"classy": {"extra_args": base_precision["classy"]}})
+info_camb = MappingProxyType({"camb": {"extra_args": planck_lss_precision["camb"]}})
+info_classy = MappingProxyType({"classy": {"extra_args": planck_lss_precision["classy"]}})
 
 
 def test_cosmo_des_y1_shear_camb(packages_path, skip_not_installed,
@@ -74,7 +73,7 @@ def test_cosmo_des_y1_galaxy_galaxy_classy(packages_path, skip_not_installed,
                                          skip_not_installed=skip_not_installed)
 
 
-ref_chi2 = {"shear": 242.825, "clustering": 100.997,
+ref_chi2 = {"shear": 242.825, "clustering": 100.78,
             "galaxy_galaxy": 208.005, "joint": 570.428}
 tolerance = 0.2
 

@@ -1,18 +1,17 @@
 import os
+import sys
 import time
 import inspect
-import pkg_resources
 from inspect import cleandoc
 from packaging import version
-from importlib import import_module
+from importlib import import_module, resources
 from typing import Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
-    get_internal_class_component_name, deepcopy_where_possible
-from cobaya.conventions import packages_path_input, kinds, cobaya_package, \
-    reserved_attributes
+    get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
+from cobaya.conventions import kinds, cobaya_package, reserved_attributes
 from cobaya.yaml import yaml_load_file, yaml_dump
 from cobaya.mpi import is_main_process
 
@@ -170,7 +169,7 @@ class HasDefaults:
         """
         filename = cls.__dict__.get('bibtex_file')
         if filename:
-            bib = pkg_resources.resource_string(cls.__module__, filename).decode("utf-8")
+            bib = cls.get_text_file_content(filename)
         else:
             bib = cls.get_associated_file_content('.bibtex')
         if bib:
@@ -181,16 +180,38 @@ class HasDefaults:
         return None
 
     @classmethod
-    def get_associated_file_content(cls, ext, file_root=None) -> Optional[str]:
-        # handle extracting package files when may be inside a zipped package so files
-        # not accessible directly
+    def get_associated_file_content(cls, ext: str,
+                                    file_root: Optional[str] = None) -> Optional[str]:
+        """
+        Return the content of the associated file, if it exists.
+
+        This function handles extracting package files when they may be
+        inside a zipped package and thus not directly accessible.
+
+        Returns:
+            The content of the file as a string, if it exists and can be read. None otherwise.
+        """
+
+        return cls.get_text_file_content((file_root or cls.get_file_base_name()) + ext)
+
+    @classmethod
+    def get_text_file_content(cls, file_name: str) -> Optional[str]:
+        """
+        Return the content of a file in the directory of the module, if it exists.
+        """
+        package = inspect.getmodule(cls).__package__
         try:
-            string = pkg_resources.resource_string(
-                cls.__module__, (file_root or cls.get_file_base_name()) + ext)
+            if os.path.split(str(file_name))[0]:
+                raise ValueError(f"{file_name} must be a bare file name, without path.")
+            # NB: resources.read_text is considered deprecated from 3.9, and will fail
+            if sys.version_info < (3, 9):
+                return resources.read_text(package, file_name)
+            with (resources.files(package) / file_name).open(
+                    "r", encoding="utf-8", errors="strict") as fp:
+                text_content = fp.read()
+            return text_content
         except Exception:
             return None
-        else:
-            return string.decode("utf-8")
 
     @classmethod
     def get_class_options(cls, input_options=empty_dict) -> InfoDict:
@@ -315,16 +336,6 @@ class CobayaComponent(HasLogger, HasDefaults):
         for k, value in info.items():
             self.validate_info(k, value, annotations)
             try:
-                # MARKED FOR DEPRECATION IN v3.0
-                # NB: cannot ever raise an error, since users may use "path_install" for
-                #     their own purposes. When considered *fully* deprecated, simply
-                #     remove this whole block.
-                if k == "path_install":
-                    self.log.warning(
-                        "*DEPRECATION*: `path_install` will be deprecated "
-                        "in the next version. Please use `packages_path` instead.")
-                    setattr(self, packages_path_input, value)
-                # END OF DEPRECATION BLOCK
                 setattr(self, k, value)
             except AttributeError:
                 raise AttributeError("Cannot set {} attribute for {}!".format(k, self))
@@ -350,7 +361,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         :return: name string
         """
-        return self._name
+        return getattr(self, "_name", self.__class__.__name__)
 
     def __repr__(self):
         return self.get_name()
@@ -496,7 +507,7 @@ class ComponentNotFoundError(LoggedError):
 
 def get_component_class(name, kind=None, component_path=None, class_name=None,
                         allow_external=True, allow_internal=True, logger=None,
-                        not_found_level=None):
+                        not_found_level=None, min_package_version=None):
     """
     Retrieves the requested component class from its reference name. The name can be a
     fully-qualified package.module.classname string, or an internal name of the particular
@@ -528,6 +539,9 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     If ``allow_internal=True`` (default), will first try to load internal components. In
     this case, if ``kind=None`` (default), instead of ``theory|likelihood|sampler``, it
     tries to guess it if the name is unique (slow!).
+
+    If allow_external=True, min_package_version can specify a minimum version of the
+    external package.
     """
     if not isinstance(name, str):
         return name
@@ -555,15 +569,14 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
         else:
             return getattr(_module, _class_name)
 
-    def return_class(_module_name, package=None):
-        _module: Any = load_module(_module_name, package=package, path=component_path)
+    def return_class(_module_name, **kwargs):
+        _module: Any = load_module(_module_name, path=component_path, **kwargs)
         if not class_name and hasattr(_module, "get_cobaya_class"):
             return _module.get_cobaya_class()
         _class_name = class_name or module_name
-        cls = get_matching_class_name(_module, _class_name, none=True)
-        if not cls:
+        if not (cls := get_matching_class_name(_module, _class_name, none=True)):
             _module = load_module(_module_name + '.' + _class_name,
-                                  package=package, path=component_path)
+                                  path=component_path, **kwargs)
             cls = get_matching_class_name(_module, _class_name)
         if not isinstance(cls, type):
             return get_matching_class_name(cls, _class_name)
@@ -608,7 +621,10 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     #    already in step 1).
     if component_path:
         try:
-            return check_kind_and_return(return_class(module_name))
+            return check_kind_and_return(return_class(module_name,
+                                                      min_version=min_package_version))
+        except VersionCheckError:
+            raise
         except Exception as excpt:
             check_if_ComponentNotFoundError_and_raise(
                 excpt, not_found_msg=(_not_found_msg +
@@ -616,10 +632,10 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
     if allow_internal:
         # If unknown type, loop recursive call with all possible types
         if kind is None:
-            for kind in kinds:
+            for this_kind in kinds:
                 try:
                     return get_component_class(
-                        name, kind, allow_external=False, allow_internal=True,
+                        name, this_kind, allow_external=False, allow_internal=True,
                         logger=logger, not_found_level="debug")
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. check all kinds.
@@ -632,14 +648,19 @@ def get_component_class(name, kind=None, component_path=None, class_name=None,
             except Exception as excpt:
                 try:
                     check_if_ComponentNotFoundError_and_raise(
-                        excpt,
-                        not_found_msg=_not_found_msg[:-1] + " as internal component.")
+                        excpt, not_found_msg=_not_found_msg[:-1]
+                                             + (" as internal, trying external."
+                                                if allow_external
+                                                else " as internal component."))
                 except ComponentNotFoundError:
                     pass  # do not raise it yet. try external (if allowed)
     if allow_external:
         try:
             # Now looking in the current folder only (component_path case handled above)
-            return check_kind_and_return(return_class(module_name))
+            return check_kind_and_return(return_class(module_name,
+                                                      min_version=min_package_version))
+        except VersionCheckError:
+            raise
         except Exception as excpt:
             try:
                 check_if_ComponentNotFoundError_and_raise(

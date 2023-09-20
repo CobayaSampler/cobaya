@@ -16,14 +16,13 @@ radial function mixed with an exponential, which is quite robust to wrong width 
 See https://arxiv.org/abs/1304.4473
 """
 
-# Global
-import numpy as np
-from itertools import chain
 import logging
+from itertools import chain
 
-# Local
-from cobaya.tools import choleskyL
+import numpy as np
+
 from cobaya.log import LoggedError, HasLogger
+from cobaya.tools import choleskyL
 
 
 class IndexCycler:
@@ -42,7 +41,7 @@ class CyclicIndexRandomizer(IndexCycler):
             n = len(n)
         super().__init__(n, random_state)
         if n <= 2:
-            self.indices = list(range(n))
+            self.indices = self.sorted_indices
 
     def next(self):
         """
@@ -58,7 +57,8 @@ class CyclicIndexRandomizer(IndexCycler):
 
 try:
     import numba
-except ImportError:
+except (ImportError, SystemError):
+    # SystemError caused usually by incompatible numpy version
     from scipy.stats import special_ortho_group
 
     random_SO_N = special_ortho_group.rvs
@@ -115,7 +115,7 @@ else:
 class RandDirectionProposer(IndexCycler):
     def propose_vec(self, scale: float = 1):
         """
-        propose a random n-dimension vector for n>1
+        Propose a random n-dimension vector for n>1
 
         :param scale: units for the distance
         :return: array with vector
@@ -190,18 +190,21 @@ class BlockedProposer(HasLogger):
                     "The index given for the last slow block, %d, is not valid: "
                     "there are only %d blocks.",
                     self.i_last_slow_block, len(parameter_blocks))
-        n_all = sum(len(b) for b in parameter_blocks)
-        n_slow = sum(len(b) for b in parameter_blocks[:1 + self.i_last_slow_block])
+        n_block = np.array([len(b) for b in parameter_blocks])
+        n_all = sum(n_block)
+        n_slow = sum(n_block[:1 + self.i_last_slow_block])
         self.nsamples_slow = 0
         self.nsamples_fast = 0
         if set(chain(*parameter_blocks)) != set(range(n_all)):
             raise LoggedError(self.log,
                               "The blocks do not contain all the parameter indices.")
+
+        # Creating the blocked proposers
+        self.proposer = [(RandDirectionProposer(n, random_state) if n > 1
+                          else RandProposer1D(1, random_state)) for n in n_block]
+
         # Prepare indices for the cycler, repeated if there is oversampling
-        self.n_block = np.array([len(b) for b in parameter_blocks])
-        indices_repeated = list(chain(
-            *[list(chain(*[[p] * o for p in block]))
-              for block, o in zip(parameter_blocks, oversampling_factors)]))
+
         # Mapping between internal indices, sampler parameter indices and blocks:
         # let i=0,1,... be the indices of the parameters for the sampler,
         # and j=0,1,... be the indices of the parameters as the proposer manages them
@@ -210,25 +213,30 @@ class BlockedProposer(HasLogger):
         # iblock is the index of the blocks, which in term of j indices is simply
         # [0,0,1] in this example
         self.i_of_j = np.array(list(chain(*parameter_blocks)))
-        self.iblock_of_j = list(
-            chain(*[[iblock] * len(b) for iblock, b in enumerate(parameter_blocks)]))
-        # Creating the blocked proposers
-        self.proposer = [(RandDirectionProposer(len(b), random_state) if len(b) > 1
-                          else RandProposer1D(1, random_state)) for b in parameter_blocks]
+
+        block_indices = range(len(parameter_blocks))
+
         # Starting j index of each block
-        self.j_start = [len(list(chain(*parameter_blocks[:iblock])))
-                        for iblock, b in enumerate(parameter_blocks)]
+        self.j_start = [sum(n_block[:iblock]) for iblock in block_indices]
+
+        self.par_blocks = [self.i_of_j[j_start:] for j_start in self.j_start]
+
+        # Block cycler,
+        # each block listed proportional to number of times it should be used
+        indices_repeated = np.repeat(block_indices, oversampling_factors * n_block)
+        self.block_cycler = CyclicIndexRandomizer(indices_repeated, random_state)
+
         # Parameter cyclers, cycling over the j's
-        self.parameter_cycler = CyclicIndexRandomizer(indices_repeated, random_state)
         # These ones are used by fast dragging only
-        self.parameter_cycler_slow = CyclicIndexRandomizer(n_slow, random_state)
-        self.parameter_cycler_fast = CyclicIndexRandomizer(n_all - n_slow, random_state)
+        iblock_of_j = np.repeat(block_indices, n_block)
+        self.block_cycler_slow = CyclicIndexRandomizer(iblock_of_j[:n_slow], random_state)
+        self.block_cycler_fast = CyclicIndexRandomizer(iblock_of_j[n_slow:], random_state)
 
     def d(self):
         return len(self.i_of_j)
 
     def get_proposal(self, P):
-        self.current_iblock = self.iblock_of_j[self.parameter_cycler.next()]
+        self.current_iblock = self.block_cycler.next()
         if self.current_iblock <= self.i_last_slow_block:
             self.nsamples_slow += 1
         else:
@@ -236,20 +244,16 @@ class BlockedProposer(HasLogger):
         self.get_block_proposal(P, self.current_iblock)
 
     def get_proposal_slow(self, P):
-        current_iblock_slow = self.iblock_of_j[self.parameter_cycler_slow.next()]
         self.nsamples_slow += 1
-        self.get_block_proposal(P, current_iblock_slow)
+        self.get_block_proposal(P, self.block_cycler_slow.next())
 
     def get_proposal_fast(self, P):
         self.nsamples_fast += 1
-        current_iblock_fast = self.iblock_of_j[self.parameter_cycler_slow.n
-                                               + self.parameter_cycler_fast.next()]
-        self.get_block_proposal(P, current_iblock_fast)
+        self.get_block_proposal(P, self.block_cycler_fast.next())
 
     def get_block_proposal(self, P, iblock):
         vec_standardized = self.proposer[iblock].propose_vec(self.proposal_scale)
-        P[self.i_of_j[self.j_start[iblock]:]] += (self.transform[iblock]
-                                                  .dot(vec_standardized))
+        P[self.par_blocks[iblock]] += self.transform[iblock].dot(vec_standardized)
 
     def set_covariance(self, propose_matrix):
         """

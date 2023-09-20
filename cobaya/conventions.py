@@ -6,6 +6,7 @@
 :Author: Jesus Torrado
 
 """
+from typing import Final
 
 # Package name (for importlib)
 # (apparently __package__ is only defined if you import something locally.
@@ -20,21 +21,21 @@ def get_version():
 debug_default = False
 resume_default = False
 
-kinds = ("sampler", "theory", "likelihood")
+kinds: Final = ("sampler", "theory", "likelihood")
 
 # Reserved attributes for component classes with defaults.
 # These are ignored by HasDefaults.get_class_options()
-reserved_attributes = {"input_params", "output_params", "install_options",
-                       "bibtex_file", "file_base_name"}
+reserved_attributes: Final = {"input_params", "output_params", "install_options",
+                              "bibtex_file", "file_base_name"}
 
 # Conventional order for yaml dumping (purely cosmetic)
-dump_sort_cosmetic = ["theory", "likelihood", "prior", "params", "sampler", "post"]
+dump_sort_cosmetic: Final = ["theory", "likelihood", "prior", "params", "sampler", "post"]
 
 # Separator for
 # fields in parameter names and files
 # Its manual inclusion in a string anywhere else (e.g. a parameter name) should be avoided
-derived_par_name_separator = "__"
-separator_files = "."
+derived_par_name_separator: Final = "__"
+separator_files: Final = "."
 
 
 # Names for the samples' fields internally and in the output
@@ -65,12 +66,28 @@ def get_minuslogpior_name(piname):
     return OutPar.minuslogprior + derived_par_name_separator + piname
 
 
+def get_minuslogprior_label(p):
+    return r"-\log\pi_\mathrm{" + str(p).replace("_", r"\ ") + "}"
+
+
 def minuslogprior_names(prior):
     return [get_minuslogpior_name(piname) for piname in prior]
 
 
+def minuslogprior_labels(prior):
+    return {piname: get_minuslogprior_label(piname) for piname in prior}
+
+
 def chi2_names(likes):
-    return [get_chi2_name(likname) for likname in likes]
+    return [get_chi2_name(likename) for likename in likes]
+
+
+def chi2_labels(likes):
+    return {likename: get_chi2_label(likename) for likename in likes}
+
+
+def minuslogpost_label():
+    return r"-\log p"
 
 
 # Output files
@@ -91,15 +108,15 @@ class Extension:
 
 
 # Installation and container definitions
-packages_path_arg = "packages_path"
-packages_path_input = packages_path_arg
-packages_path_arg_posix = packages_path_arg.replace("_", "-")
-packages_path_env = "COBAYA_PACKAGES_PATH"
+packages_path_arg: Final = "packages_path"
+packages_path_input: Final = "packages_path"
+packages_path_arg_posix: Final = packages_path_arg.replace("_", "-")
+packages_path_env: Final = "COBAYA_PACKAGES_PATH"
 packages_path_config_file = "config.yaml"
 packages_path_containers = "/cobaya_packages"
 
-install_skip_env = "COBAYA_INSTALL_SKIP"
-test_skip_env = "COBAYA_TEST_SKIP"
+install_skip_env: Final = "COBAYA_INSTALL_SKIP"
+test_skip_env: Final = "COBAYA_TEST_SKIP"
 
 products_path = "/products"
 
@@ -107,9 +124,9 @@ data_path = "data"
 code_path = "code"
 
 # Internal package structure
-subfolders = {"likelihood": "likelihoods",
-              "sampler": "samplers",
-              "theory": "theories"}
+subfolders: Final = {"likelihood": "likelihoods",
+                     "sampler": "samplers",
+                     "theory": "theories"}
 
 # Approximate overhead of cobaya per posterior evaluation. Useful for blocking speeds
 overhead_time = 0.0003
@@ -118,10 +135,10 @@ overhead_time = 0.0003
 line_width = 120
 
 
-# Physical constants
+# Physical constants (all definitions)
 # ------------------
 # Light speed
 class Const:
     c_km_s = 299792.458  # speed of light
-    h_J_s = 6.626070040e-34  # Planck's constant
-    kB_J_K = 1.38064852e-23  # Boltzmann constant
+    h_J_s = 6.62607015e-34  # Planck's constant
+    kB_J_K = 1.380649e-23  # Boltzmann constant

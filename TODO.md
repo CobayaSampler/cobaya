@@ -16,7 +16,6 @@
 ## update like/theory dict types to allow for instances (remove log.warning if all OK)
 ## skip measure_and_set_speeds if only one component
 ## maybe re-dump model info with measured speeds (need to allow saving of speeds from helper theories like camb.transfers)
-## Support PySide6 https://doc.qt.io/qtforpython/porting_from2.html
 ## Add other sample job scripts; add auto-configure database based on cluster names
 
 # Enhancements/Refactorings

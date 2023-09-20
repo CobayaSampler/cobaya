@@ -9,4 +9,4 @@ aliases: [plikHM_TTTEEE]
 # Speed in evaluations/second
 speed: 500
 
-params: !defaults [params_calib]
+params: !defaults [../base_classes/planck_calib]

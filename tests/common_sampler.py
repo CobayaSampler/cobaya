@@ -4,7 +4,6 @@ import numpy as np
 from itertools import chain
 import os
 from scipy.stats import multivariate_normal
-from getdist.mcsamples import MCSamplesFromCobaya
 
 from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.typing import InputDict, SamplersDict
@@ -54,7 +53,7 @@ def generate_random_info(n_modes, ranges, random_state):
 @mpi.sync_errors
 def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmpdir="",
                          packages_path=None, skip_not_installed=False, fixed=False,
-                         random_state=None):
+                         do_plots=False, random_state=None):
     # Info of likelihood and prior
     ranges = np.array([[-1, 1] for _ in range(dimension)])
     if fixed:
@@ -79,31 +78,30 @@ def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmp
     info["output"] = os.path.join(tmpdir, 'out_chain')
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)
-
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
-    products = sampler.products()
-    products["sample"] = mpi.gather(products["sample"])
+    if sampler_name == "mcmc":
+        ignore_rows = 0.5
+    else:
+        ignore_rows = 0
+    products = sampler.products(combined=True, skip_samples=ignore_rows)
     # Done! --> Tests
     if mpi.is_main_process():
-        if sampler_name == "mcmc":
-            ignore_rows = 0.5
-        else:
-            ignore_rows = 0
-        results = MCSamplesFromCobaya(updated_info, products["sample"],
-                                      ignore_rows=ignore_rows, name_tag="sample")
+        results = products["sample"].to_getdist(label="sample")
+        temperature = info["sampler"][sampler_name].get("temperature", 1)
+        if temperature != 1:
+            results.cool()
         clusters = None
         if "clusters" in products:
-            clusters = [MCSamplesFromCobaya(
-                updated_info, products["clusters"][i]["sample"],
-                name_tag="cluster %d" % (i + 1))
-                for i in products["clusters"]]
+            clusters = [
+                collection["sample"].to_getdist(label="cluster %d" % (i + 1))
+                for i, collection in products["clusters"].items()]
         # Plots!
-        if not is_travis():
+        if do_plots and not is_travis():
             try:
                 import getdist.plots as gdplots
                 from getdist.gaussian_mixtures import MixtureND
                 sampled_params = [
-                    p for p, v in info["params"].items() if "prior" not in v]
+                    p for p, v in info["params"].items() if "prior" in v]
                 mixture = MixtureND(
                     info["likelihood"]["gaussian_mixture"]["means"],
                     info["likelihood"]["gaussian_mixture"]["covs"],
@@ -113,7 +111,7 @@ def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmp
                 if clusters:
                     to_plot += clusters
                 g.triangle_plot(to_plot, params=sampled_params)
-                g.export("test.png")
+                g.export(os.path.join(info["output"], "test.png"))
             except:
                 print("Plotting failed!")
         # 1st test: KL divergence
@@ -284,4 +282,3 @@ def body_of_test_speeds(info_sampler, manual_blocking=False,
                 "Derived params not reproduced correctly. "
                 "Chain has %r but should be %r. " % (derived_chain, derived_good) +
                 "Full chain point:\n%r" % products["sample"][i])
-    print(products["sample"])

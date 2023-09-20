@@ -20,7 +20,6 @@ from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
 from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
-from cobaya.collection import SampleCollection
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic, \
     has_non_yaml_reproducible
 from cobaya.component import get_component_class
@@ -93,6 +92,7 @@ class FileLock:
             raise LoggedError(self.log,
                               "File %s is locked by another process, you are running "
                               "with MPI disabled but may have more than one process. "
+                              "Make sure that you have mpi4py installed and working."
                               "Note that --test should not be used with MPI.")
         if mpi.get_mpi():
             import mpi4py
@@ -111,7 +111,9 @@ class FileLock:
                           + ("Your current mpi4py config is:"
                              "\n %s" % mpi4py.get_config()
                              if mpi4py is not None else
-                             "mpi4py is NOT currently installed."), self.lock_file)
+                             "mpi4py is NOT currently installed.")
+                          + "\nIf this is a lock issue you can disable this check by "
+                            "setting env COBAYA_USE_FILE_LOCKING=False.", self.lock_file)
 
     def check_error(self):
         if self.lock_error_file and os.path.exists(self.lock_error_file):
@@ -147,16 +149,9 @@ class Output(HasLogger):
 
     @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
                         "_resuming", "prefix_regexp_str", "log"))
-    def __init__(self, prefix, resume=resume_default, force=False, infix=None,
-                 output_prefix=None):
+    def __init__(self, prefix, resume=resume_default, force=False, infix=None):
         self.name = "output"
         self.set_logger(self.name)
-        # MARKED FOR DEPRECATION IN v3.0
-        # -- also remove output_prefix kwarg above
-        if output_prefix is not None:
-            raise LoggedError(self.log, "`output_prefix` has been deprecated. "
-                                        "Please use `prefix` instead.")
-        # END OF DEPRECATION BLOCK
         self.lock = FileLock()
         self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (
@@ -388,7 +383,7 @@ class Output(HasLogger):
                 info.pop("debug", None)
                 info.pop("force", None)
                 info.pop("resume", None)
-                # make sure the dumped output_prefix does only contain the file prefix,
+                # make sure the dumped output prefix does only contain the file prefix,
                 # not the folder, since it's already been placed inside it
                 info["output"] = self.updated_prefix()
                 with open(f, "w", encoding="utf-8") as f_out:
@@ -456,8 +451,8 @@ class Output(HasLogger):
         """
         if name is None:
             name = (datetime.datetime.now().isoformat().replace("T", "")
-                        .replace(":", "").replace(".", "")
-                        .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
+                    .replace(":", "").replace(".", "")
+                    .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
         file_name = os.path.join(
             self.folder,
             self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
@@ -524,6 +519,8 @@ class Output(HasLogger):
         """
         self.check_lock()
         filenames = self.find_collections(name=name, extension=extension)
+        # pylint: disable=import-outside-toplevel
+        from cobaya.collection import SampleCollection
         collections = [
             SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
                              load=True, onload_skip=skip, onload_thin=thin)
@@ -531,7 +528,7 @@ class Output(HasLogger):
         if concatenate and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
-                collection.append(collection_i)
+                collection._append(collection_i)
             return collection
         return collections
 
@@ -580,11 +577,6 @@ def get_output(*args, **kwargs) -> Output:
     Auxiliary function to retrieve the output driver
     (e.g. whether to get the MPI-wrapped one, or a dummy output driver).
     """
-    # MARKED FOR DEPRECATION IN v3.0
-    if kwargs.get("output_prefix") is not None:
-        raise ValueError("DEPRECATION: `output_prefix` has been deprecated. "
-                         "Please use `prefix` instead.")
-    # END OF DEPRECATION BLOCK
     if kwargs.get("prefix"):
         return Output(*args, **kwargs)
     else:

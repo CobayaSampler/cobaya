@@ -76,7 +76,6 @@ confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
 seed:  # positive integer
 # Raw output of PolyChord (no need to change them, normally)
 # ----------------------------------------------------------
-file_root:
 posteriors: True
 equals: True
 cluster_posteriors: True

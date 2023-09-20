@@ -14,7 +14,7 @@ or other combination with TE and EE.
 Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500,
 or pass a dictionary of ranges for each spectrum.
 
-##TODO: calPlanck vs Aplanck
+It is used by the 2018 and more recent CamSpec Planck likelihoods.
 
 """
 
@@ -50,12 +50,16 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                        "github_release": "v1", "asset": "CamSpec2018.zip",
                        "directory": "planck_2018_CamSpec_native"}
 
-    bibtex_file = 'planck2018.bibtex'
     type = "CMB"
+
+    @classmethod
+    def get_bibtex(cls):
+        from cobaya.likelihoods.base_classes import Planck2018Clik
+        return Planck2018Clik.get_bibtex()
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
-        print('Loading: ', filename)
+        self.mpi_debug('Loading: %s', filename)
         dat = np.loadtxt(filename)
         assert int(dat[0, 0]) == 2
         dat = np.hstack(([0, 0], dat[:, 1]))
@@ -71,11 +75,11 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         if ini.hasKey('use_range'):
             used_ell = ini.params['use_range']
             if isinstance(used_ell, dict):
-                print('Using range %s' % used_ell)
+                self.mpi_info('Using range %s', used_ell)
                 used_ell = {key: range_to_ells(value) for key, value in used_ell.items()}
             else:
                 if silent:
-                    print('CamSpec using range: %s' % used_ell)
+                    self.mpi_info('CamSpec using range: %s', used_ell)
                 used_ell = range_to_ells(used_ell)
         else:
             used_ell = None
@@ -132,8 +136,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         if not silent:
             for name, mn, mx in zip(self.cl_names, lmin, lmax):
                 if name in self.use_cl:
-                    print(name, mn, mx)
-            print('Number of data points: %s' % self.cov.shape[0])
+                    self.mpi_info("L-range for %s: %s %s", name, mn, mx)
+            self.mpi_info('Number of data points: %s', self.cov.shape[0])
         self.lmax = lmax
         self.lmin = lmin
         max_l = np.max(self.lmax)

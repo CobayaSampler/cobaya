@@ -11,6 +11,7 @@ Inspired by a similar characteristic of
 
 # Global
 import os
+import argparse
 from inspect import cleandoc
 from typing import List, Dict, Union
 
@@ -28,7 +29,7 @@ _default_length = 80
 
 # Cobaya's own bib info
 cobaya_desc = cleandoc(r"""
-The posterior has been explored/maximized/reweighted using Cobaya \cite{torrado:2020xyz}.
+The posterior has been explored/maximized/reweighted using Cobaya \cite{torrado:2020dgo}.
 """)
 
 cobaya_bib = r"""
@@ -93,8 +94,11 @@ def get_bib_info(*infos, logger=None):
                 continue
     # Deal with bare component names
     for component in used_components.get(None, []):
+        kind = None
+        if ":" in component:
+            kind, component = component.split(":")
         try:
-            cls = get_component_class(component)
+            cls = get_component_class(component, kind=kind, logger=logger)
         except ComponentNotFoundError:
             sugg = similar_internal_class_names(component)
             logger.error(
@@ -144,7 +148,6 @@ def bib_script(args=None):
     """Command line script for the bibliography."""
     warn_deprecation()
     # Parse arguments and launch
-    import argparse
     parser = argparse.ArgumentParser(prog="cobaya bib", description=(
         "Prints bibliography to be cited for one or more components or input files."))
     parser.add_argument("files_or_components", action="store", nargs="+",

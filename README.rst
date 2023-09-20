@@ -17,12 +17,14 @@
 
 .. image:: https://travis-ci.com/CobayaSampler/cobaya.svg?branch=master
    :target: https://app.travis-ci.com/CobayaSampler/cobaya
-.. image:: https://img.shields.io/pypi/v/cobaya.svg?style=flat
-   :target: https://pypi.python.org/pypi/cobaya/
 .. image:: https://readthedocs.org/projects/cobaya/badge/?version=latest
    :target: https://cobaya.readthedocs.org/en/latest
 .. image:: https://codecov.io/gh/CobayaSampler/cobaya/branch/master/graphs/badge.svg
    :target: https://codecov.io/github/CobayaSampler/cobaya/branch/master
+.. image:: https://img.shields.io/pypi/v/cobaya.svg?style=flat
+   :target: https://pypi.python.org/pypi/cobaya/
+.. image:: https://static.pepy.tech/personalized-badge/cobaya?period=total&units=international_system&left_color=grey&right_color=blue&left_text=pypi%20downloads
+   :target: https://pepy.tech/project/cobaya
 .. image:: https://img.shields.io/badge/arXiv-2005.05290-b31b1b.svg?color=0B6523
    :target: https://arxiv.org/abs/2005.05290
 
@@ -86,7 +88,7 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
    :height: 150px
    :width: 150px
 
-.. image:: ./img/logo_ttk.png
+.. image:: https://raw.githubusercontent.com/CobayaSampler/cobaya/master/img/logo_ttk.png
    :alt: RWTH Aachen
    :target: https://www.particle-theory.rwth-aachen.de/
    :height: 150px

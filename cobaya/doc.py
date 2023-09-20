@@ -7,6 +7,7 @@
 """
 
 # Global
+import argparse
 from pprint import pformat
 
 # Local
@@ -28,7 +29,6 @@ def doc_script(args=None):
     logger_setup()
     logger = get_logger("doc")
     # Parse arguments
-    import argparse
     parser = argparse.ArgumentParser(
         prog="cobaya doc", description="Prints defaults for Cobaya's components.")
     parser.add_argument("component", action="store", nargs="?", default="",
@@ -36,7 +36,9 @@ def doc_script(args=None):
                         help=("The component whose defaults are requested. "
                               "Pass a component kind (sampler, theory, likelihood) to "
                               "list all available (internal) ones, pass nothing to list "
-                              "all available (internal) components of all kinds."))
+                              "all available (internal) components of all kinds. In case "
+                              "of ambiguity (two components of different kinds sharing a "
+                              "name), you can pass the kind as 'kind:name'."))
     parser.add_argument("-p", "--python", action="store_true", default=False,
                         help="Request Python instead of YAML.")
     expand_flag, expand_flag_ishort = "expand", 1
@@ -51,20 +53,23 @@ def doc_script(args=None):
             print("%s:" % kind)
             print(_indent + ("\n" + _indent).join(
                 get_available_internal_class_names(kind)))
-        return
+        return 0
     # A kind passed (plural or singular): list all of that kind
     if arguments.component.lower() in subfolders.values():
         arguments.component = next(
-            k for k in subfolders if arguments.component == subfolders[k])
+            k for k, sub in subfolders.items() if arguments.component == sub)
     if arguments.component.lower() in kinds:
         print("%s:" % arguments.component.lower())
         print(_indent +
               ("\n" + _indent).join(
                   get_available_internal_class_names(arguments.component.lower())))
-        return
+        return 0
     # Otherwise, try to identify the component
+    kind = None
+    if ":" in arguments.component:
+        kind, arguments.component = arguments.component.split(":")
     try:
-        cls = get_component_class(arguments.component, logger=logger)
+        cls = get_component_class(arguments.component, kind=kind, logger=logger)
     except ComponentNotFoundError:
         suggestions = similar_internal_class_names(arguments.component)
         logger.error(
@@ -82,6 +87,7 @@ def doc_script(args=None):
             print("# This file contains defaults. "
                   "To populate them, use the flag --%s (or -%s)." % (
                       expand_flag, expand_flag[expand_flag_ishort]))
+    return 0
 
 
 if __name__ == '__main__':

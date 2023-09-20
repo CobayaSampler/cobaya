@@ -21,7 +21,8 @@ from importlib import import_module
 from copy import deepcopy
 from packaging import version
 from itertools import permutations
-from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, Iterable, Dict
+from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, Iterable, \
+    Dict, Callable
 from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
@@ -170,13 +171,13 @@ def load_module(name, package=None, path=None, min_version=None,
         # Force reload if requested.
         # Use with care and only in install checks (e.g. for version upgrade checks):
         # will delete all references from previous imports!
-        if name in sys.modules and reload:
+        if reload and name in sys.modules:
             del sys.modules[name]
         module = import_module(name, package=package)
     if path and check_path:
         check_module_path(module, path)
     if min_version:
-        check_module_version(module, min_version)
+        check_module_version(module, str(min_version))
     return module
 
 
@@ -394,10 +395,17 @@ class NumberWithUnits:
                 val = float(x)
                 if dtype == int and np.isfinite(val):
                     # in case ints are given in exponential notation, make int(float())
-                    return int(val)
+                    if val == 0:
+                        return val
+                    sign = 1 if val > 0 else -1
+                    return sign * int(max(abs(val), 1))
                 return val
-            except ValueError:
-                raise LoggedError(log, "Could not convert '%r' to a number.", x)
+            except ValueError as excpt:
+                raise LoggedError(
+                    log,
+                    "Could not convert '%r' to a number.",
+                    x
+                ) from excpt
 
         if isinstance(n_with_unit, str):
             n_with_unit = n_with_unit.lower()
@@ -418,6 +426,7 @@ class NumberWithUnits:
         self.set_scale(scale if scale is not None else 1)
 
     def set_scale(self, scale):
+        """Applies a numerical value for the scale, updating the attr. `value`."""
         if self.unit:
             self.scale = scale
             self.value = self.unit_value * scale
@@ -568,7 +577,15 @@ def _fast_norm_logpdf(self, x):
     return self.dist._logpdf(x_) + self._cobaya_mlogscale
 
 
-def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
+def _KL_norm(m1, S1, m2, S2):
+    """Performs the Guassian KL computation, without input testing."""
+    dim = S1.shape[0]
+    S2inv = np.linalg.inv(S2)
+    return 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
+                  dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
+
+
+def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([]), symmetric=False):
     """Kullback-Leibler divergence between 2 gaussians."""
     S1, S2 = [np.atleast_2d(S) for S in [S1, S2]]
     assert S1.shape[0], "Must give at least S1"
@@ -579,10 +596,10 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([])):
         S2 = np.identity(dim)
     if m2 is None:
         m2 = np.zeros(dim)
-    S2inv = np.linalg.inv(S2)
-    KL = 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
-                dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
-    return KL
+    if symmetric:
+        # pylint: disable=arguments-out-of-order
+        return _KL_norm(m1, S1, m2, S2) + _KL_norm(m2, S2, m1, S1)
+    return _KL_norm(m1, S1, m2, S2)
 
 
 def choleskyL(M, return_scale_free=False):
@@ -739,7 +756,7 @@ def deepcopy_where_possible(base: _R) -> _R:
     and to do that it works on a copy of it; but some of the values passed to cobaya
     may not be copyable (if they are not pickleable). This function provides a
     compromise solution. To allow dict comparisons and make the copy mutable it converts
-    MappingProxyType, OrderedDict and other Mapping types into plain dict.
+    MappingProxyType and other Mapping types into plain dict.
     """
     if isinstance(base, Mapping):
         _copy = {}
@@ -749,6 +766,9 @@ def deepcopy_where_possible(base: _R) -> _R:
     if isinstance(base, (HasLogger, type)):
         return base  # type: ignore
     else:
+        # Special case: instance methods can be copied, but should not be.
+        if isinstance(base, Callable) and hasattr(base, "__self__"):
+            return base
         try:
             return deepcopy(base)
         except:
@@ -806,7 +826,7 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
          for this_cost in permuted_costs_per_param_per_block])
     total_costs = np.array(
         [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
-             .dot(permuted_costs_per_param_per_block[i])
+         .dot(permuted_costs_per_param_per_block[i])
          for i, o in enumerate(orderings)])
     i_optimal: int = np.argmin(total_costs)  # type: ignore
     optimal_ordering = orderings[i_optimal]
@@ -822,6 +842,8 @@ def find_with_regexp(regexp, root, walk_tree=False):
 
     Set walk_tree=True if there is more than one directory level (default: `False`).
     """
+    if isinstance(regexp, str):
+        regexp = re.compile(regexp)
     try:
         if walk_tree:
             files = []
@@ -976,12 +998,6 @@ def resolve_packages_path(infos=None):
         infos = []
     elif isinstance(infos, Mapping):
         infos = [infos]
-    # MARKED FOR DEPRECATION IN v3.0
-    for info in infos:
-        if info.get("modules"):
-            raise LoggedError(log, "The input field 'modules' has been deprecated."
-                                   "Please use instead %r", packages_path_input)
-    # END OF DEPRECATION BLOCK
     paths = set(os.path.realpath(p) for p in
                 [info.get(packages_path_input) for info in infos] if p)
     if len(paths) == 1:
@@ -993,13 +1009,6 @@ def resolve_packages_path(infos=None):
                  "Maybe specify one via a command line argument '-%s [...]'?",
             packages_path_arg[0])
     path_env = os.environ.get(packages_path_env)
-    # MARKED FOR DEPRECATION IN v3.0
-    old_env = "COBAYA_MODULES"
-    path_old_env = os.environ.get(old_env)
-    if path_old_env and not path_env:
-        raise LoggedError(log, "The env var %r has been deprecated in favor of %r",
-                          old_env, packages_path_env)
-    # END OF DEPRECATION BLOCK
     if path_env:
         return path_env
     return load_packages_path_from_config_file()

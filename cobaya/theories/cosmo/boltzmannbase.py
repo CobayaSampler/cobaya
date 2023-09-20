@@ -215,11 +215,18 @@ class BoltzmannBase(Theory):
                 #                 "Source %r requested twice with different specification"
                 #                 ": %r vs %r.", source, window, self.sources[source])
                 self._must_provide[k].update(v)
-            elif k in ["Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
+            elif k in {"Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
                        "angular_diameter_distance", "comoving_radial_distance",
-                       "sigma8_z", "fsigma8"]:
+                       "sigma8_z", "fsigma8"}:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
+                if not isinstance(v, Mapping) or "z" not in v:
+                    raise LoggedError(
+                        self.log,
+                        f"The value in the dictionary of requisites {k} must be a "
+                        "dictionary containing the key 'z' with a list of redshifts "
+                        f"(got instead {{{k}: {v}}})"
+                    )
                 self._must_provide[k]["z"] = combine_1d(
                     v["z"], self._must_provide[k].get("z"))
             elif k == "angular_diameter_distance_2":
@@ -322,8 +329,9 @@ class BoltzmannBase(Theory):
         The ``muK2`` and ``K2`` options use the model's CMB temperature.
 
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
-        :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
-        the lensing potential ``pp`` spectrum).
+        :math:`\ell(\ell+1)/(2\pi)` (or by :math:`[\ell(\ell+1)]^2/(2\pi)` in the case of
+        the lensing potential ``pp`` spectrum, and :math:`[\ell(\ell+1)]^{3/2}/(2\pi)` for
+        the the cross spectra ``tp`` and ``ep``).
         """
 
     @abstract

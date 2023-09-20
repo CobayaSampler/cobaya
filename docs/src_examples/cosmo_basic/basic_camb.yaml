@@ -5,7 +5,7 @@ theory:
       bbn_predictor: PArthENoPE_880.2_standard.dat
       lens_potential_accuracy: 1
       num_massive_neutrinos: 1
-      nnu: 3.046
+      nnu: 3.044
       theta_H0_range:
       - 20
       - 100

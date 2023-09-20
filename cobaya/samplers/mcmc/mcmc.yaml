@@ -20,6 +20,8 @@ proposal_scale: 2.4
 output_every: 60s
 # Number of distinct accepted points between proposal learn & convergence checks
 learn_every: 40d
+# Posterior temperature: >1 for more exploratory chains
+temperature: 1
 # Proposal covariance matrix learning
 # -----------------------------------
 learn_proposal: True
@@ -69,6 +71,7 @@ callback_function:
 callback_every:  # default: every checkpoint
 # Seeding runs
 # ------------
+# NB: in parallel runs, only works until to the first proposer covmat update.
 seed:  # integer between 0 and 2**32 - 1
 # DEPRECATED
 # ----------------
