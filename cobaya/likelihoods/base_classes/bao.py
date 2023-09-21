@@ -233,7 +233,7 @@ class BAO(InstallableLikelihood):
                 raise LoggedError(
                     self.log, "If 'prob_dist' given, 'prob_dist_bounds' needs to be "
                               "specified as [min, max].")
-            spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
+            spline = UnivariateSpline(alpha, -chi2 / 2, s=0, ext=2)
             self.logpdf = lambda _x: (spline(_x)[0] if self.prob_dist_bounds[0]
                                                        <= _x <= self.prob_dist_bounds[1]
                                       else -np.inf)
@@ -265,7 +265,7 @@ class BAO(InstallableLikelihood):
                 x = self.grid_data[:, 0]
                 Nx = x.shape[0]
                 chi2 = np.log(self.grid_data[:, 1])
-                self.interpolator = UnivariateSpline(x, chi2, s=0)
+                self.interpolator = UnivariateSpline(x, chi2, s=0, ext=2)
             elif self.grid_data.shape[1] == 3:
                 self.use_grid_1d = False
                 self.use_grid_2d = True
