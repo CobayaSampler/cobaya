@@ -17,7 +17,7 @@ from typing import Mapping, Sequence, Dict, Set, List, Tuple, Any, Callable, Uni
 from cobaya.typing import ParamsDict, ParamDict, ParamInput, \
     ExpandedParamsDict, ParamValuesDict, partags
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
-    getfullargspec, deepcopy_where_possible, invert_dict, str_to_list
+    getfullargspec, deepcopy_where_possible, invert_dict, str_to_list, get_scipy_1d_pdf
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -484,3 +484,46 @@ class Parameterization(HasLogger):
                                   "Maybe there is a circular dependency between derived "
                                   "parameters?", list(inputs))
         return wrapped_funcs
+
+
+def get_literal_param_range(param_info, confidence_for_unbounded=1):
+    """
+    Extracts parameter bounds from a parameter input dict, if present.
+    """
+    get_bounds_from_dict = lambda i: [i.get("min", -np.inf), i.get("max", np.inf)]
+    # Sampled
+    if is_sampled_param(param_info):
+        pdf_dist = get_scipy_1d_pdf(param_info.get("prior", {}))  # may raise ValueError
+        lims = pdf_dist.interval(confidence_for_unbounded)
+    # Derived
+    elif is_derived_param(param_info):
+        lims = get_bounds_from_dict(param_info or {})
+    # Fixed
+    else:
+        value = expand_info_param(param_info).get("value", None)
+        try:
+            value = float(value)
+        except (ValueError, TypeError):
+            # e.g. lambda function values
+            lims = get_bounds_from_dict(param_info or {})
+        else:
+            lims = (value, value)
+    return lims[0] if lims[0] != -np.inf else None, lims[1] if lims[1] != np.inf else None
+
+
+def get_literal_param_ranges(params_info, confidence_for_unbounded=1):
+    """
+        Extracts parameters bounds from a parameter input dict, or a
+        :class:`~parameterization.Parameterization` instance.
+
+        Notes
+        -----
+        Only use this if you know what you are doing. In general, you should get parameter
+        bounds from a :class:`~model.Model` instance as :func:`model.Model.prior.bounds`.
+    """
+    if isinstance(params_info, Parameterization):
+        params_info = params_info._infos  # pylint: disable=protected-access
+    return {
+        p: get_literal_param_range(info, confidence_for_unbounded)
+        for p, info in params_info.items()
+    }

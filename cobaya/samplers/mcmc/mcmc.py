@@ -887,11 +887,10 @@ class MCMC(CovmatSampler):
         Parameters
         ----------
         combined: bool, default: False
-            If ``True`` and running more than one MPI process, the ``sample`` key of the
-            returned dictionary contains a concatenated sample including all parallel
-            chains concatenated, instead of the chain of the current process only. For
-            this to work, this method needs to be called from all MPI processes
-            simultaneously.
+            If ``True`` and running more than one MPI process, returns a single sample
+            collection including all parallel chains concatenated, instead of the chain of
+            the current process only. For this to work, this method needs to be called
+            from all MPI processes simultaneously.
         skip_samples: int or float, default: 0
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is

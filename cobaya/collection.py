@@ -156,11 +156,13 @@ class BaseCollection(HasLogger):
             self._cached_ranges = dict(zip(
                 self.sampled_params,
                 model.prior.bounds(confidence_for_unbounded=0.9999995)))  # 5 sigmas
-        for p, p_info in model.parameterization.derived_params_info().items():
-            mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
-            some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
-            if some_bound_specified:
-                self._cached_ranges[p] = [mini, maxi]
+            for p, p_info in model.parameterization.derived_params_info().items():
+                mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
+                some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
+                if some_bound_specified:
+                    self._cached_ranges[p] = [mini, maxi]
+        else:  # DummyModel
+            self._cached_ranges = deepcopy(model.params_bounds)
 
 
 def ensure_cache_dumped(method):
@@ -835,7 +837,7 @@ class SampleCollection(BaseCollection):
         Parameters
         ----------
         skip: float
-            Specified the amount of initial samples to be skipped, either directly if
+            Specifies the amount of initial samples to be skipped, either directly if
             ``skip>1`` (rounded up to next integer), or as a fraction if ``0<skip<1``.
 
         inplace: bool, default: False
