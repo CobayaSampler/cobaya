@@ -21,7 +21,7 @@ from cobaya.conventions import overhead_time, get_chi2_name, \
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_info_overrides
-from cobaya.parameterization import Parameterization
+from cobaya.parameterization import Parameterization, get_literal_param_ranges
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
     is_LikelihoodInterface
@@ -1313,12 +1313,16 @@ class Model(HasLogger):
 
 
 class DummyModel:
-    """Dummy class for loading chains for post processing."""
+    """Dummy class for loading chains (e.g. for post processing)."""
 
     def __init__(self, info_params, info_likelihood, info_prior=None):
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
         self.prior = [prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
+        self.params_bounds = get_literal_param_ranges(
+            self.parameterization,
+            confidence_for_unbounded=0.9999995  # 5 sigmas of the prior
+        )
 
 
 def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],

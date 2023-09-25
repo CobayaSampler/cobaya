@@ -11,8 +11,8 @@ import sys
 import datetime
 import re
 import shutil
-from packaging import version
 from typing import Optional, Any
+from packaging import version
 # Local
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
     OutputError, InputImportError
@@ -33,7 +33,7 @@ _ext = "txt"
 def use_portalocker():
     if os.getenv('COBAYA_USE_FILE_LOCKING', 't').lower() in ('true', '1', 't'):
         try:
-            import portalocker
+            import portalocker  # pylint: disable=import-outside-toplevel
         except ModuleNotFoundError:
             return None
         else:
@@ -63,7 +63,7 @@ class FileLock:
         try:
             h: Any = None
             if use_portalocker():
-                import portalocker
+                import portalocker  # pylint: disable=import-outside-toplevel
                 try:
                     h = open(self.lock_file, 'wb')
                     portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
@@ -95,7 +95,7 @@ class FileLock:
                               "Make sure that you have mpi4py installed and working."
                               "Note that --test should not be used with MPI.")
         if mpi.get_mpi():
-            import mpi4py
+            import mpi4py  # pylint: disable=import-outside-toplevel
         else:
             mpi4py = None
         if mpi.is_main_process() and use_portalocker() is None:
@@ -107,13 +107,13 @@ class FileLock:
                           "configured (using the same mpi as mpirun/mpiexec); "
                           "e.g. try the test at\n"
                           "https://cobaya.readthedocs.io/en/latest/installation."
-                          "html#mpi-parallelization-optional-but-encouraged\n"
-                          + ("Your current mpi4py config is:"
-                             "\n %s" % mpi4py.get_config()
-                             if mpi4py is not None else
-                             "mpi4py is NOT currently installed.")
-                          + "\nIf this is a lock issue you can disable this check by "
-                            "setting env COBAYA_USE_FILE_LOCKING=False.", self.lock_file)
+                          "html#mpi-parallelization-optional-but-encouraged\n" +
+                          ("Your current mpi4py config is:"
+                           "\n %s" % mpi4py.get_config()
+                           if mpi4py is not None else
+                           "mpi4py is NOT currently installed.") +
+                          "\nIf this is a lock issue you can disable this check by "
+                          "setting env COBAYA_USE_FILE_LOCKING=False.", self.lock_file)
 
     def check_error(self):
         if self.lock_error_file and os.path.exists(self.lock_error_file):
@@ -167,11 +167,14 @@ class Output(HasLogger):
             self.log.debug("Creating output folder '%s'", self.folder)
             try:
                 os.makedirs(self.folder)
-            except OSError:
+            except OSError as excpt:
                 self.log.error(get_traceback_text(sys.exc_info()))
                 raise LoggedError(
-                    self.log, "Could not create folder '%s'. "
-                              "See traceback on top of this message.", self.folder)
+                    self.log,
+                    "Could not create folder '%s'. "
+                    "See traceback on top of this message.",
+                    self.folder
+                ) from excpt
         self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         # Prepare file names, and check if chain exists
@@ -247,7 +250,7 @@ class Output(HasLogger):
                 os.makedirs(folder)
         except Exception as e:
             raise LoggedError(
-                self.log, "Could not create folder %r. Reason: %r", folder, str(e))
+                self.log, "Could not create folder %r. Reason: %r", folder, str(e)) from e
 
     @mpi.root_only
     def delete_infos(self):
@@ -397,14 +400,14 @@ class Output(HasLogger):
                     try:
                         f_out.write(yaml_dump(sort_cosmetic(info)))
                     except OutputError as e:
-                        raise LoggedError(self.log, str(e))
+                        raise LoggedError(self.log, str(e)) from e
         if updated_info_trimmed and has_non_yaml_reproducible(updated_info_trimmed):
             try:
-                import dill
+                import dill  # pylint: disable=import-outside-toplevel
             except ImportError:
                 self.mpi_info('Install "dill" to save reproducible options file.')
             else:
-                import pickle
+                import pickle  # pylint: disable=import-outside-toplevel
                 try:
                     with open(self.dump_file_updated, 'wb') as f:
                         dill.dump(sort_cosmetic(updated_info_trimmed), f,
@@ -515,8 +518,8 @@ class Output(HasLogger):
             if self.is_collection_file_name(
                 os.path.split(f2)[1], name=name, extension=extension))
 
-    def load_collections(self, model, skip=0, thin=1, concatenate=False,
-                         name=None, extension=None):
+    def load_collections(self, model, skip=0, thin=1, combined=False,
+                         name=None, extension=None, concatenate=None):
         """
         Loads all collection files found which are compatible with this `Output`
         instance, including their path in their name.
@@ -532,10 +535,19 @@ class Output(HasLogger):
             SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
                              load=True, onload_skip=skip, onload_thin=thin)
             for i, filename in enumerate(filenames)]
-        if concatenate and collections:
+        # MARKED FOR DEPRECATION IN v3.3
+        if concatenate is not None:
+            self.log.warning(
+                "Argument 'concatenate' will be deprecated soon. "
+                "Please use 'combined' instead."
+            )
+            # BEHAVIOUR TO BE REPLACED BY AN ERROR
+            combined = concatenate
+        # END OF DEPRECATION BLOCK
+        if combined and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
-                collection._append(collection_i)
+                collection._append(collection_i)  # pylint: disable=protected-access
             return collection
         return collections
 
@@ -558,6 +570,7 @@ class OutputDummy(Output):
     """
 
     # noinspection PyUnusedLocal
+    # pylint: disable=unused-argument,super-init-not-called
     def __init__(self, *args, **kwargs):
         self.set_logger()
         self.log.debug("No output requested. Doing nothing.")
@@ -591,3 +604,83 @@ def get_output(*args, **kwargs) -> Output:
         return Output(*args, **kwargs)
     else:
         return OutputDummy(*args, **kwargs)
+
+
+def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
+    """
+    Loads all sample collections with a given prefix.
+
+    Parameters
+    ----------
+    prefix: str
+        Prefix used to look for samples (e.g. ``chains/a`` will try to load
+        ``chains/a.1.txt`` etc.). Can also be passed a ``.yaml`` file from which the
+        prefix will be guessed.
+    skip: float (default: 0)
+        Specifies the amount of initial samples to be skipped, either directly if
+        ``skip>1`` (rounded up to next integer), or as a fraction if ``0<skip<1``.
+        For collections coming from a Nested Sampler, prints a warning and does nothing.
+    thin: int (default: 1, no skipping)
+        Specifies a thinning factor applied to the sample; must be ``>1``.
+    combined: bool (default: False)
+        If True. instead of returning a list of all collections of samples found, it
+        returns a single concatenated one, after applying ``skip`` and ``thin`` on the
+        individual ones. NB: if ``combined`` is True, it is recommended to skip some
+        initial fraction, e.g. ``skip=0.3``.
+    to_getdist: bool (default: False)
+        If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
+        this option and ``combined`` are ``True``, the latter is ignored and a
+        multi-chain :class:'getdist.MCSamples` object is created out of the chains of
+        all MPI processes.
+
+    Returns
+    -------
+    samples: list[SampleCollection], SampleCollection, getdist.MCSamples
+        A list of :class:`~collection.SampleCollection`, or a single one if passed
+        ``combined=True``. If Cobaya output was detected for the given prefix, but no
+        samples were found (e.g. a failed or early-cancelled run), an empty list will be
+        returned.
+
+    Raises
+    ------
+    FileNotFoundError: if no Cobaya output was found.
+
+    Notes
+    -----
+    This function does not interact directly with MPI, and will return the same value for
+    all processes.
+    """
+    # yaml: load and look for "output", or use file name without extension
+    if (isinstance(prefix, str) and
+        any(os.path.splitext(prefix)[1].lower() == ext.lower() for ext in Extension.yamls)
+    ):
+        file_name, _ = os.path.splitext(prefix)
+        prefix = (yaml_load_file(prefix) or {}).get("output", None)
+        if prefix is None:
+            prefix = file_name
+    output = get_output(prefix=prefix, resume=True, force=False)
+    info = output.load_updated_info()
+    if info is None:
+        raise FileNotFoundError(
+            f"Could not find any sample with prefix '{prefix}' "
+            f"(looked for file '{output.file_updated}')."
+        )
+    from cobaya.model import DummyModel  # pylint: disable=import-outside-toplevel
+    dummy_model = DummyModel(info["params"], info["likelihood"], info.get("prior"))
+    if to_getdist:
+        collections = output.load_collections(
+            dummy_model, skip=skip, thin=thin, combined=False,
+        )
+        if collections:
+            collections = [c.to_getdist() for c in collections]
+            collections[0].readChains(
+                files_or_samples=[c.samples for c in collections],
+                weights=[c.weights for c in collections],
+                loglikes=[c.loglikes for c in collections],
+            )
+            collections = collections[0]
+    else:
+        collections = output.load_collections(
+            dummy_model, skip=skip, thin=thin, combined=combined
+        )
+    return collections

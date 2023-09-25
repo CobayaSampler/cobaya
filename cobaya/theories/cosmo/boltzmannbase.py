@@ -31,7 +31,7 @@ class BoltzmannBase(Theory):
 
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
-        # Additional input parameters to pass to CAMB, and attributes to set_ manually
+        # Additional input parameters (e.g. to pass to setter function, to set as attr...)
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         self._must_provide = {}
 
