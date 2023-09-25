@@ -197,6 +197,13 @@ class Output(HasLogger):
                 self._resuming = True
                 self.log.info("Let's try to resume/load.")
 
+    def __str__(self):
+        return (f"Output instance defined within folder '{self.folder}' "
+                f"with prefix '{self.prefix}'.")
+
+    def __repr__(self):
+        return self.__str__()
+
     def is_prefix_folder(self):
         """
         Returns `True` if the output prefix is a bare folder, e.g. `chains/`.
@@ -565,6 +572,9 @@ class OutputDummy(Output):
     def nullfunc(self, *args, **kwargs):
         pass
 
+    def __str__(self):
+        return "DummyOutput instance (does no do any I/O)."
+
     def __nonzero__(self):
         return False
 
@@ -577,7 +587,7 @@ def get_output(*args, **kwargs) -> Output:
     Auxiliary function to retrieve the output driver
     (e.g. whether to get the MPI-wrapped one, or a dummy output driver).
     """
-    if kwargs.get("prefix"):
+    if kwargs.get("prefix") or len(args) >= 1:
         return Output(*args, **kwargs)
     else:
         return OutputDummy(*args, **kwargs)
