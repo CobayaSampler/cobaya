@@ -11,7 +11,7 @@ The *updated information* and *products* mentioned above are returned by the ``r
 
 .. code:: python
 
-    from cobaya.run import run
+    from cobaya import run
     updated_info, sampler = run(your_input)
 
 ``sampler`` here is the sampler instance that just ran, e.g. the ``mcmc`` sampler. The results of the sampler can be obtained as ``sampler.products()``, which returns a dictionary whose contents depend on the sampler used, e.g. one chain for the ``mcmc`` sampler.

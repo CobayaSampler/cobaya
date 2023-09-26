@@ -526,6 +526,11 @@ class Output(HasLogger):
 
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
+
+        Notes
+        -----
+        Unless you know what you are doing, use the :func:`cobaya.output.load_samples`
+        function instead to load samples.
         """
         self.check_lock()
         filenames = self.find_collections(name=name, extension=extension)
@@ -623,15 +628,13 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
     thin: int (default: 1, no skipping)
         Specifies a thinning factor applied to the sample; must be ``>1``.
     combined: bool (default: False)
-        If True. instead of returning a list of all collections of samples found, it
+        If True, instead of returning a list of all collections of samples found, it
         returns a single concatenated one, after applying ``skip`` and ``thin`` on the
         individual ones. NB: if ``combined`` is True, it is recommended to skip some
         initial fraction, e.g. ``skip=0.3``.
     to_getdist: bool (default: False)
-        If ``True``, returns sample collections as :class:'getdist.MCSamples`. If both
-        this option and ``combined`` are ``True``, the latter is ignored and a
-        multi-chain :class:'getdist.MCSamples` object is created out of the chains of
-        all MPI processes.
+        If ``True``, returns a single :class:`getdist.MCSamples` instance, containing all
+        samples (``combined`` is ignored).
 
     Returns
     -------
@@ -651,9 +654,11 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
     all processes.
     """
     # yaml: load and look for "output", or use file name without extension
-    if (isinstance(prefix, str) and
+    is_yaml_filename = (
+        isinstance(prefix, str) and
         any(os.path.splitext(prefix)[1].lower() == ext.lower() for ext in Extension.yamls)
-    ):
+    )
+    if is_yaml_filename:
         file_name, _ = os.path.splitext(prefix)
         prefix = (yaml_load_file(prefix) or {}).get("output", None)
         if prefix is None:
@@ -672,13 +677,7 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
             dummy_model, skip=skip, thin=thin, combined=False,
         )
         if collections:
-            collections = [c.to_getdist() for c in collections]
-            collections[0].readChains(
-                files_or_samples=[c.samples for c in collections],
-                weights=[c.weights for c in collections],
-                loglikes=[c.loglikes for c in collections],
-            )
-            collections = collections[0]
+            collections = collections[0].to_getdist(combine_with=collections[1:])
     else:
         collections = output.load_collections(
             dummy_model, skip=skip, thin=thin, combined=combined

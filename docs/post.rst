@@ -67,7 +67,7 @@ Let us generate the initial sample:
 
 .. code:: python
 
-   from cobaya.run import run
+   from cobaya import run
    updinfo, sampler = run(gaussian_info)
    results = sampler.products()
 

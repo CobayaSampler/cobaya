@@ -68,7 +68,7 @@ To run **cobaya** from a Python script or interpreter, simply do
 
 .. code:: python
 
-    from cobaya.run import run
+    from cobaya import run
     updated_info, sampler = run(your_input)
 
 where ``your_input`` is a Python dictionary, yaml file name or yaml text (for how to create one, see :ref:`example_quickstart_interactive`).
