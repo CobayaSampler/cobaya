@@ -388,11 +388,11 @@ def queue_job_details(batchPath=None, running=True, queued=True, warnNotBatch=Tr
     if not index:
         print('No existing job index found')
         return []
-    if spawn.find_executable("showq") is not None:
+    if shutil.which("showq") is not None:
         qstat = 'showq'
         running_txt = ' Running '
     else:
-        if spawn.find_executable("squeue") is not None:
+        if shutil.which("squeue") is not None:
             qstat = 'squeue'
         else:
             # e.g. Sun Grid Engine/OGS
