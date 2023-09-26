@@ -11,7 +11,7 @@ import os
 import functools
 import warnings
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple
+from typing import Union, Sequence, Optional, Tuple, List
 from numbers import Number
 import numpy as np
 import pandas as pd
@@ -966,6 +966,7 @@ class SampleCollection(BaseCollection):
             self,
             label: Optional[str] = None,
             model: Optional[Model] = None,
+            combine_with: Optional[List["SampleCollection"]] = None,
     ) -> MCSamples:
         """
         Parameters
@@ -975,6 +976,9 @@ class SampleCollection(BaseCollection):
         model: :class:`cobaya.model.Model`, optional
             `Model` with which the sample was created. Needed only if parameter labels or
             aliases have changed since the collection was generated.
+        combine_with: list of :class:`cobaya.collection.SampleCollection`, optional
+            Additional collections to be added when creating a getdist object.
+            Compatibility between the collections is assumed and not checked.
 
         Returns
         -------
@@ -989,13 +993,24 @@ class SampleCollection(BaseCollection):
         if isinstance(model, Model):
             self._cache_aux_model_quantities(model)
         elif model is not None:
-            LoggedError("Optional argument `model` must be a Cobaya Model instance.")
+            raise LoggedError(
+                self.log,
+                "Optional argument `model` must be a Cobaya Model instance."
+            )
         used_names_dict = {p: p + ("*" if p not in self.sampled_params else "")
                            for p in self.data.columns[2:]}
+        if combine_with is None:
+            combine_with = []
+        all_collections = [self] + list(combine_with)
+        samples, weights, loglikes = [], [], []
+        for c in all_collections:
+            samples.append(c[c.data.columns[2:]].to_numpy(np.float64, copy=True))
+            weights.append(c[OutPar.weight].to_numpy(np.float64, copy=True))
+            loglikes.append(c[OutPar.minuslogpost].to_numpy(np.float64, copy=True))
         return MCSamples(
-            samples=self[self.data.columns[2:]].to_numpy(np.float64, copy=True),
-            weights=self[OutPar.weight].to_numpy(np.float64, copy=True),
-            loglikes=self[OutPar.minuslogpost].to_numpy(np.float64, copy=True),
+            samples=samples,
+            weights=weights,
+            loglikes=loglikes,
             temperature=self.temperature,
             sampler=deepcopy(self.sample_type),
             names=list(used_names_dict.values()),

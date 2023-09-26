@@ -258,6 +258,24 @@ A callback function can be specified through the ``callback_function`` option. I
 The callback function is called every ``callback_every`` points have been added to the chain, or at every checkpoint if that option has not been defined.
 
 
+.. _mcmc_load_chains:
+
+Loading chains (single or multiple)
+-----------------------------------
+
+To load the result of an MCMC run saved with prefix e.g. ``chains/test`` as a single chain, skipping the first third of each chain, simply do
+
+.. code:: python
+
+    from cobaya import load_samples
+
+    # As Cobaya SampleCollection
+    full_chain = load_samples("chains/test", skip=0.33, combined=True)
+
+    # As GetDist MCSamples
+    full_chain = load_samples("chains/test", skip=0.33, to_getdist=True)
+
+
 .. _mcmc_mpi_in_script:
 
 Interaction with MPI when using MCMC inside your own script
@@ -272,7 +290,7 @@ When integrating Cobaya in your pipeline inside a Python script (as opposed to c
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    from cobaya.run import run
+    from cobaya import run
     from cobaya.log import LoggedError
 
     success = False
@@ -300,7 +318,7 @@ As sampler products, every MPI process receives its own chain via the :meth:`~.m
     # As cobaya.collections.SampleCollection
     full_chain = mcmc.samples(combined=True, skip_samples=0.33)
 
-    # As GetDist MCSamples (multiple chains kept internally)
+    # As GetDist MCSamples
     full_chain = mcmc.samples(combined=True, skip_samples=0.33, to_getdist=True)
 
 .. note::

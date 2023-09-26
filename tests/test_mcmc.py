@@ -109,10 +109,7 @@ def test_mcmc_drag_results(temperature):
     info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
     info["sampler"]["mcmc"]["temperature"] = temperature
     updated_info, sampler = run(info)
-    products = sampler.products()
-    from getdist.mcsamples import MCSamplesFromCobaya
-    products["sample"] = mpi.allgather(products["sample"])
-    gdsample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.2)
+    gdsample = sampler.samples(combined=True, skip_samples=0.2, to_getdist=True)
     if temperature != 1:
         gdsample.cool(temperature)
     assert abs(gdsample.mean('a') - 0.2) < 0.03
