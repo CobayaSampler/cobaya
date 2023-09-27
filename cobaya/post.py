@@ -9,7 +9,7 @@
 import os
 import time
 from itertools import chain
-from typing import List, Union, Optional, Tuple, TypedDict
+from typing import List, Union, Optional, Tuple, TypedDict, TYPE_CHECKING
 import numpy as np
 
 from cobaya import mpi
@@ -30,12 +30,113 @@ from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
     PostDict
 
+if TYPE_CHECKING:
+    from getdist import MCSamples
+
 
 class PostResultDict(TypedDict):
     sample: Union[SampleCollection, List[SampleCollection]]
     stats: ParamValuesDict
     logpost_weight_offset: float
     weights: Union[np.ndarray, List[np.ndarray]]
+
+
+class PostResult():
+
+    def __init__(self, post_results: PostResultDict):
+        self.results = post_results
+
+    # For backwards compatibility
+    def __getitem__(self, key):
+        return self.results[key]
+
+    # For compatibility with Sampler, when returned by run()
+    def samples(self,
+                combined: bool = False,
+                skip_samples: float = 0,
+                to_getdist: bool = False,
+                ) -> Union[SampleCollection, MCSamples]:
+        """
+        Returns the post-processed sample.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, returns a single sample
+            collection including all parallel chains concatenated, instead of the chain of
+            the current process only. For this to work, this method needs to be called
+            from all MPI processes simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied before concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples (``combined`` is ignored).
+
+        Returns
+        -------
+        SampleCollection, getdist.MCSamples
+            The sample of accepted steps.
+        """
+        # TODO: could be abstracted together with mcmc.samples()
+        collection = self.results["sample"].skip_samples(skip_samples, inplace=False)
+        if to_getdist or (combined and mpi.more_than_one_process()):
+            collections = mpi.gather(collection)
+        else:
+            collections = [collection]
+        if mpi.is_main_process():
+            if to_getdist:
+                collection = collections[0].to_getdist(combine_with=collections[1:])
+            elif len(collections) > 1:
+                for collection in collections[1:]:
+                    # pylint: disable=protected-access
+                    collections[0]._append(collection)
+                collection = collections[0]
+        collection = mpi.share_mpi(collection)
+        return collection
+
+    # For compatibility with Sampler, when returned by run()
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> PostResultDict:
+        """
+        Returns the products of post-processing.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied previously to concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples (``combined`` is ignored).
+
+        Returns
+        -------
+        PostResultDict
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sample"``, and stats about the post-processing.
+        """
+        products = {
+            "sample": self.samples(
+                combined=combined,
+                skip_samples=skip_samples,
+                to_getdist=to_getdist
+            )
+        }
+        products.update({k: v for k, v in self.results.items() if k != "sample"})
+        return products
 
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
@@ -59,7 +160,7 @@ def value_or_list(lst: list):
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          sample: Union[SampleCollection, List[SampleCollection], None] = None
-         ) -> Tuple[InputDict, PostResultDict]:
+         ) -> Tuple[InputDict, PostResult]:
     info = load_input_dict(info_or_yaml_or_file)
     # MARKED FOR DEPRECATION IN v3.2
     if info.get("debug_file"):  # type: ignore
@@ -557,14 +658,16 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weights) ** 2 / sum(sum_w2s)))
-    products: PostResultDict = {"sample": value_or_list(out_collections),
-                                "stats": {'min_importance_weight': (min(min_weights) /
-                                                                    max(max_weights)),
-                                          'points_removed': sum(points_removed_s),
-                                          'tot_weight': sum(tot_weights),
-                                          'max_weight': max(max_output_weights),
-                                          'sum_w2': sum(sum_w2s),
-                                          'points': sum(points_s)},
-                                "logpost_weight_offset": difflogmax,
-                                "weights": value_or_list(weights)}
-    return out_combined, products
+    products_dict: PostResultDict = {
+        "sample": value_or_list(out_collections),
+        "stats": {'min_importance_weight': (min(min_weights) / max(max_weights)),
+                  'points_removed': sum(points_removed_s),
+                  'tot_weight': sum(tot_weights),
+                  'max_weight': max(max_output_weights),
+                  'sum_w2': sum(sum_w2s),
+                  'points': sum(points_s)
+                  },
+        "logpost_weight_offset": difflogmax,
+        "weights": value_or_list(weights)
+    }
+    return out_combined, PostResult(products_dict)
