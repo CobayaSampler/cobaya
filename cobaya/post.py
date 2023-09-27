@@ -55,7 +55,7 @@ class PostResult():
                 combined: bool = False,
                 skip_samples: float = 0,
                 to_getdist: bool = False,
-                ) -> Union[SampleCollection, MCSamples]:
+                ) -> Union[SampleCollection, "MCSamples"]:
         """
         Returns the post-processed sample.
 
