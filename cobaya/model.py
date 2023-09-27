@@ -1319,10 +1319,6 @@ class DummyModel:
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
         self.prior = [prior_1d_name] + list(info_prior or [])
         self.likelihood = list(info_likelihood)
-        self.params_bounds = get_literal_param_ranges(
-            self.parameterization,
-            confidence_for_unbounded=0.9999995  # 5 sigmas of the prior
-        )
 
 
 def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],

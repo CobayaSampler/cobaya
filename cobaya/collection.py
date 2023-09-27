@@ -21,9 +21,10 @@ from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
     derived_par_name_separator, minuslogprior_labels, chi2_labels, minuslogpost_label
+from cobaya.parameterization import get_literal_param_ranges
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
-from cobaya.model import Model, LogPosterior, DummyModel
+from cobaya.model import Model, LogPosterior
 
 # Suppress getdist output
 chains.print_load_details = False
@@ -151,18 +152,8 @@ class BaseCollection(HasLogger):
         self._cached_labels.update(minuslogprior_labels(model.prior))
         self._cached_labels.update(chi2_labels(model.likelihood))
         self._cached_renames = deepcopy(model.parameterization.sampled_params_renames())
-        self._cached_ranges = None
-        if not isinstance(model, DummyModel):  # can happen during post-processing
-            self._cached_ranges = dict(zip(
-                self.sampled_params,
-                model.prior.bounds(confidence_for_unbounded=0.9999995)))  # 5 sigmas
-            for p, p_info in model.parameterization.derived_params_info().items():
-                mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
-                some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
-                if some_bound_specified:
-                    self._cached_ranges[p] = [mini, maxi]
-        else:  # DummyModel
-            self._cached_ranges = deepcopy(model.params_bounds)
+        self._cached_ranges = get_literal_param_ranges(
+            model.parameterization, confidence_for_unbounded=0.9999995)  # 5 sigmas
 
 
 def ensure_cache_dumped(method):
