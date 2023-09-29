@@ -138,67 +138,28 @@ class FileLock:
         self.clear_lock()
 
 
-class Output(HasLogger):
+class OutputReadOnly():
     """
-    Basic output driver. It takes care of creating the output files, checking
-    compatibility with old runs when resuming, cleaning up when forcing, preparing
-    :class:`~collection.SampleCollection` files, etc.
+    A read-only output driver: it tracks naming of, and can load input and collection
+    files. Contrary to :class:`output.Output`, this class is not MPI-aware, which makes it
+    useful to be able to do these operations within isolated MPI processes.
     """
 
     _old_updated_info: Optional[InputDict]
 
-    @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
-                        "_resuming", "prefix_regexp_str", "log"))
-    def __init__(self, prefix, resume=resume_default, force=False, infix=None):
-        self.name = "output"
-        self.set_logger(self.name)
-        self.lock = FileLock()
+    def __init__(self, prefix, infix=None):
         self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (
             r"[\._]" if self.prefix else "")
-        self.force = force
-        if resume and force and prefix:
-            # No resume and force at the same time (if output)
-            raise LoggedError(
-                self.log,
-                "Make 'resume: True' or 'force: True', not both at the same time: "
-                "can't simultaneously overwrite a chain and resume from it.")
-        if not os.path.exists(self.folder):
-            self.log.debug("Creating output folder '%s'", self.folder)
-            try:
-                os.makedirs(self.folder)
-            except OSError as excpt:
-                self.log.error(get_traceback_text(sys.exc_info()))
-                raise LoggedError(
-                    self.log,
-                    "Could not create folder '%s'. "
-                    "See traceback on top of this message.",
-                    self.folder
-                ) from excpt
-        self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
-                      self.folder, self.prefix)
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
             self.folder, self.prefix, infix=infix, kind="input")
         self.file_updated = get_info_path(self.folder, self.prefix, infix=infix)
         self.dump_file_updated = get_info_path(
             self.folder, self.prefix, infix=infix, ext=Extension.dill)
-        self._resuming = False
         # Output kind and collection extension
         self.kind = _kind
         self.ext = _ext
-        if os.path.isfile(self.file_updated):
-            self.log.info(
-                "Found existing info files with the requested output prefix: '%s'",
-                prefix)
-            if self.force:
-                self.log.info("Will delete previous products ('force' was requested).")
-                self.delete_infos()
-                # Sampler products will be deleted at sampler initialisation
-            elif resume:
-                # Only in this case we can be sure that we are actually resuming
-                self._resuming = True
-                self.log.info("Let's try to resume/load.")
 
     def __str__(self):
         return (f"Output instance defined within folder '{self.folder}' "
@@ -212,6 +173,12 @@ class Output(HasLogger):
         Returns `True` if the output prefix is a bare folder, e.g. `chains/`.
         """
         return bool(self.prefix)
+
+    def updated_prefix(self):
+        """
+        Updated path: drops folder: now it's relative to the chain's location.
+        """
+        return self.prefix or "."
 
     def separator_if_needed(self, separator):
         """
@@ -240,6 +207,183 @@ class Output(HasLogger):
         return os.path.join(self.folder,
                             self.prefix + self.separator_if_needed(separator) + suffix)
 
+    def get_updated_info(self, use_cache=False, cache=False) -> Optional[InputDict]:
+        """
+        Returns the version of the input file updated with defaults, loading it if
+        necessary not previously cached, or if forced by ``use_cache=False``.
+
+        If loading is forced and ``cache=True``, the loaded input will be cached for
+        future calls.
+        """
+        if use_cache and hasattr(self, "_old_updated_info"):
+            return self._old_updated_info
+        return self.reload_updated_info(cache=cache)
+
+    def reload_updated_info(self, cache=False) -> Optional[InputDict]:
+        """
+        Reloads and returns the version of the input file updated with defaults.
+
+        If none is found, returns ``None`` without raising an error.
+
+        If ``cache=True``, the loaded input will be cached for future calls.
+        """
+        try:
+            if os.path.isfile(self.dump_file_updated):
+                loaded = load_info_dump(self.dump_file_updated)
+            else:
+                loaded = yaml_load_file(self.file_updated)  # type: ignore
+            if cache:
+                self._old_updated_info = deepcopy_where_possible(loaded)
+            return loaded
+        except IOError:
+            if cache:
+                self._old_updated_info = None
+            return None
+
+    def prepare_collection(self, name=None, extension=None):
+        """
+        Generates a file name for the collection, as
+        ``[folder]/[prefix].[name].[extension]``.
+
+        Notice that ``name=None`` generates a date, but ``name=""`` removes the ``name``
+        field, making it simply ``[folder]/[prefix].[extension]``.
+        """
+        if name is None:
+            name = (datetime.datetime.now().isoformat().replace("T", "")
+                    .replace(":", "").replace(".", "")
+                    .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
+        file_name = os.path.join(
+            self.folder,
+            self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
+            self.sanitize_collection_extension(extension))
+        return file_name, self.kind
+
+    def collection_regexp(self, name=None, extension=None):
+        """
+        Returns a regexp for collections compatible with this output settings.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        if name is None:
+            name = r"\d+\."
+        elif name is False:
+            name = ""
+        else:
+            name = re.escape(name) + r"\."
+        extension = self.sanitize_collection_extension(extension)
+        return re.compile(self.prefix_regexp_str + name +
+                          re.escape(extension.lower()) + "$")
+
+    def is_collection_file_name(self, file_name, name=None, extension=None):
+        """
+        Check if a `file_name` is a collection compatible with this `Output` instance.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        return (file_name ==
+                getattr(self.collection_regexp(name=name, extension=extension)
+                        .match(file_name), "group", lambda: None)())
+
+    def find_collections(self, name=None, extension=None):
+        """
+        Returns all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: matches any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+        """
+        return sorted(
+            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
+            if self.is_collection_file_name(
+                os.path.split(f2)[1], name=name, extension=extension))
+
+    def load_collections(self, model, skip=0, thin=1, combined=False,
+                         name=None, extension=None, concatenate=None):
+        """
+        Loads all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+
+        Notes
+        -----
+        Unless you know what you are doing, use the :func:`cobaya.output.load_samples`
+        function instead to load samples.
+        """
+        filenames = self.find_collections(name=name, extension=extension)
+        # pylint: disable=import-outside-toplevel
+        from cobaya.collection import SampleCollection
+        collections = [
+            SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
+                             load=True, onload_skip=skip, onload_thin=thin)
+            for i, filename in enumerate(filenames)]
+        # MARKED FOR DEPRECATION IN v3.3
+        if concatenate is not None:
+            print("*WARNING*: Argument 'concatenate' will be deprecated soon. "
+                  "Please use 'combined' instead.")
+            # BEHAVIOUR TO BE REPLACED BY AN ERROR
+            combined = concatenate
+        # END OF DEPRECATION BLOCK
+        if combined and collections:
+            collection = collections[0]
+            for collection_i in collections[1:]:
+                collection._append(collection_i)  # pylint: disable=protected-access
+            return collection
+        return collections
+
+
+class Output(HasLogger, OutputReadOnly):
+    """
+    Basic output driver. It takes care of creating the output files, checking
+    compatibility with old runs when resuming, cleaning up when forcing, preparing
+    :class:`~collection.SampleCollection` files, etc.
+    """
+
+    @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
+                        "_resuming", "prefix_regexp_str", "log"))
+    def __init__(self, prefix, resume=resume_default, force=False, infix=None):
+        super().__init__(prefix, infix=None)
+        self.name = "output"
+        self.set_logger(self.name)
+        self.lock = FileLock()
+        self.force = force
+        if resume and force and prefix:
+            # No resume and force at the same time (if output)
+            raise LoggedError(
+                self.log,
+                "Make 'resume: True' or 'force: True', not both at the same time: "
+                "can't simultaneously overwrite a chain and resume from it.")
+        if not os.path.exists(self.folder):
+            self.log.debug("Creating output folder '%s'", self.folder)
+            try:
+                os.makedirs(self.folder)
+            except OSError as excpt:
+                self.log.error(get_traceback_text(sys.exc_info()))
+                raise LoggedError(
+                    self.log,
+                    "Could not create folder '%s'. "
+                    "See traceback on top of this message.",
+                    self.folder
+                ) from excpt
+        self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
+                      self.folder, self.prefix)
+        self._resuming = False
+        if os.path.isfile(self.file_updated):
+            self.log.info(
+                "Found existing info files with the requested output prefix: '%s'",
+                prefix)
+            if self.force:
+                self.log.info("Will delete previous products ('force' was requested).")
+                self.delete_infos()
+                # Sampler products will be deleted at sampler initialisation
+            elif resume:
+                # Only in this case we can be sure that we are actually resuming
+                self._resuming = True
+                self.log.info("Let's try to resume/load.")
+
     @mpi.root_only
     def create_folder(self, folder):
         """
@@ -261,12 +405,6 @@ class Output(HasLogger):
             except OSError:
                 pass
 
-    def updated_prefix(self):
-        """
-        Updated path: drops folder: now it's relative to the chain's location.
-        """
-        return self.prefix or "."
-
     def is_resuming(self):
         return self._resuming
 
@@ -274,35 +412,43 @@ class Output(HasLogger):
     def set_resuming(self, value):
         self._resuming = value
 
+    # MARKED FOR DEPRECATION IN v3.3
     @mpi.from_root
     def load_updated_info(self, cache=False, use_cache=False) -> Optional[InputDict]:
+        """
+        Returns the version of the input file updated with defaults, loading it if
+        necessary.
+
+        *WARNING*: This method has been deprecated in favor of ``get_updated_info`` and
+        ``reaload_update_info``, depending on the use case (see their docstrings).
+        """
+        # BEHAVIOUR TO BE REPLACED BY AN ERROR
         return self.reload_updated_info(cache=cache, use_cache=use_cache)
+        # END OF DEPRECATION BLOCK
 
-    def reload_updated_info(self, cache=False, use_cache=False) -> Optional[InputDict]:
+    def reload_updated_info(self, cache=False, **kwargs) -> Optional[InputDict]:
+        """
+        Reloads and returns the version of the input file updated with defaults.
+
+        If none is found, returns ``None`` without raising an error.
+
+        If ``cache=True``, the loaded input will be cached for future calls.
+        """
+        # MARKED FOR DEPRECATION IN v3.3
+        if "use_cache" in kwargs:
+            self.log.warning("The `use_cache` argument will be deprecated soon. If you "
+                             "want to ensure that you receive a cached version, call the "
+                             "new method ``get_updated_info(use_cache=True)`.")
+            # BEHAVIOUR TO BE REPLACED BY AN ERROR
+            return self.get_update_info(use_cache=kwargs["use_cache"])
+        # END OF DEPRECATION BLOCK
+        loaded = None
         if mpi.is_main_process():
-            if use_cache and hasattr(self, "_old_updated_info"):
-                return self._old_updated_info
-            try:
-                if os.path.isfile(self.dump_file_updated):
-                    loaded = load_info_dump(self.dump_file_updated)
-                else:
-                    loaded = yaml_load_file(self.file_updated)  # type: ignore
-                if cache:
-                    self._old_updated_info = deepcopy_where_possible(loaded)
-                return loaded
-            except IOError:
-                if cache:
-                    self._old_updated_info = None
-                return None
-        else:
-            # Only cached possible when non main process
-            if not use_cache:
-                raise LoggedError(self.log, "Cannot call `reload_updated_info` from "
-                                            "non-main process unless cached version "
-                                            "(`use_cache=True`) requested.")
-            return getattr(self, "_old_updated_info", None)
+            loaded = super().reload_updated_info(cache=cache)
+        if cache:
+            self._old_updated_info = mpi.share_mpi(loaded)
+        return loaded
 
-    @mpi.set_from_root("_old_updated_info")
     def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
                             cache_old=False, use_cache_old=False, ignore_blocks=()):
         """
@@ -323,8 +469,8 @@ class Output(HasLogger):
             # We will test the old info against the dumped+loaded new info.
             # This is because we can't actually check if python objects do change
             try:
-                old_info = self.reload_updated_info(cache=cache_old,
-                                                    use_cache=use_cache_old)
+                old_info = self.get_updated_info(cache=cache_old,
+                                                 use_cache=use_cache_old)
             except InputImportError:
                 # for example, when there's a dynamically generated class that cannot
                 # be found by the yaml loader (could use yaml loader that ignores them)
@@ -416,6 +562,25 @@ class Output(HasLogger):
                     os.remove(self.dump_file_updated)
                     self.mpi_info('Options file cannot be pickled %s', e)
 
+    def load_collections(self, model, skip=0, thin=1, combined=False,
+                         name=None, extension=None, concatenate=None):
+        """
+        Loads all collection files found which are compatible with this `Output`
+        instance, including their path in their name.
+
+        Use `name` for particular types of collections (default: any number).
+        Pass `False` to mean there is nothing between the output prefix and the extension.
+
+        Notes
+        -----
+        Unless you know what you are doing, use the :func:`cobaya.output.load_samples`
+        function instead to load samples.
+        """
+        self.check_lock()
+        return super().load_collections(
+            model, skip=skip, thin=thin, combined=combined,
+            name=name, extension=extension, concatenate=concatenate)
+
     def delete_with_regexp(self, regexp, root=None):
         """
         Deletes all files compatible with the given `regexp`.
@@ -451,52 +616,6 @@ class Output(HasLogger):
         except OSError:
             pass
 
-    def prepare_collection(self, name=None, extension=None):
-        """
-        Generates a file name for the collection, as
-        ``[folder]/[prefix].[name].[extension]``.
-
-        Notice that ``name=None`` generates a date, but ``name=""`` removes the ``name``
-        field, making it simply ``[folder]/[prefix].[extension]``.
-        """
-        if name is None:
-            name = (datetime.datetime.now().isoformat().replace("T", "")
-                    .replace(":", "").replace(".", "")
-                    .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
-        file_name = os.path.join(
-            self.folder,
-            self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
-            self.sanitize_collection_extension(extension))
-        return file_name, self.kind
-
-    def collection_regexp(self, name=None, extension=None):
-        """
-        Returns a regexp for collections compatible with this output settings.
-
-        Use `name` for particular types of collections (default: any number).
-        Pass `False` to mean there is nothing between the output prefix and the extension.
-        """
-        if name is None:
-            name = r"\d+\."
-        elif name is False:
-            name = ""
-        else:
-            name = re.escape(name) + r"\."
-        extension = self.sanitize_collection_extension(extension)
-        return re.compile(self.prefix_regexp_str + name +
-                          re.escape(extension.lower()) + "$")
-
-    def is_collection_file_name(self, file_name, name=None, extension=None):
-        """
-        Check if a `file_name` is a collection compatible with this `Output` instance.
-
-        Use `name` for particular types of collections (default: any number).
-        Pass `False` to mean there is nothing between the output prefix and the extension.
-        """
-        return (file_name ==
-                getattr(self.collection_regexp(name=name, extension=extension)
-                        .match(file_name), "group", lambda: None)())
-
     @mpi.root_only
     def clear_lock(self):
         self.lock.clear_lock()
@@ -504,57 +623,6 @@ class Output(HasLogger):
     @mpi.root_only
     def check_lock(self):
         self.lock.check_error()
-
-    def find_collections(self, name=None, extension=None):
-        """
-        Returns all collection files found which are compatible with this `Output`
-        instance, including their path in their name.
-
-        Use `name` for particular types of collections (default: matches any number).
-        Pass `False` to mean there is nothing between the output prefix and the extension.
-        """
-        return sorted(
-            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
-            if self.is_collection_file_name(
-                os.path.split(f2)[1], name=name, extension=extension))
-
-    def load_collections(self, model, skip=0, thin=1, combined=False,
-                         name=None, extension=None, concatenate=None):
-        """
-        Loads all collection files found which are compatible with this `Output`
-        instance, including their path in their name.
-
-        Use `name` for particular types of collections (default: any number).
-        Pass `False` to mean there is nothing between the output prefix and the extension.
-
-        Notes
-        -----
-        Unless you know what you are doing, use the :func:`cobaya.output.load_samples`
-        function instead to load samples.
-        """
-        self.check_lock()
-        filenames = self.find_collections(name=name, extension=extension)
-        # pylint: disable=import-outside-toplevel
-        from cobaya.collection import SampleCollection
-        collections = [
-            SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
-                             load=True, onload_skip=skip, onload_thin=thin)
-            for i, filename in enumerate(filenames)]
-        # MARKED FOR DEPRECATION IN v3.3
-        if concatenate is not None:
-            self.log.warning(
-                "Argument 'concatenate' will be deprecated soon. "
-                "Please use 'combined' instead."
-            )
-            # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            combined = concatenate
-        # END OF DEPRECATION BLOCK
-        if combined and collections:
-            collection = collections[0]
-            for collection_i in collections[1:]:
-                collection._append(collection_i)  # pylint: disable=protected-access
-            return collection
-        return collections
 
     @mpi.root_only
     def set_lock(self):
@@ -663,8 +731,8 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
         prefix = (yaml_load_file(prefix) or {}).get("output", None)
         if prefix is None:
             prefix = file_name
-    output = get_output(prefix=prefix, resume=True, force=False)
-    info = output.load_updated_info()
+    output = OutputReadOnly(prefix=prefix)
+    info = output.get_updated_info()
     if info is None:
         raise FileNotFoundError(
             f"Could not find any sample with prefix '{prefix}' "
