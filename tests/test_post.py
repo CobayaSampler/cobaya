@@ -208,6 +208,6 @@ def test_post_params(tmpdir):
     assert allclose(products.samples()["a"] - products.samples()["b"],
                     loaded_samples["a_minus_b"])
     assert np.allclose(loaded_samples["cprime"].to_numpy(dtype=np.float64),
-                    info_post["post"]["add"]["params"]["c"])
+                       info_post["post"]["add"]["params"]["c"])
     assert allclose(loaded_samples["my_chi2__target"],
                     products.samples()["chi2__target"])

@@ -343,9 +343,10 @@ class Output(HasLogger, OutputReadOnly):
     """
 
     @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
+                        "file_input", "file_updated", "dump_file_updated",
                         "_resuming", "prefix_regexp_str", "log"))
     def __init__(self, prefix, resume=resume_default, force=False, infix=None):
-        super().__init__(prefix, infix=None)
+        OutputReadOnly.__init__(self, prefix, infix=None)
         self.name = "output"
         self.set_logger(self.name)
         self.lock = FileLock()
@@ -435,7 +436,7 @@ class Output(HasLogger, OutputReadOnly):
         If ``cache=True``, the loaded input will be cached for future calls.
         """
         # MARKED FOR DEPRECATION IN v3.3
-        if "use_cache" in kwargs:
+        if kwargs.get("use_cache", None):
             self.log.warning("The `use_cache` argument will be deprecated soon. If you "
                              "want to ensure that you receive a cached version, call the "
                              "new method ``get_updated_info(use_cache=True)`.")
@@ -445,8 +446,9 @@ class Output(HasLogger, OutputReadOnly):
         loaded = None
         if mpi.is_main_process():
             loaded = super().reload_updated_info(cache=cache)
+        loaded = mpi.share_mpi(loaded)
         if cache:
-            self._old_updated_info = mpi.share_mpi(loaded)
+            self._old_updated_info = loaded
         return loaded
 
     def check_and_dump_info(self, input_info, updated_info, check_compatible=True,

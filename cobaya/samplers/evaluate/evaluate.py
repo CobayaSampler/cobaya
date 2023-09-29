@@ -14,6 +14,7 @@ from typing import Mapping
 from cobaya.sampler import Sampler
 from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError
+import cobaya.mpi as mpi
 
 
 class Evaluate(Sampler):
@@ -33,7 +34,7 @@ class Evaluate(Sampler):
             raise LoggedError(
                 self.log,
                 "Could not convert the number of samples to an integer: %r", self.N)
-        self.one_point = SampleCollection(self.model, self.output, name="1")
+        self.points = SampleCollection(self.model, self.output, name=str(1 + mpi.rank()))
         self.log.info("Initialized!")
 
     def run(self):
@@ -64,7 +65,7 @@ class Evaluate(Sampler):
                 ["%s = %g" % pv for pv in reference_point.items()]))
             self.log.info("Evaluating prior and likelihoods...")
             self.logposterior = self.model.logposterior(reference_point)
-            self.one_point.add(
+            self.points.add(
                 list(reference_point.values()), derived=self.logposterior.derived,
                 logpost=self.logposterior.logpost, logpriors=self.logposterior.logpriors,
                 loglikes=self.logposterior.loglikes)
@@ -86,7 +87,7 @@ class Evaluate(Sampler):
                 self.log.info("Likelihoods and derived parameters not computed, "
                               "since the prior is null.")
         # Write the output: the point and its prior, posterior and likelihood.
-        self.one_point.out_update()
+        self.points.out_update()
 
     def products(self):
         """
@@ -96,4 +97,4 @@ class Evaluate(Sampler):
            The sample ``SampleCollection`` containing the
            sequentially discarded live points.
         """
-        return {"sample": self.one_point}
+        return {"sample": self.points}

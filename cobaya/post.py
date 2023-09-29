@@ -86,6 +86,7 @@ class PostResult():
             collections = [collections]
         collections = [c.skip_samples(skip_samples, inplace=False) for c in collections]
         # In all the remaining cases, we'll concatenate the chains
+        collection = None
         all_collections = mpi.gather(collections)
         if mpi.is_main_process():
             all_collections = list(chain(*all_collections))
