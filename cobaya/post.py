@@ -62,10 +62,10 @@ class PostResult():
         Parameters
         ----------
         combined: bool, default: False
-            If ``True`` and running more than one MPI process, returns a single sample
-            collection including all parallel chains concatenated, instead of the chain of
-            the current process only. For this to work, this method needs to be called
-            from all MPI processes simultaneously.
+            If ``True`` and running more than one MPI process, returns for all processes
+            a single sample collection including, all parallel chains concatenated, instead
+            of the chain of the current process only. For this to work, this method needs
+            to be called from all MPI processes simultaneously.
         skip_samples: int or float, default: 0
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is
@@ -77,24 +77,28 @@ class PostResult():
         Returns
         -------
         SampleCollection, getdist.MCSamples
-            The sample of accepted steps.
+            The post-processed samples.
         """
-        # TODO: could be abstracted together with mcmc.samples()
-        collection = self.results["sample"].skip_samples(skip_samples, inplace=False)
-        if to_getdist or (combined and mpi.more_than_one_process()):
-            collections = mpi.gather(collection)
-        else:
-            collections = [collection]
+        # Difference with MCMC: self.results["sample"] may contain one collection or a
+        # list of them pre-process
+        collections = self.results["sample"]
+        if not isinstance(collections, list):
+            collections = [collections]
+        collections = [c.skip_samples(skip_samples, inplace=False) for c in collections]
+        # In all the remaining cases, we'll concatenate the chains
+        all_collections = mpi.gather(collections)
         if mpi.is_main_process():
+            all_collections = list(chain(*all_collections))
             if to_getdist:
-                collection = collections[0].to_getdist(combine_with=collections[1:])
-            elif len(collections) > 1:
-                for collection in collections[1:]:
-                    # pylint: disable=protected-access
-                    collections[0]._append(collection)
-                collection = collections[0]
-        collection = mpi.share_mpi(collection)
-        return collection
+                collection = all_collections[0].to_getdist(
+                    combine_with=all_collections[1:])
+            else:
+                if len(all_collections) > 1:
+                    for collection in all_collections[1:]:
+                        # pylint: disable=protected-access
+                        all_collections[0]._append(collection)
+                collection = all_collections[0]
+        return mpi.share_mpi(collection)
 
     # For compatibility with Sampler, when returned by run()
     def products(

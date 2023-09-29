@@ -11,9 +11,10 @@ import sys
 import logging
 import inspect
 from itertools import chain
-from typing import Any, Callable
+from typing import Any, Callable, Union, Dict, TYPE_CHECKING
 from tempfile import gettempdir
 import re
+import warnings
 import numpy as np
 
 # Local
@@ -27,6 +28,10 @@ from cobaya.install import download_github_release
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, Extension
+
+# Avoid importing GetDist if not necessary
+if TYPE_CHECKING:
+    from getdist import MCSamples
 
 
 # Suppresses warnings about first defining attrs outside __init__
@@ -237,12 +242,13 @@ class polychord(Sampler):
 
     def run(self):
         """
-        Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
+        Prepares the prior and likelihood functions, calls ``PolyChord``'s ``run``, and
+        processes its output.
         """
-
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
+
         def logpost(params_values):
             result = self.model.logposterior(params_values)
             loglikes = result.loglikes
@@ -283,7 +289,9 @@ class polychord(Sampler):
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
 
     def save_sample(self, fname, name):
-        sample = np.atleast_2d(np.loadtxt(fname))
+        with warnings.catch_warnings():  # in case of empty file
+            warnings.simplefilter("ignore")
+            sample = np.atleast_2d(np.loadtxt(fname))
         if not sample.size:
             return None
         collection = SampleCollection(
@@ -325,107 +333,205 @@ class polychord(Sampler):
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
         (if ``txt`` output requested).
         """
-        if is_main_process():
-            self.log.info("Loading PolyChord's results: samples and evidences.")
-            self.dump_paramnames(self.raw_prefix)
-            self.collection = self.save_sample(self.raw_prefix + ".txt", "1")
-            # Load clusters, and save if output
-            if self.pc_settings.do_clustering:
-                self.clusters = {}
-                clusters_raw_regexp = re.compile(
-                    re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
-                cluster_raw_files = sorted(find_with_regexp(
-                    clusters_raw_regexp, os.path.join(
-                        self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
-                for f in cluster_raw_files:
-                    i = int(f[f.rfind("_") + 1:-len(".txt")])
-                    if self.output:
-                        old_folder = self.output.folder
-                        self.output.folder = self.clusters_folder
-                    sample = self.save_sample(f, str(i))
-                    if self.output:
-                        # noinspection PyUnboundLocalVariable
-                        self.output.folder = old_folder
-                    self.clusters[i] = {"sample": sample}
-            # Prepare the evidence(s) and write to file
-            pre = "log(Z"
-            active = "(Still active)"
-            with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
-                lines = [line for line in statsfile.readlines() if line.startswith(pre)]
-            for line in lines:
-                logZ, logZstd = [float(n.replace(active, "")) for n in
-                                 line.split("=")[-1].split("+/-")]
-                component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
-                if not component:
-                    self.logZ, self.logZstd = logZ, logZstd
-                elif self.pc_settings.do_clustering:
-                    i = int(component)
-                    self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
+        if not is_main_process():
+            return
+        self.log.info("Loading PolyChord's results: samples and evidences.")
+        self.dump_paramnames(self.raw_prefix)
+        self.collection = self.save_sample(self.raw_prefix + ".txt", "1")
+        # Load clusters, and save if output
+        if self.pc_settings.do_clustering:
+            self.clusters = {}
+            clusters_raw_regexp = re.compile(
+                re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
+            cluster_raw_files = sorted(find_with_regexp(
+                clusters_raw_regexp, os.path.join(
+                    self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
+            for f in cluster_raw_files:
+                i = int(f[f.rfind("_") + 1:-len(".txt")])
+                if self.output:
+                    old_folder = self.output.folder
+                    self.output.folder = self.clusters_folder
+                sample = self.save_sample(f, str(i))
+                if self.output:
+                    # noinspection PyUnboundLocalVariable
+                    self.output.folder = old_folder
+                self.clusters[i] = {"sample": sample}
+        # Prepare the evidence(s) and write to file
+        pre = "log(Z"
+        active = "(Still active)"
+        with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
+            lines = [line for line in statsfile.readlines() if line.startswith(pre)]
+        for line in lines:
+            logZ, logZstd = [float(n.replace(active, "")) for n in
+                             line.split("=")[-1].split("+/-")]
+            component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
+            if not component:
+                self.logZ, self.logZstd = logZ, logZstd
+            elif self.pc_settings.do_clustering:
+                i = int(component)
+                self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
+        with warnings.catch_warnings():  # evidence too large (overflow)
+            warnings.simplefilter("ignore")
             self.log.debug(
-                "RAW log(Z) = %g +/- %g ; RAW Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
+                "RAW log(Z) = %g +/- %g ; "
+                "RAW Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
-            self._correct_unphysical_fraction()
-            if self.output:
-                out_evidences = {"logZ": self.logZ, "logZstd": self.logZstd}
-                if self.clusters is not None:
-                    out_evidences["clusters"] = {}
-                    for i in sorted(list(self.clusters)):
-                        out_evidences["clusters"][i] = {
-                            "logZ": self.clusters[i]["logZ"],
-                            "logZstd": self.clusters[i]["logZstd"],
-                        }
-                fname = os.path.join(self.output.folder,
-                                     self.output.prefix + Extension.evidence)
-                yaml_dump_file(fname, out_evidences, comment="log-evidence",
-                               error_if_exists=False)
-        # TODO: try to broadcast the collections
-        # if get_mpi():
-        #     bcast_from_0 = lambda attrname: setattr(self,
-        #         attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
-        #     map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
-        if is_main_process():
-            self.log.info("Finished! Raw PolyChord output stored in '%s', "
-                          "with prefix '%s'",
-                          self.pc_settings.base_dir, self.pc_settings.file_root)
+        self._correct_unphysical_fraction()
+        if self.output:
+            out_evidences = {"logZ": self.logZ, "logZstd": self.logZstd}
+            if self.clusters is not None:
+                out_evidences["clusters"] = {}
+                for i in sorted(list(self.clusters)):
+                    out_evidences["clusters"][i] = {
+                        "logZ": self.clusters[i]["logZ"],
+                        "logZstd": self.clusters[i]["logZstd"],
+                    }
+            fname = os.path.join(self.output.folder,
+                                 self.output.prefix + Extension.evidence)
+            yaml_dump_file(fname, out_evidences, comment="log-evidence",
+                           error_if_exists=False)
+        self.log.info("Finished! Raw PolyChord output stored in '%s', "
+                      "with prefix '%s'",
+                      self.pc_settings.base_dir, self.pc_settings.file_root)
+        with warnings.catch_warnings():  # evidence too large (overflow)
+            warnings.simplefilter("ignore")
             self.log.info(
                 "log(Z) = %g +/- %g ; Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
 
-    def products(
+    def samples(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> Union[SampleCollection, "MCSamples"]:
+        """
+        Returns the sample of the posterior built out of dead points.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` returns the same, single posterior for all processes. Otherwise,
+            it is only returned for the root process (this behaviour is kept for
+            compatibility with the equivalent function for MCMC).
+        skip_samples: int or float, default: 0
+            No effect (skipping initial samples from a sorted nested sampling sample would
+            bias it). Raises a warning if greater than 0.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples, for all MPI processes (``combined`` is ignored).
+
+        Returns
+        -------
+        SampleCollection, getdist.MCSamples
+           The posterior sample.
+        """
+        if skip_samples:
+            self.mpi_warning(
+                "Initial samples should not be skipped in nested sampling. "
+                "Ignoring 'skip_samples' keyword."
+            )
+        collection = self.collection
+        if not combined and not to_getdist:
+            return collection  # None for MPI ranks > 0
+        # In all remaining cases, we return the same for all ranks
+        if to_getdist:
+            if is_main_process():
+                collection = collection.to_getdist()
+        return share_mpi(collection)
+
+    def samples_clusters(
             self,
             to_getdist: bool = False,
-            **kwargs,
-    ) -> dict:
+    ) -> Union[None, Dict[int, Union[SampleCollection, "MCSamples"]]]:
+        """
+        Returns the samples corresponding to all clusters, if doing clustering, or
+        ``None`` otherwise.
+
+        Parameters
+        ----------
+        to_getdist: bool, default: False
+            If ``True``, returns the cluster samples as :class:`getdist.MCSamples`.
+
+        Returns
+        -------
+        None, Dict[int, SampleCollection], Dict[int, "MCSamples"]
+           The cluster posterior samples.
+        """
+        if not self.pc_settings.do_clustering:
+            return None
+        if not is_main_process():
+            return None
+        clusters: Dict[int, Union[SampleCollection, "MCSamples"]] = {}
+        for i, c in self.clusters.items():
+            if to_getdist:
+                try:
+                    clusters[i] = c["sample"].to_getdist()
+                except (ValueError, AttributeError):
+                    self.log.warning(
+                        "Cluster #%d could not be converted to a GetDist sample. "
+                        "Storing 'None'.", i)
+                    clusters[i] = None
+            else:
+                clusters[i] = c["sample"]
+        return clusters
+
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> Dict:
         """
         Returns the products of the sampling process.
 
         Parameters
         ----------
-        to_getdist: bool, default: True
-            If ``True``, returns sample collections as :class:'getdist.MCSamples`.
+        combined: bool, default: False
+            If ``True`` returns the same, single posterior for all processes. Otherwise,
+            it is only returned for the root process (this behaviour is kept for
+            compatibility with the equivalent function for MCMC).
+        skip_samples: int or float, default: 0
+            No effect (skipping initial samples from a sorted nested sampling sample would
+            bias it). Raises a warning if greater than 0.
+        to_getdist: bool, default: False
+            If ``True``, returns :class:`getdist.MCSamples` instances for the full
+            posterior sample and the clusters, for all MPI processes (``combined`` is
+            ignored).
 
-        Returns:
-           The sample ``SampleCollection`` containing the sequentially
-           discarded live points.
+        Returns
+        -------
+        dict
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sample"``, the log-evidence and its uncertainty
+            under ``logZ`` and ``logZstd`` respectively, and the same for the individual
+            clusters, if present, under the ``clusters`` key.
+
+        Notes
+        -----
+        If either ``combined`` or ``to_getdist`` are ``True``, the same products dict is
+        returned for all processes. Otherwise, ``None`` is returned for processes of rank
+        larger than 0.
         """
-        if kwargs.get("skip_samples"):
-            self.mpi_warning(
-                "Initial samples should not be skipped in nested sampling. Ignoring."
-            )
         if is_main_process():
-            collection = self.collection
-            if to_getdist:
-                collection = self.collection.to_getdist(model=self.model)
             products = {
-                "sample": collection, "logZ": self.logZ, "logZstd": self.logZstd}
+                "logZ": self.logZ,
+                "logZstd": self.logZstd,
+                "sample": self.samples(
+                    combined=combined, skip_samples=skip_samples, to_getdist=to_getdist),
+            }
             if self.pc_settings.do_clustering:
-                clusters = self.clusters
-                if to_getdist:
-                    for c in clusters.values():
-                        c["sample"] = c["sample"].to_getdist(model=self.model)
-                products.update({"clusters": clusters})
+                products["clusters"] = {i: {} for i in self.clusters}
+                for i, s in self.samples_clusters(to_getdist=to_getdist).items():
+                    products["clusters"][i]["logZ"] = self.clusters[i]["logZ"]
+                    products["clusters"][i]["logZstd"] = self.clusters[i]["logZstd"]
+                    products["clusters"][i]["sample"] = s
+        do_bcast = combined or to_getdist
+        if do_bcast:
+            return share_mpi(products)
+        if is_main_process():
             return products
         else:
             return {}

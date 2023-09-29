@@ -887,48 +887,46 @@ class MCMC(CovmatSampler):
         Parameters
         ----------
         combined: bool, default: False
-            If ``True`` and running more than one MPI process, returns a single sample
-            collection including all parallel chains concatenated, instead of the chain of
-            the current process only. For this to work, this method needs to be called
-            from all MPI processes simultaneously.
+            If ``True`` and running more than one MPI process, returns for all processes
+            a single sample collection including all parallel chains concatenated, instead
+            of the chain of the current process only. For this to work, this method needs
+            to be called from all MPI processes simultaneously.
         skip_samples: int or float, default: 0
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is
             applied before concatenation. Forces the return of a copy.
         to_getdist: bool, default: False
             If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
-            all samples (``combined`` is ignored).
+            all samples, for all MPI processes (``combined`` is ignored).
 
         Returns
         -------
         SampleCollection, getdist.MCSamples
             The sample of accepted steps.
         """
-        collection = self.collection.skip_samples(skip_samples, inplace=False)
-        if to_getdist or (combined and more_than_one_process()):
-            collections = mpi.gather(collection)
-        else:
-            collections = [collection]
-        if is_main_process():
-            if to_getdist:
-                collection = collections[0].to_getdist(combine_with=collections[1:])
-            elif len(collections) > 1:
-                if not skip_samples:
-                    self.mpi_warning(
-                        "When combining chains, it is recommended to remove some "
-                        "initial fraction, e.g. 'skip_samples=0.3'"
-                    )
-                for collection in collections[1:]:
-                    # pylint: disable=protected-access
-                    collections[0]._append(collection)
-                collection = collections[0]
-        collection = mpi.share_mpi(collection)
         if self.temperature != 1 and not to_getdist:
             self.mpi_warning(
                 "The MCMC chain(s) are stored with temperature != 1. "
                 "Keep that in mind when operating on them, or detemper (in-place) with "
                 "products()['sample'].reset_temperature()'.")
-        return collection
+        collection = self.collection.skip_samples(skip_samples, inplace=False)
+        if not (to_getdist or combined):
+            return collection
+        # In all the remaining cases, we'll concatenate the chains
+        if not skip_samples:
+            self.mpi_warning(
+                "When combining chains, it is recommended to remove some "
+                "initial fraction, e.g. 'skip_samples=0.3'"
+            )
+        collections = mpi.gather(collection)
+        if is_main_process():
+            if to_getdist:
+                collection = collections[0].to_getdist(combine_with=collections[1:])
+            else:
+                for collection in collections[1:]:
+                    collections[0]._append(collection)  # pylint: disable=protected-access
+                collection = collections[0]
+        return mpi.share_mpi(collection)
 
     def products(
             self,
