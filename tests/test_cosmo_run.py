@@ -146,7 +146,7 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
     samp_getdist2 = post_results_text.samples(to_getdist=True)
     assert np.isclose(samp2.mean('sigma8'), samp_getdist2.mean('sigma8'))
 
-    # from save info, no output
+    # from saved info, no output
     info_post['output'] = None
     output_info, post_results_from_saved = run(
         {'output': info['output'], 'post': info_post}, force=True)
