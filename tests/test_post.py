@@ -90,7 +90,7 @@ def test_post_prior(tmpdir, temperature):
     else:
         target_mean, target_cov = mpi.share()
     for pass_chains in [False, True]:
-        post(info_post, sample=sampler.samples() if pass_chains else None)
+        _, post_products = post(info_post, sample=sampler.samples() if pass_chains else None)
         # Load with GetDist and compare
         if mpi.is_main_process():
             mcsamples = load_samples(
