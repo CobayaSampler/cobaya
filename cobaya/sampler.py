@@ -151,7 +151,7 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
     sampler_name, sampler_class = get_sampler_name_and_class(
         updated_info_sampler, logger=logger_sampler)
     check_sampler_info(
-        (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
+        (output.get_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
@@ -296,7 +296,7 @@ class Sampler(CobayaComponent):
         for k, v in checkpoint_info["sampler"][self.get_name()].items():
             setattr(self, k, v)
         # check if convergence parameters changed, and if so converged=False
-        old_info = self.output.reload_updated_info(use_cache=True)
+        old_info = self.output.get_updated_info(use_cache=True)
         assert old_info
         if self.converge_info_changed(old_info["sampler"][self.get_name()],
                                       self._updated_info):

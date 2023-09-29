@@ -183,7 +183,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # 1. Load existing sample
     output_in = get_output(prefix=info.get("output"))
     if output_in:
-        info_in = output_in.load_updated_info() or update_info(info)
+        info_in = output_in.get_updated_info() or update_info(info)
     else:
         info_in = update_info(info)
     params_in: ExpandedParamsDict = info_in["params"]  # type: ignore

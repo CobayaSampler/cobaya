@@ -106,6 +106,8 @@ Both sample files and collections contain the following columns, in this order:
 .. autofunction:: output.get_info_path
 .. autofunction:: output.get_output
 
+.. autoclass:: output.OutputReadOnly
+   :members:
 .. autoclass:: output.Output
    :members:
 .. autoclass:: output.OutputDummy
