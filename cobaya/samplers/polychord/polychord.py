@@ -160,23 +160,6 @@ class polychord(Sampler):
         self.pc_settings = settings.PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
-        # prior conversion from the hypercube
-        bounds = self.model.prior.bounds(
-            confidence_for_unbounded=self.confidence_for_unbounded)
-        # Check if priors are bounded (nan's to inf)
-        inf = np.where(np.isinf(bounds))
-        if len(inf[0]):
-            params_names = list(self.model.parameterization.sampled_params())
-            params = [params_names[i] for i in sorted(set(inf[0]))]
-            raise LoggedError(
-                self.log, "PolyChord needs bounded priors, but the parameter(s) '"
-                          "', '".join(params) + "' is(are) unbounded.")
-        locs = bounds[:, 0]
-        scales = bounds[:, 1] - bounds[:, 0]
-        # This function re-scales the parameters AND puts them in the right order
-        self.pc_prior = lambda x: (locs + np.array(x)[self.ordering] * scales).tolist()
-        # We will need the volume of the prior domain, since PolyChord divides by it
-        self.logvolume = np.log(np.prod(scales))
         # Prepare callback function
         if self.callback_function is not None:
             self.callback_function_callable = (
@@ -240,10 +223,8 @@ class polychord(Sampler):
         Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
         """
 
-        # Prepare the posterior
-        # Don't forget to multiply by the volume of the physical hypercube,
-        # since PolyChord divides by it
-        def logpost(params_values):
+        # Prepare the polychord likelihood
+        def loglikelihood(params_values):
             result = self.model.logposterior(params_values)
             loglikes = result.loglikes
             if len(loglikes) != self.n_likes:
@@ -252,13 +233,20 @@ class polychord(Sampler):
             if len(derived) != self.n_derived:
                 derived = np.full(self.n_derived, np.nan)
             derived = list(derived) + list(result.logpriors) + list(loglikes)
-            return (max(result.logpost + self.logvolume, self.pc_settings.logzero),
-                    derived)
+            return max(loglikes.sum(), self.pc_settings.logzero), derived
 
+        def prior(cube):
+            theta = np.empty_like(cube)
+            for i, xi in enumerate(np.array(cube)[self.ordering]):
+                theta[i] = self.model.prior.pdf[i].ppf(xi)
+            return theta
+
+        if is_main_process():
+            self.dump_paramnames(self.raw_prefix)
         sync_processes()
         self.mpi_info("Calling PolyChord...")
-        self.pc.run_polychord(logpost, self.nDims, self.nDerived, self.pc_settings,
-                              self.pc_prior, self.dumper)
+        self.pc.run_polychord(loglikelihood, self.nDims, self.nDerived, self.pc_settings,
+                              prior, self.dumper)
         self.process_raw_output()
 
     @property
