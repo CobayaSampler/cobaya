@@ -1,5 +1,9 @@
 ## 3.X.Y – YYYY-MM-DD
 
+### General
+
+- Improved `.products()` method for samplers (MCMC and PolyChord) and post-processing: samples can now retrieved simultaneously for all MPI processes, and converted to GetDist. Also added `.samples()` methods to retrieve just the samples.
+
 ### Cosmology
 
 #### CLASS

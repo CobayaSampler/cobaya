@@ -21,7 +21,7 @@ from cobaya.log import logger_setup, is_debug, get_logger, LoggedError
 from cobaya.yaml import yaml_dump
 from cobaya.input import update_info, load_info_overrides
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
-from cobaya.post import post, PostResultDict
+from cobaya.post import post, PostResult
 from cobaya import mpi
 
 
@@ -30,11 +30,11 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         output: Union[str, LiteralFalse, None] = None,
         debug: Union[bool, int, None] = None,
         stop_at_error: Optional[bool] = None,
-        resume: bool = None, force: bool = None,
+        resume: Optional[bool] = None, force: Optional[bool] = None,
         minimize: Optional[bool] = None,
-        no_mpi: bool = False, test: bool = None,
+        no_mpi: bool = False, test: Optional[bool] = None,
         override: Optional[InputDict] = None,
-        ) -> Tuple[InputDict, Union[Sampler, PostResultDict]]:
+        ) -> Tuple[InputDict, Union[Sampler, PostResult]]:
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
@@ -91,10 +91,10 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 if which_sampler.lower() != "minimize":
                     info["sampler"] = {"minimize": None}
                     which_sampler = "minimize"
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as excpt:
             raise LoggedError(
                 logger_run, "You need to specify a sampler using the 'sampler' key "
-                            "as e.g. `sampler: {mcmc: None}.`")
+                            "as e.g. `sampler: {mcmc: None}.`") from excpt
         infix = "minimize" if which_sampler == "minimize" else None
         with get_output(prefix=info.get("output"), resume=info.get("resume"),
                         force=info.get("force"), infix=infix) as out:
@@ -117,8 +117,8 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             try:
                 last_sampler = list(updated_info["sampler"])[-1]
                 last_sampler_info = {last_sampler: updated_info["sampler"][last_sampler]}
-            except (KeyError, TypeError):
-                raise LoggedError(logger_run, "No sampler requested.")
+            except (KeyError, TypeError) as excpt:
+                raise LoggedError(logger_run, "No sampler requested.") from excpt
             sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
             check_sampler_info(
                 (out.get_updated_info(use_cache=True) or {}).get("sampler"),
@@ -160,7 +160,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 def run_script(args=None):
     """Shell script wrapper for :func:`run.run` (including :func:`post.post`)"""
     warn_deprecation()
-    import argparse
+    import argparse  # pylint: disable=import-outside-toplevel
     # kwargs for flags that should be True|None, instead of True|False
     # (needed in order not to mistakenly override input file inside the run() function
     trueNone_kwargs = {"action": "store_true", "default": None}

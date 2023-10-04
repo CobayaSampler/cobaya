@@ -90,7 +90,8 @@ def test_post_prior(tmpdir, temperature):
     else:
         target_mean, target_cov = mpi.share()
     for pass_chains in [False, True]:
-        _, post_products = post(info_post, sample=sampler.samples() if pass_chains else None)
+        _, post_products = post(
+            info_post, sample=sampler.samples() if pass_chains else None)
         # Load with GetDist and compare
         if mpi.is_main_process():
             mcsamples = load_samples(
@@ -161,11 +162,11 @@ def test_post_likelihood():
             new_mean, new_cov = mpi.share()
         assert np.allclose(new_mean, target_mean)
         assert np.allclose(new_cov, target_cov)
-        assert allclose(products_post.samples()["chi2__A"],
-                        products_post.samples()["chi2__target"])
-        assert allclose(products_post.samples()["chi2__BB"],
-                        products_post.samples()["chi2__dummy"] +
-                        products_post.samples()["chi2__dummy_add"])
+        assert allclose(products_post.samples(combined=True)["chi2__A"],
+                        products_post.samples(combined=True)["chi2__target"])
+        assert allclose(products_post.samples(combined=True)["chi2__BB"],
+                        products_post.samples(combined=True)["chi2__dummy"] +
+                        products_post.samples(combined=True)["chi2__dummy_add"])
     finally:
         OutputOptions.output_inteveral_s = orig_interval
 
@@ -196,18 +197,22 @@ def test_post_params(tmpdir):
     info_post.update(updated_info_gaussian)
     _, products = post(info_post, sampler_gaussian.products()["sample"])
     # Compare parameters
-    assert allclose(products.samples()["a"] - products.samples()["b"],
-                    products.samples()["a_minus_b"])
-    assert np.allclose(products.samples()["cprime"].to_numpy(dtype=np.float64),
-                       info_post["post"]["add"]["params"]["c"])
-    assert allclose(products.samples()["my_chi2__target"],
-                    products.samples()["chi2__target"])
+    assert allclose(products.samples(combined=True)["a"] -
+                    products.samples(combined=True)["b"],
+                    products.samples(combined=True)["a_minus_b"])
+    assert np.allclose(
+        products.samples(combined=True)["cprime"].to_numpy(dtype=np.float64),
+        info_post["post"]["add"]["params"]["c"]
+    )
+    assert allclose(products.samples(combined=True)["my_chi2__target"],
+                    products.samples(combined=True)["chi2__target"])
     # Same, but with loaded samples
     loaded_samples = load_samples(
         info_post["output"] + ".post." + info_post["post"]["suffix"], combined=True)
-    assert allclose(products.samples()["a"] - products.samples()["b"],
+    assert allclose(products.samples(combined=True)["a"] -
+                    products.samples(combined=True)["b"],
                     loaded_samples["a_minus_b"])
     assert np.allclose(loaded_samples["cprime"].to_numpy(dtype=np.float64),
                        info_post["post"]["add"]["params"]["c"])
     assert allclose(loaded_samples["my_chi2__target"],
-                    products.samples()["chi2__target"])
+                    products.samples(combined=True)["chi2__target"])

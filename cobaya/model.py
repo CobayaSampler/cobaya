@@ -21,7 +21,7 @@ from cobaya.conventions import overhead_time, get_chi2_name, \
 from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
 from cobaya.input import update_info, load_info_overrides
-from cobaya.parameterization import Parameterization, get_literal_param_ranges
+from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
     is_LikelihoodInterface

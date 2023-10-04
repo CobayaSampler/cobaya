@@ -63,9 +63,9 @@ class PostResult():
         ----------
         combined: bool, default: False
             If ``True`` and running more than one MPI process, returns for all processes
-            a single sample collection including, all parallel chains concatenated, instead
-            of the chain of the current process only. For this to work, this method needs
-            to be called from all MPI processes simultaneously.
+            a single sample collection including, all parallel chains concatenated,
+            instead of the chain of the current process only. For this to work, this
+            method needs to be called from all MPI processes simultaneously.
         skip_samples: int or float, default: 0
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is
@@ -85,6 +85,8 @@ class PostResult():
         if not isinstance(collections, list):
             collections = [collections]
         collections = [c.skip_samples(skip_samples, inplace=False) for c in collections]
+        if not (to_getdist or combined):
+            return collections
         # In all the remaining cases, we'll concatenate the chains
         collection = None
         all_collections = mpi.gather(collections)
@@ -133,15 +135,17 @@ class PostResult():
             A dictionary containing the :class:`cobaya.collection.SampleCollection` of
             accepted steps under ``"sample"``, and stats about the post-processing.
         """
-        products = {
+        products_dict: PostResultDict = {
             "sample": self.samples(
                 combined=combined,
                 skip_samples=skip_samples,
                 to_getdist=to_getdist
-            )
+            ),
+            "stats": self.results["stats"],
+            "logpost_weight_offset": self.results["logpost_weight_offset"],
+            "weights": self.results["weights"],
         }
-        products.update({k: v for k, v in self.results.items() if k != "sample"})
-        return products
+        return products_dict
 
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
@@ -214,7 +218,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if skip:
                 collection = collection.skip_samples(skip)
             if thin != 1:
-                collection = collection.thin_samples(thin)
+                collection = collection.thin_samples(thin or 0)
             in_collections[i] = collection
     elif output_in:
         files = output_in.find_collections()
@@ -342,8 +346,10 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
-        if (is_derived_param(pinfo) and "value" not in pinfo
-                and p not in add_params):
+        if (
+            is_derived_param(pinfo) and "value" not in pinfo and
+            p not in add_params
+        ):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
@@ -356,10 +362,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 out_combined[kind].pop(remove_item, None)
                 if remove_item not in (add.get(kind) or []) and kind != "theory":
                     warn_remove = True
-            except ValueError:
+            except ValueError as excpt:
                 raise LoggedError(
-                    log, "Trying to remove %s '%s', but it is not present. "
-                         "Existing ones: %r", kind, remove_item, list(out_combined[kind]))
+                    log,
+                    "Trying to remove %s '%s', but it is not present. Existing ones: %r",
+                    kind, remove_item, list(out_combined[kind]),
+                ) from excpt
         if kind != "theory" and kind in add:
             dups = set(add.get(kind) or []).intersection(out_combined[kind]) - {"one"}
             if dups:
@@ -464,8 +472,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                "values: %s", missing_params)
 
     missing_priors = set(name for name in collection_out.minuslogprior_names if
-                         name not in mlprior_names_add
-                         and name not in collection_in.columns)
+                         name not in mlprior_names_add and
+                         name not in collection_in.columns)
     if _minuslogprior_1d_name in missing_priors:
         prior_recompute_1d = True
     if prior_recompute_1d:
@@ -555,6 +563,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if -np.inf in logpriors_new:
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
+            # pylint: disable=protected-access
             loglikes_add, output_derived = model_add._loglikes_input_params(
                 all_params, return_output_params=True, as_dict=True)
             loglikes_add = {get_chi2_name(name): loglikes_add[name] for name in
@@ -597,8 +606,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
             if difflogmax is not None:
                 logpost_new = sum(logpriors_new) + sum(loglikes_new)
-                importance_weight = np.exp(logpost_new + point.get(OutPar.minuslogpost)
-                                           - difflogmax)
+                importance_weight = np.exp(
+                    logpost_new + point.get(OutPar.minuslogpost) - difflogmax)
                 weight = weight * importance_weight
                 importance_weights.append(importance_weight)
                 if time.time() - last_dump_time > OutputOptions.output_inteveral_s:
