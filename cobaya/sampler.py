@@ -45,14 +45,14 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 """
 # Global
 import os
-import numpy as np
-from typing import Optional, Sequence, Mapping, Union
 from itertools import chain
+from typing import Optional, Sequence, Mapping, Union, Dict, TYPE_CHECKING
+import numpy as np
 from numpy.random import SeedSequence, default_rng
 
 # Local
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.typing import InfoDict, SamplersDict, SamplerDict
+from cobaya.typing import SamplersDict, SamplerDict
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update, \
     str_to_list
 from cobaya.model import Model
@@ -62,6 +62,11 @@ from cobaya.component import CobayaComponent, get_component_class
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy, Output
 from cobaya import mpi
+
+# Avoid importing GetDist if not necessary
+if TYPE_CHECKING:
+    from cobaya.collection import SampleCollection
+    from getdist import MCSamples
 
 
 def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):
@@ -80,9 +85,10 @@ def check_sane_info_sampler(info_sampler: SamplersDict):
         raise LoggedError(__name__, "No sampler given!")
     try:
         list(info_sampler)[0]
-    except AttributeError:
+    except AttributeError as excpt:
         raise LoggedError(
-            __name__, "The sampler block must be a dictionary 'sampler: {options}'.")
+            __name__, "The sampler block must be a dictionary 'sampler: {options}'."
+        ) from excpt
     if len(info_sampler) > 1:
         raise LoggedError(__name__, "Only one sampler currently supported at a time.")
 
@@ -189,7 +195,6 @@ class Sampler(CobayaComponent):
         The prior and likelihood are also accessible through the attributes with the same
         names.
         """
-        pass
 
     def run(self):
         """
@@ -202,9 +207,15 @@ class Sampler(CobayaComponent):
                [do one more step]
                [update the collection of samples]
         """
-        pass
 
-    def products(self) -> InfoDict:
+    def samples(self, **kwargs) -> Union["SampleCollection", "MCSamples"]:
+        """
+        Returns the products expected in a scripted call of cobaya,
+        (e.g. a collection of samples or a list of them).
+        """
+        return {}
+
+    def products(self, **kwargs) -> Dict:
         """
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
@@ -405,6 +416,7 @@ class CovmatSampler(Sampler):
     """
     Parent class for samplers that are initialised with a covariance matrix.
     """
+
     covmat_params: Sequence[str]
     # Amount by which to shrink covmat diagonals when set from priors or reference.
     fallback_covmat_scale: float = 4
@@ -463,12 +475,20 @@ class CovmatSampler(Sampler):
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
-                self.log.debug(f"Loaded a covariance matrix from '{self.covmat}'")
-            except TypeError:
-                raise LoggedError(self.log, "The property 'covmat' must be a file name,"
-                                            "but it's '%s'.", str(self.covmat))
-            except IOError:
-                raise LoggedError(self.log, "Can't open covmat file '%s'.", self.covmat)
+                self.log.debug("Loaded a covariance matrix from '%r'", self.covmat)
+            except TypeError as texcpt:
+                raise LoggedError(
+                    self.log,
+                    "The property 'covmat' must be a file name,"
+                    "but it's '%s'.",
+                    str(self.covmat),
+                ) from texcpt
+            except IOError as ioexcpt:
+                raise LoggedError(
+                    self.log,
+                    "Can't open covmat file '%s'.",
+                    self.covmat,
+                ) from ioexcpt
             if header[0] != "#":
                 raise LoggedError(
                     self.log, "The first line of the covmat file '%s' "

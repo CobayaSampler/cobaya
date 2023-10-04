@@ -441,7 +441,7 @@ class Output(HasLogger, OutputReadOnly):
                              "want to ensure that you receive a cached version, call the "
                              "new method ``get_updated_info(use_cache=True)`.")
             # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            return self.get_update_info(use_cache=kwargs["use_cache"])
+            return self.get_updated_info(use_cache=kwargs["use_cache"])
         # END OF DEPRECATION BLOCK
         loaded = None
         if mpi.is_main_process():
@@ -613,7 +613,8 @@ class Output(HasLogger, OutputReadOnly):
         except IsADirectoryError:
             try:
                 shutil.rmtree(filename)
-            except:
+            except Exception:
+                self.log.debug("Tried and failed to delete folder %r", filename)
                 raise
         except OSError:
             pass

@@ -152,8 +152,15 @@ class BaseCollection(HasLogger):
         self._cached_labels.update(minuslogprior_labels(model.prior))
         self._cached_labels.update(chi2_labels(model.likelihood))
         self._cached_renames = deepcopy(model.parameterization.sampled_params_renames())
+        # For unbound sampled params only, we take the most permissive bounds between
+        # a 5-sigma prior interval and the samples extrema (with some enlargement factor)
         self._cached_ranges = get_literal_param_ranges(
-            model.parameterization, confidence_for_unbounded=0.9999995)  # 5 sigmas
+            model.parameterization, confidence_for_unbounded=1)
+        self._cached_ranges_sampled_5sigma = {
+            p: bounds for p, bounds in get_literal_param_ranges(
+                model.parameterization, confidence_for_unbounded=0.9999995).items()
+            if p in self.sampled_params
+        }
 
 
 def ensure_cache_dumped(method):
@@ -548,11 +555,11 @@ class SampleCollection(BaseCollection):
         if self.temperature == 1:
             return self._data[OutPar.weight].to_numpy(dtype=np.float64)
         return (
-                self._data[OutPar.weight].to_numpy(dtype=np.float64) *
-                detempering_weights_factor(
-                    -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
-                    self.temperature
-                )
+            self._data[OutPar.weight].to_numpy(dtype=np.float64) *
+            detempering_weights_factor(
+                -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
+                self.temperature
+            )
         )
 
     def _detempered_minuslogpost(self):
@@ -998,6 +1005,27 @@ class SampleCollection(BaseCollection):
             samples.append(c[c.data.columns[2:]].to_numpy(np.float64, copy=True))
             weights.append(c[OutPar.weight].to_numpy(np.float64, copy=True))
             loglikes.append(c[OutPar.minuslogpost].to_numpy(np.float64, copy=True))
+        # Ranges (unbounded sampled params are updated with extrema, see comment above)
+        min_samples, max_samples = (
+            self.data.min(axis=0, skipna=True).to_dict(),
+            self.data.max(axis=0, skipna=True).to_dict(),
+        )
+        enlarge_factor = 0.1
+        ranges = {}
+        for p, p_range in self._cached_ranges.items():
+            ranges[p] = list(p_range)
+            if p in self.sampled_params:
+                range_from_sample = max_samples[p] - min_samples[p]
+                if p_range[0] is None:
+                    ranges[p][0] = min(
+                        self._cached_ranges_sampled_5sigma[p][0],
+                        min_samples[p] - enlarge_factor * range_from_sample,
+                    )
+                if p_range[1] is None:
+                    ranges[p][1] = max(
+                        self._cached_ranges_sampled_5sigma[p][1],
+                        max_samples[p] + enlarge_factor * range_from_sample,
+                    )
         return MCSamples(
             samples=samples,
             weights=weights,
@@ -1007,7 +1035,7 @@ class SampleCollection(BaseCollection):
             names=list(used_names_dict.values()),
             labels=[deepcopy(self._cached_labels[p]) for p in used_names_dict
                     if p in self._cached_labels],
-            ranges=deepcopy(self._cached_ranges),
+            ranges=ranges,
             renames=deepcopy(self._cached_renames),
             name_tag=label,
             label=deepcopy(self.name),
@@ -1168,7 +1196,7 @@ class OnePoint(SampleCollection):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         try:
             return self.data.values[0,
-            [self.data.columns.get_loc(c) for c in columns]]
+                                    [self.data.columns.get_loc(c) for c in columns]]
         except KeyError as excpt:
             raise ValueError("Some of the indices are not valid columns.") from excpt
 
