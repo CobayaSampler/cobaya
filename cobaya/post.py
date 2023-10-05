@@ -9,7 +9,7 @@
 import os
 import time
 from itertools import chain
-from typing import List, Union, Optional, Tuple, TypedDict
+from typing import List, Union, Optional, Tuple, TypedDict, TYPE_CHECKING
 import numpy as np
 
 from cobaya import mpi
@@ -30,12 +30,122 @@ from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
     PostDict
 
+if TYPE_CHECKING:
+    from getdist import MCSamples
+
 
 class PostResultDict(TypedDict):
-    sample: Union[SampleCollection, List[SampleCollection]]
+    sample: Union[SampleCollection, List[SampleCollection], "MCSamples"]
     stats: ParamValuesDict
     logpost_weight_offset: float
     weights: Union[np.ndarray, List[np.ndarray]]
+
+
+class PostResult:
+
+    def __init__(self, post_results: PostResultDict):
+        self.results = post_results
+
+    # For backwards compatibility
+    def __getitem__(self, key):
+        return self.results[key]
+
+    # For compatibility with Sampler, when returned by run()
+    def samples(self,
+                combined: bool = False,
+                skip_samples: float = 0,
+                to_getdist: bool = False,
+                ) -> Union[SampleCollection, List[SampleCollection], "MCSamples"]:
+        """
+        Returns the post-processed sample.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, returns for all processes
+            a single sample collection including, all parallel chains concatenated,
+            instead of the chain of the current process only. For this to work, this
+            method needs to be called from all MPI processes simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied before concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples (``combined`` is ignored).
+
+        Returns
+        -------
+        SampleCollection, List[SampleCollection], getdist.MCSamples
+            The post-processed samples.
+        """
+        # Difference with MCMC: self.results["sample"] may contain one collection or a
+        # list of them pre-process
+        collections = self.results["sample"]
+        if not isinstance(collections, list):
+            collections = [collections]
+        collections = [c.skip_samples(skip_samples, inplace=False) for c in collections]
+        if not (to_getdist or combined):
+            return collections
+        # In all the remaining cases, we'll concatenate the chains
+        collection = None
+        all_collections = mpi.gather(collections)
+        if mpi.is_main_process():
+            all_collections = list(chain(*all_collections))
+            if to_getdist:
+                collection = all_collections[0].to_getdist(
+                    combine_with=all_collections[1:])
+            else:
+                if len(all_collections) > 1:
+                    for collection in all_collections[1:]:
+                        # pylint: disable=protected-access
+                        all_collections[0]._append(collection)
+                collection = all_collections[0]
+        return mpi.share_mpi(collection)
+
+    # For compatibility with Sampler, when returned by run()
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> PostResultDict:
+        """
+        Returns the products of post-processing.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied previously to concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples (``combined`` is ignored).
+
+        Returns
+        -------
+        PostResultDict
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sample"``, and stats about the post-processing.
+        """
+        products_dict: PostResultDict = {
+            "sample": self.samples(
+                combined=combined,
+                skip_samples=skip_samples,
+                to_getdist=to_getdist
+            ),
+            "stats": self.results["stats"],
+            "logpost_weight_offset": self.results["logpost_weight_offset"],
+            "weights": self.results["weights"],
+        }
+        return products_dict
 
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
@@ -59,7 +169,7 @@ def value_or_list(lst: list):
 @mpi.sync_state
 def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
          sample: Union[SampleCollection, List[SampleCollection], None] = None
-         ) -> Tuple[InputDict, PostResultDict]:
+         ) -> Tuple[InputDict, PostResult]:
     info = load_input_dict(info_or_yaml_or_file)
     # MARKED FOR DEPRECATION IN v3.2
     if info.get("debug_file"):  # type: ignore
@@ -82,7 +192,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # 1. Load existing sample
     output_in = get_output(prefix=info.get("output"))
     if output_in:
-        info_in = output_in.load_updated_info() or update_info(info)
+        info_in = output_in.get_updated_info() or update_info(info)
     else:
         info_in = update_info(info)
     params_in: ExpandedParamsDict = info_in["params"]  # type: ignore
@@ -108,7 +218,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if skip:
                 collection = collection.skip_samples(skip)
             if thin != 1:
-                collection = collection.thin_samples(thin)
+                collection = collection.thin_samples(thin or 0)
             in_collections[i] = collection
     elif output_in:
         files = output_in.find_collections()
@@ -236,8 +346,10 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
-        if (is_derived_param(pinfo) and "value" not in pinfo
-                and p not in add_params):
+        if (
+            is_derived_param(pinfo) and "value" not in pinfo and
+            p not in add_params
+        ):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
@@ -250,10 +362,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 out_combined[kind].pop(remove_item, None)
                 if remove_item not in (add.get(kind) or []) and kind != "theory":
                     warn_remove = True
-            except ValueError:
+            except ValueError as excpt:
                 raise LoggedError(
-                    log, "Trying to remove %s '%s', but it is not present. "
-                         "Existing ones: %r", kind, remove_item, list(out_combined[kind]))
+                    log,
+                    "Trying to remove %s '%s', but it is not present. Existing ones: %r",
+                    kind, remove_item, list(out_combined[kind]),
+                ) from excpt
         if kind != "theory" and kind in add:
             dups = set(add.get(kind) or []).intersection(out_combined[kind]) - {"one"}
             if dups:
@@ -358,8 +472,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                "values: %s", missing_params)
 
     missing_priors = set(name for name in collection_out.minuslogprior_names if
-                         name not in mlprior_names_add
-                         and name not in collection_in.columns)
+                         name not in mlprior_names_add and
+                         name not in collection_in.columns)
     if _minuslogprior_1d_name in missing_priors:
         prior_recompute_1d = True
     if prior_recompute_1d:
@@ -449,6 +563,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if -np.inf in logpriors_new:
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
+            # pylint: disable=protected-access
             loglikes_add, output_derived = model_add._loglikes_input_params(
                 all_params, return_output_params=True, as_dict=True)
             loglikes_add = {get_chi2_name(name): loglikes_add[name] for name in
@@ -491,8 +606,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
             if difflogmax is not None:
                 logpost_new = sum(logpriors_new) + sum(loglikes_new)
-                importance_weight = np.exp(logpost_new + point.get(OutPar.minuslogpost)
-                                           - difflogmax)
+                importance_weight = np.exp(
+                    logpost_new + point.get(OutPar.minuslogpost) - difflogmax)
                 weight = weight * importance_weight
                 importance_weights.append(importance_weight)
                 if time.time() - last_dump_time > OutputOptions.output_inteveral_s:
@@ -557,14 +672,16 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weights) ** 2 / sum(sum_w2s)))
-    products: PostResultDict = {"sample": value_or_list(out_collections),
-                                "stats": {'min_importance_weight': (min(min_weights) /
-                                                                    max(max_weights)),
-                                          'points_removed': sum(points_removed_s),
-                                          'tot_weight': sum(tot_weights),
-                                          'max_weight': max(max_output_weights),
-                                          'sum_w2': sum(sum_w2s),
-                                          'points': sum(points_s)},
-                                "logpost_weight_offset": difflogmax,
-                                "weights": value_or_list(weights)}
-    return out_combined, products
+    products_dict: PostResultDict = {
+        "sample": value_or_list(out_collections),
+        "stats": {'min_importance_weight': (min(min_weights) / max(max_weights)),
+                  'points_removed': sum(points_removed_s),
+                  'tot_weight': sum(tot_weights),
+                  'max_weight': max(max_output_weights),
+                  'sum_w2': sum(sum_w2s),
+                  'points': sum(points_s)
+                  },
+        "logpost_weight_offset": difflogmax,
+        "weights": value_or_list(weights)
+    }
+    return out_combined, PostResult(products_dict)

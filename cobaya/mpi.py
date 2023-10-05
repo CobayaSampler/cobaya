@@ -368,7 +368,7 @@ class ProcessState:
                 log.info('SET %s %s %s', self.name, self.tag, value)
             self.states[self._rank] = value
             for i_rank in self._others:
-                _mpi_comm.Isend(self.states[self._rank],
+                _mpi_comm.Isend(self.states[self._rank:self._rank + 1],
                                 dest=i_rank, tag=self.tag).Test()
             return True
         else:
@@ -415,7 +415,7 @@ class ProcessState:
 
     def all_ready(self) -> bool:
         """
-        Test is all processes in READY state (and if they are reset to NONE).
+        Test if all processes in READY state (and if they are reset to NONE).
         """
         self.sync(check_error=True)
         all_ready = all(self.states == State.READY)

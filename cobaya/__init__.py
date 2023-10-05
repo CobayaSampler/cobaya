@@ -6,6 +6,7 @@ from cobaya.model import get_model
 from cobaya.typing import InputDict, PostDict
 from cobaya.log import LoggedError
 from cobaya.post import post
+from cobaya.output import load_samples
 
 
 if sys.version_info < (3, 8):

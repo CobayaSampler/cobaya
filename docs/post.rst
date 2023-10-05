@@ -67,9 +67,8 @@ Let us generate the initial sample:
 
 .. code:: python
 
-   from cobaya.run import run
+   from cobaya import run
    updinfo, sampler = run(gaussian_info)
-   results = sampler.products()
 
 And let us define the additions and run post-processing:
 
@@ -97,15 +96,14 @@ And let us define the additions and run post-processing:
    info_post.update(post_info)
 
    from cobaya.post import post
-   updinfo_post, results_post = post(info_post, results["sample"])
+   updinfo_post, results_post = post(info_post, sampler.samples())
 
    # Load with GetDist and plot
-   from getdist.mcsamples import MCSamplesFromCobaya
    import getdist.plots as gdplt
    # %matplotlib inline  # if on a jupyter notebook
 
-   gdsamples_gaussian = MCSamplesFromCobaya(updinfo, results["sample"])
-   gdsamples_post = MCSamplesFromCobaya(updinfo_post, results_post["sample"])
+   gdsamples_gaussian = sampler.samples(to_getdist=True)
+   gdsamples_post = results_post.samples(to_getdist=True)
 
    p = gdplt.get_single_plotter(width_inch=6)
    p.plot_2d([gdsamples_gaussian, gdsamples_post], ["x", "y"], filled=True)

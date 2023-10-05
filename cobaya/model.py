@@ -1313,7 +1313,7 @@ class Model(HasLogger):
 
 
 class DummyModel:
-    """Dummy class for loading chains for post processing."""
+    """Dummy class for loading chains (e.g. for post processing)."""
 
     def __init__(self, info_params, info_likelihood, info_prior=None):
         self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)

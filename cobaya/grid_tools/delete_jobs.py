@@ -1,5 +1,5 @@
 import subprocess
-from distutils import spawn
+import shutil
 from . import batchjob_args, jobqueue
 
 
@@ -52,7 +52,7 @@ def delete_jobs():
                   'if no batch directory')
         for engine in jobqueue.grid_engine_defaults:
             qdel = jobqueue.engine_default(engine, 'qdel')
-            if spawn.find_executable(qdel) is not None:
+            if shutil.which(qdel) is not None:
                 for jobId in ids:
                     subprocess.check_output(qdel + ' ' + str(jobId), shell=True)
                 break

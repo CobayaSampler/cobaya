@@ -151,7 +151,7 @@ Output:
 .. image:: img/example_quickstart_plot.png
    :align: center
 
-Alternatively, if we had chosen to write the output as in the shell case by adding an ``output`` prefix, we could have loaded the chain in GetDist from the hard drive:
+Alternatively, if we had chosen to write the output as in the shell case by adding an ``output`` prefix, we could have loaded the chain in GetDist format from the hard drive:
 
 .. literalinclude:: ./src_examples/quickstart/analyze_alt.py
    :language: python

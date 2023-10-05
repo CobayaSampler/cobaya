@@ -11,7 +11,7 @@ import os
 import functools
 import warnings
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple
+from typing import Union, Sequence, Optional, Tuple, List
 from numbers import Number
 import numpy as np
 import pandas as pd
@@ -21,9 +21,10 @@ from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
 # Local
 from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
     derived_par_name_separator, minuslogprior_labels, chi2_labels, minuslogpost_label
+from cobaya.parameterization import get_literal_param_ranges
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
-from cobaya.model import Model, LogPosterior, DummyModel
+from cobaya.model import Model, LogPosterior
 
 # Suppress getdist output
 chains.print_load_details = False
@@ -151,16 +152,15 @@ class BaseCollection(HasLogger):
         self._cached_labels.update(minuslogprior_labels(model.prior))
         self._cached_labels.update(chi2_labels(model.likelihood))
         self._cached_renames = deepcopy(model.parameterization.sampled_params_renames())
-        self._cached_ranges = None
-        if not isinstance(model, DummyModel):  # can happen during post-processing
-            self._cached_ranges = dict(zip(
-                self.sampled_params,
-                model.prior.bounds(confidence_for_unbounded=0.9999995)))  # 5 sigmas
-        for p, p_info in model.parameterization.derived_params_info().items():
-            mini, maxi = p_info.get("min", -np.inf), p_info.get("max", np.inf)
-            some_bound_specified = np.isfinite(mini) or np.isfinite(maxi)
-            if some_bound_specified:
-                self._cached_ranges[p] = [mini, maxi]
+        # For unbound sampled params only, we take the most permissive bounds between
+        # a 5-sigma prior interval and the samples extrema (with some enlargement factor)
+        self._cached_ranges = get_literal_param_ranges(
+            model.parameterization, confidence_for_unbounded=1)
+        self._cached_ranges_sampled_5sigma = {
+            p: bounds for p, bounds in get_literal_param_ranges(
+                model.parameterization, confidence_for_unbounded=0.9999995).items()
+            if p in self.sampled_params
+        }
 
 
 def ensure_cache_dumped(method):
@@ -555,11 +555,11 @@ class SampleCollection(BaseCollection):
         if self.temperature == 1:
             return self._data[OutPar.weight].to_numpy(dtype=np.float64)
         return (
-                self._data[OutPar.weight].to_numpy(dtype=np.float64) *
-                detempering_weights_factor(
-                    -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
-                    self.temperature
-                )
+            self._data[OutPar.weight].to_numpy(dtype=np.float64) *
+            detempering_weights_factor(
+                -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
+                self.temperature
+            )
         )
 
     def _detempered_minuslogpost(self):
@@ -835,7 +835,7 @@ class SampleCollection(BaseCollection):
         Parameters
         ----------
         skip: float
-            Specified the amount of initial samples to be skipped, either directly if
+            Specifies the amount of initial samples to be skipped, either directly if
             ``skip>1`` (rounded up to next integer), or as a fraction if ``0<skip<1``.
 
         inplace: bool, default: False
@@ -964,6 +964,7 @@ class SampleCollection(BaseCollection):
             self,
             label: Optional[str] = None,
             model: Optional[Model] = None,
+            combine_with: Optional[List["SampleCollection"]] = None,
     ) -> MCSamples:
         """
         Parameters
@@ -973,6 +974,9 @@ class SampleCollection(BaseCollection):
         model: :class:`cobaya.model.Model`, optional
             `Model` with which the sample was created. Needed only if parameter labels or
             aliases have changed since the collection was generated.
+        combine_with: list of :class:`cobaya.collection.SampleCollection`, optional
+            Additional collections to be added when creating a getdist object.
+            Compatibility between the collections is assumed and not checked.
 
         Returns
         -------
@@ -987,19 +991,51 @@ class SampleCollection(BaseCollection):
         if isinstance(model, Model):
             self._cache_aux_model_quantities(model)
         elif model is not None:
-            LoggedError("Optional argument `model` must be a Cobaya Model instance.")
+            raise LoggedError(
+                self.log,
+                "Optional argument `model` must be a Cobaya Model instance."
+            )
         used_names_dict = {p: p + ("*" if p not in self.sampled_params else "")
                            for p in self.data.columns[2:]}
+        if combine_with is None:
+            combine_with = []
+        all_collections = [self] + list(combine_with)
+        samples, weights, loglikes = [], [], []
+        for c in all_collections:
+            samples.append(c[c.data.columns[2:]].to_numpy(np.float64, copy=True))
+            weights.append(c[OutPar.weight].to_numpy(np.float64, copy=True))
+            loglikes.append(c[OutPar.minuslogpost].to_numpy(np.float64, copy=True))
+        # Ranges (unbounded sampled params are updated with extrema, see comment above)
+        min_samples, max_samples = (
+            self.data.min(axis=0, skipna=True).to_dict(),
+            self.data.max(axis=0, skipna=True).to_dict(),
+        )
+        enlarge_factor = 0.1
+        ranges = {}
+        for p, p_range in self._cached_ranges.items():
+            ranges[p] = list(p_range)
+            if p in self.sampled_params:
+                range_from_sample = max_samples[p] - min_samples[p]
+                if p_range[0] is None:
+                    ranges[p][0] = min(
+                        self._cached_ranges_sampled_5sigma[p][0],
+                        min_samples[p] - enlarge_factor * range_from_sample,
+                    )
+                if p_range[1] is None:
+                    ranges[p][1] = max(
+                        self._cached_ranges_sampled_5sigma[p][1],
+                        max_samples[p] + enlarge_factor * range_from_sample,
+                    )
         return MCSamples(
-            samples=self[self.data.columns[2:]].to_numpy(np.float64, copy=True),
-            weights=self[OutPar.weight].to_numpy(np.float64, copy=True),
-            loglikes=self[OutPar.minuslogpost].to_numpy(np.float64, copy=True),
+            samples=samples,
+            weights=weights,
+            loglikes=loglikes,
             temperature=self.temperature,
             sampler=deepcopy(self.sample_type),
             names=list(used_names_dict.values()),
             labels=[deepcopy(self._cached_labels[p]) for p in used_names_dict
                     if p in self._cached_labels],
-            ranges=deepcopy(self._cached_ranges),
+            ranges=ranges,
             renames=deepcopy(self._cached_renames),
             name_tag=label,
             label=deepcopy(self.name),
@@ -1160,7 +1196,7 @@ class OnePoint(SampleCollection):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         try:
             return self.data.values[0,
-            [self.data.columns.get_loc(c) for c in columns]]
+                                    [self.data.columns.get_loc(c) for c in columns]]
         except KeyError as excpt:
             raise ValueError("Some of the indices are not valid columns.") from excpt
 
