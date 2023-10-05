@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 class PostResultDict(TypedDict):
-    sample: Union[SampleCollection, List[SampleCollection]]
+    sample: Union[SampleCollection, List[SampleCollection], "MCSamples"]
     stats: ParamValuesDict
     logpost_weight_offset: float
     weights: Union[np.ndarray, List[np.ndarray]]
