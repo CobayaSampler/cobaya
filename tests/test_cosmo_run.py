@@ -167,7 +167,7 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
                                              'post': info_revert}, force=True)
     samp_revert = post_products_revert.samples(to_getdist=True)
 
-    samp_thin = sampler_init.products(skip_samples=0.2, to_getdist=True)["sample"]
+    samp_thin = sampler_init.samples(skip_samples=0.2, to_getdist=True)
     samp_thin.weighted_thin(4)
     assert samp_thin.numrows == samp_revert.numrows + \
         post_products_revert["stats"]["points_removed"]
