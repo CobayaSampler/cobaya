@@ -13,7 +13,7 @@ import platform
 from copy import deepcopy
 from itertools import chain
 from functools import reduce
-from typing import Mapping, Union, Optional, TypeVar, Callable, Dict, List
+from typing import Mapping, Union, Optional, TypeVar, Callable, Dict, List, Sized
 from collections import defaultdict
 
 # Local
@@ -563,10 +563,20 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     for j in ignore_k_this:
                         block1[k].pop(j, None)
                         block2[k].pop(j, None)
+            if not strict:
+                # For Mapping values, homogenize to None empty lists, sets, maps, etc.
+                # e.g. {value: {}} should be equal to {value: None}
+                for value in [block1[k], block2[k]]:
+                    if isinstance(value, Mapping):
+                        for kk in value:
+                            if isinstance(value[kk], Sized) and len(value[kk]) == 0:
+                                value[kk] = None
             if block1[k] != block2[k]:
                 # For clarity, pop common stuff before printing
-                to_pop = [j for j in block1[k] if (block1[k].get(j) == block2[k].get(j))]
-                [(block1[k].pop(j, None), block2[k].pop(j, None)) for j in to_pop]
+                to_pop = [j for j in block1[k] if block1[k].get(j) == block2[k].get(j)]
+                for j in to_pop:
+                    block1[k].pop(j, None)
+                    block2[k].pop(j, None)
                 myprint(
                     myname + ": different content of [%s:%s]" % (block_name, k) +
                     " -- (re-run with `debug: True` for more info)")
