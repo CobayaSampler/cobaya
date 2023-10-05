@@ -41,7 +41,7 @@ class PostResultDict(TypedDict):
     weights: Union[np.ndarray, List[np.ndarray]]
 
 
-class PostResult():
+class PostResult:
 
     def __init__(self, post_results: PostResultDict):
         self.results = post_results
@@ -55,7 +55,7 @@ class PostResult():
                 combined: bool = False,
                 skip_samples: float = 0,
                 to_getdist: bool = False,
-                ) -> Union[SampleCollection, "MCSamples"]:
+                ) -> Union[SampleCollection, List[SampleCollection], "MCSamples"]:
         """
         Returns the post-processed sample.
 
@@ -76,7 +76,7 @@ class PostResult():
 
         Returns
         -------
-        SampleCollection, getdist.MCSamples
+        SampleCollection, List[SampleCollection], getdist.MCSamples
             The post-processed samples.
         """
         # Difference with MCMC: self.results["sample"] may contain one collection or a

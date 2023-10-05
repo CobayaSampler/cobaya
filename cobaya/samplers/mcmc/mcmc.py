@@ -941,24 +941,25 @@ class MCMC(CovmatSampler):
         ----------
         combined: bool, default: False
             If ``True`` and running more than one MPI process, the ``sample`` key of the
-            returned dictionary contains a concatenated sample including all parallel
-            chains concatenated, instead of the chain of the current process only. For
-            this to work, this method needs to be called from all MPI processes
-            simultaneously.
+            returned dictionary contains a sample including all parallel chains
+            concatenated, instead of the chain of the current process only. For this to
+            work, this method needs to be called from all MPI processes simultaneously.
         skip_samples: int or float, default: 0
             Skips some amount of initial samples (if ``int``), or an initial fraction of
             them (if ``float < 1``). If concatenating (``combined=True``), skipping is
             applied previously to concatenation. Forces the return of a copy.
         to_getdist: bool, default: False
-            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
-            all samples (``combined`` is ignored).
+            If ``True``, the ``sample`` key of the returned dictionary contains a single
+            :class:`getdist.MCSamples` instance including all samples (``combined`` is
+            ignored).
 
         Returns
         -------
         dict
-            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
-            accepted steps under ``"sample"``, and a progress report table under
-            ``"progress"``.
+            A dictionary containing the sample of accepted steps under ``sample`` (as
+            :class:`cobaya.collection.SampleCollection` by default, or as
+            :class:`getdist.MCSamples` if ``to_getdist=True``), and a progress report
+            table under ``"progress"``.
         """
         products = {
             "sample": self.samples(
