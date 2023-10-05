@@ -445,7 +445,7 @@ class polychord(Sampler):
     def samples_clusters(
             self,
             to_getdist: bool = False,
-    ) -> Union[None, Dict[int, Union[SampleCollection, "MCSamples"]]]:
+    ) -> Union[None, Dict[int, Union[SampleCollection, "MCSamples", None]]]:
         """
         Returns the samples corresponding to all clusters, if doing clustering, or
         ``None`` otherwise.
@@ -457,7 +457,7 @@ class polychord(Sampler):
 
         Returns
         -------
-        None, Dict[int, SampleCollection], Dict[int, "MCSamples"]
+        None, Dict[int, Union[SampleCollection, MCSamples, None]]
            The cluster posterior samples.
         """
         if not self.pc_settings.do_clustering:
@@ -503,7 +503,7 @@ class polychord(Sampler):
 
         Returns
         -------
-        dict
+        dict, None
             A dictionary containing the :class:`cobaya.collection.SampleCollection` of
             accepted steps under ``"sample"``, the log-evidence and its uncertainty
             under ``logZ`` and ``logZstd`` respectively, and the same for the individual
@@ -515,6 +515,7 @@ class polychord(Sampler):
         returned for all processes. Otherwise, ``None`` is returned for processes of rank
         larger than 0.
         """
+        products = {}
         if is_main_process():
             products = {
                 "logZ": self.logZ,
@@ -531,10 +532,7 @@ class polychord(Sampler):
         do_bcast = combined or to_getdist
         if do_bcast:
             return share_mpi(products)
-        if is_main_process():
-            return products
-        else:
-            return {}
+        return products
 
     @classmethod
     def get_base_dir(cls, output):

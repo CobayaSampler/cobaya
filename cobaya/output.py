@@ -138,7 +138,7 @@ class FileLock:
         self.clear_lock()
 
 
-class OutputReadOnly():
+class OutputReadOnly:
     """
     A read-only output driver: it tracks naming of, and can load input and collection
     files. Contrary to :class:`output.Output`, this class is not MPI-aware, which makes it

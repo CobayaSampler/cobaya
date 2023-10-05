@@ -213,14 +213,12 @@ class Sampler(CobayaComponent):
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
-        return {}
 
     def products(self, **kwargs) -> Dict:
         """
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
-        return {}
 
     @property
     def random_state(self) -> np.random.Generator:
