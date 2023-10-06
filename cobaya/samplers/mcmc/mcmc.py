@@ -752,6 +752,7 @@ class MCMC(CovmatSampler):
         if converged_means:
             if more_than_one_process():
                 # pylint: disable=protected-access
+                # noinspection PyProtectedMember
                 mcsamples = self.collection._sampled_to_getdist(
                     first=use_first, tempered=True)
                 try:
@@ -768,9 +769,10 @@ class MCMC(CovmatSampler):
             else:
                 try:
                     mcsamples_list = [
-                        # pylint: disable=protected-access
+                        # noinspection PyProtectedMember
                         self.collection._sampled_to_getdist(
-                            first=i * cut, last=(i + 1) * cut - 1, tempered=True)
+                            first=i * cut, last=(i + 1) * cut - 1, tempered=True
+                        )  # pylint: disable=protected-access
                         for i in range(1, m)]
                 except always_stop_exceptions:
                     raise
@@ -924,6 +926,7 @@ class MCMC(CovmatSampler):
                 collection = collections[0].to_getdist(combine_with=collections[1:])
             else:
                 for collection in collections[1:]:
+                    # noinspection PyProtectedMember
                     collections[0]._append(collection)  # pylint: disable=protected-access
                 collection = collections[0]
         return mpi.share_mpi(collection)
@@ -961,15 +964,10 @@ class MCMC(CovmatSampler):
             :class:`getdist.MCSamples` if ``to_getdist=True``), and a progress report
             table under ``"progress"``.
         """
-        products = {
-            "sample": self.samples(
-                combined=combined,
-                skip_samples=skip_samples,
-                to_getdist=to_getdist
-            )
-        }
-        products["progress"] = share_mpi(getattr(self, "progress", None))
-        return products
+        return {"sample": self.samples(combined=combined,
+                                       skip_samples=skip_samples,
+                                       to_getdist=to_getdist),
+                "progress": share_mpi(getattr(self, "progress", None))}
 
     # Class methods
     @classmethod

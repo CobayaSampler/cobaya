@@ -195,7 +195,7 @@ class CMBlikes(DataSetLikelihood):
                 if self.pcl_lmin <= L <= self.pcl_lmax:
                     bins.binning_matrix[:, b, L - self.pcl_lmin] = window[i, 1:]
                 else:
-                    err = err or any(window[i, 1:] != 0)
+                    err = err or np.count_nonzero(window[i, 1:])
             if err:
                 self.log.warning('%s %u outside pcl_lmin-cl_max range: %s' %
                                  (file_stem, b, windows % (b + 1)))

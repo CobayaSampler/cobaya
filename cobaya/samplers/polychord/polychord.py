@@ -464,14 +464,14 @@ class polychord(Sampler):
             return None
         if not is_main_process():
             return None
-        clusters: Dict[int, Union[SampleCollection, "MCSamples"]] = {}
+        clusters: Dict[int, Union[SampleCollection, "MCSamples", None]] = {}
         for i, c in self.clusters.items():
             if to_getdist:
                 try:
                     clusters[i] = c["sample"].to_getdist()
                 except (ValueError, AttributeError):
                     self.log.warning(
-                        "Cluster #%d could not be converted to a GetDist sample. "
+                        "Cluster #%d could not be converted to a GetDist sample. "
                         "Storing 'None'.", i)
                     clusters[i] = None
             else:

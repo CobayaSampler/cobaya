@@ -131,7 +131,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # 4. Initialize the posterior and the sampler
             with Model(updated_info["params"], updated_info["likelihood"],
                        updated_info.get("prior"), updated_info.get("theory"),
-                       packages_path=info.get(packages_path_input),
+                       packages_path=info.get("packages_path"),
                        timing=updated_info.get("timing"),
                        allow_renames=False,
                        stop_at_error=info.get("stop_at_error", False)) as model:
@@ -140,7 +140,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
                 sampler = sampler_class(updated_info["sampler"][sampler_name],
                                         model, out, name=sampler_name,
-                                        packages_path=info.get(packages_path_input))
+                                        packages_path=info.get("packages_path"))
                 # Re-dump updated info, now also containing updates from the sampler
                 updated_info["sampler"][sampler_name] = \
                     recursive_update(updated_info["sampler"][sampler_name],

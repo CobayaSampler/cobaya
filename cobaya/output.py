@@ -330,6 +330,7 @@ class OutputReadOnly:
         if combined and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
+                # noinspection PyProtectedMember
                 collection._append(collection_i)  # pylint: disable=protected-access
             return collection
         return collections

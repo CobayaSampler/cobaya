@@ -15,8 +15,7 @@ import numpy as np
 from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
-    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names, \
-    packages_path_input
+    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
 from cobaya.model import Model, DummyModel
@@ -48,6 +47,7 @@ class PostResult:
 
     # For backwards compatibility
     def __getitem__(self, key):
+        # noinspection PyTypedDict
         return self.results[key]
 
     # For compatibility with Sampler, when returned by run()
@@ -99,6 +99,7 @@ class PostResult:
                 if len(all_collections) > 1:
                     for collection in all_collections[1:]:
                         # pylint: disable=protected-access
+                        # noinspection PyProtectedMember
                         all_collections[0]._append(collection)
                 collection = all_collections[0]
         return mpi.share_mpi(collection)
@@ -447,8 +448,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # TODO: check allow_renames=False?
     model_add = Model(out_params_with_computed, add["likelihood"],
                       info_prior=add.get("prior"), info_theory=out_combined["theory"],
-                      packages_path=(info_post.get(packages_path_input) or
-                                     info.get(packages_path_input)),
+                      packages_path=(info_post.get("packages_path") or
+                                     info.get("packages_path")),
                       allow_renames=False, post=True,
                       stop_at_error=info.get('stop_at_error', False),
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)
@@ -564,6 +565,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
             # pylint: disable=protected-access
+            # noinspection PyProtectedMember
             loglikes_add, output_derived = model_add._loglikes_input_params(
                 all_params, return_output_params=True, as_dict=True)
             loglikes_add = {get_chi2_name(name): loglikes_add[name] for name in
