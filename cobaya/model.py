@@ -338,7 +338,7 @@ class Model(HasLogger):
         return logprior
 
     def _loglikes_input_params(
-            self, input_params: Optional[Dict[str, float]] = None,
+            self, input_params: ParamValuesDict,
             return_derived: bool = True, return_output_params: bool = False,
             as_dict: bool = False, make_finite: bool = False, cached: bool = True
     ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],

@@ -677,7 +677,7 @@ class Prior(HasLogger):
         Whether there is a fixed reference point for all parameters, such that calls to
         :func:`Prior.reference` would always return the same.
         """
-        if not hasattr(self, "_ref_is_pointlike"):
+        if self._ref_is_pointlike is None:
             self._set_pointlike()
         return self._ref_is_pointlike
 
