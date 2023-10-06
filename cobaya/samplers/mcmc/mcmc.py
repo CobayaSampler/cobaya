@@ -690,7 +690,7 @@ class MCMC(CovmatSampler):
             acceptance_rate = (np.average(acceptance_rates, weights=Ns)
                                if acceptance_rates is not None else acceptance_rate)
             if self.oversample_thin > 1:
-                weights_multi_str = (" = avg(%r)" % list(1 / np.array(acceptance_rates))
+                weights_multi_str = (" = 1/avg(%r)" % list(acceptance_rates)
                                      if acceptance_rates is not None else "")
                 self.log.info(" - Average thinned weight: %.3f%s", 1 / acceptance_rate,
                               weights_multi_str)
