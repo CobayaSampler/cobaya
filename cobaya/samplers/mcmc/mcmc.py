@@ -696,9 +696,16 @@ class MCMC(CovmatSampler):
                 datetime.datetime.now().isoformat()
             acceptance_rate = (np.average(acceptance_rates, weights=Ns)
                                if acceptance_rates is not None else acceptance_rate)
-            accpt_multi_str = (" = avg(%r)" % list(acceptance_rates)
-                               if acceptance_rates is not None else "")
-            self.log.info(" - Acceptance rate: %.3f%s", acceptance_rate, accpt_multi_str)
+            if self.oversample_thin > 1:
+                weights_multi_str = (" = avg(%r)" % list(1 / np.array(acceptance_rates))
+                                     if acceptance_rates is not None else "")
+                self.log.info(" - Average thinned weight: %.3f%s", 1 / acceptance_rate,
+                              weights_multi_str)
+            else:
+                accpt_multi_str = (" = avg(%r)" % list(acceptance_rates)
+                                   if acceptance_rates is not None else "")
+                self.log.info(" - Acceptance rate: %.3f%s", acceptance_rate,
+                              accpt_multi_str)
             self.progress.at[self.i_learn, "acceptance_rate"] = acceptance_rate
             # "Within" or "W" term -- our "units" for assessing convergence
             # and our prospective new covariance matrix
