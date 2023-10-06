@@ -557,7 +557,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                                 k, kind=block_name, component_path=component_path,
                                 class_name=(block1[k] or {}).get("class"), logger=logger)
                             ignore_k_this.update(set(
-                                getattr(cls, "_at_resume_prefer_new", {})))
+                                getattr(cls, "_at_resume_prefer_new", [])))
                         except ImportError:
                             pass
                     # Pop ignored and kept options
@@ -601,7 +601,7 @@ def get_preferred_old_values(info_old):
                 cls = get_component_class(
                     k, kind=block_name, component_path=component_path,
                     class_name=(block[k] or {}).get("class"), logger=logger)
-                prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", {})
+                prefer_old_k_this = getattr(cls, "_at_resume_prefer_old", [])
                 if prefer_old_k_this:
                     if block_name not in keep_old:
                         keep_old[block_name] = {}

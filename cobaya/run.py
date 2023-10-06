@@ -120,7 +120,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             except (KeyError, TypeError) as excpt:
                 raise LoggedError(logger_run, "No sampler requested.") from excpt
             sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
-            check_sampler_info(
+            updated_info["sampler"] = check_sampler_info(
                 (out.get_updated_info(use_cache=True) or {}).get("sampler"),
                 updated_info["sampler"], is_resuming=out.is_resuming())
             # Dump again, now including sampler info
