@@ -418,7 +418,7 @@ class ProcessState:
         Test if all processes in READY state (and if they are reset to NONE).
         """
         self.sync(check_error=True)
-        all_ready = all(self.states == State.READY)
+        all_ready = np.all(self.states == State.READY)
         if all_ready:
             self.states[:] = State.NONE
         return all_ready
@@ -449,7 +449,7 @@ class ProcessState:
             self.set(State.END)
             self.wait_all_ended()
         set_current_process_state(self.last_process_state)
-        if not exc_type and any(self.states == State.ERROR):
+        if not exc_type and State.ERROR in self.states:
             self.fire_error()
 
 

@@ -17,6 +17,7 @@ from cobaya.run import run
 from cobaya.yaml import yaml_load
 from cobaya.tools import getfullargspec
 from cobaya.likelihood import Likelihood
+from cobaya.typing import InputDict
 from cobaya import mpi
 
 # Definition of external (log)pdfs
@@ -38,7 +39,7 @@ gaussian_func = lambda y: eval(gaussian_str)(y)
 assert gaussian_func(0.1) == stats.norm.logpdf(0.1, loc=0, scale=0.2)
 
 
-class HalfRing():
+class HalfRing:
 
     def __init__(self):
         self.logp_func = half_ring_func
@@ -80,7 +81,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         if os.path.exists(prefix):
             shutil.rmtree(prefix)
     # build updated info
-    info = {
+    info: InputDict = {
         "output": prefix,
         "params": {
             "x": {"prior": {"min": 0, "max": 1}, "proposal": 0.05},
@@ -195,6 +196,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
 
 def plot_sample(sample, params):
     import getdist.plots as gdplt
+    # noinspection PyProtectedMember
     gdsamples = sample._sampled_to_getdist()
     gdplot = gdplt.getSubplotPlotter()
     gdplot.triangle_plot(gdsamples, params, filled=True)

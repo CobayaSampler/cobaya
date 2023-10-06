@@ -1236,7 +1236,7 @@ class Model(HasLogger):
             raise LoggedError(
                 self.log, "Manual blocking: unknown parameters: %r", unknown)
         oversampling_factors = np.array(oversampling_factors)
-        if (oversampling_factors != np.sort(oversampling_factors)).all():
+        if np.all(oversampling_factors != np.sort(oversampling_factors)):
             self.log.warning(
                 "Manual blocking: speed-blocking *apparently* non-optimal: "
                 "oversampling factors must go from small (slow) to large (fast).")
@@ -1354,7 +1354,7 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Inform about ignored info keys
     ignored_info = []
     for k in list(info):
-        if k not in {"params", "likelihood", "prior", "theory", packages_path_input,
+        if k not in {"params", "likelihood", "prior", "theory", "packages_path",
                      "timing", "stop_at_error", "auto_params", "debug"}:
             value = info.pop(k)  # type: ignore
             if value is not None and (not isinstance(value, Mapping) or value):
@@ -1370,6 +1370,6 @@ def get_model(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # Initialize the parameters and posterior
     return Model(updated_info["params"], updated_info["likelihood"],
                  updated_info.get("prior"), updated_info.get("theory"),
-                 packages_path=info.get(packages_path_input),
+                 packages_path=info.get("packages_path"),
                  timing=updated_info.get("timing"),
                  stop_at_error=info.get("stop_at_error", False))
