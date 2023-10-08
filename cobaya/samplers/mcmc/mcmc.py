@@ -48,7 +48,7 @@ class MCMC(CovmatSampler):
         "learn_every", "learn_proposal_Rminus1_max", "learn_proposal_Rminus1_max_early",
         "learn_proposal_Rminus1_min", "max_samples", "Rminus1_stop", "Rminus1_cl_stop",
         "Rminus1_cl_level", "covmat", "covmat_params"]
-    _at_resume_prefer_old = CovmatSampler._at_resume_prefer_new + [
+    _at_resume_prefer_old = CovmatSampler._at_resume_prefer_old + [
         "proposal_scale", "blocking"]
     _prior_rejections: int = 0
     file_base_name = 'mcmc'
@@ -139,11 +139,14 @@ class MCMC(CovmatSampler):
                     progress_file.write("# " + " ".join(
                         [header_fmt.get(col, ((7 + 8) - len(col)) * " " + col) for col in
                          self.progress.columns]) + "\n")
+        sync_processes()
         # Get first point, to be discarded -- not possible to determine its weight
         # Still, we need to compute derived parameters, since, as the proposal "blocked",
         # we may be saving the initial state of some block.
         # NB: if resuming but nothing was written (burn-in not finished): re-start
-        if self.output.is_resuming() and len(self.collection):
+        existing_chain_this_process = bool(len(self.collection))
+        existing_chains_any_process = bool(sum(mpi.allgather(len(self.collection))))
+        if self.output.is_resuming() and existing_chain_this_process:
             last = len(self.collection) - 1
             initial_point = (self.collection[self.collection.sampled_params]
             .iloc[last]).to_numpy(dtype=np.float64, copy=True)
@@ -160,29 +163,34 @@ class MCMC(CovmatSampler):
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
             self.log.info("Getting initial point... (this may take a few seconds)")
-            initial_point, results = \
-                self.model.get_valid_point(max_tries=min(self.max_tries.value, int(1e7)),
-                                           random_state=self._rng)
-            # If resuming but no existing chain, assume failed run and ignore blocking
-            # if speeds measurement requested
-            if self.output.is_resuming() and not self.collection \
-                    and self.measure_speeds:
-                self.blocking = None
-            if self.measure_speeds and self.blocking:
-                self.mpi_warning(
-                    "Parameter blocking manually fixed: speeds will not be measured.")
-            elif self.measure_speeds:
-                n = None if self.measure_speeds is True else int(self.measure_speeds)
-                self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
+            initial_point, results = self.model.get_valid_point(
+                max_tries=int(min(self.max_tries.value, 1e7)),
+                random_state=self._rng
+            )
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
+        sync_processes()
+        # If resuming but no existing chains, assume failed run and ignore blocking
+        # if speeds measurement requested
+        if (
+            self.output.is_resuming() and not existing_chains_any_process and
+            self.measure_speeds
+        ):
+            self.blocking = None
+        if self.measure_speeds and self.blocking:
+            self.mpi_warning(
+                "Parameter blocking manually/previously fixed: "
+                "speeds will not be measured."
+            )
+        elif self.measure_speeds:
+            n = None if self.measure_speeds is True else int(self.measure_speeds)
+            self.model.measure_and_set_speeds(n=n, discard=0, random_state=self._rng)
         # Set up blocked proposer
         self.set_proposer_blocking()
         self.set_proposer_initial_covmat(load=True)
-
+        # sanity check whether initial dispersion of points is plausible given the
+        # covariance being used
         if not self.output.is_resuming() and more_than_one_process():
-            # sanity check whether initial dispersion of points is plausible given the
-            # covariance being used
             initial_mean = np.mean(np.array(mpi.allgather(initial_point)), axis=0)
             delta = initial_point - initial_mean
             diag, rot = np.linalg.eigh(self.proposer.get_covariance())
@@ -194,7 +202,6 @@ class MCMC(CovmatSampler):
                     "The initial points are widely dispersed compared to "
                     "the proposal covariance, it may take a long time to "
                     "burn in (max dist to start mean: %s)", max_dist)
-
         # Max #(learn+convergence checks) to wait,
         # in case one process dies/hangs without raising error
         self.been_waiting = 0
@@ -204,7 +211,6 @@ class MCMC(CovmatSampler):
         self._msg_ready = ("Ready to check convergence" +
                            (" and learn a new proposal covmat"
                             if self.learn_proposal else ""))
-
         # Initial dummy checkpoint
         # (needed when 1st "learn point" not reached in prev. run)
         self.write_checkpoint()
@@ -752,6 +758,7 @@ class MCMC(CovmatSampler):
         if converged_means:
             if more_than_one_process():
                 # pylint: disable=protected-access
+                # noinspection PyProtectedMember
                 mcsamples = self.collection._sampled_to_getdist(
                     first=use_first, tempered=True)
                 try:
@@ -768,9 +775,10 @@ class MCMC(CovmatSampler):
             else:
                 try:
                     mcsamples_list = [
-                        # pylint: disable=protected-access
+                        # noinspection PyProtectedMember
                         self.collection._sampled_to_getdist(
-                            first=i * cut, last=(i + 1) * cut - 1, tempered=True)
+                            first=i * cut, last=(i + 1) * cut - 1, tempered=True
+                        )  # pylint: disable=protected-access
                         for i in range(1, m)]
                 except always_stop_exceptions:
                     raise
@@ -924,6 +932,7 @@ class MCMC(CovmatSampler):
                 collection = collections[0].to_getdist(combine_with=collections[1:])
             else:
                 for collection in collections[1:]:
+                    # noinspection PyProtectedMember
                     collections[0]._append(collection)  # pylint: disable=protected-access
                 collection = collections[0]
         return mpi.share_mpi(collection)
@@ -961,15 +970,10 @@ class MCMC(CovmatSampler):
             :class:`getdist.MCSamples` if ``to_getdist=True``), and a progress report
             table under ``"progress"``.
         """
-        products = {
-            "sample": self.samples(
-                combined=combined,
-                skip_samples=skip_samples,
-                to_getdist=to_getdist
-            )
-        }
-        products["progress"] = share_mpi(getattr(self, "progress", None))
-        return products
+        return {"sample": self.samples(combined=combined,
+                                       skip_samples=skip_samples,
+                                       to_getdist=to_getdist),
+                "progress": share_mpi(getattr(self, "progress", None))}
 
     # Class methods
     @classmethod

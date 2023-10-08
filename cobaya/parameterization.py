@@ -522,6 +522,7 @@ def get_literal_param_ranges(params_info, confidence_for_unbounded=1):
         bounds from a :class:`~model.Model` instance as :func:`model.Model.prior.bounds`.
     """
     if isinstance(params_info, Parameterization):
+        # noinspection PyProtectedMember
         params_info = params_info._infos  # pylint: disable=protected-access
     return {
         p: get_literal_param_range(info, confidence_for_unbounded)

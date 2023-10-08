@@ -6,6 +6,7 @@ import signal
 from pprint import pformat
 import numpy as np
 import io
+from typing import Optional
 
 # Local
 from cobaya.yaml import yaml_dump
@@ -192,7 +193,7 @@ class MainWindow(QWidget):
         screen = self.getScreen()
         h = min(screen.height() * 5 / 6., 900)
         size = QSize(min(screen.width() * 5 / 6., 1200), h)
-        pos = settings.value("pos", None)
+        pos: Optional[QPoint] = settings.value("pos", None)
         savesize = settings.value("size", size)
         if savesize.width() > screen.width():
             savesize.setWidth(size.width())

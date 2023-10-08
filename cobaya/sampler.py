@@ -103,7 +103,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
     """
     logger_sampler = get_logger(__name__)
     if not info_old:
-        return
+        return info_new
     # TODO: restore this at some point: just append minimize info to the old one
     # There is old info, but the new one is Minimizer and the old one is not
     # if (len(info_old) == 1 and list(info_old) != ["minimize"] and
@@ -132,6 +132,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
                                 "with the new one. Delete the previous output manually, "
                                 "or automatically with either "
                                 "'-f', '--force', 'force: True'")
+    return info_new
 
 
 def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Output] = None,
@@ -156,7 +157,7 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
     # Get sampler class & check resume/force compatibility
     sampler_name, sampler_class = get_sampler_name_and_class(
         updated_info_sampler, logger=logger_sampler)
-    check_sampler_info(
+    updated_info_sampler = check_sampler_info(
         (output.get_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
