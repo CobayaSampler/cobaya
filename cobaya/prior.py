@@ -344,7 +344,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 # Global
 import numbers
 from types import MethodType
-from typing import Sequence, NamedTuple, Callable, Optional, Mapping, List, Union
+from typing import Sequence, NamedTuple, Callable, Optional, Mapping, List, Any
 import numpy as np
 
 # Local
@@ -632,7 +632,7 @@ class Prior(HasLogger):
         """
         if not hasattr(self, "ref_pdf"):
             # Initialised with nan's in case ref==None: no ref -> uses prior
-            self.ref_pdf: List[Union[float, object]] = [np.nan] * self.d()
+            self.ref_pdf: List[Any] = [np.nan] * self.d()
         unknown = set(ref_info).difference(self.params)
         if unknown:
             raise LoggedError(self.log,
@@ -677,7 +677,7 @@ class Prior(HasLogger):
         Whether there is a fixed reference point for all parameters, such that calls to
         :func:`Prior.reference` would always return the same.
         """
-        if not hasattr(self, "_ref_is_pointlike"):
+        if self._ref_is_pointlike is None:
             self._set_pointlike()
         return self._ref_is_pointlike
 
