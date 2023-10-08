@@ -1,0 +1,13 @@
+# eBOSS QSO results, measurements from eBOSS DR16
+# as described in, Alam et al. 2021
+# https://arxiv.org/pdf/2007.08991.pdf
+
+path: null
+measurements_file: bao_data/sdss_DR16_QSO_BAO_DMDH.txt
+cov_file: bao_data/sdss_DR16_QSO_BAO_DMDH_covtot.txt
+# Fiducial sound horizon with which data have been stored
+rs_fid: 1  # Mpc
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000
