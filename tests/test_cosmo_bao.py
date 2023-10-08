@@ -21,7 +21,7 @@ def test_generic_camb(packages_path, skip_not_installed):
                  chi2_generic, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr16_consensus_bao_lrg_camb(packages_path, skip_not_installed):
+def test_sdss_dr16_consensus_baoplus_lrg_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lrg"
     info_likelihood = {like: {}}
     info_theory = {"camb": None}
@@ -29,7 +29,7 @@ def test_sdss_dr16_consensus_bao_lrg_camb(packages_path, skip_not_installed):
                  chi2_sdss_dr16_baoplus_lrg, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
+def test_sdss_dr16_consensus_baoplus_lrg_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lrg"
     info_likelihood = {like: {}}
     info_theory = {"classy": None}
@@ -38,8 +38,42 @@ def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2, skip_not_installed=skip_not_installed)
 
+def test_sdss_dr16_consensus_bao_lrg_camb(packages_path, skip_not_installed):
+    like = "bao.sdss_dr16_lrg_bao_dmdh"
+    info_likelihood = {like: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr16_bao_lrg, skip_not_installed=skip_not_installed)
 
-def test_sdss_dr16_consensus_bao_elg_camb(packages_path, skip_not_installed):
+
+def test_sdss_dr16_consensus_bao_lrg_classy(packages_path, skip_not_installed):
+    like = "bao.sdss_dr16_lrg_bao_dmdh"
+    info_likelihood = {like: {}}
+    info_theory = {"classy": None}
+    chi2 = deepcopy(chi2_sdss_dr16_bao_lrg)
+    chi2["tolerance"] += chi2.pop("classy_extra_tolerance", 0)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2, skip_not_installed=skip_not_installed)
+
+def test_sdss_dr12_consensus_bao_lrg_camb(packages_path, skip_not_installed):
+    like = "bao.sdss_dr12_lrg_bao_dmdh"
+    info_likelihood = {like: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr12_bao_lrg, skip_not_installed=skip_not_installed)
+
+
+def test_sdss_dr12_consensus_bao_lrg_classy(packages_path, skip_not_installed):
+    like = "bao.sdss_dr12_lrg_bao_dmdh"
+    info_likelihood = {like: {}}
+    info_theory = {"classy": None}
+    chi2 = deepcopy(chi2_sdss_dr12_bao_lrg)
+    chi2["tolerance"] += chi2.pop("classy_extra_tolerance", 0)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2, skip_not_installed=skip_not_installed)
+    
+
+def test_sdss_dr16_consensus_baoplus_elg_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_elg"
     info_likelihood = {like: {}}
     info_theory = {"camb": None}
@@ -47,7 +81,7 @@ def test_sdss_dr16_consensus_bao_elg_camb(packages_path, skip_not_installed):
                  chi2_sdss_dr16_baoplus_elg, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr16_consensus_bao_elg_classy(packages_path, skip_not_installed):
+def test_sdss_dr16_consensus_baoplus_elg_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_elg"
     info_likelihood = {like: {}}
     info_theory = {"classy": None}
@@ -56,8 +90,25 @@ def test_sdss_dr16_consensus_bao_elg_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2, skip_not_installed=skip_not_installed)
 
+def test_sdss_dr16_consensus_bao_elg_camb(packages_path, skip_not_installed):
+    like = "bao.sdss_dr16_bao_elg"
+    info_likelihood = {like: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr16_bao_elg, skip_not_installed=skip_not_installed)
 
-def test_sdss_dr16_consensus_bao_qso_camb(packages_path, skip_not_installed):
+
+def test_sdss_dr16_consensus_bao_elg_classy(packages_path, skip_not_installed):
+    like = "bao.sdss_dr16_bao_elg"
+    info_likelihood = {like: {}}
+    info_theory = {"classy": None}
+    chi2 = deepcopy(chi2_sdss_dr16_bao_elg)
+    chi2["tolerance"] += chi2.pop("classy_extra_tolerance", 0)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2, skip_not_installed=skip_not_installed)
+    
+
+def test_sdss_dr16_consensus_baoplus_qso_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_qso"
     info_likelihood = {like: {}}
     info_theory = {"camb": None}
@@ -65,7 +116,7 @@ def test_sdss_dr16_consensus_bao_qso_camb(packages_path, skip_not_installed):
                  chi2_sdss_dr16_baoplus_qso, skip_not_installed=skip_not_installed)
 
 
-def test_sdss_dr16_consensus_bao_qso_classy(packages_path, skip_not_installed):
+def test_sdss_dr16_consensus_baoplus_qso_classy(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_qso"
     info_likelihood = {like: {}}
     info_theory = {"classy": None}
@@ -74,6 +125,22 @@ def test_sdss_dr16_consensus_bao_qso_classy(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2, skip_not_installed=skip_not_installed)
 
+def test_sdss_dr16_consensus_bao_qso_camb(packages_path, skip_not_installed):
+    like = "bao.sdss_dr16_qso_bao_dmdh"
+    info_likelihood = {like: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sdss_dr16_bao_qso, skip_not_installed=skip_not_installed)
+
+
+def test_sdss_dr16_consensus_bao_qso_classy(packages_path, skip_not_installed):
+    like = "bao.sdss_dr16_qso_bao_dmdh"
+    info_likelihood = {like: {}}
+    info_theory = {"classy": None}
+    chi2 = deepcopy(chi2_sdss_dr16_bao_qso)
+    chi2["tolerance"] += chi2.pop("classy_extra_tolerance", 0)
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2, skip_not_installed=skip_not_installed)
 
 def test_sdss_dr16_consensus_bao_lyauto_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lyauto"
@@ -215,10 +282,19 @@ best_fit = deepcopy(params_lowTEB_highTTTEEE)
 
 chi2_sdss_dr16_baoplus_elg = {
     "bao.sdss_dr16_baoplus_elg": 3.24, "tolerance": 0.06}
+chi2_sdss_dr16_bao_elg = {
+    "bao.sdss_dr16_bao_elg": 0.37, "tolerance": 0.06}
 chi2_sdss_dr16_baoplus_lrg = {
     "bao.sdss_dr16_baoplus_lrg": 5.96, "tolerance": 0.04}
+chi2_sdss_dr16_bao_lrg = {
+    "bao.sdss_dr16_lrg_bao_dmdh": 3.29, "tolerance": 0.04}
+chi2_sdss_dr12_bao_lrg = {
+    "bao.sdss_dr12_lrg_bao_dmdh": 2.95, "tolerance": 0.04}
 chi2_sdss_dr16_baoplus_qso = {
     "bao.sdss_dr16_baoplus_qso": 8.78, "tolerance": 0.04,
+    "classy_extra_tolerance": 0.21}
+chi2_sdss_dr16_bao_qso = {
+    "bao.sdss_dr16_qso_bao_dmdh": 0.54, "tolerance": 0.04,
     "classy_extra_tolerance": 0.21}
 chi2_sdss_dr16_baoplus_lyauto = {
     "bao.sdss_dr16_baoplus_lyauto": 1.74, "tolerance": 0.04}
