@@ -100,10 +100,14 @@ def compute_temperature(logpost, logprior, loglike, check=True):
     of the sample temperature, and raises ``AssertionError`` if inconsistent.
     """
     temp = (logprior + loglike) / logpost
-    if check and not isinstance(temp, Number) and len(temp) > 1:
-        assert np.allclose(temp, temp[0],
-                           rtol=1e-3), "Inconsistent temperature in sample."
-        temp = np.mean(temp)
+    if not isinstance(temp, Number):
+        if len(temp) > 1:
+            if check:
+                assert np.allclose(temp, temp[0], rtol=1e-3), \
+                    "Inconsistent temperature in sample."
+            temp = np.mean(temp)
+        else:
+            temp = float(temp[0])
     return temp
 
 
