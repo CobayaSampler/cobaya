@@ -244,18 +244,26 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     else:
         raise LoggedError(log, "No output from where to load from, "
                                "nor input collections given.")
-    # A note on tempered chains: detempering happens automatically when reweighting,
-    # which is done later in this function in most cases.
-    # But for the sake of robustness, we detemper all chains at init.
-    if mpi.is_main_process() and any(c.is_tempered for c in in_collections):
-        log.info("Starting from tempered chains. Will detemper before proceeding.")
     # Let's make sure we work on a copy if the chain is going to be altered
     already_copied = bool(output_in) or (sample is not None and (skip or thin != 1))
     for i, collection in enumerate(in_collections):
         if not already_copied:
             collection = collection.copy()
-        collection.reset_temperature()
         in_collections[i] = collection
+    # A note on tempered chains: detempering happens automatically when reweighting,
+    # which is done later in this function in most cases.
+    # But for the sake of robustness, we detemper all chains at init.
+    # In order not to introduce reweighting errors coming from subtractions of the max
+    # log-posterior at detempering, we need to detemper all samples at once
+    all_in_collections = mpi.gather(in_collections)
+    if mpi.is_main_process():
+        flat_in_collections = list(chain(*all_in_collections))
+        if any(c.is_tempered for c in flat_in_collections):
+            log.info("Starting from tempered chains. Will detemper before proceeding.")
+        flat_in_collections[0].reset_temperature(with_batch=flat_in_collections[1:])
+    # Detempering happens in place, so one can scatter back the original
+    # all_in_collections object to preserve the in_collection dist across processes
+    in_collections = mpi.scatter(all_in_collections)
     if any(len(c) <= 1 for c in in_collections):
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "

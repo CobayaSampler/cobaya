@@ -50,6 +50,7 @@ class FileLock:
         if filename:
             self.set_lock(log, filename)
 
+    # pylint: disable=consider-using-with
     def set_lock(self, log, filename, force=False):
         if self.has_lock():
             return
@@ -318,7 +319,8 @@ class OutputReadOnly:
         from cobaya.collection import SampleCollection
         collections = [
             SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
-                             load=True, onload_skip=skip, onload_thin=thin)
+                             load=True, onload_skip=skip, onload_thin=thin,
+                             is_batch=len(filenames) > 1)
             for i, filename in enumerate(filenames)]
         # MARKED FOR DEPRECATION IN v3.3
         if concatenate is not None:
@@ -332,6 +334,7 @@ class OutputReadOnly:
             for collection_i in collections[1:]:
                 # noinspection PyProtectedMember
                 collection._append(collection_i)  # pylint: disable=protected-access
+            collection.is_batch = False
             return collection
         return collections
 
