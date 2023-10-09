@@ -111,19 +111,26 @@ def compute_temperature(logpost, logprior, loglike, check=True):
     return temp
 
 
-def detempering_weights_factor(tempered_logpost, temperature):
+def detempering_weights_factor(tempered_logpost, temperature, max_tempered_logpost=None):
     """
     Returns the detempering factors for the weights of a tempered sample, i.e. if ``w_t``
     is the weight of the tempered sample, then the weight of the unit-temperature one is
     ``w_t * f``, where the ``f`` returned by this method is
     ``exp(logp * (1 - 1/temperature))``, where ``logp`` is the (untempered) logposterior.
 
-    Factors are normalized so that the largest equals one.
+    Factors are normalized so that the largest equals one, according to the maximum
+    logposterior (can be overridden with argument ``max_tempered_logpost``, useful for
+    detempering chain batches).
     """
     if temperature == 1:
         return np.ones(np.atleast_1d(tempered_logpost).shape)
     log_ratio = remove_temperature(tempered_logpost, temperature) - tempered_logpost
-    return np.exp(log_ratio - max(log_ratio))
+    if max_tempered_logpost is None:
+        max_log_ratio = max(log_ratio)
+    else:
+        max_log_ratio = \
+            remove_temperature(max_tempered_logpost, temperature) - max_tempered_logpost
+    return np.exp(log_ratio - max_log_ratio)
 
 
 class BaseCollection(HasLogger):
@@ -202,13 +209,15 @@ class SampleCollection(BaseCollection):
 
     def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
                  extension=None, file_name=None, resuming=False, load=False,
-                 temperature=None, onload_skip=0, onload_thin=1, sample_type=None):
+                 temperature=None, onload_skip=0, onload_thin=1, sample_type=None,
+                 is_batch=False):
         super().__init__(model, name)
         if sample_type is not None and (not isinstance(sample_type, str) or
                                         not sample_type.lower() in sample_types):
             raise LoggedError(self.log, "'sample_type' must be one of %r.", sample_types)
         self.sample_type = sample_type.lower() if sample_type is not None else sample_type
         self.cache_size = cache_size
+        self.is_batch = False
         self._data = None
         self._n = None
         # Create/load the main data frame and the tracking indices
@@ -554,17 +563,47 @@ class SampleCollection(BaseCollection):
         weights = self[OutPar.weight]
         return np.allclose(np.round(weights), weights)
 
-    def _detempered_weights(self):
-        """Computes the detempered weights."""
-        if self.temperature == 1:
-            return self._data[OutPar.weight].to_numpy(dtype=np.float64)
-        return (
-            self._data[OutPar.weight].to_numpy(dtype=np.float64) *
-            detempering_weights_factor(
-                -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
-                self.temperature
+    # pylint: disable=protected-access
+    def _detempered_weights(self, with_batch=None):
+        """
+        Computes the detempered weights.
+
+        If this sample is part of a batch, call this method passing the rest of the batch
+        as a list using the argument ``with`` (otherwise inconsistent weights between
+        samples will be introduced). If additional chains are passed with ``with``, their
+        temperature will be reset in-place.
+
+        Returns always a list of weight vectors: one element per collection in the batch.
+        """
+        batch = [self]
+        if with_batch is not None:
+            batch += list(with_batch)
+        elif self.is_batch:
+            self.log.warning(
+                "Trying to get detempered weights for individual sample collection that "
+                "appears to be part of a batch (e.g. of parallel MCMC chains). This will "
+                "produce inconsistent weights across chains, unless passing the rest of "
+                "the batch as ``with_batch=[collection_1, collection_2,... ]``.")
+        temps = [c.temperature for c in batch]
+        if not np.allclose(temps, temps[0]):
+            raise LoggedError(
+                self.log,
+                f"Temperature inconsistent across the batch: {temps}."
             )
-        )
+        for c in batch:
+            c._cache_dump()
+        if self.temperature == 1:
+            return [c._data[OutPar.weight].to_numpy(dtype=np.float64) for c in batch]
+        max_logpost = np.max(np.concatenate(
+            [-c._data[OutPar.minuslogpost].to_numpy(dtype=np.float64) for c in batch]))
+        return [
+            c._data[OutPar.weight].to_numpy(dtype=np.float64) *
+            detempering_weights_factor(
+                -c._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
+                c.temperature,
+                max_tempered_logpost=max_logpost
+            ) for c in batch
+        ]
 
     def _detempered_minuslogpost(self):
         """Computes the detempered -log-posterior."""
@@ -575,21 +614,30 @@ class SampleCollection(BaseCollection):
             self.temperature
         )
 
-    def reset_temperature(self):
+    # pylint: disable=protected-access
+    def reset_temperature(self, with_batch=None):
         """
         Drops the information about sampling temperature: ``weight`` and ``minuslogpost``
         columns will now correspond to those of a unit-temperature posterior sample.
 
+        If this sample is part of a batch, call this method passing the rest of the batch
+        as a list using the argument ``with`` (otherwise inconsistent weights between
+        samples will be introduced). If additional chains are passed with ``with``, their
+        temperature will be reset in-place.
+
         This cannot be undone: (e.g. recovering original integer tempered weights).
         You may want to call this method on a copy (see :func:`SampleCollection.copy`).
         """
-        self._cache_dump()
+        weights_batch = self._detempered_weights(with_batch=with_batch)
+        # Calling *after* getting weights, since that call checks consistency across batch
         if self.temperature == 1:
             return
-        self._data[OutPar.weight] = self._detempered_weights()
-        self._drop_samples_null_weight()
-        self._data[OutPar.minuslogpost] = self._detempered_minuslogpost()
-        self.temperature = 1
+        batch = [self] + list(with_batch or [])
+        for c, weights in zip(batch, weights_batch):
+            c._data[OutPar.weight] = weights
+            c._drop_samples_null_weight()
+            c._data[OutPar.minuslogpost] = c._detempered_minuslogpost()
+            c.temperature = 1
 
     def _enlarge(self, n):
         """
@@ -720,7 +768,8 @@ class SampleCollection(BaseCollection):
             return weights, np.allclose(np.round(weights), weights)
         if self.is_tempered and not tempered:
             # For sure the weights are not integer
-            return self._detempered_weights()[first:last], False
+            # TODO [WIP] remove [0] below when `with_batch` added
+            return self._detempered_weights()[0][first:last], False
         return (
             self[OutPar.weight][first:last].to_numpy(dtype=np.float64),
             self.has_int_weights

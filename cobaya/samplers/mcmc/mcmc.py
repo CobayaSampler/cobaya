@@ -117,7 +117,8 @@ class MCMC(CovmatSampler):
         name = str(1 + mpi.rank())
         self.collection = SampleCollection(
             self.model, self.output, name=name, resuming=self.output.is_resuming(),
-            temperature=self.temperature, sample_type="mcmc")
+            temperature=self.temperature, sample_type="mcmc",
+            is_batch=more_than_one_process())
         self.current_point = OneSamplePoint(self.model)
         # Use standard MH steps by default
         self.get_new_sample = self.get_new_sample_metropolis
