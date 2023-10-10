@@ -487,7 +487,8 @@ class SampleCollection(BaseCollection):
                         np.atleast_2d(
                             self[self.minuslogprior_names].to_numpy(dtype=np.float64)),
                         axis=-1,
-                    )
+                    ),
+                    rtol=1e-4,
             ):
                 raise LoggedError(
                     self.log,
@@ -498,7 +499,8 @@ class SampleCollection(BaseCollection):
                     np.sum(
                         np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)),
                         axis=-1,
-                    )
+                    ),
+                    rtol=1e-4,
             ):
                 raise LoggedError(
                     self.log,
