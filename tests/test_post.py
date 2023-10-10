@@ -1,5 +1,6 @@
 import os
 from copy import deepcopy
+from itertools import chain
 from scipy.stats import multivariate_normal
 import numpy as np
 import pytest
@@ -50,7 +51,28 @@ info_sampler = {"mcmc": {"Rminus1_stop": 0.25, "Rminus1_cl_stop": 0.5, "seed": 1
 info_sampler_dummy = {"evaluate": {"N": 10}}
 
 
-def _get_targets(mcsamples_in):
+def _get_targets_cobaya(collections_in):
+    # Notice that we do the importance reweighting, but do not change the logposterior
+    # in the collection (not used for mean or cov anyway).
+    loglikes = []
+    for c in collections_in:
+        a, b = c["a"].to_numpy(dtype=np.float64), c["b"].to_numpy(dtype=np.float64)
+        loglikes.append(
+            [target_pdf_prior(ai, bi) - sampled_pdf(ai, bi) for ai, bi in zip(a, b)]
+        )
+    # Subtract max over ALL collections: relative weights between collection would appear
+    max_loglikes = max(list(chain(*loglikes)))
+    importance_weights = [np.exp(np.array(l) - max_loglikes) for l in loglikes]
+    collections_in[0].reweight(importance_weights, with_batch=collections_in[1:])
+    # Merge before computing statistics
+    for c in collections_in[1:]:
+        collections_in[0]._append(c)
+    target_mean = collections_in[0].mean()
+    target_cov = collections_in[0].cov()
+    return target_mean, target_cov
+
+
+def _get_targets_getdist(mcsamples_in):
     loglikes = []
     for a, b in zip(mcsamples_in['a'], mcsamples_in['b']):
         loglikes.append(-target_pdf_prior(a, b) + sampled_pdf(a, b))
@@ -84,11 +106,16 @@ def test_post_prior(tmpdir, temperature):
         info["sampler"]["mcmc"]["temperature"] = temperature
     _, sampler = run(info)
     if mpi.is_main_process():
+        collections_in = load_samples(info["output"], skip=0.1)
+        target_mean_cobaya, target_cov_cobaya = mpi.share(
+            _get_targets_cobaya(collections_in))
         mcsamples_in = load_samples(info["output"], skip=0.1, to_getdist=True)
         mcsamples_in.cool(temperature)
-        target_mean, target_cov = mpi.share(_get_targets(mcsamples_in))
+        target_mean_getdist, target_cov_getdist = mpi.share(
+            _get_targets_getdist(mcsamples_in))
     else:
-        target_mean, target_cov = mpi.share()
+        target_mean_cobaya, target_cov_cobaya = mpi.share()
+        target_mean_getdist, target_cov_getdist = mpi.share()
     for pass_chains in [False, True]:
         _, post_products = post(
             info_post, sample=sampler.samples() if pass_chains else None)
@@ -96,7 +123,7 @@ def test_post_prior(tmpdir, temperature):
         if mpi.is_main_process():
             mcsamples = load_samples(
                 info_post["output"] + _post_ + info_post["post"]["suffix"],
-                to_getdist=True
+                to_getdist=True,
             )
             new_mean = mcsamples.mean(["a", "b"])
             new_cov = mcsamples.getCovMat().matrix
@@ -105,8 +132,10 @@ def test_post_prior(tmpdir, temperature):
             new_mean, new_cov = mpi.share()
         # Noisier with higher temperature
         atol, rtol = (1e-8, 1e-5) if temperature == 1 else (5e-4, 1e-3)
-        assert np.allclose(new_mean, target_mean, atol=atol, rtol=rtol)
-        assert np.allclose(new_cov, target_cov, atol=atol, rtol=rtol)
+        assert np.allclose(new_mean, target_mean_cobaya, atol=atol, rtol=rtol)
+        assert np.allclose(new_cov, target_cov_cobaya, atol=atol, rtol=rtol)
+        assert np.allclose(new_mean, target_mean_getdist, atol=atol, rtol=rtol)
+        assert np.allclose(new_cov, target_cov_getdist, atol=atol, rtol=rtol)
 
 
 def test_post_likelihood():
@@ -153,7 +182,7 @@ def test_post_likelihood():
 
         # Load with GetDist and compare
         if mcsamples_in:
-            target_mean, target_cov = mpi.share(_get_targets(mcsamples_in))
+            target_mean, target_cov = mpi.share(_get_targets_getdist(mcsamples_in))
             new_mean = mcsamples_post.mean(["a", "b"])
             new_cov = mcsamples_post.getCovMat().matrix
             mpi.share((new_mean, new_cov))
