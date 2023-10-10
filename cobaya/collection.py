@@ -11,7 +11,7 @@ import os
 import functools
 import warnings
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple, List
+from typing import Union, Sequence, Optional, Tuple, List, Sized
 from numbers import Number
 import numpy as np
 import pandas as pd
@@ -511,37 +511,40 @@ class SampleCollection(BaseCollection):
     def _check_weights(
             self,
             weights: Optional[np.ndarray] = None,
-            length: Optional[int] = None
+            length: Optional[Union[int, List[int]]] = None
     ):
         """
         Checks correct length, shape and signs of the ``weights``.
 
         If no weights passed, checks internal consistency.
 
-        If ``length`` passed, checks for specific length of the weights vector.
+        If ``length`` passed, checks for specific length(s) of the weights vector(s).
 
         Raises ``LoggedError`` if the weights are badly arranged or invalid.
         """
         if weights is None:
-            weights_array = self[OutPar.weight].to_numpy(dtype=np.float64)
+            weights = [self[OutPar.weight].to_numpy(dtype=np.float64)]
         else:
-            weights_array = np.atleast_1d(weights)
-            if len(weights_array.shape) != 1:
+            if not isinstance(weights[0], Sized):
+                weights = [weights]
+            weights = [np.array(ws) for ws in weights]
+            if length is None:
+                length = [len(w) for w in weights]
+            lengths_array = np.atleast_1d(length)
+            if len(weights) != len(lengths_array):
+                expected_msg = f"Expected a list of {len(lengths_array)} 1d arrays"
                 raise LoggedError(
                     self.log,
-                    "The shape of the weights is wrong. Expected a 1d array, "
-                    "but got shape %r.",
-                    weights_array.shape
+                    f"The shape of the weights is wrong. {expected_msg}, "
+                    f"but got {weights}."
                 )
-            check_length = len(self) if length is None else length
-            if len(weights_array) != check_length:
+            if any(len(w) != l for w, l in zip(weights, lengths_array)):
                 raise LoggedError(
                     self.log,
-                    "The length of the weights vector is wrong. Expected %d but got %d.",
-                    check_length,
-                    len(weights_array)
+                    f"The lengths of the weights vectors are wrong. Expected "
+                    f"{[len(w) for w in weights]} but got {lengths_array}."
                 )
-        if np.any(weights_array < 0):
+        if any(np.any(ws < 0) for ws in weights):
             raise LoggedError(
                 self.log,
                 "The weight vector contains negative elements."
@@ -569,9 +572,9 @@ class SampleCollection(BaseCollection):
         Computes the detempered weights.
 
         If this sample is part of a batch, call this method passing the rest of the batch
-        as a list using the argument ``with`` (otherwise inconsistent weights between
-        samples will be introduced). If additional chains are passed with ``with``, their
-        temperature will be reset in-place.
+        as a list using the argument ``with_batch`` (otherwise inconsistent weights
+        between samples will be introduced). If additional chains are passed with
+        ``with_batch``, their temperature will be reset in-place.
 
         Returns always a list of weight vectors: one element per collection in the batch.
         """
@@ -767,8 +770,8 @@ class SampleCollection(BaseCollection):
             weights /= max(weights)
             return weights, np.allclose(np.round(weights), weights)
         if self.is_tempered and not tempered:
-            # For sure the weights are not integer
-            # TODO [WIP] remove [0] below when `with_batch` added
+            # For sure the weights are not integer in this case
+            # NB: Index [0] below bc a list is returned, in case of batch processing
             return self._detempered_weights()[0][first:last], False
         return (
             self[OutPar.weight][first:last].to_numpy(dtype=np.float64),
@@ -781,7 +784,7 @@ class SampleCollection(BaseCollection):
             last: Optional[int] = None,
             weights: Optional[np.ndarray] = None,
             derived: bool = False,
-            tempered: bool = False
+            tempered: bool = False,
     ) -> np.ndarray:
         """
         Returns the (weighted) mean of the parameters in the chain,
@@ -819,7 +822,7 @@ class SampleCollection(BaseCollection):
             last: Optional[int] = None,
             weights: Optional[np.ndarray] = None,
             derived: bool = False,
-            tempered: bool = False
+            tempered: bool = False,
     ) -> np.ndarray:
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
@@ -849,7 +852,8 @@ class SampleCollection(BaseCollection):
         return np.atleast_2d(np.cov(  # type: ignore
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
-                dtype=np.float64).T,
+                     dtype=np.float64).T,
+            ddof=0,  # does simple mean w/o bias factor; weights are used as probabilities
             **{weight_type_kwarg: weights_cov}))
 
     def _drop_samples_null_weight(self):
@@ -857,11 +861,19 @@ class SampleCollection(BaseCollection):
         self._data = self.data[self._data.weight > 0].reset_index(drop=True)
         self._n = self._data.last_valid_index() + 1
 
-    def reweight(self, importance_weights, check=True):
+    def reweight(self, importance_weights, with_batch=None, check=True):
         """
-        Reweights the sample with the given ``importance_weights``.
+        Reweights the sample in-place with the given ``importance_weights``.
 
         Temperature information is dropped.
+
+        If this sample is part of a batch, call this method passing the rest of the batch
+        as a list using the argument ``with_match`` (otherwise inconsistent weights
+        between samples will be introduced). If additional chains are passed with
+        ``with_batch``, they will also be reweighted in-place. In that case,
+        ``importance_weights`` needs to be a list of weight vectors, the first of which to
+        be applied to the current instance, and the rest to the collections passed with
+        ``with_batch``.
 
         This cannot be fully undone (e.g. recovering original integer weights).
         You may want to call this method on a copy (see :func:`SampleCollection.copy`).
@@ -869,11 +881,18 @@ class SampleCollection(BaseCollection):
         For the sake of speed, length and positivity checks on the importance weights can
         be skipped with ``check=False`` (default ``True``).
         """
-        self.reset_temperature()  # includes a self._cache_dump()
+        self.reset_temperature(with_batch=with_batch)  # includes a self._cache_dump()
+        if not isinstance(importance_weights[0], Sized):
+            importance_weights = [importance_weights]
         if check:
-            self._check_weights(importance_weights)
-        self._data[OutPar.weight] *= importance_weights
-        self._drop_samples_null_weight()
+            self._check_weights(
+                importance_weights,
+                length=[len(self)] + [len(c) for c in with_batch or []]
+            )
+        batch = [self] + list(with_batch or [])
+        for c, iweights in zip(batch, importance_weights):
+            c._data[OutPar.weight] *= iweights
+            c._drop_samples_null_weight()
 
     def filtered_copy(self, where) -> 'SampleCollection':
         """Returns a copy of the collection with some condition ``where`` imposed."""
