@@ -4,8 +4,10 @@
 
 - Created a general `load_samples` function to load Cobaya results natively or as GetDist MCSamples.
 - Improved `.products()` method for samplers (MCMC and PolyChord) and post-processing: samples can now retrieved simultaneously for all MPI processes, and converted to GetDist. Also added `.samples()` methods to retrieve just the samples.
-- Fixed a bug with mpi runs partly stalling when run with many chains (#308)
-- Python 12 support (removed all dependence on distutils)
+- Collections are now aware of whether they are part of a parallel batch, and warn if trying to reweight/detemper individually (fixes #321).
+- Fixed a bug with mpi runs partly stalling when run with many chains (#308, thanks @vivianmiranda @lukashergt for reporting and testing).
+- Fixed a bug with overzealous checks when loading chains (#306, thanks @mishakb for reporting).
+- Python 3.12 support (removed all dependence on distutils)
 
 ### Cosmology
 
