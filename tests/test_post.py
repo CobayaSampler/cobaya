@@ -130,7 +130,6 @@ def test_post_prior(tmpdir, temperature):
             mpi.share((new_mean, new_cov))
         else:
             new_mean, new_cov = mpi.share()
-        # Noisier with higher temperature
         assert np.allclose(new_mean, target_mean_cobaya)
         assert np.allclose(new_cov, target_cov_cobaya)
         assert np.allclose(new_mean, target_mean_getdist)
