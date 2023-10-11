@@ -322,7 +322,7 @@ class OutputReadOnly:
                              load=True, onload_skip=skip, onload_thin=thin,
                              is_batch=len(filenames) > 1)
             for i, filename in enumerate(filenames)]
-        # MARKED FOR DEPRECATION IN v3.3
+        # MARKED FOR DEPRECATION IN v3.4
         if concatenate is not None:
             print("*WARNING*: Argument 'concatenate' will be deprecated soon. "
                   "Please use 'combined' instead.")
@@ -417,7 +417,7 @@ class Output(HasLogger, OutputReadOnly):
     def set_resuming(self, value):
         self._resuming = value
 
-    # MARKED FOR DEPRECATION IN v3.3
+    # MARKED FOR DEPRECATION IN v3.4
     @mpi.from_root
     def load_updated_info(self, cache=False, use_cache=False) -> Optional[InputDict]:
         """
@@ -439,7 +439,7 @@ class Output(HasLogger, OutputReadOnly):
 
         If ``cache=True``, the loaded input will be cached for future calls.
         """
-        # MARKED FOR DEPRECATION IN v3.3
+        # MARKED FOR DEPRECATION IN v3.4
         if kwargs.get("use_cache", None):
             self.log.warning("The `use_cache` argument will be deprecated soon. If you "
                              "want to ensure that you receive a cached version, call the "

@@ -98,12 +98,11 @@ class Likelihood(Theory, LikelihoodInterface):
     # MARKED FOR DEPRECATION IN v3.3
     @property
     def theory(self):
-        self.log.warning(
-            "The 'theory' attribute of likelihoods will be deprecated soon. "
+        raise LoggedError(
+            self.log,
+            "The 'theory' attribute of likelihoods has been deprecated. "
             "Please use the equivalent 'provider' attribute instead."
         )
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        return self.provider
         # END OF DEPRECATION BLOCK
 
     def logp(self, **params_values):

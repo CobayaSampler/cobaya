@@ -699,13 +699,13 @@ class SampleCollection(BaseCollection):
     @property
     def values(self) -> np.ndarray:
         """
-        Returns the sample collection as a numpy array; to be deprecated in favour of
-        ``Collection.to_numpy``, following Pandas.
+        Deprecated in favour of ``SampleCollection.to_numpy``, following Pandas.
         """
-        print("*WARNING* Following Pandas, the 'Collection.values()' method will soon be "
-              "deprecated in favour of 'Collection.to_numpy()'.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        return self.data.to_numpy(dtype=np.float64)
+        raise LoggedError(
+            self.log,
+            "Following Pandas, the 'SampleCollection.values()' method has been deprecated"
+            " in favour of 'SampleCollection.to_numpy()'."
+        )
         # END OF DEPRECATION BLOCK
 
     def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
