@@ -137,7 +137,10 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
 
 ###############################################################################
-deploy: # only if it builds and if the commit has been tagged
+# DEPLOYMENT to PyPI (only if it builds and if the commit has been tagged)
+before_deploy:
+  - echo > setup.py
+deploy:
   provider: pypi
   username: JesusTorrado
   password:
