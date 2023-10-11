@@ -131,11 +131,10 @@ def test_post_prior(tmpdir, temperature):
         else:
             new_mean, new_cov = mpi.share()
         # Noisier with higher temperature
-        atol, rtol = (1e-8, 1e-5) if temperature == 1 else (5e-4, 1e-3)
-        assert np.allclose(new_mean, target_mean_cobaya, atol=atol, rtol=rtol)
-        assert np.allclose(new_cov, target_cov_cobaya, atol=atol, rtol=rtol)
-        assert np.allclose(new_mean, target_mean_getdist, atol=atol, rtol=rtol)
-        assert np.allclose(new_cov, target_cov_getdist, atol=atol, rtol=rtol)
+        assert np.allclose(new_mean, target_mean_cobaya)
+        assert np.allclose(new_cov, target_cov_cobaya)
+        assert np.allclose(new_mean, target_mean_getdist)
+        assert np.allclose(new_cov, target_cov_getdist)
 
 
 def test_post_likelihood():

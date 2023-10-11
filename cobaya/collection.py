@@ -11,7 +11,7 @@ import os
 import functools
 import warnings
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple, List, Sized
+from typing import Union, Sequence, Optional, Tuple, List
 from numbers import Number
 import numpy as np
 import pandas as pd
@@ -217,7 +217,7 @@ class SampleCollection(BaseCollection):
             raise LoggedError(self.log, "'sample_type' must be one of %r.", sample_types)
         self.sample_type = sample_type.lower() if sample_type is not None else sample_type
         self.cache_size = cache_size
-        self.is_batch = False
+        self.is_batch = is_batch
         self._data = None
         self._n = None
         # Create/load the main data frame and the tracking indices
@@ -527,7 +527,7 @@ class SampleCollection(BaseCollection):
         if weights is None:
             weights = [self[OutPar.weight].to_numpy(dtype=np.float64)]
         else:
-            if not isinstance(weights[0], Sized):
+            if not hasattr(weights[0], "__len__"):
                 weights = [weights]
             weights = [np.array(ws) for ws in weights]
             if length is None:
@@ -884,7 +884,7 @@ class SampleCollection(BaseCollection):
         be skipped with ``check=False`` (default ``True``).
         """
         self.reset_temperature(with_batch=with_batch)  # includes a self._cache_dump()
-        if not isinstance(importance_weights[0], Sized):
+        if not hasattr(importance_weights[0], "__len__"):
             importance_weights = [importance_weights]
         if check:
             self._check_weights(

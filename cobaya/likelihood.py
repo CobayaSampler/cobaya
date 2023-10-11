@@ -24,7 +24,7 @@ class can be used as and when needed.
 
 # Global
 from time import sleep
-from typing import Mapping, Optional, Union, Dict, Sized
+from typing import Mapping, Optional, Union, Dict
 from itertools import chain
 import numbers
 import numpy as np
@@ -58,7 +58,7 @@ class LikelihoodInterface:
         :return:  log likelihood from the current state as a scalar
         """
         value = self.current_state["logp"]
-        if isinstance(value, Sized):
+        if hasattr(value, "__len__"):
             value = value[0]
         return value
 
@@ -227,7 +227,7 @@ class LikelihoodExternalFunction(Likelihood):
             self.log.debug("External function failed at evaluation.")
             raise
         bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
-        if isinstance(return_value, Sized):
+        if hasattr(return_value, "__len__"):
             logp = return_value[0]
             if self.output_params:
                 try:
