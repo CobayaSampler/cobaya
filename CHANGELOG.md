@@ -11,6 +11,8 @@
 
 ### Cosmology
 
+- Added 1-d grid LSS likelihood and BAO-only ELG and QSO (PR #266; thanks @msyriac)
+
 #### CLASS
 
 - Updated manual installation instructions and fixed some dependencies.
