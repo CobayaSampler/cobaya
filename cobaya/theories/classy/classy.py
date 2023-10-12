@@ -164,10 +164,11 @@ You may prefer to install CLASS manually e.g. if you are planning to modify it.
 
    .. code:: bash
 
-      $ python -m pip install 'cython<3'
+      $ python -m pip install 'cython'
 
-   In particular the version restriction is due to `this issue
-   <https://github.com/lesgourg/class_public/issues/531>`_.
+   In particular, if working with a modified CLASS version based on a version previous
+   to v3.2.1, you need to change above ``'cython'`` by ``'cython<3'`` (see `this issue
+   <https://github.com/lesgourg/class_public/issues/531>`_).
 
 To download and install CLASS manually in a folder called ``CLASS`` under
 ``/path/to/cosmo``, simply do:
@@ -251,7 +252,7 @@ class classy(BoltzmannBase):
 
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v3.2.0"
+    _min_classy_version = "v3.2.1"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
@@ -638,9 +639,6 @@ class classy(BoltzmannBase):
             requested_and_extra["Omega_nu"] = self.classy.Omega_nu
         if "T_cmb" in requested_and_extra:
             requested_and_extra["T_cmb"] = self.classy.T_cmb()
-        if "theta_s_100" in requested_and_extra:
-            requested_and_extra["theta_s_100"] = \
-                self.classy.get_current_derived_parameters(["100*theta_s"])["100*theta_s"]
         # Get the rest using the general derived param getter
         # No need for error control: classy.get_current_derived_parameters is passed
         # every derived parameter not excluded before, and cause an error, indicating
@@ -770,7 +768,7 @@ class classy(BoltzmannBase):
         log.info("Installing pre-requisites...")
         # TODO: remove version restriction below when this issue is fixed:
         # https://github.com/lesgourg/class_public/issues/531
-        exit_status = pip_install("cython<3")
+        exit_status = pip_install("cython")
         if exit_status:
             log.error("Could not install pre-requisite: cython")
             return False

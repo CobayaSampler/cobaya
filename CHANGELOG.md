@@ -1,3 +1,11 @@
+## 3.4.X – YYYY-MM-DD
+
+### Cosmology
+
+#### CLASS
+
+- Min version update to 3.2.1 (solves #305; thanks to the CLASS developers)
+
 ## 3.4 – 2023-10-11
 
 ### General

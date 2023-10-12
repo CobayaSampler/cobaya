@@ -178,10 +178,7 @@ hubble = {
                                            'ref': {'dist': 'norm', 'loc': 1.0416,
                                                    'scale': 0.0004},
                                            'proposal': 0.0002,
-                                           'latex': '100\\theta_\\mathrm{s}',
-                                           'drop': True}, '100*theta_s': {
-                               'value': 'lambda theta_s_100: theta_s_100',
-                               'derived': False},
+                                           'latex': '100\\theta_\\mathrm{s}'},
                            'H0': {'latex': 'H_0'}}}}},
     'sound_horizon_lensonly': {
         'desc': 'Angular size of the sound horizon (h>0.4; approximate, if using CAMB)',
