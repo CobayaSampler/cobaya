@@ -45,7 +45,7 @@ docs = [
 version = {attr = "cobaya.__version__"}
 
 [tool.setuptools.package-data]
-cobaya = ["*.yaml", "*.bibtex"]
+"*" = ["*.yaml", "*.bibtex"]
 
 [project.scripts]
 cobaya-install = "cobaya.install:install_script"

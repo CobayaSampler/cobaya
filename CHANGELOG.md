@@ -1,4 +1,8 @@
-## 3.4.X – YYYY-MM-DD
+## 3.4.1 – 2023-10-12
+
+### General
+
+- Fixed a packaging bug after migration to `pyproject.toml`
 
 ### Cosmology
 
