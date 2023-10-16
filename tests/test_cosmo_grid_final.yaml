@@ -125,21 +125,21 @@ grid:
   datasets:
     planck_lowl_plikHM_TTTEEE_lensing:
       preset:
-        like_cmb: planck_2015_lensing
+        like_cmb: planck_2018
         sampler: MCMC
     planck_lowl_plikHM_TTTEEE_lensing_poly:
       preset:
-        like_cmb: planck_2015_lensing
+        like_cmb: planck_2018
       sampler: {polychord: {nlive: 400, num_repeats: 20, do_clustering: False, precision_criterion: 0.05}}
     planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon:
       preset:
-        like_cmb: planck_2015_lensing
+        like_cmb: planck_2018
         like_bao: BAO_planck_2018
         like_sn: Pantheon
         sampler: MCMC
-    planck_lowl_plikHM_TTTEEE_lensingk_BK14:
+    planck_lowl_plikHM_TTTEEE_lensingk_BK18:
       preset:
-        like_cmb: planck_2015_lensing_bk14
+        like_cmb: planck_2018
         sampler: MCMC
 
 # OLD
