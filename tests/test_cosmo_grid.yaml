@@ -17,7 +17,7 @@ grid:
       # so the former overwrite the latter in case of conflict.
       datasets:
         - planck_lowl_plikHM_TTTEEE_lensing
-        - planck_lowl_plikHM_TTTEEE_lensingk_BK15
+        - planck_lowl_plikHM_TTTEEE_lensingk_BK18
 # TODO: post-processing (e.g. importance reweighting)
 #      post:
 #        - [...]
@@ -56,7 +56,7 @@ grid:
         planck_2018_lowl.EE:
         planck_NPIPE_highl_CamSpec.TTTEEE:
         planck_2018_lensing.native:
-    planck_lowl_plikHM_TTTEEE_lensingk_BK15:
+    planck_lowl_plikHM_TTTEEE_lensingk_BK18:
       likelihood:
         planck_2018_lowl.TT:
         planck_2018_lowl.EE:
