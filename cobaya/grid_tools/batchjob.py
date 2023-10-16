@@ -50,8 +50,8 @@ def readobject(directory=None):
             sys.path.insert(0, config_dir)
         with open(fname, 'rb') as inp:
             grid = pickle.load(inp)
-        if not os.path.exists(grid.basePath):
-            raise FileNotFoundError('Directory not found %s' % grid.basePath)
+        if not os.path.exists(grid.batchPath):
+            raise FileNotFoundError('Directory not found %s' % grid.batchPath)
         return grid
     except Exception as e:
         print('Error loading cached batch object: ', e)
