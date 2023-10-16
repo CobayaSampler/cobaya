@@ -17,8 +17,7 @@ grid:
       # so the former overwrite the latter in case of conflict.
       datasets:
         - planck_lowl_plikHM_TTTEEE_lensing
-        - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
-        - planck_lowl_plikHM_TTTEEE_lensingk_BK14
+        - planck_lowl_plikHM_TTTEEE_lensingk_BK15
 # TODO: post-processing (e.g. importance reweighting)
 #      post:
 #        - [...]
@@ -53,25 +52,22 @@ grid:
   datasets:
     planck_lowl_plikHM_TTTEEE_lensing:
       likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
-    planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon:
+        planck_2018_lowl.TT:
+        planck_2018_lowl.EE:
+        planck_NPIPE_highl_CamSpec.TTTEEE:
+        planck_2018_lensing.native:
+    planck_lowl_plikHM_TTTEEE_lensingk_BK15:
       likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
-    planck_lowl_plikHM_TTTEEE_lensingk_BK14:
-      likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
-        bicep_keck_2014:
+        planck_2018_lowl.TT:
+        planck_2018_lowl.EE:
+        planck_NPIPE_highl_CamSpec.TTTEEE:
+        planck_2018_lensing.native:
+        bicep_keck_2018:
 
 # OLD
 ##cov
 ##    dir:  # where to look for covariance matrices
-#    # try to match each new run name to exisitng covmat (covariance matrix for efficient exploration)
+#    # try to match each new run name to existing covmat (covariance matrix for efficient exploration)
 #    # e.g. try to map to get name without particular data combinations
 #    ##covWithoutNameOrder = ['lensing', 'BAO']
 #    # or try replacing various names (these are standard for the provided planck_covmats)

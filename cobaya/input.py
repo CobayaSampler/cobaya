@@ -220,7 +220,8 @@ def get_used_components(*infos, return_infos=False):
                     kind, kind)
             if return_infos:
                 for c in comps[kind]:
-                    comp_infos[c].update(info[kind][c] or {})
+                    comp_infos[c].update((info[kind][c] or {}) if
+                                         isinstance(info[kind], Mapping) else {})
     # return dictionary of non-empty blocks
     components = {k: v for k, v in comps.items() if v}
     return (components, dict(comp_infos)) if return_infos else components

@@ -11,6 +11,7 @@
 import os
 import copy
 import argparse
+import numpy as np
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
@@ -19,7 +20,7 @@ from cobaya.input import get_used_components, merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.tools import sort_cosmetic, warn_deprecation
 from cobaya.grid_tools import batchjob
-from cobaya.cosmo_input import create_input, get_best_covmat
+from cobaya.cosmo_input import create_input, get_best_covmat_ext
 from cobaya.parameterization import is_sampled_param
 
 
@@ -56,7 +57,7 @@ def make_grid_script():
 
 
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
-             interactive=False, install_reqs_at=None, install_reqs_force=None):
+             interactive=False, install_reqs_at=None, install_reqs_force=None, random_state=None):
     print("Generating grid...")
     batchPath = os.path.abspath(batchPath) + os.sep
     if not settings:
@@ -94,6 +95,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     grid_definition = defaults.pop("grid")
     models_definitions = grid_definition["models"]
     datasets_definitions = grid_definition["datasets"]
+    random_state = np.random.default_rng(random_state)
     for jobItem in batch.items(wantSubItems=False):
         # Model info
         jobItem.makeChainPath()
@@ -149,12 +151,12 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             # as theory+sampled
             from itertools import chain
             like_params = set(chain(*[
-                list(like["params"])
+                list(like.get("params") or [])
                 for like in updated_info["likelihood"].values()]))
             params_info = {p: v for p, v in updated_info["params"].items()
                            if is_sampled_param(v) and p not in like_params}
-            best_covmat = get_best_covmat(os.path.abspath(packages_path),
-                                          params_info, updated_info["likelihood"])
+            best_covmat = get_best_covmat_ext(os.path.abspath(packages_path),
+                                          params_info, updated_info["likelihood"],random_state)
             info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
