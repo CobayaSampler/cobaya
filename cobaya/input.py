@@ -470,6 +470,8 @@ def merge_info(*infos):
         return previous_info
     current_info = None
     for new_info in infos[1:]:
+        if isinstance(previous_info,str):
+            raise LoggedError(logger, previous_info)
         previous_params_info = deepcopy(previous_info.pop("params", {}) or {})
         new_params_info = deepcopy(new_info).pop("params", {}) or {}
         # NS: params have been popped, since they have their own merge function

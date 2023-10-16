@@ -12,8 +12,8 @@ grid:
       # NB: datasets infos are added *after* models info,
       # so the former overwrite the latter in case of conflict.
       datasets:
-        - planck_lowl_plikHM_TTTEEE_lensing
-        - planck_lowl_plikHM_TTTEEE_lensing_polychord
+        - planck_lowl_NPIPE_TTTEEE_lensing
+        - planck_lowl_NPIPE_TTTEEE_lensing_polychord
   # Definitions of the models used
   models:
     "":
@@ -37,33 +37,35 @@ grid:
         bbn: YHe
   # Definitions of datasets used
   datasets:
-    planck_lowl_plikHM_TTTEEE_lensing:
+    planck_lowl_NPIPE_TTTEEE_lensing:
       likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
+        planck_2018_lowl.TT:
+        planck_2018_lowl.EE:
+        planck_NPIPE_highl_CamSpec.TTTEEE:
+        planck_2018_lensing.native:
       preset:
         sampler: MCMC
-    planck_lowl_plikHM_TTTEEE_lensing_polychord:
+    planck_lowl_NPIPE_TTTEEE_lensing_polychord:
       likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
+        planck_2018_lowl.TT:
+        planck_2018_lowl.EE:
+        planck_NPIPE_highl_CamSpec.TTTEEE:
+        planck_2018_lensing.native:
       sampler: {polychord: {}}
   # Skipped combinations
   skip:
     r:
-      - planck_lowl_plikHM_TTTEEE_lensing_polychord
+      - planck_lowl_NPIPE_TTTEEE_lensing_polychord
     omegak:
-      - planck_lowl_plikHM_TTTEEE_lensing_polychord
+      - planck_lowl_NPIPE_TTTEEE_lensing_polychord
     mnu:
-      - planck_lowl_plikHM_TTTEEE_lensing_polychord
+      - planck_lowl_NPIPE_TTTEEE_lensing_polychord
     mnu_nnu:
-      - planck_lowl_plikHM_TTTEEE_lensing_polychord
+      - planck_lowl_NPIPE_TTTEEE_lensing_polychord
     w:
-      - planck_lowl_plikHM_TTTEEE_lensing_polychord
+      - planck_lowl_NPIPE_TTTEEE_lensing_polychord
     yhe:
-      - planck_lowl_plikHM_TTTEEE_lensing_polychord
+      - planck_lowl_NPIPE_TTTEEE_lensing_polychord
 
 # Below this line (upper level), defaults ########################
 
