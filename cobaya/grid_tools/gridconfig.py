@@ -57,7 +57,8 @@ def make_grid_script():
 
 
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
-             interactive=False, install_reqs_at=None, install_reqs_force=None, random_state=None):
+             interactive=False, install_reqs_at=None, install_reqs_force=None,
+             random_state=None):
     print("Generating grid...")
     batchPath = os.path.abspath(batchPath) + os.sep
     if not settings:
@@ -156,7 +157,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             params_info = {p: v for p, v in updated_info["params"].items()
                            if is_sampled_param(v) and p not in like_params}
             best_covmat = get_best_covmat_ext(os.path.abspath(packages_path),
-                                          params_info, updated_info["likelihood"],random_state)
+                                              params_info, updated_info["likelihood"],
+                                              random_state)
             info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
