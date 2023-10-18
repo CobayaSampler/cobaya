@@ -25,6 +25,7 @@ List of external packages
  * `cobaya-mock-cmb <https://github.com/misharash/cobaya_mock_cmb>`_
  * `pyWMAP <https://github.com/HTJense/pyWMAP>`_
  * `Mock CMB-HD <https://github.com/CMB-HD/hdlike>`_
+ * `TDCOSMO strong lensing time delays <https://github.com/nataliehogg/tdcosmo_ext>`_
  * `Example - simple demo <https://github.com/CobayaSampler/example_external_likelihood>`_
  * `Example - Planck lensing <https://github.com/CobayaSampler/planck_lensing_external>`_
 
