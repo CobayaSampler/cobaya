@@ -30,6 +30,8 @@ The ##RUN line specified the actual command. If you run more than one run per jo
 
 The lines starting ## are used to define default settings for jobs, in this case 4 chains each running with 4 cores each (this does not use a complete NERSC node).
 
+You can see some `sample templates <https://github.com/CobayaSampler/cobaya/tree/master/cobaya/grid_tools/script_templates>`_ for different grid management systems.
+
 The available placeholder variables are:
 
 .. list-table::
