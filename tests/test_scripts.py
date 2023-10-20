@@ -2,6 +2,9 @@ from io import StringIO
 import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
+from cobaya.grid_tools.gridconfig import make_grid_script
+from cobaya.grid_tools.runbatch import run as run_script
+from cobaya.yaml import yaml_load_file
 from .common import stdout_redirector
 
 
@@ -51,3 +54,17 @@ def test_bib(tmpdir):
     with stdout_redirector(stream):
         bib_script([f])
     assert 'Torrado:2020' in stream.getvalue()
+
+
+def test_grid(tmpdir):
+    f = os.path.join(tmpdir, 'grid')
+    make_grid_script([f, os.path.join(os.path.dirname(__file__), 'test_cosmo_grid.yaml')])
+
+    info = yaml_load_file(
+        os.path.join(f, 'input_files', 'camb_mnu_planck_lowl_NPIPE_TT.yaml'))
+    assert info['theory']['camb']['extra_args']['num_massive_neutrinos'] == 3
+    stream = StringIO()
+    with stdout_redirector(stream):
+        run_script([f, '--dryrun', '--job-template',
+                    'cobaya/grid_tools/script_templates/job_script_UGE'])
+    assert 'camb_w_planck_lowl_NPIPE_TTTEEE_lensing.yaml' in stream.getvalue()

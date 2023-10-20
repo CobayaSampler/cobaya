@@ -16,8 +16,8 @@ grid:
       # NB: datasets infos are added *after* models info,
       # so the former overwrite the latter in case of conflict.
       datasets:
-        - planck_lowl_plikHM_TTTEEE_lensing
-        - planck_lowl_plikHM_TTTEEE_lensingk_BK18
+        - planck_lowl_NPIPE_TTTEEE_lensing
+        - planck_lowl_NPIPE_TT
 # TODO: post-processing (e.g. importance reweighting)
 #      post:
 #        - [...]
@@ -50,19 +50,17 @@ grid:
         bbn: YHe
   # Definitions of datasets used
   datasets:
-    planck_lowl_plikHM_TTTEEE_lensing:
+    planck_lowl_NPIPE_TTTEEE_lensing:
       likelihood:
         planck_2018_lowl.TT:
         planck_2018_lowl.EE:
         planck_NPIPE_highl_CamSpec.TTTEEE:
         planck_2018_lensing.native:
-    planck_lowl_plikHM_TTTEEE_lensingk_BK18:
+    planck_lowl_NPIPE_TT:
       likelihood:
         planck_2018_lowl.TT:
         planck_2018_lowl.EE:
-        planck_NPIPE_highl_CamSpec.TTTEEE:
-        planck_2018_lensing.native:
-        bicep_keck_2018:
+        planck_NPIPE_highl_CamSpec.TT:
 
 # OLD
 ##cov

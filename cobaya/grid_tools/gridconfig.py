@@ -49,9 +49,9 @@ def pathIsGrid(batchPath):
         os.path.join(batchPath, 'config', 'config.ini'))
 
 
-def make_grid_script():
+def make_grid_script(args=None):
     warn_deprecation()
-    args = getArgs()
+    args = getArgs(args)
     args.interactive = True
     makeGrid(**args.__dict__)
 

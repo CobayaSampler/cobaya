@@ -7,7 +7,7 @@ from cobaya.grid_tools import batchjob_args, jobqueue
 from cobaya.tools import warn_deprecation
 
 
-def run():
+def run(args=None):
     warn_deprecation()
     Opts = batchjob_args.BatchArgs(
         prog='cobaya grid-run',
@@ -39,7 +39,7 @@ def run():
                              help='minimum R-1 convergence for importance job parent')
     Opts.parser.add_argument('--parent_stopped', action='store_true',
                              help='only run if parent chain is not still running')
-    (batch, args) = Opts.parseForBatch()
+    (batch, args) = Opts.parseForBatch(args)
     if args.not_queued:
         print('Getting queued names...')
         queued = jobqueue.queue_job_names(args.batchPath)
