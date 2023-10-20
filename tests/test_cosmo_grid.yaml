@@ -100,17 +100,4 @@ theory:
     extra_args:
       lens_potential_accuracy: 1
 
-# Bug in original Planck chains: wrong prior
-# (reproducing here for test purposes
-params:
-  galf_TE_A_143_217:
-    prior:
-      dist: norm
-      loc: 0.30
-      scale: 0.09
-    ref:
-      dist: norm
-      loc: 0.30
-      scale: 0.09
-
 timing: True
