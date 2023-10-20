@@ -120,9 +120,7 @@ def install(*infos, **kwargs):
              if isinstance(info, str) and info.split('.')[-1] in Extension.yamls
              else info for info in infos]
     infos_not_single_names = [info for info in infos if isinstance(info, Mapping)]
-    if not path:
-        path = resolve_packages_path(*infos_not_single_names)
-    if not path:
+    if not (path := path or resolve_packages_path(*infos_not_single_names)):
         raise LoggedError(
             logger, ("No 'path' argument given, and none could be found in input infos "
                      "(as %r), the %r env variable or the config file. "

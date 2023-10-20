@@ -18,7 +18,7 @@ from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.input import get_used_components, merge_info, update_info
 from cobaya.install import install as install_reqs
-from cobaya.tools import sort_cosmetic, warn_deprecation
+from cobaya.tools import sort_cosmetic, warn_deprecation, resolve_packages_path
 from cobaya.grid_tools import batchjob
 from cobaya.cosmo_input import create_input, get_best_covmat_ext
 from cobaya.parameterization import is_sampled_param
@@ -141,8 +141,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         except KeyError:
             raise ValueError("No sampler has been chosen")
         if sampler == "mcmc" and info["sampler"][sampler].get("covmat", "auto"):
-            packages_path = install_reqs_at or info.get(packages_path_input, None)
-            if not packages_path:
+            if not (packages_path := install_reqs_at or info.get(packages_path_input)
+                                     or resolve_packages_path()):
                 raise ValueError("Cannot assign automatic covariance matrices because no "
                                  "external packages path has been defined.")
             # Need updated info for covmats: includes renames
