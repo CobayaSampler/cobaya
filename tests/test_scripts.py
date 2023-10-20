@@ -56,7 +56,7 @@ def test_bib(tmpdir):
     assert 'Torrado:2020' in stream.getvalue()
 
 
-def test_grid(tmpdir):
+def test_cosmo_grid(tmpdir):
     f = os.path.join(tmpdir, 'grid')
     make_grid_script([f, os.path.join(os.path.dirname(__file__), 'test_cosmo_grid.yaml')])
 
