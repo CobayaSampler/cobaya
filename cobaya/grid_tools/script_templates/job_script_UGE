@@ -26,9 +26,9 @@ export OMP_NUM_THREADS={OMP}
 # #$ -M your_email@here.com
 
 # Your C/Fortran compiler + MPI + Python here
-module load python/2.7.12
-module load gcc/5.4.0
-module load openmpi/2.0.1/gcc/5.4.0
+module load Python
+module load gcc
+module load OpenMPI
 
 cd {ROOTDIR}
 

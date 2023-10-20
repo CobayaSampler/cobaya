@@ -145,7 +145,7 @@ grid:
 # OLD
 ##cov
 ##    dir:  # where to look for covariance matrices
-#    # try to match each new run name to exisitng covmat (covariance matrix for efficient exploration)
+#    # try to match each new run name to existing covmat (covariance matrix for efficient exploration)
 #    # e.g. try to map to get name without particular data combinations
 #    ##covWithoutNameOrder = ['lensing', 'BAO']
 #    # or try replacing various names (these are standard for the provided planck_covmats)
@@ -156,7 +156,7 @@ grid:
 # Below this line (upper level), defaults ########################
 
 # Presets for shorter input
-# Any other field ovewrites the presets
+# Any other field overwrites the presets
 preset:
   # Base model
   primordial: SFSR
