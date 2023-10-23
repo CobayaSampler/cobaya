@@ -1,11 +1,16 @@
+"""
+.. module:: cobaya.grid_tools.gridtables
+
+:Synopsis: make summary pdf with tables for result in a grid (Cobaya version)
+:Author: Antony Lewis (based on CosmoMC version of the same code)
+
+"""
 import os
 import copy
 from cobaya.grid_tools import batchjob_args
 from getdist import types, paramnames
 from getdist.mcsamples import loadMCSamples
 
-
-# TODO: This code may not work yet (untested)
 
 def grid_tables(args=None):
 
@@ -222,14 +227,14 @@ def grid_tables(args=None):
 
     def dataIndex(job_i):
         if args.changes_data_ignore:
-            ignores = dict()
+            ignores = {}
             for ig in args.changes_data_ignore:
                 ignores[ig] = ''
             return job_i.data_set.makeNormedDatatag(ignores)
         else:
             return job_i.normed_data
 
-    baseJobItems = dict()
+    baseJobItems = {}
     for paramtag, parambatch in items:
         isBase = len(parambatch[0].param_set) == 0
         for job_item in parambatch:
@@ -303,7 +308,7 @@ def grid_tables(args=None):
                                 paramNameFile=args.paramNameFile,
                                 bestfit=args.bestfitonly)
                 if args.changes_adding_data is not None:
-                    baseJobItems = dict()
+                    baseJobItems = {}
                     refItems = []
                     for job_item in theseItems:
                         if job_item.data_set.hasName(args.changes_adding_data):
@@ -323,7 +328,7 @@ def grid_tables(args=None):
                 if args.changes_replacing is not None:
                     origCompare = [item for item in theseItems if
                                    args.changes_replacing[0] in item.data_set.names]
-                    baseJobItems = dict()
+                    baseJobItems = {}
                     for job_item in origCompare:
                         referenceJobItem = copy.deepcopy(job_item)
                         referenceJobItem.loadJobItemResults(

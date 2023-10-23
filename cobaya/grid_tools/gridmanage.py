@@ -1,3 +1,11 @@
+"""
+.. module:: cobaya.grid_tools.gridmanage
+
+:Synopsis: tools for managing grids of chains (Cobaya version)
+:Author: Antony Lewis (based on CosmoMC version of the same code)
+
+"""
+
 import os
 import fnmatch
 import subprocess
@@ -9,21 +17,27 @@ import getdist
 from getdist import IniFile
 
 from cobaya.conventions import Extension
-from . import batchjob_args, batchjob
+from .batchjob_args import BatchArgs
 
 
-# TODO: partly untested grid functions imported from cosmomc with minor changes
 # might be better as cobaya-grid command [options]
 
 def grid_check_converge(args=None):
-    Opts = batchjob_args.BatchArgs('Find chains which have failed or not converged.',
-                                   importance=True, converge=True)
+    Opts = BatchArgs('Find chains which have failed or not converged, and show'
+                     'Gelman-Rubin R-1 values for each run. Use e.g. burn_removed=0.3 '
+                     'to remove 30% of the chain as burn in.',
+                     'cobaya-grid-converge', importance=True, converge=True)
 
-    Opts.parser.add_argument('--exist', action='store_true')
-    Opts.parser.add_argument('--checkpoint', action='store_true')
-    Opts.parser.add_argument('--running', action='store_true')
-    Opts.parser.add_argument('--not_running', action='store_true')
-    Opts.parser.add_argument('--stuck', action='store_true')
+    Opts.parser.add_argument('--exist', action='store_true', help='chain must exist')
+    Opts.parser.add_argument('--checkpoint', action='store_true',
+                             help='use R-1 stored in checkpoint files '
+                                  '(rather than getdist output)')
+    Opts.parser.add_argument('--running', action='store_true',
+                             help="only check running chains")
+    Opts.parser.add_argument('--not_running', action='store_true',
+                             help="only check chains that are not running")
+    Opts.parser.add_argument('--stuck', action='store_true',
+                             help="finds chains with big spread in the last update time")
 
     (batch, args) = Opts.parseForBatch(args)
 
@@ -71,12 +85,15 @@ def grid_getdist(args=None):
     if isinstance(args, str):
         args = [args]
 
-    Opts = batchjob_args.BatchArgs('Run getdist over the grid of models',
-                                   notExist=True)
-    Opts.parser.add_argument('--update_only', action='store_true')
+    Opts = BatchArgs('Run getdist over the grid of models',
+                     'cobaya-grid-getdist', notExist=True)
+    Opts.parser.add_argument('--update_only', action='store_true',
+                             help='only run if getdist on chains that have been updated '
+                                  'since the last run')
     Opts.parser.add_argument('--make_plots', action='store_true',
                              help='run generated script plot files to make PDFs')
-    Opts.parser.add_argument('--norun', action='store_true')
+    Opts.parser.add_argument('--norun', action='store_true',
+                             help='just make the .ini files, do not run getdist')
     Opts.parser.add_argument('--burn_removed', action='store_true',
                              help="if burn in has already been removed from chains")
     Opts.parser.add_argument('--burn_remove', type=float,
@@ -149,8 +166,9 @@ def grid_getdist(args=None):
 
 
 def grid_list(args=None):
-    Opts = batchjob_args.BatchArgs('List items in a grid', importance=True, converge=True,
-                                   notExist=True)
+    Opts = BatchArgs('List items in a grid',
+                     'cobaya-grid-list, importance=True, converge=True',
+                     notExist=True)
     Opts.parser.add_argument('--exists', action='store_true', help='chain must exist')
     Opts.parser.add_argument('--normed', action='store_true', help='Output normed names')
 
@@ -175,8 +193,8 @@ def grid_cleanup(args=None):
     if isinstance(args, str):
         args = [args]
 
-    Opts = batchjob_args.BatchArgs('delete failed chains, files etc.', importance=True,
-                                   converge=True)
+    Opts = BatchArgs('delete failed chains, files etc.', 'cobaya-grid-cleanup',
+                     importance=True, converge=True)
 
     Opts.parser.add_argument('--dist', action='store_true',
                              help="set to only affect getdist output files")
@@ -234,8 +252,8 @@ def grid_cleanup(args=None):
 
 def grid_copy(args=None):
 
-    Opts = batchjob_args.BatchArgs('copy or zip chains and optionally other files',
-                                   importance=True, converge=True)
+    Opts = BatchArgs('copy or zip chains and optionally other files',
+                     'cobaya-grid-copy', importance=True, converge=True)
 
     Opts.parser.add_argument('target_dir', help="output root directory or zip file name")
 
@@ -267,7 +285,7 @@ def grid_copy(args=None):
 
     (batch, args) = Opts.parseForBatch(args)
 
-    if '.zip' in args.target_dir:
+    if args.target_dir.endswith('.zip'):
         args.zip = True
     if args.max_age_days:
         max_age = datetime.now() - timedelta(days=args.max_age_days)
@@ -298,7 +316,7 @@ def grid_copy(args=None):
                 return True
         return False
 
-    def doCopy(source, dest, _f, hasBurn=False):
+    def do_copy(source, dest, _f, hasBurn=False):
         nonlocal sizeMB
         if args.verbose:
             print(source + _f)
@@ -314,7 +332,6 @@ def grid_copy(args=None):
             if args.zip:
                 if lines:
                     zipper.writestr(destf, "".join(lines))
-
                 else:
                     zipper.write(source + _f, destf)
             else:
@@ -346,7 +363,7 @@ def grid_copy(args=None):
                 s = target_dir + 'config'
                 os.makedirs(s, exist_ok=True)
             for f in os.listdir(config_path):
-                doCopy(config_path, 'config' + os.sep, f)
+                do_copy(config_path, 'config' + os.sep, f)
 
     for jobItem in Opts.filteredBatchItems():
         if args.converge == 0 or jobItem.hasConvergeBetterThan(args.converge):
@@ -366,7 +383,7 @@ def grid_copy(args=None):
                 while os.path.exists(jobItem.chainRoot + '.%d.txt' % i):
                     f = jobItem.name + '.%d.txt' % i
                     chainfiles += 1
-                    doCopy(jobItem.chainPath, outdir, f, not jobItem.isImportanceJob)
+                    do_copy(jobItem.chainPath, outdir, f, not jobItem.isImportanceJob)
                     i += 1
                 if not jobItem.isImportanceJob and args.remove_burn_fraction:
                     props = jobItem.propertiesIni()
@@ -383,7 +400,7 @@ def grid_copy(args=None):
                         infofiles += 1
                         if args.verbose:
                             print(jobItem.chainPath + f)
-                        doCopy(jobItem.chainPath, outdir, f)
+                        do_copy(jobItem.chainPath, outdir, f)
             if args.dist and os.path.exists(jobItem.distPath):
                 outdir += 'dist' + os.sep
                 if not args.zip:
@@ -395,7 +412,7 @@ def grid_copy(args=None):
                                  datetime.fromtimestamp(os.path.getmtime(
                                      jobItem.distPath + f)) > max_age):
                         distfiles += 1
-                        doCopy(jobItem.distPath, outdir, f)
+                        do_copy(jobItem.distPath, outdir, f)
             print('... %d chain files, %d other files and %d dist files' % (
                 chainfiles, infofiles, distfiles))
 
@@ -406,9 +423,9 @@ def grid_copy(args=None):
 
 
 def grid_extract(args=None):
-    Opts = batchjob_args.BatchArgs('copy all files of a given type from all getdist '
-                                   'output directories in the batch',
-                                   importance=True, converge=True)
+    Opts = BatchArgs('copy all files of a given type from all getdist '
+                     'output directories in the grid', 'cobaya-grid-extract',
+                     importance=True, converge=True)
 
     Opts.parser.add_argument('target_dir')
     Opts.parser.add_argument('file_extension', nargs='+')
@@ -425,7 +442,7 @@ def grid_extract(args=None):
         os.makedirs(target_dir)
 
     if args.tag_replacements is not None:
-        replacements = dict()
+        replacements = {}
         for i, val in enumerate(args.tag_replacements[::2]):
             replacements[val] = args.tag_replacements[i * 2 + 1]
     else:
