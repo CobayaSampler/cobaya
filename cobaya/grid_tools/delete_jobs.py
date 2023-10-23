@@ -3,7 +3,7 @@ import shutil
 from . import batchjob_args, jobqueue
 
 
-def delete_jobs():
+def delete_jobs(args=None):
     Opts = batchjob_args.BatchArgs('Delete running or queued jobs', importance=True,
                                    batchPathOptional=True)
 
@@ -16,7 +16,7 @@ def delete_jobs():
     Opts.parser.add_argument('--delete_ids', nargs='+', type=int)
     Opts.parser.add_argument('--confirm', action='store_true')
 
-    (batch, args) = Opts.parseForBatch()
+    (batch, args) = Opts.parseForBatch(args)
 
     if batch:
         if args.delete_id_range is not None:

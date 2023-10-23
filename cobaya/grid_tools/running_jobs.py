@@ -1,9 +1,7 @@
 from . import batchjob_args, jobqueue
 
 
-# TODO: currently only tested for use with runMPI.py for single jobs
-
-def running_jobs():
+def running_jobs(args=None):
     opts = batchjob_args.BatchArgs(
         'List details of running or queued jobs; gives job stats, '
         'then current R-1 and job/chain names', importance=True, batchPathOptional=True)
@@ -12,7 +10,7 @@ def running_jobs():
     group.add_argument('--queued', action='store_true')
     group.add_argument('--running', action='store_true')
 
-    (batch, args) = opts.parseForBatch()
+    (batch, args) = opts.parseForBatch(args)
 
     if batch:
         items = [jobItem for jobItem in opts.filteredBatchItems()]

@@ -19,6 +19,8 @@ from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
 from .conventions import input_folder, script_folder, log_folder
+from cobaya.conventions import Extension
+from cobaya.yaml import yaml_load_file
 
 
 def grid_cache_file(directory):
@@ -64,11 +66,6 @@ def readobject(directory=None):
 def saveobject(obj, filename):
     with open(filename, 'wb') as output:
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
-
-
-def makePath(s):
-    if not os.path.exists(s):
-        os.makedirs(s)
 
 
 def nonEmptyFile(fname):
@@ -331,14 +328,14 @@ class JobItem(PropertiesItem):
     def matchesDatatag(self, tagList):
         if self.datatag in tagList or self.normed_data in tagList:
             return True
-        return self.datatag.replace('_post', '') in [tag.replace('_post', '') for tag in
-                                                     tagList]
+        return self.datatag.replace('_post', '') \
+            in [tag.replace('_post', '') for tag in tagList]
 
     def hasParam(self, name):
         if isinstance(name, str):
             return name in self.param_set
         else:
-            return any([True for i in name if i in self.param_set])
+            return any(True for i in name if i in self.param_set)
 
     def importanceJobs(self):
         return self.importanceItems
@@ -357,7 +354,7 @@ class JobItem(PropertiesItem):
                 j.removeImportance(job)
 
     def makeChainPath(self):
-        makePath(self.chainPath)
+        os.makedirs(self.chainPath, exist_ok=True)
         return self.chainPath
 
     def writeIniLines(self, f):
@@ -366,7 +363,7 @@ class JobItem(PropertiesItem):
         outfile.close()
 
     def chainName(self, chain=1):
-        return self.chainRoot + '_' + str(chain) + '.txt'
+        return self.chainRoot + '.' + str(chain) + '.txt'
 
     def chainExists(self, chain=1):
         fname = self.chainName(chain)
@@ -420,14 +417,17 @@ class JobItem(PropertiesItem):
         return bf.logLike < 1e29
 
     def convergeStat(self):
-        fname = self.chainRoot + '.converge_stat'
+        fname = self.chainRoot + Extension.checkpoint
         if not nonEmptyFile(fname):
             return None, None
-        textFileHandle = open(fname, encoding="utf-8")
-        textFileLines = textFileHandle.readlines()
-        textFileHandle.close()
-        return (float(textFileLines[0].strip()), len(textFileLines) > 1
-                and textFileLines[1].strip() == 'Done')
+        yaml = yaml_load_file(fname)
+        try:
+            sampler = yaml["sampler"]
+            sampler = sampler[list(sampler)[0]]
+            R = float(sampler.get("Rminus1_last"))
+            return R, sampler.get('converged')
+        except Exception as _:
+            return None, None
 
     def chainFinished(self):
         if self.isImportanceJob:
@@ -444,7 +444,7 @@ class JobItem(PropertiesItem):
         R, done = self.convergeStat()
         if R is None:
             return False
-        if not os.path.exists(self.chainRoot + '_1.chk'):
+        if not os.path.exists(self.chainRoot + Extension.covmat):
             return False
         return not done and R > minR
 
@@ -618,14 +618,14 @@ class BatchJob(PropertiesItem):
         saveobject(self, (grid_cache_file(self.batchPath), filename)[filename != ''])
 
     def makeDirectories(self, setting_file=None):
-        makePath(self.batchPath)
+        os.makedirs(self.batchPath, exist_ok=True)
         if setting_file:
-            makePath(self.batchPath + 'config')
+            s = self.batchPath + 'config'
+            os.makedirs(s, exist_ok=True)
             setting_file = setting_file.replace('.pyc', '.py')
             shutil.copy(setting_file, self.batchPath + 'config')
             props = self.propertiesIni()
             props.params['setting_file'] = os.path.split(setting_file)[-1]
             props.saveFile()
-        makePath(self.batchPath + self.iniFile_path)
-        makePath(self.batchPath + self.scriptFile_path)
-        makePath(self.batchPath + self.logFile_path)
+        for p in (self.iniFile_path, self.scriptFile_path, self.logFile_path):
+            os.makedirs(self.batchPath + p, exist_ok=True)

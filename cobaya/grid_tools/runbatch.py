@@ -10,7 +10,7 @@ from cobaya.tools import warn_deprecation
 def run(args=None):
     warn_deprecation()
     Opts = batchjob_args.BatchArgs(
-        prog='cobaya grid-run',
+        prog='cobaya-grid-run',
         desc='Submit jobs to run chains or importance sample',
         notExist=True, notall=True, converge=True)
     jobqueue.addArguments(Opts.parser, combinedJobs=True)
@@ -45,11 +45,7 @@ def run(args=None):
         queued = jobqueue.queue_job_names(args.batchPath)
 
     def notQueued(name):
-        for job in queued:
-            if name in job:
-                # print 'Already running:', name
-                return False
-        return True
+        return not any(name in job for job in queued)
 
     variant = ''
     if args.importance_minimize:

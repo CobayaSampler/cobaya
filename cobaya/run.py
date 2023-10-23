@@ -142,7 +142,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                      sampler.info())
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
                 mpi.sync_processes()
-                if info.get("test", False):
+                if info.get("test"):
                     logger_run.info("Test initialization successful! "
                                     "You can probably run now without `--%s`.", "test")
                     return updated_info, sampler

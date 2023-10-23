@@ -26,7 +26,7 @@ from cobaya.parameterization import is_sampled_param
 
 def getArgs(vals=None):
     parser = argparse.ArgumentParser(
-        prog="cobaya grid-create",
+        prog="cobaya-grid-create",
         description='Initialize grid using settings file')
     parser.add_argument('batchPath', help=(
         'root directory containing/to contain the grid '
@@ -87,7 +87,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         print('OK, configured grid with %u existing chains' % (len(batch.jobItems)))
         return batch
     else:
-        batch.makeDirectories(setting_file=None)
+        batch.makeDirectories(settingName)
         batch.save()
     infos = {}
     components_used = {}
@@ -158,7 +158,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                            if is_sampled_param(v) and p not in like_params}
             best_covmat = get_best_covmat_ext(os.path.abspath(packages_path),
                                               params_info, updated_info["likelihood"],
-                                              random_state)
+                                              random_state, msg_context=jobItem.name)
             info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job

@@ -1,7 +1,6 @@
 # Incomplete implementations/bigger jobs
 
-## Grids/rest of cosmomc scripts
-## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
+## Lots of batchjob stuff (importance sampling, minize, python settings) not implemented
 ## containers
 
 # cosmetic/consistency/speed

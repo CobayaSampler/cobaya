@@ -99,7 +99,7 @@ def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
 
 
 def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_state,
-                        cached=True) -> Optional[dict]:
+                        cached=True, msg_context="") -> Optional[dict]:
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
     the parameters used.
@@ -109,6 +109,9 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
     global _loaded_covmats_database
     covmats_database = (
             _loaded_covmats_database or get_covmat_database(packages_path, cached=cached))
+    if not covmats_database:
+        log.warning("No covariance matrices found at packages_path")
+        return None
     _loaded_covmats_database = covmats_database
     # Prepare params and likes aliases
     params_renames = set(chain(*[
@@ -124,8 +127,8 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
         lambda covmat: len(set(covmat["params"]).intersection(params_renames)))
     best_p = get_best_score(covmats_database, score_params)
     if not best_p:
-        log.warning(
-            "No covariance matrix found including at least one of the given parameters")
+        log.warning(msg_context + (':\n' if msg_context else '') +
+                    "No covariance matrix found including at least one of the given parameters")
         return None
     # Match likelihood names / keywords
     # No debug print here: way too many!
@@ -153,7 +156,8 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
                   "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
     # if there is more than one (unlikely), just pick one at random
     if len(best_p_l_sp_sn) > 1:
-        log.warning("WARNING: >1 possible best covmats: %r",
+        log.warning(msg_context + (':\n' if msg_context else '') +
+                    "WARNING: >1 possible best covmats: %r",
                     [b["name"] for b in best_p_l_sp_sn])
     random_state = np.random.default_rng(random_state)
     return best_p_l_sp_sn[random_state.choice(range(len(best_p_l_sp_sn)))].copy()

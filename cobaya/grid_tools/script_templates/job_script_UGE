@@ -41,7 +41,7 @@ echo Hostfile `cat $PE_HOSTFILE`
 ## which extracts text from here with ##XX: ...##
 
 ## Command to use for each run in the batch
-##RUN: mpirun -n {NUMMPI} {PROGRAM} {INI}##
+##RUN: mpirun -n {NUMMPI} {PROGRAM} {INI} > {JOBSCRIPTDIR}/{INIBASE}.log 2>&1##
 
 ## Commands to submit and delete
 ##DEFAULT_qsub: qsub##
