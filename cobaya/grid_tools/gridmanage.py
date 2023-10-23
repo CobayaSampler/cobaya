@@ -12,7 +12,7 @@ from cobaya.conventions import Extension
 from . import batchjob_args, batchjob
 
 
-# TODO: untested grid functions imported from cosmomc with minor changes
+# TODO: partly untested grid functions imported from cosmomc with minor changes
 # might be better as cobaya-grid command [options]
 
 def grid_check_converge(args=None):
@@ -63,9 +63,13 @@ def grid_check_converge(args=None):
                 print('...', jobItem.chainRoot)
 
         print('Converge check...')
+        for jobItem in converge:
+            print('...', jobItem.chainRoot, jobItem.R())
 
 
 def grid_getdist(args=None):
+    if isinstance(args, str):
+        args = [args]
 
     Opts = batchjob_args.BatchArgs('Run getdist over the grid of models',
                                    notExist=True)
@@ -150,6 +154,8 @@ def grid_list(args=None):
     Opts.parser.add_argument('--exists', action='store_true', help='chain must exist')
     Opts.parser.add_argument('--normed', action='store_true', help='Output normed names')
 
+    if isinstance(args, str):
+        args = [args]
     (batch, args) = Opts.parseForBatch(args)
     items = Opts.sortedParamtagDict(chainExist=args.exists)
 
@@ -166,12 +172,16 @@ def grid_list(args=None):
 
 
 def grid_cleanup(args=None):
+    if isinstance(args, str):
+        args = [args]
 
     Opts = batchjob_args.BatchArgs('delete failed chains, files etc.', importance=True,
                                    converge=True)
 
-    Opts.parser.add_argument('--dist', action='store_true')
-    Opts.parser.add_argument('--ext', nargs='+', default=['*'])
+    Opts.parser.add_argument('--dist', action='store_true',
+                             help="set to only affect getdist output files")
+    Opts.parser.add_argument('--ext', nargs='+', default=['*'],
+                             help="file extensions to delete")
     Opts.parser.add_argument('--empty', action='store_true')
     Opts.parser.add_argument('--confirm', action='store_true')
     Opts.parser.add_argument('--chainnum', default=None)

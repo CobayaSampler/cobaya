@@ -422,11 +422,10 @@ class JobItem(PropertiesItem):
             return None, None
         yaml = yaml_load_file(fname)
         try:
-            sampler = yaml["sampler"]
-            sampler = sampler[list(sampler)[0]]
+            sampler = next(iter(yaml["sampler"].values()))
             R = float(sampler.get("Rminus1_last"))
             return R, sampler.get('converged')
-        except Exception as _:
+        except Exception:
             return None, None
 
     def chainFinished(self):
