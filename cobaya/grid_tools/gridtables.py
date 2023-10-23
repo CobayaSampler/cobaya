@@ -106,22 +106,22 @@ def grid_tables(args=None):
         samps = samps1.getCombinedSamplesWithSamples(samps2)
         return getTableLines(samps.getMargeStats())
 
-    def paramResultTable(_jobItem, deltaChisqJobItem=None, _referenceDataJobItem=None):
-        if deltaChisqJobItem is not None and deltaChisqJobItem.name == _jobItem.name:
+    def paramResultTable(jobItem, deltaChisqJobItem=None, _referenceDataJobItem=None):
+        if deltaChisqJobItem is not None and deltaChisqJobItem.name == jobItem.name:
             deltaChisqJobItem = None
-        if (args.changes_from_paramtag is None
-                and _referenceDataJobItem.normed_data == _jobItem.normed_data
-                or args.changes_from_paramtag is not None
-                and _referenceDataJobItem.name == _jobItem.name):
-            _referenceDataJobItem = None
         if _referenceDataJobItem is not None:
-            pass
+            if (args.changes_from_paramtag is None
+                    and _referenceDataJobItem.normed_data == jobItem.normed_data
+                    or args.changes_from_paramtag is not None
+                    and _referenceDataJobItem.name == jobItem.name):
+                _referenceDataJobItem = None
+
         table_lines = []
         caption = []
-        _jobItem.loadJobItemResults(paramNameFile=args.paramNameFile,
-                                    bestfit=not args.nobestfit,
-                                    bestfitonly=args.bestfitonly)
-        bf = _jobItem.result_bestfit
+        jobItem.loadJobItemResults(paramNameFile=args.paramNameFile,
+                                   bestfit=not args.nobestfit,
+                                   bestfitonly=args.bestfitonly)
+        bf = jobItem.result_bestfit
         if bf is not None:
             caption.append(
                 ' Best-fit $\\chi^2_{\\rm eff} = ' + ('%.2f' % (bf.logLike * 2)) + '$')
@@ -136,7 +136,7 @@ def grid_tables(args=None):
             if bf is not None:
                 table_lines += getTableLines(bf)
         else:
-            likeMarge = _jobItem.result_likemarge
+            likeMarge = jobItem.result_likemarge
             if likeMarge is not None and likeMarge.meanLogLike is not None:
                 caption.append('$\\bar{\\chi}^2_{\\rm eff} = ' + (
                         '%.2f' % (likeMarge.meanLogLike * 2)) + '$')
@@ -147,14 +147,14 @@ def grid_tables(args=None):
                         delta = likeMarge.meanLogLike - likeMarge_ref.meanLogLike
                         caption.append('$\\Delta\\bar{\\chi}^2_{\\rm eff} = ' + (
                                 '%.2f' % (delta * 2)) + '$')
-            if _jobItem.result_converge is not None:
-                caption.append('$R-1 =' + _jobItem.result_converge.worstR() + '$')
-            if _jobItem.result_marge is not None:
+            if jobItem.result_converge is not None:
+                caption.append('$R-1 =' + jobItem.result_converge.worstR() + '$')
+            if jobItem.result_marge is not None:
                 if args.systematic_average:
-                    table_lines += getSystematicAverageTableLines(_jobItem,
+                    table_lines += getSystematicAverageTableLines(jobItem,
                                                                   _referenceDataJobItem)
                 else:
-                    table_lines += getTableLines(_jobItem.result_marge,
+                    table_lines += getTableLines(jobItem.result_marge,
                                                  _referenceDataJobItem)
 
         table_lines.append('')
@@ -180,19 +180,19 @@ def grid_tables(args=None):
         return table_lines
 
     def compareTable(jobItems, titles=None):
-        for job_item in jobItems:
-            job_item.loadJobItemResults(paramNameFile=args.paramNameFile,
-                                        bestfit=not args.nobestfit,
-                                        bestfitonly=args.bestfitonly)
-            print(job_item.name)
+        for job_i in jobItems:
+            job_i.loadJobItemResults(paramNameFile=args.paramNameFile,
+                                     bestfit=not args.nobestfit,
+                                     bestfitonly=args.bestfitonly)
+            print(job_i.name)
         if titles is None:
-            titles = [job_item.datatag for job_item in jobItems if
-                      job_item.result_marge is not None]
+            titles = [job_i.datatag for job_i in jobItems if
+                      job_i.result_marge is not None]
         else:
             titles = titles.split(';')
         return types.ResultTable(1,
-                                 [job_item.result_marge for job_item in jobItems if
-                                  job_item.result_marge is not None],
+                                 [job_i.result_marge for job_i in jobItems if
+                                  job_i.result_marge is not None],
                                  limit=args.limit, titles=titles,
                                  blockEndParams=args.blockEndParams,
                                  paramList=args.paramList).lines
@@ -220,26 +220,26 @@ def grid_tables(args=None):
             raise Exception('when using changes_from_paramtag cannot have no_delta_chisq')
         args.delta_chisq_paramtag = args.changes_from_paramtag
 
-    def dataIndex(job_item):
+    def dataIndex(job_i):
         if args.changes_data_ignore:
             ignores = dict()
             for ig in args.changes_data_ignore:
                 ignores[ig] = ''
-            return job_item.data_set.makeNormedDatatag(ignores)
+            return job_i.data_set.makeNormedDatatag(ignores)
         else:
-            return job_item.normed_data
+            return job_i.normed_data
 
     baseJobItems = dict()
     for paramtag, parambatch in items:
         isBase = len(parambatch[0].param_set) == 0
-        for jobItem in parambatch:
+        for job_item in parambatch:
             if (args.delta_chisq_paramtag is None and
                     isBase and not args.no_delta_chisq or
                     args.delta_chisq_paramtag is not None
-                    and jobItem.paramtag == args.delta_chisq_paramtag):
-                referenceJobItem = copy.deepcopy(jobItem)
+                    and job_item.paramtag == args.delta_chisq_paramtag):
+                referenceJobItem = copy.deepcopy(job_item)
                 referenceJobItem.loadJobItemResults(paramNameFile=args.paramNameFile)
-                baseJobItems[jobItem.normed_data] = referenceJobItem
+                baseJobItems[job_item.normed_data] = referenceJobItem
 
     loc = os.path.split(args.latex_filename)[0]
     if loc:
@@ -257,7 +257,7 @@ def grid_tables(args=None):
         lines = []
         if not args.forpaper:
             lines.append('\\documentclass[10pt]{article}')
-            lines.append('\\usepackage{fullpage}')
+            # lines.append('\\usepackage{fullpage}')
             lines.append('\\usepackage[pdftex]{hyperref}')
             lines.append('\\usepackage[paperheight=' + args.height +
                          ',paperwidth=' + args.width + ',margin=0.8in]{geometry}')
@@ -295,47 +295,47 @@ def grid_tables(args=None):
 
                 referenceDataJobItem = None
                 if args.changes_from_datatag is not None:
-                    for jobItem in theseItems:
-                        if (jobItem.normed_data == args.changes_from_datatag
-                                or jobItem.datatag == args.changes_from_datatag):
-                            referenceDataJobItem = copy.deepcopy(jobItem)
+                    for job_item in theseItems:
+                        if (job_item.normed_data == args.changes_from_datatag
+                                or job_item.datatag == args.changes_from_datatag):
+                            referenceDataJobItem = copy.deepcopy(job_item)
                             referenceDataJobItem.loadJobItemResults(
                                 paramNameFile=args.paramNameFile,
                                 bestfit=args.bestfitonly)
                 if args.changes_adding_data is not None:
                     baseJobItems = dict()
                     refItems = []
-                    for jobItem in theseItems:
-                        if jobItem.data_set.hasName(args.changes_adding_data):
-                            jobItem.normed_without = "_".join(
-                                sorted([x for x in jobItem.data_set.names if
+                    for job_item in theseItems:
+                        if job_item.data_set.hasName(args.changes_adding_data):
+                            job_item.normed_without = "_".join(
+                                sorted([x for x in job_item.data_set.names if
                                         x not in args.changes_adding_data]))
-                            refItems.append(jobItem.normed_without)
+                            refItems.append(job_item.normed_without)
                         else:
-                            jobItem.normed_without = None
-                    for jobItem in theseItems:
-                        if jobItem.normed_data in refItems:
-                            referenceJobItem = copy.deepcopy(jobItem)
+                            job_item.normed_without = None
+                    for job_item in theseItems:
+                        if job_item.normed_data in refItems:
+                            referenceJobItem = copy.deepcopy(job_item)
                             referenceJobItem.loadJobItemResults(
                                 paramNameFile=args.paramNameFile,
                                 bestfit=args.bestfitonly)
-                            baseJobItems[jobItem.normed_data] = referenceJobItem
+                            baseJobItems[job_item.normed_data] = referenceJobItem
                 if args.changes_replacing is not None:
                     origCompare = [item for item in theseItems if
                                    args.changes_replacing[0] in item.data_set.names]
                     baseJobItems = dict()
-                    for jobItem in origCompare:
-                        referenceJobItem = copy.deepcopy(jobItem)
+                    for job_item in origCompare:
+                        referenceJobItem = copy.deepcopy(job_item)
                         referenceJobItem.loadJobItemResults(
                             paramNameFile=args.paramNameFile,
                             bestfit=args.bestfitonly)
-                        baseJobItems[jobItem.normed_data] = referenceJobItem
+                        baseJobItems[job_item.normed_data] = referenceJobItem
 
-                for jobItem in theseItems:
+                for job_item in theseItems:
                     if args.changes_adding_data is not None:
-                        if jobItem.normed_without is not None:
+                        if job_item.normed_without is not None:
                             referenceDataJobItem = baseJobItems.get(
-                                jobItem.normed_without,
+                                job_item.normed_without,
                                 None)
                         else:
                             referenceDataJobItem = None
@@ -345,17 +345,17 @@ def grid_tables(args=None):
                     elif args.changes_replacing is not None:
                         referenceDataJobItem = None
                         for replace in args.changes_replacing[1:]:
-                            if replace in jobItem.data_set.names:
+                            if replace in job_item.data_set.names:
                                 referenceDataJobItem = baseJobItems.get(
                                     batch.normalizeDataTag(
-                                        jobItem.data_set.tagReplacing(
+                                        job_item.data_set.tagReplacing(
                                             replace, args.changes_replacing[0])), None)
                                 break
                         referenceJobItem = referenceDataJobItem
                         if args.changes_only and not referenceDataJobItem:
                             continue
                     else:
-                        referenceJobItem = baseJobItems.get(dataIndex(jobItem), None)
+                        referenceJobItem = baseJobItems.get(dataIndex(job_item), None)
                     if args.changes_from_paramtag is not None:
                         referenceDataJobItem = referenceJobItem
                     if args.systematic_average and referenceDataJobItem is None:
@@ -363,19 +363,19 @@ def grid_tables(args=None):
                     if not args.forpaper:
                         if args.systematic_average:
                             lines.append('\\subsection{ ' + texEscapeText(
-                                jobItem.name) + '/' + texEscapeText(
+                                job_item.name) + '/' + texEscapeText(
                                 referenceDataJobItem.name) + '}')
                         else:
                             lines.append(
-                                '\\subsection{ ' + texEscapeText(jobItem.name) + '}')
+                                '\\subsection{ ' + texEscapeText(job_item.name) + '}')
                     try:
-                        tableLines = paramResultTable(jobItem, referenceJobItem,
+                        tableLines = paramResultTable(job_item, referenceJobItem,
                                                       referenceDataJobItem)
                         if args.separate_tex:
-                            types.TextFile(tableLines).write(jobItem.distRoot + '.tex')
+                            types.TextFile(tableLines).write(job_item.distRoot + '.tex')
                         lines += tableLines
                     except Exception as e:
-                        print('ERROR: ' + jobItem.name)
+                        print('ERROR: ' + job_item.name)
                         print("Index Error:" + str(e))
 
         if not args.forpaper:
