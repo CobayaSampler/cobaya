@@ -147,7 +147,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                     "You can probably run now without `--%s`.", "test")
                     return updated_info, sampler
                 # Run the sampler
-                sampler.run()
+                sampler.grid_run()
     return updated_info, sampler
 
 

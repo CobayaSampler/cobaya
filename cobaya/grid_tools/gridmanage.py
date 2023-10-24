@@ -22,10 +22,9 @@ from .batchjob_args import BatchArgs
 
 # might be better as cobaya-grid command [options]
 
-def grid_check_converge(args=None):
+def grid_converge(args=None):
     Opts = BatchArgs('Find chains which have failed or not converged, and show'
-                     'Gelman-Rubin R-1 values for each run. Use e.g. burn_removed=0.3 '
-                     'to remove 30% of the chain as burn in.',
+                     'Gelman-Rubin R-1 values for each run.',
                      'cobaya-grid-converge', importance=True, converge=True)
 
     Opts.parser.add_argument('--exist', action='store_true', help='chain must exist')
@@ -82,10 +81,9 @@ def grid_check_converge(args=None):
 
 
 def grid_getdist(args=None):
-    if isinstance(args, str):
-        args = [args]
 
-    Opts = BatchArgs('Run getdist over the grid of models',
+    Opts = BatchArgs('Run getdist over the grid of models. '
+                     'Use e.g. burn_remove=0.3 to remove 30% of the chain as burn in.',
                      'cobaya-grid-getdist', notExist=True)
     Opts.parser.add_argument('--update_only', action='store_true',
                              help='only run if getdist on chains that have been updated '
@@ -166,14 +164,11 @@ def grid_getdist(args=None):
 
 
 def grid_list(args=None):
-    Opts = BatchArgs('List items in a grid',
-                     'cobaya-grid-list, importance=True, converge=True',
-                     notExist=True)
+    Opts = BatchArgs('List items in a grid', 'cobaya-grid-list',
+                     importance=True, converge=True, notExist=True)
     Opts.parser.add_argument('--exists', action='store_true', help='chain must exist')
     Opts.parser.add_argument('--normed', action='store_true', help='Output normed names')
 
-    if isinstance(args, str):
-        args = [args]
     (batch, args) = Opts.parseForBatch(args)
     items = Opts.sortedParamtagDict(chainExist=args.exists)
 
@@ -190,11 +185,10 @@ def grid_list(args=None):
 
 
 def grid_cleanup(args=None):
-    if isinstance(args, str):
-        args = [args]
 
-    Opts = BatchArgs('delete failed chains, files etc.', 'cobaya-grid-cleanup',
-                     importance=True, converge=True)
+    Opts = BatchArgs('Delete failed chains, files etc. Nothing is actually delete'
+                     'until you add --confirm, so you can check what you are doing first',
+                     'cobaya-grid-cleanup', importance=True, converge=True)
 
     Opts.parser.add_argument('--dist', action='store_true',
                              help="set to only affect getdist output files")
@@ -316,15 +310,15 @@ def grid_copy(args=None):
                 return True
         return False
 
-    def do_copy(source, dest, _f, hasBurn=False):
+    def do_copy(source, dest, _f, has_burn=False):
         nonlocal sizeMB
         if args.verbose:
             print(source + _f)
         frac = 1
         if not args.dryrun:
-            if args.remove_burn_fraction and hasBurn:
-                lines = open(source + _f).readlines()
-                lines = lines[int(len(lines) * args.remove_burn_fraction):]
+            if args.remove_burn_fraction and has_burn:
+                lines = open(source + _f, encoding='utf-8-sig').readlines()
+                lines = lines[:int((len(lines)) * args.remove_burn_fraction):]
                 frac = 1 - args.remove_burn_fraction
             else:
                 lines = None
@@ -336,7 +330,7 @@ def grid_copy(args=None):
                     zipper.write(source + _f, destf)
             else:
                 if lines:
-                    open(target_dir + destf, 'w').writelines(lines)
+                    open(target_dir + destf, 'w', encoding='utf-8').writelines(lines)
                 else:
                     if args.sym_link:
                         if os.path.islink(target_dir + destf):
@@ -344,11 +338,11 @@ def grid_copy(args=None):
                         os.symlink(os.path.realpath(source + _f), target_dir + destf)
                     else:
                         shutil.copyfile(source + _f, target_dir + destf)
-        elif args.remove_burn_fraction and hasBurn:
+        elif args.remove_burn_fraction and has_burn:
             frac = 1 - args.remove_burn_fraction
         sizeMB += os.path.getsize(source + _f) / 1024. ** 2 * frac
 
-    def writeIni(iniName, _props):
+    def write_ini(iniName, _props):
         if args.dryrun:
             return
         if args.zip:
@@ -388,7 +382,7 @@ def grid_copy(args=None):
                 if not jobItem.isImportanceJob and args.remove_burn_fraction:
                     props = jobItem.propertiesIni()
                     props.params['burn_removed'] = True
-                    writeIni(jobItem.name + '.properties.ini', props)
+                    write_ini(jobItem.name + '.properties.ini', props)
                     doneProperties = True
 
             for f in os.listdir(jobItem.chainPath):

@@ -7,21 +7,19 @@
 """
 import os
 import copy
-from cobaya.grid_tools import batchjob_args
+from cobaya.grid_tools.batchjob_args import BatchArgs
 from getdist import types, paramnames
 from getdist.mcsamples import loadMCSamples
 
 
 def grid_tables(args=None):
 
-    Opts = batchjob_args.BatchArgs(
-        'Make pdf tables from latex generated from getdist outputs', importance=True,
-        converge=True)
+    Opts = BatchArgs('Make pdf tables from latex generated from getdist outputs',
+                     importance=True, converge=True)
     Opts.parser.add_argument('latex_filename', help="name of latex/PDF file to produce")
     Opts.parser.add_argument('--limit', type=int, default=2,
                              help="sigmas of quoted confidence intervals")
     Opts.parser.add_argument('--all_limits', action='store_true')
-
     Opts.parser.add_argument('--bestfitonly', action='store_true')
     Opts.parser.add_argument('--nobestfit', action='store_true')
     Opts.parser.add_argument('--no_delta_chisq', action='store_true')
@@ -65,8 +63,12 @@ def grid_tables(args=None):
 
     Opts.parser.add_argument('--paramList', default=None,
                              help=".paramnames file listing specific "
-                                  "parameters to include (only)")
-    Opts.parser.add_argument('--blockEndParams', default=None)
+                                  "parameters to include (only).")
+    Opts.parser.add_argument('--blockEndParams', default=None,
+                             help='a semi-colon separated list of parameters marking'
+                                  'the end of distinct parameter blocks '
+                                  '(e.g. physical vs nuisance parmeters, '
+                                  'sampled vs derived)')
     Opts.parser.add_argument('--columns', type=int, nargs=1, default=3)
     Opts.parser.add_argument('--compare', nargs='+', default=None)
 
@@ -387,8 +389,8 @@ def grid_tables(args=None):
             lines.append('\\end{document}')
 
         (outdir, outname) = os.path.split(outfile)
-        if len(outdir) > 0 and not os.path.exists(outdir):
-            os.makedirs(outdir)
+        if outdir:
+            os.makedirs(outdir, exist_ok=True)
         types.TextFile(lines).write(outfile)
         root = os.path.splitext(outname)[0]
 
@@ -403,3 +405,7 @@ def grid_tables(args=None):
             for ext in delext:
                 if os.path.exists(root + '.' + ext):
                     os.remove(root + '.' + ext)
+
+
+if __name__ == "__main__":
+    grid_tables()

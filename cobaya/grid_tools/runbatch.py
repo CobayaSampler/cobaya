@@ -7,7 +7,7 @@ from cobaya.grid_tools import batchjob_args, jobqueue
 from cobaya.tools import warn_deprecation
 
 
-def run(args=None):
+def grid_run(args=None):
     warn_deprecation()
     Opts = batchjob_args.BatchArgs(
         prog='cobaya-grid-run',
@@ -26,10 +26,9 @@ def run(args=None):
                              help='run where minimization previously failed')
     Opts.parser.add_argument('--checkpoint_run', nargs='?', default=None, const=0,
                              type=float,
-                             help=(
-                                 'run if stopped and not finished; if optional value '
-                                 'given then only run chains with convergence worse than '
-                                 'the given value'))
+                             help='run if stopped and not finished; if optional value '
+                                  'given then only run chains with convergence '
+                                  'worse than the given value')
     Opts.parser.add_argument('--importance_ready', action='store_true',
                              help='where parent chain has converged and stopped')
     Opts.parser.add_argument('--importance_changed', action='store_true',

@@ -25,6 +25,9 @@ class BatchArgs:
         self.doplots = plots
 
     def parseForBatch(self, vals=None):
+        if isinstance(vals, str):
+            vals = [vals]
+
         if self.importanceParameter:
             self.parser.add_argument('--noimportance', action='store_true',
                                      help='original chains only, no importance sampled')
@@ -69,7 +72,7 @@ class BatchArgs:
                                           'don\'t already exist on disk')
         if self.doplots:
             self.parser.add_argument('--paramNameFile',
-                                     default='clik_latex.paramnames',
+                                     default=None,
                                      help=".paramnames file for custom labels for "
                                           "parameters")
             self.parser.add_argument('--paramList', default=None,

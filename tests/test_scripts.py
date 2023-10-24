@@ -2,8 +2,8 @@ from io import StringIO
 import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
-from cobaya.grid_tools.gridconfig import make_grid_script
-from cobaya.grid_tools.runbatch import run as run_script
+from cobaya.grid_tools.gridconfig import grid_create
+from cobaya.grid_tools.runbatch import grid_run as run_script
 from cobaya.grid_tools import gridmanage
 
 from cobaya.yaml import yaml_load_file
@@ -61,7 +61,7 @@ def test_bib(tmpdir):
 def test_cosmo_grid(tmpdir):
     test_name = 'camb_w_planck_lowl_NPIPE_TTTEEE_lensing'
     f = os.path.join(tmpdir, 'grid')
-    make_grid_script([f, os.path.join(os.path.dirname(__file__), 'test_cosmo_grid.yaml')])
+    grid_create([f, os.path.join(os.path.dirname(__file__), 'test_cosmo_grid.yaml')])
 
     info = yaml_load_file(
         os.path.join(f, 'input_files', 'camb_mnu_planck_lowl_NPIPE_TT.yaml'))
@@ -95,4 +95,4 @@ def test_cosmo_grid(tmpdir):
     stream = StringIO()
     with stdout_redirector(stream):
         gridmanage.grid_getdist([f, '--exist'])
-    assert "Chains do not exist yet" not in stream.getvalue()
+    assert "Chains do not" not in stream.getvalue()

@@ -70,6 +70,12 @@ Table of contents
    cluster_amazon
 
 .. toctree::
+   :caption: Grids of runs
+   :maxdepth: 1
+
+   grids
+
+.. toctree::
    :caption: For developers
    :maxdepth: 1
 

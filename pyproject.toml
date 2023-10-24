@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "cobaya"
 dynamic = ["version"]
 authors = [
-    {name = "Jesus Torrado"},
-    {name = "Antony Lewis"},
+    { name = "Jesus Torrado" },
+    { name = "Antony Lewis" },
 ]
 description = "Code for Bayesian Analysis"
 readme = "README.rst"
-license = {file = "LICENCE.txt"}
+license = { file = "LICENCE.txt" }
 keywords = ["montecarlo", "sampling", "MCMC", "cosmology"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -43,7 +43,7 @@ docs = [
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "cobaya.__version__"}
+version = { attr = "cobaya.__version__" }
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.bibtex"]
@@ -53,12 +53,12 @@ cobaya-install = "cobaya.install:install_script"
 cobaya-run = "cobaya.run:run_script"
 cobaya-doc = "cobaya.doc:doc_script"
 cobaya-bib = "cobaya.bib:bib_script"
-cobaya-grid-create = "cobaya.grid_tools:make_grid_script"
-cobaya-grid-run = "cobaya.grid_tools.runbatch:run"
+cobaya-grid-create = "cobaya.grid_tools:grid_create"
+cobaya-grid-run = "cobaya.grid_tools.runbatch:grid_run"
 cobaya-grid-tables = "cobaya.grid_tools.gridtables:grid_tables"
 cobaya-grid-list = "cobaya.grid_tools.gridmanage:grid_list"
 cobaya-grid-getdist = "cobaya.grid_tools.gridmanage:grid_getdist"
-cobaya-grid-converge = "cobaya.grid_tools.gridmanage:grid_check_converge"
+cobaya-grid-converge = "cobaya.grid_tools.gridmanage:grid_converge"
 cobaya-grid-cleanup = "cobaya.grid_tools.gridmanage:grid_cleanup"
 cobaya-grid-copy = "cobaya.grid_tools.gridmanage:grid_copy"
 cobaya-grid-extract = "cobaya.grid_tools.gridmanage:grid_extract"

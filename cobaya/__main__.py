@@ -15,8 +15,8 @@ commands = {"install": ["install", "install_script"],
             "cosmo-generator": ["cosmo_input", "gui_script"],
             "create-image": ["containers", "create_image_script"],
             "prepare-data": ["containers", "prepare_data_script"],
-            "grid-create": ["grid_tools", "make_grid_script"],
-            "grid-run": ["grid_tools.runbatch", "run"],
+            "grid-create": ["grid_tools", "grid_create"],
+            "grid-run": ["grid_tools.runbatch", "grid_run"],
             "run-job": ["grid_tools.runMPI", "run_single"],
             }
 
