@@ -3,7 +3,7 @@ import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
 from cobaya.grid_tools.gridconfig import grid_create
-from cobaya.grid_tools.runbatch import grid_run as run_script
+from cobaya.grid_tools.runbatch import grid_run
 from cobaya.grid_tools import gridmanage
 
 from cobaya.yaml import yaml_load_file
@@ -68,8 +68,8 @@ def test_cosmo_grid(tmpdir):
     assert info['theory']['camb']['extra_args']['num_massive_neutrinos'] == 3
     stream = StringIO()
     with stdout_redirector(stream):
-        run_script([f, '--dryrun', '--job-template',
-                    'cobaya/grid_tools/script_templates/job_script_UGE'])
+        grid_run([f, '--dryrun', '--job-template',
+                  'cobaya/grid_tools/script_templates/job_script_UGE'])
     assert test_name in stream.getvalue()
 
     stream = StringIO()
