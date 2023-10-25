@@ -22,6 +22,15 @@ from .batchjob_args import BatchArgs
 
 # might be better as cobaya-grid command [options]
 
+def run_and_wait(processes, commands=None, procs=1):
+    if commands:
+        processes.add(subprocess.Popen(commands))
+    while len(processes) >= procs:
+        time.sleep(.1)
+        processes.difference_update(
+            [p for p in processes if p.poll() is not None])
+
+
 def grid_converge(args=None):
     Opts = BatchArgs('Find chains which have failed or not converged, and show'
                      'Gelman-Rubin R-1 values for each run.',
@@ -152,15 +161,13 @@ def grid_getdist(args=None):
                 not args.update_only or jobItem.getDistNeedsUpdate()):
             if jobItem.chainExists():
                 print("running: " + fname)
-                processes.add(
-                    subprocess.Popen([args.command] + [fname]))
-                while len(processes) >= args.procs:
-                    time.sleep(.1)
-                    processes.difference_update(
-                        [p for p in processes if p.poll() is not None])
+                run_and_wait(processes, [args.command] + [fname], args.procs)
             else:
                 if not args.exist:
                     print("Chains do not exist yet: " + jobItem.chainRoot)
+
+    if args.procs > 1:
+        run_and_wait(processes)
 
 
 def grid_list(args=None):

@@ -12,6 +12,7 @@ import os
 import copy
 import argparse
 import numpy as np
+from getdist.inifile import IniFile
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
@@ -44,7 +45,7 @@ def getArgs(vals=None):
     return parser.parse_args(vals)
 
 
-def pathIsGrid(batchPath):
+def path_is_grid(batchPath):
     return os.path.exists(batchjob.grid_cache_file(batchPath)) or os.path.exists(
         os.path.join(batchPath, 'config', 'config.ini'))
 
@@ -63,13 +64,18 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     batchPath = os.path.abspath(batchPath) + os.sep
     if not settings:
         if not settingName:
-            raise NotImplementedError("Re-using previous batch is work in progress...")
-        #            if not pathIsGrid(batchPath):
-        #                raise Exception('Need to give name of setting file if batchPath/config '
-        #                                'does not exist')
-        #            read_only = True
-        #            sys.path.insert(0, batchPath + 'config')
-        #            settings = __import__(IniFile(batchPath + 'config/config.ini').params['setting_file'].replace('.py', ''))
+            if not path_is_grid(batchPath):
+                raise Exception('Need to give name of setting file if batchPath/config '
+                                'does not exist')
+            read_only = True
+            settingName = IniFile(os.path.join(batchPath + 'config',
+                                               'config.ini')).params['setting_file']
+            if settingName.endswith('.py'):
+                raise Exception('python settings not yet implemented')
+                # with PythonPath(batchPath + 'config'):
+                #      settings = __import__(settingName.replace('.py', ''))
+            else:
+                settings = yaml_load_file(os.path.join(batchPath + 'config', settingName))
         elif os.path.splitext(settingName)[-1].lower() in Extension.yamls:
             settings = yaml_load_file(settingName)
         else:
@@ -163,7 +169,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                 best_covmat["folder"], best_covmat["name"])
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
-        yaml_dump_file(jobItem.iniFile(), sort_cosmetic(info), error_if_exists=False)
+        yaml_dump_file(jobItem.yaml_file(), sort_cosmetic(info), error_if_exists=False)
 
         # Non-translated old code
         # if not start_at_bestfit:
@@ -207,8 +213,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         return batch
     print('Done... to run do: cobaya-grid-run %s' % batchPath)
 #    if not start_at_bestfit:
-#        print('....... for best fits: python python/runbatch.py %s --minimize'%batchPath)
+#        print('....... for best fits: python python/gridrun.py %s --minimize'%batchPath)
 #    print('')
-#    print('for importance sampled: python python/runbatch.py %s --importance'%batchPath)
+#    print('for importance sampled: python python/gridrun.py %s --importance'%batchPath)
 #    print('for best-fit for importance sampled: '
-#          'python python/runbatch.py %s --importance_minimize'%batchPath)
+#          'python python/gridrun.py %s --importance_minimize'%batchPath)

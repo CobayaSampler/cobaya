@@ -16,7 +16,7 @@ commands = {"install": ["install", "install_script"],
             "create-image": ["containers", "create_image_script"],
             "prepare-data": ["containers", "prepare_data_script"],
             "grid-create": ["grid_tools", "grid_create"],
-            "grid-run": ["grid_tools.runbatch", "grid_run"],
+            "grid-run": ["grid_tools", "grid_run"],
             "run-job": ["grid_tools.runMPI", "run_single"],
             }
 

@@ -18,7 +18,7 @@ from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
-from .conventions import input_folder, script_folder, log_folder
+from .conventions import input_folder, script_folder, log_folder, yaml_ext
 from cobaya.conventions import Extension
 from cobaya.yaml import yaml_load_file
 
@@ -41,7 +41,7 @@ def readobject(directory=None):
         directory = sys.argv[1]
     fname = grid_cache_file(directory)
     if not os.path.exists(fname):
-        if gridconfig.pathIsGrid(directory):
+        if gridconfig.path_is_grid(directory):
             return gridconfig.makeGrid(directory, read_only=True, interactive=False)
         return None
     try:
@@ -58,7 +58,7 @@ def readobject(directory=None):
     except Exception as e:
         print('Error loading cached batch object: ', e)
         resetGrid(directory)
-        if gridconfig.pathIsGrid(directory):
+        if gridconfig.path_is_grid(directory):
             return gridconfig.makeGrid(directory, read_only=True, interactive=False)
         raise
 
@@ -98,7 +98,7 @@ class DataSet:
         if isinstance(names, str):
             names = [names]
         if params is None:
-            params = [(name + '.ini') for name in names]
+            params = [(name + yaml_ext) for name in names]
         else:
             params = self.standardizeParams(params)
         if covmat is not None:
@@ -149,8 +149,8 @@ class DataSet:
         if isinstance(params, dict) or isinstance(params, str):
             params = [params]
         for i in range(len(params)):
-            if isinstance(params[i], str) and '.ini' not in params[i]:
-                params[i] += '.ini'
+            if isinstance(params[i], str) and yaml_ext not in params[i]:
+                params[i] += yaml_ext
         return params
 
     def hasName(self, name):
@@ -257,11 +257,11 @@ class JobItem(PropertiesItem):
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
         self.iniFile_path = input_folder
-        self.iniFile_ext = ".yaml"
+        self.iniFile_ext = yaml_ext
         self.scriptFile_path = script_folder
         self.logFile_path = log_folder
 
-    def iniFile(self, variant=''):
+    def yaml_file(self, variant=''):
         if not self.isImportanceJob:
             return (self.batchPath + self.iniFile_path + os.sep +
                     self.name + variant + self.iniFile_ext)
@@ -357,11 +357,6 @@ class JobItem(PropertiesItem):
         os.makedirs(self.chainPath, exist_ok=True)
         return self.chainPath
 
-    def writeIniLines(self, f):
-        outfile = open(self.iniFile(), 'w', encoding="utf-8")
-        outfile.write("\n".join(f))
-        outfile.close()
-
     def chainName(self, chain=1):
         return self.chainRoot + '.' + str(chain) + '.txt'
 
@@ -381,7 +376,7 @@ class JobItem(PropertiesItem):
             return chains
 
     def allChainExists(self, num_chains):
-        return all([self.chainExists(i + 1) for i in range(num_chains)])
+        return all(self.chainExists(i + 1) for i in range(num_chains))
 
     def chainFileDate(self, chain=1):
         return os.path.getmtime(self.chainName(chain))
@@ -394,11 +389,11 @@ class JobItem(PropertiesItem):
             i += 1
         return os.path.exists(self.chainName(i + 1)) or max(dates) - min(dates) > interval
 
-    def notRunning(self):
+    def notRunning(self, age_qualify_minutes=5):
         if not self.chainExists():
             return False  # might be in queue
         lastWrite = self.chainFileDate()
-        return lastWrite < time.time() - 5 * 60
+        return lastWrite < time.time() - age_qualify_minutes * 60
 
     def chainMinimumExists(self):
         fname = self.chainRoot + '.minimum'

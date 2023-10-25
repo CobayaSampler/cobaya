@@ -3,7 +3,7 @@ import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
 from cobaya.grid_tools.gridconfig import grid_create
-from cobaya.grid_tools.runbatch import grid_run
+from cobaya.grid_tools.gridrun import grid_run
 from cobaya.grid_tools import gridmanage
 
 from cobaya.yaml import yaml_load_file

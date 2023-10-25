@@ -1,3 +1,3 @@
 from .gridconfig import *
-from .runbatch import *
+from .gridrun import *
 from . import jobqueue
