@@ -18,7 +18,7 @@ from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
-from .conventions import input_folder, script_folder, log_folder, yaml_ext
+from .conventions import input_folder, script_folder, yaml_ext
 from cobaya.conventions import Extension
 from cobaya.yaml import yaml_load_file
 
@@ -92,19 +92,19 @@ class DataSet:
     importanceNames: list
     importanceParams: list
 
-    def __init__(self, names, params=None, covmat=None, dist_settings=None):
+    def __init__(self, names, option_dicts=None, covmat=None, dist_settings=None):
         if not dist_settings:
             dist_settings = {}
         if isinstance(names, str):
             names = [names]
-        if params is None:
-            params = [(name + yaml_ext) for name in names]
+        if option_dicts is None:
+            option_dicts = [(name + yaml_ext) for name in names]
         else:
-            params = self.standardizeParams(params)
+            option_dicts = self.standardizeParams(option_dicts)
         if covmat is not None:
             self.covmat = covmat
         self.names = names
-        self.params = params
+        self.infos = option_dicts
         # can be an array of items, either ini file name or dictionaries of parameters
         self.tag = "_".join(self.names)
         self.dist_settings = dist_settings
@@ -116,10 +116,10 @@ class DataSet:
         if dist_settings:
             self.dist_settings.update(dist_settings)
         if overrideExisting:
-            self.params = params + self.params
+            self.infos = params + self.infos
             # can be an array of items, either ini file name or dictionaries of parameters
         else:
-            self.params += params
+            self.infos += params
         if name is not None:
             self.names += [name]
             self.tag = "_".join(self.names)
@@ -142,7 +142,7 @@ class DataSet:
         data.importanceNames = names
         data.importanceParams = data.standardizeParams(params)
         data.names += data.importanceNames
-        data.params += data.importanceParams
+        data.infos += data.importanceParams
         return data
 
     def standardizeParams(self, params):
@@ -233,13 +233,14 @@ class JobItem(PropertiesItem):
     importanceSettings: list
     importanceFilter: ImportanceFilter
 
-    def __init__(self, path, param_set, data_set, base='base', minimize=True):
+    def __init__(self, path, param_set, data_set, base='base', group_name=None,
+                 minimize=True):
         self.param_set = param_set
         if not isinstance(data_set, DataSet):
-            data_set = DataSet(data_set)
+            data_set = DataSet(data_set[0], data_set[1])
         self.data_set = data_set
         self.base = base
-        self.paramtag = base + "_" + param_set
+        self.paramtag = "_".join([base] + param_set)
         self.datatag = data_set.tag
         self.name = self.paramtag + '_' + self.datatag
         self.batchPath = path
@@ -252,14 +253,13 @@ class JobItem(PropertiesItem):
         self.importanceItems = []
         self.want_minimize = minimize
         self.result_converge = None
-        self.group = None
+        self.group = group_name
         self.parent = None
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
         self.iniFile_path = input_folder
         self.iniFile_ext = yaml_ext
         self.scriptFile_path = script_folder
-        self.logFile_path = log_folder
 
     def yaml_file(self, variant=''):
         if not self.isImportanceJob:
@@ -505,36 +505,64 @@ class BatchJob(PropertiesItem):
         self.getdist_options = {}
         self.iniFile_path = input_folder
         self.scriptFile_path = script_folder
-        self.logFile_path = log_folder
 
     def propertiesIniFile(self):
         return os.path.join(self.batchPath, 'config', 'config.ini')
 
-    def makeItems(self, settings, messages=True):
+    def makeItems(self, settings, messages=True, base_name='base'):
         self.jobItems = []
-        self.getdist_options = getattr(settings, 'getdist_options', self.getdist_options)
-        allImportance = getattr(settings, 'importanceRuns', [])
-        for group_name, group in settings["grid"]["groups"].items():
-            for data_set in group["datasets"]:
-                for param_set in group["models"]:
-                    if any(data_set in (x.get("skip", {}) or {}).get(param_set, {})
-                           for x in (settings["grid"], group)):
-                        continue
-                    item = JobItem(self.batchPath, param_set, data_set, base=group_name)
-                    if hasattr(group, 'groupName'):
-                        item.group = group.groupName
-                    if item.name not in self.skip:
-                        item.makeImportance(group.get("importanceRuns", []))
-                        item.makeImportance(allImportance)
-                        self.jobItems.append(item)
-        for item in getattr(settings, 'jobItems', []):
-            self.jobItems.append(item)
-            item.makeImportance(allImportance)
-        if hasattr(settings, 'importance_filters'):
-            for job in self.jobItems:
-                for item in job.importanceJobs():
-                    item.makeImportance(settings.importance_filters)
-                job.makeImportance(settings.importance_filters)
+        dic = settings if isinstance(settings, dict) else settings.__dict__
+        self.getdist_options = dic.get('getdist_options') or self.getdist_options
+        self.skip = dic.get("skip") or []
+        all_importance = dic.get('importance_runs') or []
+
+        if isinstance(settings, dict):
+            dataset_infos = settings["grid"]["datasets"]
+            for group_name, group in settings["grid"]["groups"].items():
+                for data_set in group["datasets"]:
+                    try:
+                        dataset_info = copy.deepcopy(dataset_infos[data_set])
+                    except KeyError:
+                        raise ValueError(
+                            "Dataset '%s' must be defined." % data_set)
+                    dataset = DataSet(data_set.split('_'), [dataset_info])
+                    for param_set in group["models"]:
+                        if any(data_set in (x.get("skip", {}) or {}).get(param_set, {})
+                               for x in (settings["grid"], group)):
+                            continue
+                        item = JobItem(self.batchPath,
+                                       param_set.split('_') if param_set else [],
+                                       dataset,
+                                       base=group.get('base_name') or base_name,
+                                       group_name=group_name)
+
+                        if item.name not in self.skip:
+                            item.makeImportance(group.get("importance_runs") or [])
+                            item.makeImportance(all_importance)
+                            self.jobItems.append(item)
+        else:
+            for group_name, group in settings.groups.items():
+                for data_set in group["datasets"]:
+                    for param_set in group["params"]:
+                        item = JobItem(self.batchPath, param_set, data_set,
+                                       base=group.get('base_name') or base_name,
+                                       group_name=group_name)
+                        item.extra_opts = group.get("extra_opts") or {}
+                        item.param_extra_opts = group.get("param_extra_opts") or {}
+                        if item.name not in self.skip:
+                            item.makeImportance(group.get("importance_runs") or [])
+                            item.makeImportance(all_importance)
+                            self.jobItems.append(item)
+
+            for item in getattr(settings, 'jobItems', []):
+                self.jobItems.append(item)
+                item.makeImportance(all_importance)
+            if hasattr(settings, 'importance_filters'):
+                for job in self.jobItems:
+                    for item in job.importanceJobs():
+                        item.makeImportance(settings.importance_filters)
+                    job.makeImportance(settings.importance_filters)
+
         for item in list(self.items()):
             for x in [imp for imp in item.importanceJobsRecursive()]:
                 if self.has_normed_name(x.normed_name):
@@ -621,5 +649,5 @@ class BatchJob(PropertiesItem):
             props = self.propertiesIni()
             props.params['setting_file'] = os.path.split(setting_file)[-1]
             props.saveFile()
-        for p in (self.iniFile_path, self.scriptFile_path, self.logFile_path):
+        for p in (self.iniFile_path, self.scriptFile_path):
             os.makedirs(self.batchPath + p, exist_ok=True)

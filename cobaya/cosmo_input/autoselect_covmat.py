@@ -125,11 +125,12 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
     # Match number of params
     score_params = (
         lambda covmat: len(set(covmat["params"]).intersection(params_renames)))
-    best_p = get_best_score(covmats_database, score_params)
+    best_p = get_best_score(covmats_database, score_params, 0)
     if not best_p:
         log.warning(msg_context + (':\n' if msg_context else '') +
                     "No covariance matrix found including at least one of the given parameters")
         return None
+
     # Match likelihood names / keywords
     # No debug print here: way too many!
     score_likes = (
@@ -163,7 +164,9 @@ def get_best_covmat_ext(packages_path, params_info, likelihoods_info, random_sta
     return best_p_l_sp_sn[random_state.choice(range(len(best_p_l_sp_sn)))].copy()
 
 
-def get_best_score(covmats, score_func) -> List[dict]:
+def get_best_score(covmats, score_func, min_score=None) -> List[dict]:
     scores = np.array([score_func(covmat) for covmat in covmats])
+    if min_score is not None and np.max(scores) <= min_score:
+        return []
     i_max = np.argwhere(scores == np.max(scores)).T[0]
     return [covmats[i] for i in i_max]

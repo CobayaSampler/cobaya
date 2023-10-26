@@ -59,12 +59,12 @@ def test_bib(tmpdir):
 
 
 def test_cosmo_grid(tmpdir):
-    test_name = 'camb_w_planck_lowl_NPIPE_TTTEEE_lensing'
+    test_name = ('base_w_planck_lowl_NPIPE_TTTEEE_lensing')
     f = os.path.join(tmpdir, 'grid')
     grid_create([f, os.path.join(os.path.dirname(__file__), 'test_cosmo_grid.yaml')])
 
     info = yaml_load_file(
-        os.path.join(f, 'input_files', 'camb_mnu_planck_lowl_NPIPE_TT.yaml'))
+        os.path.join(f, 'input_files', 'base_mnu_planck_lowl_NPIPE_TT.yaml'))
     assert info['theory']['camb']['extra_args']['num_massive_neutrinos'] == 3
     stream = StringIO()
     with stdout_redirector(stream):

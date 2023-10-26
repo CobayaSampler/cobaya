@@ -12,6 +12,7 @@ import os
 import copy
 import argparse
 import numpy as np
+import importlib.util
 from getdist.inifile import IniFile
 
 # Local
@@ -19,7 +20,8 @@ from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.input import get_used_components, merge_info, update_info
 from cobaya.install import install as install_reqs
-from cobaya.tools import sort_cosmetic, warn_deprecation, resolve_packages_path
+from cobaya.tools import sort_cosmetic, warn_deprecation, resolve_packages_path, \
+    PythonPath
 from cobaya.grid_tools import batchjob
 from cobaya.cosmo_input import create_input, get_best_covmat_ext
 from cobaya.parameterization import is_sampled_param
@@ -57,6 +59,17 @@ def grid_create(args=None):
     makeGrid(**args.__dict__)
 
 
+def import_from_path(full_path):
+    # Create a module spec from the full path
+    spec = importlib.util.spec_from_file_location(
+        os.path.splitext(os.path.basename(full_path))[0], full_path)
+    # Create a module from the spec
+    module = importlib.util.module_from_spec(spec)
+    # Execute the module to populate it
+    spec.loader.exec_module(module)
+    return module
+
+
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
              interactive=False, install_reqs_at=None, install_reqs_force=None,
              random_state=None):
@@ -70,20 +83,19 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             read_only = True
             settingName = IniFile(os.path.join(batchPath + 'config',
                                                'config.ini')).params['setting_file']
+            settingName = os.path.join(batchPath + 'config', settingName)
             if settingName.endswith('.py'):
-                raise Exception('python settings not yet implemented')
-                # with PythonPath(batchPath + 'config'):
-                #      settings = __import__(settingName.replace('.py', ''))
+                settings = import_from_path(settingName)
             else:
-                settings = yaml_load_file(os.path.join(batchPath + 'config', settingName))
+                settings = yaml_load_file(settingName)
         elif os.path.splitext(settingName)[-1].lower() in Extension.yamls:
             settings = yaml_load_file(settingName)
+        elif settingName.endswith('.py'):
+            settings = import_from_path(settingName)
         else:
-            raise NotImplementedError("Using a python script is work in progress...")
-            # In this case, info-as-dict would be passed
-            # settings = __import__(settingName, fromlist=['dummy'])
+            settings = __import__(settingName, fromlist=['dummy'])
+            settingName = settings.__file__
     batch = batchjob.BatchJob(batchPath)
-    # batch.skip = settings.get("skip", False)
     batch.makeItems(settings, messages=not read_only)
     if read_only:
         for jobItem in [b for b in batch.jobItems]:
@@ -93,31 +105,64 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         print('OK, configured grid with %u existing chains' % (len(batch.jobItems)))
         return batch
     else:
-        batch.makeDirectories(settingName)
+        batch.makeDirectories(settingName or settings.__file__)
         batch.save()
     infos = {}
     components_used = {}
-    # Default info
-    defaults = copy.deepcopy(settings)
-    grid_definition = defaults.pop("grid")
-    models_definitions = grid_definition["models"]
-    datasets_definitions = grid_definition["datasets"]
     random_state = np.random.default_rng(random_state)
+    from_yaml = isinstance(settings, dict)
+    # Default info
+    if from_yaml:
+        defaults = copy.deepcopy(settings)
+        grid_definition = defaults.pop("grid")
+        models_definitions = grid_definition["models"]
+        yaml_dir = defaults.pop("yaml_dir", "") or ""
+    else:
+        yaml_dir = getattr(settings, 'yaml_dir', "")
+
+    def dicts_or_load(_infos):
+        return [(yaml_load_file(os.path.join(yaml_dir, _info)) if
+                 isinstance(_info, str) else _info)
+                for _info in _infos]
+
+    def dict_option(_name):
+        s = getattr(settings, _name, {})
+        if isinstance(s, str):
+            return yaml_load_file(os.path.join(yaml_dir, s))
+        return s
+
+    if not from_yaml:
+        defaults = settings.defaults if isinstance(settings.defaults, dict) \
+            else merge_info(*dicts_or_load(settings.defaults))
+        params = dict_option('params')
+        param_extra = dict_option('param_extra_opts')
+        settings_extra = dict_option('extra_opts')
+
     for jobItem in batch.items(wantSubItems=False):
         # Model info
         jobItem.makeChainPath()
-        try:
-            model_info = copy.deepcopy(models_definitions[jobItem.param_set] or {})
-        except KeyError:
-            raise ValueError("Model '%s' must be defined." % jobItem.param_set)
+        if from_yaml:
+            model_tag = "_".join(jobItem.param_set)
+            try:
+                model_info = copy.deepcopy(models_definitions[model_tag] or {})
+            except KeyError:
+                raise ValueError("Model '%s' must be defined." % model_tag)
+        else:
+            model_info = {'params': {}}
+            for par in jobItem.param_set:
+                if par not in params:
+                    raise ValueError("params[%s] must be defined." % par)
+                model_info['params'][par] = params[par]
+            job_param_extra = getattr(jobItem, 'param_extra_opts', {}) or {}
+            job_extra = getattr(jobItem, 'extra_opts', {}) or {}
+            extra = dict(param_extra, **job_param_extra)
+            model_info = merge_info(settings_extra, job_extra, model_info,
+                                    *[extra[par]
+                                      for par in jobItem.param_set if par in extra])
+
         model_info = merge_info(defaults, model_info)
-        # Dataset info
-        try:
-            dataset_info = copy.deepcopy(datasets_definitions[jobItem.data_set.tag])
-        except KeyError:
-            raise ValueError("Data set '%s' must be defined." % jobItem.data_set.tag)
-        # Combined info
-        combined_info = merge_info(defaults, model_info, dataset_info)
+        data_infos = dicts_or_load(jobItem.data_set.infos)
+        combined_info = merge_info(defaults, model_info, *data_infos)
         if "preset" in combined_info:
             preset = combined_info.pop("preset")
             combined_info = merge_info(create_input(**preset), combined_info)
@@ -128,9 +173,9 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             combined_info[packages_path_input] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
         # we need to install to add auto covmats
-        if jobItem.param_set not in infos:
-            infos[jobItem.param_set] = {}
-        infos[jobItem.param_set][jobItem.data_set.tag] = combined_info
+        if jobItem.paramtag not in infos:
+            infos[jobItem.paramtag] = {}
+        infos[jobItem.paramtag][jobItem.data_set.tag] = combined_info
     # Installing requisites
     if install_reqs_at:
         print("Installing required code and data for the grid.")
@@ -139,7 +184,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         install_reqs(components_used, path=install_reqs_at, force=install_reqs_force)
     print("Adding covmats (if necessary) and writing input files")
     for jobItem in batch.items(wantSubItems=False):
-        info = infos[jobItem.param_set][jobItem.data_set.tag]
+        info = infos[jobItem.paramtag][jobItem.data_set.tag]
         # Covariance matrices
         # We try to find them now, instead of at run time, to check if correctly selected
         try:
@@ -166,7 +211,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                                               params_info, updated_info["likelihood"],
                                               random_state, msg_context=jobItem.name)
             info["sampler"][sampler]["covmat"] = os.path.join(
-                best_covmat["folder"], best_covmat["name"])
+                best_covmat["folder"], best_covmat["name"]) if best_covmat else None
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
         yaml_dump_file(jobItem.yaml_file(), sort_cosmetic(info), error_if_exists=False)

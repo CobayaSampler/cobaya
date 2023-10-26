@@ -140,7 +140,7 @@ def grid_run(args=None):
                                 submitJob(jobItem.yaml_file(variant))
 
     if args.noqueue:
-        if args.procs > 1:
+        if args.noqueue > 1:
             run_and_wait(processes)
     elif yaml_files:
         if args.runs_per_job > 1:
