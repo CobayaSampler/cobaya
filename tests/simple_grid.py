@@ -18,6 +18,8 @@ default: InputDict = {
 
 defaults = [default]
 
+importance_defaults = []
+
 # settings for the variation of each parameter that is varied in the grid
 params = {'a_1': {'prior': {'min': -2, 'max': 2}, 'latex': '\\alpha_{1}'},
           'a_2': {'prior': {'min': -1, 'max': 3}, 'latex': '\\alpha_{2}'}}
@@ -53,6 +55,6 @@ joint = DataSet(['like1', 'like2'], [like1, like2])
 groups = {
     'main': {
         'params': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
-        'datasets': [('like1', like1), (['like1', 'like2'], [like1, like2])]
+        'datasets': [('like1', like1), joint]
     }
 }

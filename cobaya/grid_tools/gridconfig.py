@@ -135,10 +135,16 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
 
     if not from_yaml:
         defaults = settings.defaults if isinstance(settings.defaults, dict) \
-            else merge_info(*dicts_or_load(settings.defaults))
+            else merge_info(*dicts_or_load(settings.defaults or [{}]))
+        importance_defaults = settings.importance_defaults if \
+            isinstance(settings.importance_defaults, dict) \
+            else merge_info(*dicts_or_load(settings.importance_defaults or [{}]))
+
         params = dict_option('params')
         param_extra = dict_option('param_extra_opts')
         settings_extra = dict_option('extra_opts')
+    else:
+        importance_defaults = defaults.pop("importance_defaults", {})
 
     for jobItem in batch.items(wantSubItems=False):
         # Model info
@@ -235,43 +241,28 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         #     ini.saveFile(jobItem.iniFile(variant))
         ## NOT IMPLEMENTED: start at best fit
         ##        ini.params['start_at_bestfit'] = start_at_bestfit
-        # ---
-        # for deffile in settings.defaults:
-        #    ini.defaults.append(batch.commonPath + deffile)
-        # if hasattr(settings, 'override_defaults'):
-        #    ini.defaults = [batch.commonPath + deffile for deffile in settings.override_defaults] + ini.defaults
-        # ---
-        # # add ini files for importance sampling runs
-        # for imp in jobItem.importanceJobs():
-        #     if getattr(imp, 'importanceFilter', None): continue
-        #     if batch.hasName(imp.name.replace('"post"', '')):
-        #         raise Exception('importance sampling something you already have?')
-        #     for minimize in (False, True):
-        #         if minimize and not getattr(imp, 'want_minimize', True): continue
-        #         ini = IniFile()
-        #         updateIniParams(ini, imp.importanceSettings, batch.commonPath)
-        #         if cosmomcAction == 0 and not minimize:
-        #             for deffile in settings.importanceDefaults:
-        #                 ini.defaults.append(batch.commonPath + deffile)
-        #             ini.params['redo_outroot'] = imp.chainRoot
-        #             ini.params['action'] = 1
-        #         else:
-        #             ini.params['file_root'] = imp.chainRoot
-        #         if minimize:
-        #             setMinimize(jobItem, ini)
-        #             variant = '_minimize'
-        #         else:
-        #             variant = ''
-        #         ini.defaults.append(jobItem.iniFile())
-        #         ini.saveFile(imp.iniFile(variant))
-        #         if cosmomcAction != 0: break
+
+        for imp in jobItem.importanceJobs():
+            if getattr(imp, 'importanceFilter', None):
+                continue
+            if batch.hasName(imp.name.replace('"post"', '')):
+                raise Exception('importance sampling something you already have?')
+            for minimize in (False,):  # TODO minimize
+                if minimize and not getattr(imp, 'want_minimize', True):
+                    continue
+                info["output"] = imp.chainRoot
+                info["post"] = merge_info(importance_defaults,
+                                          *dicts_or_load(imp.importanceSettings))
+                info["post"]["suffix"] = imp.names
+                yaml_dump_file(jobItem.yaml_file(), sort_cosmetic(info),
+                               error_if_exists=False)
 
     if not interactive:
         return batch
     print('Done... to run do: cobaya-grid-run %s' % batchPath)
 #    if not start_at_bestfit:
-#        print('....... for best fits: python python/gridrun.py %s --minimize'%batchPath)
+#        print('....... for best fits: cobaya-grid-run %s --minimize'%batchPath)
 #    print('')
-#    print('for importance sampled: python python/gridrun.py %s --importance'%batchPath)
+#    print('for importance sampled: cobaya-grid-run %s --importance'%batchPath)
 #    print('for best-fit for importance sampled: '
-#          'python python/gridrun.py %s --importance_minimize'%batchPath)
+#          'cobaya-grid-run %s --importance_minimize'%batchPath)

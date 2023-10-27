@@ -18,7 +18,7 @@ from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 
-from .conventions import input_folder, script_folder, yaml_ext
+from .conventions import input_folder, script_folder, input_folder_post, yaml_ext
 from cobaya.conventions import Extension
 from cobaya.yaml import yaml_load_file
 
@@ -142,7 +142,7 @@ class DataSet:
         data.importanceNames = names
         data.importanceParams = data.standardizeParams(params)
         data.names += data.importanceNames
-        data.infos += data.importanceParams
+        # data.infos += data.importanceParams
         return data
 
     def standardizeParams(self, params):
@@ -257,16 +257,14 @@ class JobItem(PropertiesItem):
         self.parent = None
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
-        self.iniFile_path = input_folder
         self.iniFile_ext = yaml_ext
-        self.scriptFile_path = script_folder
 
     def yaml_file(self, variant=''):
         if not self.isImportanceJob:
-            return (self.batchPath + self.iniFile_path + os.sep +
+            return (self.batchPath + input_folder + os.sep +
                     self.name + variant + self.iniFile_ext)
         else:
-            return (self.batchPath + 'postIniFiles' + os.sep +
+            return (self.batchPath + input_folder_post + os.sep +
                     self.name + variant + self.iniFile_ext)
 
     def propertiesIniFile(self):
@@ -275,24 +273,24 @@ class JobItem(PropertiesItem):
     def isBurnRemoved(self):
         return self.propertiesIni().bool('burn_removed')
 
-    def makeImportance(self, importanceRuns):
-        for impRun in importanceRuns:
-            if isinstance(impRun, ImportanceSetting):
-                if not impRun.wantImportance(self):
+    def makeImportance(self, importance_runs):
+        for imp_run in importance_runs:
+            if isinstance(imp_run, ImportanceSetting):
+                if not imp_run.wantImportance(self):
                     continue
             else:
-                if len(impRun) > 2 and not impRun[2].wantImportance(self):
+                if len(imp_run) > 2 and not imp_run[2].wantImportance(self):
                     continue
-                impRun = ImportanceSetting(impRun[0], impRun[1])
-            if len(set(impRun.names).intersection(self.data_set.names)) > 0:
+                imp_run = ImportanceSetting(imp_run[0], imp_run[1])
+            if len(set(imp_run.names).intersection(self.data_set.names)) > 0:
                 print('importance job duplicating parent data set: %s with %s' % (
-                    self.name, impRun.names))
+                    self.name, imp_run.names))
                 continue
-            data = self.data_set.extendForImportance(impRun.names, impRun.inis)
+            data = self.data_set.extendForImportance(imp_run.names, imp_run.inis)
             job = JobItem(self.batchPath, self.param_set, data,
-                          minimize=impRun.want_minimize)
-            job.importanceTag = "_".join(impRun.names)
-            job.importanceSettings = impRun.inis
+                          minimize=imp_run.want_minimize)
+            job.importanceTag = "_".join(imp_run.names)
+            job.importanceSettings = imp_run.inis
             if '_post_' not in self.name:
                 tag = '_post_' + job.importanceTag
             else:
@@ -307,9 +305,9 @@ class JobItem(PropertiesItem):
             job.isImportanceJob = True
             job.parent = self
             job.group = self.group
-            job.dist_settings.update(impRun.dist_settings)
-            if isinstance(impRun, ImportanceFilter):
-                job.importanceFilter = impRun
+            job.dist_settings.update(imp_run.dist_settings)
+            if isinstance(imp_run, ImportanceFilter):
+                job.importanceFilter = imp_run
             job.makeIDs()
             self.importanceItems.append(job)
 
@@ -503,8 +501,6 @@ class BatchJob(PropertiesItem):
         self.subBatches = []
         # self.jobItems = None
         self.getdist_options = {}
-        self.iniFile_path = input_folder
-        self.scriptFile_path = script_folder
 
     def propertiesIniFile(self):
         return os.path.join(self.batchPath, 'config', 'config.ini')
@@ -649,5 +645,5 @@ class BatchJob(PropertiesItem):
             props = self.propertiesIni()
             props.params['setting_file'] = os.path.split(setting_file)[-1]
             props.saveFile()
-        for p in (self.iniFile_path, self.scriptFile_path):
+        for p in (input_folder, input_folder_post, script_folder):
             os.makedirs(self.batchPath + p, exist_ok=True)

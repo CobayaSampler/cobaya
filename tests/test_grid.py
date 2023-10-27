@@ -26,8 +26,8 @@ def test_grid(tmpdir):
                                        'like1', 'dist', 'base_a_1_a_2_like1.margestats'))
 
     table_file = os.path.join(tmpdir, 'table')
-    grid_tables([f, table_file])
-    assert os.path.exists(table_file + '.pdf')
+    grid_tables([f, table_file, '--forpaper'])  # haven't installed latex in general
+    assert os.path.exists(table_file + '.tex')
 
     grid_tables([f, table_file, '--limit', '1', '--forpaper', '--param', 'a_2', '--data',
                  'like2'])
