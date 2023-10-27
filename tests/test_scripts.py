@@ -59,7 +59,7 @@ def test_bib(tmpdir):
 
 
 def test_cosmo_grid(tmpdir):
-    test_name = ('base_w_planck_lowl_NPIPE_TTTEEE_lensing')
+    test_name = 'base_w_planck_lowl_NPIPE_TTTEEE_lensing'
     f = os.path.join(tmpdir, 'grid')
     grid_create([f, os.path.join(os.path.dirname(__file__), 'test_cosmo_grid.yaml')])
 

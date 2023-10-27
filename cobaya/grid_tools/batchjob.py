@@ -513,8 +513,8 @@ class BatchJob(PropertiesItem):
         self.jobItems = []
         dic = settings if isinstance(settings, dict) else settings.__dict__
         self.getdist_options = dic.get('getdist_options') or self.getdist_options
-        self.skip = dic.get("skip") or []
         all_importance = dic.get('importance_runs') or []
+        self.skip = dic.get("skip") or []
 
         if isinstance(settings, dict):
             dataset_infos = settings["grid"]["datasets"]

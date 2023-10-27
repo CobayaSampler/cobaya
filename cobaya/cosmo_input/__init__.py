@@ -3,7 +3,8 @@ try:
 except ImportError:
     # PySide not installed, but pass for now (will fail at GUI initialization)
     pass
-from .autoselect_covmat import get_best_covmat, get_best_covmat_ext
+from .autoselect_covmat import get_best_covmat, get_best_covmat_ext, \
+    get_covmat_package_folders
 from .create_input import create_input
 from .input_database import planck_base_model, base_precision, planck_precision, \
     planck_lss_precision, cmb_precision

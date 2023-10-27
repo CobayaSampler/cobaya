@@ -65,7 +65,7 @@ def grid_tables(args=None):
                              help=".paramnames file listing specific "
                                   "parameters to include (only).")
     Opts.parser.add_argument('--blockEndParams', default=None,
-                             help='a semi-colon separated list of parameters marking'
+                             help='a semi-colon separated list of parameters marking '
                                   'the end of distinct parameter blocks '
                                   '(e.g. physical vs nuisance parmeters, '
                                   'sampled vs derived)')
@@ -154,7 +154,7 @@ def grid_tables(args=None):
                         delta = likeMarge.meanLogLike - likeMarge_ref.meanLogLike
                         caption.append('$\\Delta\\bar{\\chi}^2_{\\rm eff} = ' + (
                                 '%.2f' % (delta * 2)) + '$')
-            if jobItem.result_converge is not None:
+            if jobItem.result_converge is not None and jobItem.result_converge.R_eigs:
                 caption.append('$R-1 =' + jobItem.result_converge.worstR() + '$')
             if jobItem.result_marge is not None:
                 if args.systematic_average:
