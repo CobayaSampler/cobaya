@@ -102,7 +102,7 @@ def grid_run(args=None):
             print('... ' + ini)
         if args.noqueue:
             if not args.dryrun:
-                run_and_wait(processes, program + ' "' + ini + '"', args.noqueue)
+                run_and_wait(processes, program.split(' ') + [ini], args.noqueue)
             return
         yaml_files.append(ini)
         if args.combine_one_job_name:
