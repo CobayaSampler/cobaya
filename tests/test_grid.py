@@ -31,8 +31,8 @@ def test_grid(tmpdir):
 
     grid_tables([f, table_file, '--limit', '1', '--forpaper', '--param', 'a_2', '--data',
                  'like2'])
-    with open(table_file + '.tex') as f:
-        assert '0.68%' in f.read()
+    with open(table_file + '.tex') as r:
+        assert '68\\%' in r.read()
 
     stream = StringIO()
     with stdout_redirector(stream):
