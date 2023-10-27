@@ -32,8 +32,8 @@ def grid_run(args=None):
     Opts.parser.add_argument('--minimize', action='store_true',
                              help='Run minimization jobs')
     Opts.parser.add_argument('--importance_minimize', action='store_true',
-                             help=('Run minimization jobs for chains '
-                                   'that are importance sampled'))
+                             help='Run minimization jobs for chains '
+                                  'that are importance sampled')
     Opts.parser.add_argument('--minimize_failed', action='store_true',
                              help='run where minimization previously failed')
     Opts.parser.add_argument('--checkpoint_run', nargs='?', default=None, const=0,
@@ -44,8 +44,8 @@ def grid_run(args=None):
     Opts.parser.add_argument('--importance_ready', action='store_true',
                              help='where parent chain has converged and stopped')
     Opts.parser.add_argument('--importance_changed', action='store_true',
-                             help=('run importance jobs where the parent chain has '
-                                   'changed since last run'))
+                             help='run importance jobs where the parent chain has '
+                                  'changed since last run')
     Opts.parser.add_argument('--parent_converge', type=float, default=0,
                              help='minimum R-1 convergence for importance job parent')
     Opts.parser.add_argument('--parent_stopped', action='store_true',

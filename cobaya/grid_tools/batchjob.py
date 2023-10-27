@@ -17,6 +17,7 @@ import time
 from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
+from getdist.paramnames import makeList
 
 from .conventions import input_folder, script_folder, input_folder_post, yaml_ext
 from cobaya.conventions import Extension
@@ -135,8 +136,8 @@ class DataSet:
 
     def extendForImportance(self, names, params):
         data = copy.deepcopy(self)
-        if '_post_' not in data.tag:
-            data.tag += '_post_' + "_".join(names)
+        if '.post.' not in data.tag:
+            data.tag += '.post.' + "_".join(names)
         else:
             data.tag += '_' + "_".join(names)
         data.importanceNames = names
@@ -210,8 +211,8 @@ class ImportanceSetting:
     def __init__(self, names, inis=None, dist_settings=None, minimize=True):
         if not inis:
             inis = []
-        self.names = names
-        self.inis = inis
+        self.names = makeList(names)
+        self.inis = makeList(inis)
         self.dist_settings = dist_settings or {}
         self.want_minimize = minimize
 
@@ -291,8 +292,8 @@ class JobItem(PropertiesItem):
                           minimize=imp_run.want_minimize)
             job.importanceTag = "_".join(imp_run.names)
             job.importanceSettings = imp_run.inis
-            if '_post_' not in self.name:
-                tag = '_post_' + job.importanceTag
+            if '.post.' not in self.name:
+                tag = '.post.' + job.importanceTag
             else:
                 tag = '_' + job.importanceTag
             job.name = self.name + tag
@@ -326,8 +327,8 @@ class JobItem(PropertiesItem):
     def matchesDatatag(self, tagList):
         if self.datatag in tagList or self.normed_data in tagList:
             return True
-        return self.datatag.replace('_post', '') \
-            in [tag.replace('_post', '') for tag in tagList]
+        return self.datatag.replace('.post.', '_') \
+            in [tag.replace('.post.', '_') for tag in tagList]
 
     def hasParam(self, name):
         if isinstance(name, str):
@@ -604,7 +605,7 @@ class BatchJob(PropertiesItem):
         return None
 
     def normalizeDataTag(self, tag):
-        return "_".join(sorted(tag.replace('_post', '').split('_')))
+        return "_".join(sorted(tag.replace('.post.', '_').split('_')))
 
     def resolveName(self, paramtag, datatag, wantSubItems=True, wantImportance=True,
                     raiseError=True, base='base',

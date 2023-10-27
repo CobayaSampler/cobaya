@@ -21,9 +21,12 @@ def test_grid(tmpdir):
     assert info['sampler']['mcmc']['max_samples'] == 100
 
     grid_run([f, '--noqueue'])
+    grid_run([f, '--noqueue', '--importance'])
     grid_getdist([f, '--burn_remove', '0.3'])
     assert os.path.exists(os.path.join(f, 'base_a_1_a_2',
                                        'like1', 'dist', 'base_a_1_a_2_like1.margestats'))
+    assert os.path.exists(os.path.join(f, 'base_a_1_a_2',
+                                       'like1', 'base_a_1_a_2_like1.post.cut.1.txt'))
 
     table_file = os.path.join(tmpdir, 'table')
     grid_tables([f, table_file, '--forpaper'])  # haven't installed latex in general
@@ -42,6 +45,6 @@ def test_grid(tmpdir):
     stream = StringIO()
     with stdout_redirector(stream):
         grid_copy([f, os.path.join(tmpdir, 'test_grid.zip'), '--dist', '--chains',
-                   '--remove_burn_fraction', '0.3'])
+                   '--remove_burn_fraction', '0.3', '--paramtag', 'like1_like2'])
     assert "4 dist files" in stream.getvalue()
     assert "1 chain files" in stream.getvalue()

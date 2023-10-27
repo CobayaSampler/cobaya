@@ -6,18 +6,17 @@ Using Cobaya grids, you can run and manage a set of runs using the grid scripts.
 
 .. note::
 
-  Grid features are not yet fully implemented, for example although filters support importance sampling and minimization,
-  these are not currently implemented. At the moment you can only generate grids from a .yaml specification, more flexible Python setting
-  files have not been ported from CosmoMC yet.
+  Minimization is not currently implemented but appears in various optional unimplemented parameters.
 
 
 To create a grid, you need a .yaml file specifying which combinations of parameters, likelihoods, etc. to use.
-The command line to generate the basic structure and files in the ``grid_folder`` directory is::
+The command line to generate the basic structure and files in the ``grid_folder`` directory is ::
 
-  cobaya-grid-create grid_folder [my_file].yaml
+  cobaya-grid-create grid_folder [my_file]
 
+where ``[my_file]'' is either a .py python setting file or a .yaml grid description.
 This will create ``grid_folder`` if it does not exist, and generate a set of .yaml files for running each of the runs in the grid.
-There is an `example <https://github.com/CobayaSampler/cobaya/blob/master/tests/test_cosmo_grid.yaml>`_ for a simple cosmology run, combing single parameter variations each with two different likelihoods.
+There is a simple generic `python example <https://github.com/CobayaSampler/cobaya/blob/master/tests/simple_grid.py>`_  and a cosmology `yaml example <https://github.com/CobayaSampler/cobaya/blob/master/tests/test_cosmo_grid.yaml>`_  which combes single parameter variations each with two different likelihoods.
 
 Once the grid is created, you can check the list of runs included using::
 
@@ -30,6 +29,12 @@ To actually submit and run the jobs, you'll need to have a :doc:`job script temp
 Simply remove the ``--dryrun`` to actually submit the jobs to run each of the items in the grid. Most of grid scripts have optional parameters to filter the grid to only run on specific subsets of items; use the ``-h`` option to see the full help.
 
 You can use ``cobaya-running-jobs grid_folder`` to and monitor which jobs are queued and running, and ``cobaya-delete-jobs grid_folder`` to cancel jobs based on various name filters.
+
+After the main samples are generated, if you have ``importance_runs`` set you can do the corresponding importance sampling on the generated chains using::
+
+  cobaya-grid-run grid_folder --importance
+
+For any run that is expected to be fast, you can use ``--noqueue`` to run each item directly rather than using a queue submission.
 
 Analysing grid results
 ================================

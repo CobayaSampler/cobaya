@@ -1,6 +1,6 @@
 # Incomplete implementations/bigger jobs
 
-## Lots of batchjob stuff (importance sampling, minize, python settings) not implemented
+## grid minimize not implemented
 ## containers
 
 # cosmetic/consistency/speed

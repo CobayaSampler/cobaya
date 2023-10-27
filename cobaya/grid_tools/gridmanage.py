@@ -225,6 +225,7 @@ def grid_cleanup(args=None):
     else:
         args.ext = ['.' + ext for ext in args.ext] + ['.*.' + ext for ext in args.ext]
 
+    done = set()
     for jobItem in Opts.filteredBatchItems():
         if (args.converge == 0 or not jobItem.hasConvergeBetterThan(
                 args.converge, returnNotExist=True)) \
@@ -235,13 +236,13 @@ def grid_cleanup(args=None):
             if os.path.exists(jobItem.distPath):
                 dirs += [jobItem.distPath]
             for adir in dirs:
-                files = sorted(os.listdir(adir))
-                for f in files:
+                for f in sorted(os.listdir(adir)):
                     for ext in args.ext:
                         if fnmatch.fnmatch(f, jobItem.name + ext):
                             fname = adir + f
-                            if os.path.exists(fname):
+                            if fname not in done and os.path.exists(fname):
                                 if not args.empty or os.path.getsize(fname) == 0:
+                                    done.add(fname)
                                     print(fname, ' (' + fsizestr(fname) + ')')
                                     if args.confirm:
                                         os.remove(fname)

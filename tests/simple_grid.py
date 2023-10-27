@@ -55,6 +55,8 @@ joint = DataSet(['like1', 'like2'], [like1, like2])
 groups = {
     'main': {
         'params': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
-        'datasets': [('like1', like1), joint]
+        'datasets': [('like1', like1), joint],
+        'importance_runs': [
+            (["cut"], {"add": {"params": {"a_0": {"prior": {"min": 0, "max": 2}}}}})]
     }
 }

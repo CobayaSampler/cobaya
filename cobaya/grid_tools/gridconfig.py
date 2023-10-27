@@ -70,6 +70,24 @@ def import_from_path(full_path):
     return module
 
 
+def post_merge_info(*infos):
+    adds = []
+    removes = []
+    result = {}
+    for info in infos:
+        inf = info.copy()
+        if "add" in info:
+            adds.append(inf.pop("add"))
+        if "remove" in info:
+            removes.append(inf.pop("remove"))
+        result.update(inf)
+    if adds:
+        result["add"] = merge_info(*adds)
+    if removes:
+        result["remove"] = merge_info(*removes)
+    return result
+
+
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
              interactive=False, install_reqs_at=None, install_reqs_force=None,
              random_state=None):
@@ -250,11 +268,12 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             for minimize in (False,):  # TODO minimize
                 if minimize and not getattr(imp, 'want_minimize', True):
                     continue
-                info["output"] = imp.chainRoot
-                info["post"] = merge_info(importance_defaults,
-                                          *dicts_or_load(imp.importanceSettings))
-                info["post"]["suffix"] = imp.names
-                yaml_dump_file(jobItem.yaml_file(), sort_cosmetic(info),
+                info = {}
+                info["output"] = jobItem.chainRoot
+                info["post"] = post_merge_info(importance_defaults,
+                                               *dicts_or_load(imp.importanceSettings))
+                info["post"]["suffix"] = imp.importanceTag
+                yaml_dump_file(imp.yaml_file(), info,
                                error_if_exists=False)
 
     if not interactive:
