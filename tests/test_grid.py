@@ -25,8 +25,12 @@ def test_grid(tmpdir):
     grid_getdist([f, '--burn_remove', '0.3'])
     assert os.path.exists(os.path.join(f, 'base_a_1_a_2',
                                        'like1', 'dist', 'base_a_1_a_2_like1.margestats'))
-    assert os.path.exists(os.path.join(f, 'base_a_1_a_2',
-                                       'like1', 'base_a_1_a_2_like1.post.cut.1.txt'))
+    assert os.path.exists(
+        os.path.join(f, 'base_a_1_a_2', 'like1_like2',
+                     'base_a_1_a_2_like1_like2.post.cut.1.txt'))
+
+    grid_run([f, '--noqueue', '--minimize', '--name', 'base_a_2_like1'])
+    assert os.path.exists(os.path.join(f, 'base_a_2', 'like1', 'base_a_2_like1.minimum'))
 
     table_file = os.path.join(tmpdir, 'table')
     grid_tables([f, table_file, '--forpaper'])  # haven't installed latex in general
@@ -45,6 +49,6 @@ def test_grid(tmpdir):
     stream = StringIO()
     with stdout_redirector(stream):
         grid_copy([f, os.path.join(tmpdir, 'test_grid.zip'), '--dist', '--chains',
-                   '--remove_burn_fraction', '0.3', '--paramtag', 'like1_like2'])
-    assert "4 dist files" in stream.getvalue()
-    assert "1 chain files" in stream.getvalue()
+                   '--remove_burn_fraction', '0.3', '--datatag', 'like1_like2'])
+    assert "10 dist files" in stream.getvalue()
+    assert "1 chain file" in stream.getvalue()

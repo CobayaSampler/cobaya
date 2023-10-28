@@ -216,7 +216,7 @@ class ImportanceSetting:
         self.dist_settings = dist_settings or {}
         self.want_minimize = minimize
 
-    def wantImportance(self, _jobItem):
+    def want_importance(self, _jobItem):
         return True
 
 
@@ -277,10 +277,14 @@ class JobItem(PropertiesItem):
     def makeImportance(self, importance_runs):
         for imp_run in importance_runs:
             if isinstance(imp_run, ImportanceSetting):
-                if not imp_run.wantImportance(self):
+                if not imp_run.want_importance(self):
                     continue
             else:
-                if len(imp_run) > 2 and not imp_run[2].wantImportance(self):
+                if len(imp_run) not in (2, 3):
+                    raise ValueError('importance_runs must be list of tuples of '
+                                     '(names, infos, [ImportanceFilter]) or '
+                                     'ImportanceSetting instances')
+                if len(imp_run) > 2 and not imp_run[2].want_importance(self):
                     continue
                 imp_run = ImportanceSetting(imp_run[0], imp_run[1])
             if len(set(imp_run.names).intersection(self.data_set.names)) > 0:

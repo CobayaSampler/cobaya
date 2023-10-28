@@ -10,7 +10,7 @@ cov_dir = ""
 skip = ['base_a_1_like1_like2']
 
 default: InputDict = {
-    'params': {'a_0': {'prior': {'min': -4, 'max': 2}, 'ref': -1, 'latex': '\\alpha_{0}'},
+    'params': {'a_0': {'prior': {'min': -4, 'max': 2}, 'ref': -1},
                'a_1': 0.1,
                'a_2': 1.1},
     'sampler': {'mcmc': {'max_samples': 500, 'burn_in': 100, 'covmat': 'auto'}},
@@ -21,8 +21,8 @@ defaults = [default]
 importance_defaults = []
 
 # settings for the variation of each parameter that is varied in the grid
-params = {'a_1': {'prior': {'min': -2, 'max': 2}, 'latex': '\\alpha_{1}'},
-          'a_2': {'prior': {'min': -1, 'max': 3}, 'latex': '\\alpha_{2}'}}
+params = {'a_1': {'prior': {'min': -2, 'max': 2}},
+          'a_2': {'prior': {'min': -1, 'max': 3}}}
 
 # Additional (non-params) options to use when each parameter is varied
 param_extra_opts = {'a_2': {
@@ -47,16 +47,23 @@ like2: InputDict = {
             'means': [np.array([0])],
             'covs': [0.1],
             'input_params_prefix': 'b'}},
-    'params': {'b_0': {'prior': {'min': -1, 'max': 1}, 'latex': '\\beta_{0}'}}
+    'params': {'b_0': {'prior': {'min': -1, 'max': 1}}}
 }
 
 joint = DataSet(['like1', 'like2'], [like1, like2])
+
+
+class ImportanceFilterb0:
+    def want_importance(self, jobItem):
+        return "like2" in jobItem.data_set.names
+
 
 groups = {
     'main': {
         'params': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
         'datasets': [('like1', like1), joint],
         'importance_runs': [
-            (["cut"], {"add": {"params": {"a_0": {"prior": {"min": 0, "max": 2}}}}})]
+            (["cut"], {"params": {"b_0": {"prior": {"min": 0, "max": 1}}}},
+             ImportanceFilterb0())]
     }
 }

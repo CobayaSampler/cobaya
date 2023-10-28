@@ -1,6 +1,6 @@
 # Incomplete implementations/bigger jobs
 
-## grid minimize not implemented
+## grid post minimize
 ## containers
 
 # cosmetic/consistency/speed

@@ -351,8 +351,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
         if (
-            is_derived_param(pinfo) and "value" not in pinfo and
-            p not in add_params
+                is_derived_param(pinfo) and "value" not in pinfo and
+                p not in add_params
         ):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)

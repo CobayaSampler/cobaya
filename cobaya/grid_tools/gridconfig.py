@@ -71,6 +71,7 @@ def import_from_path(full_path):
 
 
 def post_merge_info(*infos):
+    # merge contents of add and remove, or if neither, assume should be options for "add"
     adds = []
     removes = []
     result = {}
@@ -80,11 +81,20 @@ def post_merge_info(*infos):
             adds.append(inf.pop("add"))
         if "remove" in info:
             removes.append(inf.pop("remove"))
-        result.update(inf)
+        if len(inf) == len(info):
+            adds.append(inf)
+        else:
+            result.update(inf)
     if adds:
         result["add"] = merge_info(*adds)
     if removes:
         result["remove"] = merge_info(*removes)
+    return result
+
+
+def set_minimize(info, minimize_info=None):
+    result = dict(info, sampler={'minimize': minimize_info}, force=True)
+    result.pop("resume", None)
     return result
 
 
@@ -161,8 +171,10 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         params = dict_option('params')
         param_extra = dict_option('param_extra_opts')
         settings_extra = dict_option('extra_opts')
+        minimize_defaults = dict_option('minimize_defaults')
     else:
         importance_defaults = defaults.pop("importance_defaults", {})
+        minimize_defaults = defaults.pop("minimize_defaults", {})
 
     for jobItem in batch.items(wantSubItems=False):
         # Model info
@@ -250,38 +262,35 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                 best_covmat["folder"], best_covmat["name"]) if best_covmat else None
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
-        yaml_dump_file(jobItem.yaml_file(), sort_cosmetic(info), error_if_exists=False)
+        info = sort_cosmetic(info)
+        yaml_dump_file(jobItem.yaml_file(), info, error_if_exists=False)
 
-        # Non-translated old code
-        # if not start_at_bestfit:
-        #     setMinimize(jobItem, ini)
-        #     variant = '_minimize'
-        #     ini.saveFile(jobItem.iniFile(variant))
-        ## NOT IMPLEMENTED: start at best fit
-        ##        ini.params['start_at_bestfit'] = start_at_bestfit
+        # Minimize
+        info = set_minimize(info, minimize_defaults)
+        yaml_dump_file(jobItem.yaml_file('_minimize'), info, error_if_exists=False)
 
+        # Importance sampling
         for imp in jobItem.importanceJobs():
             if getattr(imp, 'importanceFilter', None):
                 continue
             if batch.hasName(imp.name.replace('"post"', '')):
                 raise Exception('importance sampling something you already have?')
-            for minimize in (False,):  # TODO minimize
-                if minimize and not getattr(imp, 'want_minimize', True):
-                    continue
-                info = {}
-                info["output"] = jobItem.chainRoot
-                info["post"] = post_merge_info(importance_defaults,
-                                               *dicts_or_load(imp.importanceSettings))
-                info["post"]["suffix"] = imp.importanceTag
-                yaml_dump_file(imp.yaml_file(), info,
-                               error_if_exists=False)
+            info = {"output": jobItem.chainRoot,
+                    "post": post_merge_info(importance_defaults,
+                                            *dicts_or_load(imp.importanceSettings)),
+                    "force": True}
+            info["post"]["suffix"] = imp.importanceTag
+            yaml_dump_file(imp.yaml_file(), info, error_if_exists=False)
+
+            # for minimize in (False, True):
+            #         if minimize and not getattr(imp, 'want_minimize', True):
+            #             continue
+            #         if not minimize:
 
     if not interactive:
         return batch
     print('Done... to run do: cobaya-grid-run %s' % batchPath)
-#    if not start_at_bestfit:
-#        print('....... for best fits: cobaya-grid-run %s --minimize'%batchPath)
-#    print('')
-#    print('for importance sampled: cobaya-grid-run %s --importance'%batchPath)
+    print('....... for best fits: cobaya-grid-run %s --minimize' % batchPath)
+    print('For importance sampled: cobaya-grid-run %s --importance' % batchPath)
 #    print('for best-fit for importance sampled: '
 #          'cobaya-grid-run %s --importance_minimize'%batchPath)
