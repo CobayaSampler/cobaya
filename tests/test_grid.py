@@ -4,7 +4,7 @@ from cobaya.yaml import yaml_load_file
 from cobaya.grid_tools.gridconfig import grid_create
 from cobaya.grid_tools.gridrun import grid_run
 from cobaya.grid_tools.gridmanage import grid_getdist, grid_list, grid_copy
-from cobaya.grid_tools.gridtables import grid_tables
+from cobaya.grid_tools.gridtables import grid_tables, grid_param_compare
 from .common import stdout_redirector
 
 
@@ -25,9 +25,8 @@ def test_grid(tmpdir):
     grid_getdist([f, '--burn_remove', '0.3'])
     assert os.path.exists(os.path.join(f, 'base_a_1_a_2',
                                        'like1', 'dist', 'base_a_1_a_2_like1.margestats'))
-    assert os.path.exists(
-        os.path.join(f, 'base_a_1_a_2', 'like1_like2',
-                     'base_a_1_a_2_like1_like2.post.cut.1.txt'))
+    assert os.path.exists(os.path.join(f, 'base_a_1_a_2', 'like1_like2',
+                                       'base_a_1_a_2_like1_like2.post.cut.1.txt'))
 
     grid_run([f, '--noqueue', '--minimize', '--name', 'base_a_2_like1'])
     assert os.path.exists(os.path.join(f, 'base_a_2', 'like1', 'base_a_2_like1.minimum'))
@@ -52,3 +51,7 @@ def test_grid(tmpdir):
                    '--remove_burn_fraction', '0.3', '--datatag', 'like1_like2'])
     assert "10 dist files" in stream.getvalue()
     assert "1 chain file" in stream.getvalue()
+
+    grid_param_compare([f, '--params', 'a_1', 'a_2', '--latex_filename', table_file])
+    with open(table_file + '.tex') as r:
+        assert 'a_2 &' in r.read()

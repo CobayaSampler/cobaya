@@ -133,7 +133,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         print('OK, configured grid with %u existing chains' % (len(batch.jobItems)))
         return batch
     else:
-        batch.makeDirectories(settingName or settings.__file__)
+        batch.make_directories(settingName or settings.__file__)
         batch.save()
     infos = {}
     components_used = {}

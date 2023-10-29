@@ -1,3 +1,12 @@
+## 3.4.x – 2023-xx-xx
+
+### Grid scripts
+- Support for running grids of models, including grid getdist, PDF tables, importance sampling, minimization (almost all features of CosmoMC grid now available in Cobaya). See the new doc pages.
+
+### General
+
+- Updated UGE sample job submission template (for cobaya-job-run and cobaya-grid-run)
+
 ## 3.4.1 – 2023-10-12
 
 ### General

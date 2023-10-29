@@ -407,5 +407,115 @@ def grid_tables(args=None):
                     os.remove(root + '.' + ext)
 
 
+def grid_param_compare(args=None):
+
+    Opts = BatchArgs('Compare parameter constraints over set of models, producing'
+                     'latext column content for tables (but not full tables)')
+    Opts.parser.add_argument('--params', nargs='+',
+                             help="list of parameters to compare in the output tables")
+    Opts.parser.add_argument('--single_extparams', nargs='+',
+                             help="list of single parameter extensions to restrict to")
+
+    Opts.parser.add_argument('--compare', nargs='+', default=None,
+                             help="list of data tags to compare")
+    Opts.parser.add_argument('--nobestfits', action='store_true')
+    Opts.parser.add_argument('--limit', type=int, default=2)
+    Opts.parser.add_argument('--latex_filename', default=None,
+                             help="name of latex file to produce (otherwise stdout)")
+    Opts.parser.add_argument('--math_columns', action='store_true',
+                             help="whether to include $$ in the output for each column")
+    Opts.parser.add_argument('--endline', default='\\cr')
+    Opts.parser.add_argument('--paramNameFile',
+                             help="Optional parameter name file "
+                                  "giving latex labels for each parameter")
+
+    (batch, args) = Opts.parseForBatch(args)
+    formatter = types.TableFormatter()
+
+    if args.paramNameFile:
+        names = paramnames.ParamNames(args.paramNameFile)
+        par_labels = dict((par, names.parWithName(par, True).label)
+                          for par in names.names())
+    else:
+        par_labels = {}
+
+    if args.compare:
+        args.compare = [batch.normalizeDataTag(dat) for dat in args.compare]
+
+    table = {}
+    paramtag_for_param = {}
+    for par in args.params:
+        paramtag_for_param[par] = []
+
+    for jobItem in Opts.filteredBatchItems():
+        if (args.compare is None or jobItem.matchesDatatag(args.compare)) and (
+                not args.single_extparams or
+                len(jobItem.param_set) == 1 and jobItem.hasParam(args.single_extparams)):
+            jobItem.loadJobItemResults(paramNameFile=None, bestfit=not args.nobestfits,
+                                       noconverge=True, silent=True)
+            if jobItem.result_marge is not None:
+                for par in args.params:
+                    texValues = jobItem.result_marge.texValues(formatter, par,
+                                                               limit=args.limit)
+                    if texValues is not None:
+                        if par not in par_labels:
+                            par_labels[par] = \
+                                jobItem.result_marge.parWithName(par, True).label
+                        if jobItem.paramtag not in table:
+                            table[jobItem.paramtag] = {}
+                        data_table = table[jobItem.paramtag]
+                        if jobItem.paramtag not in paramtag_for_param[par]:
+                            paramtag_for_param[par].append(jobItem.paramtag)
+                        if jobItem.normed_data not in data_table:
+                            data_table[jobItem.normed_data] = {}
+                        data_table[jobItem.normed_data][par] = texValues
+
+    def make_math(txt):
+        if args.math_columns:
+            return '$' + txt + '$'
+        else:
+            return txt
+
+    def text_as_column(txt, latex=True):
+        if latex:
+            return make_math(txt)
+        else:
+            return txt
+
+    def sort_data(_batch, datatags):
+        items = []
+        for tag in datatags:
+            items += [item for item in _batch if item == tag]
+        return items
+
+    lines = []
+
+    for i, par in enumerate(args.params):
+        for paramtag in paramtag_for_param[par]:
+            dataTable = table[paramtag]
+            print(paramtag, len(dataTable))
+            if args.compare is not None:
+                dataTable = sort_data(dataTable, args.compare)
+            cols = [make_math(par_labels[par])]
+            for datatag in dataTable:
+                if args.latex_filename is not None:
+                    for par2 in args.params:
+                        if par2 in table[paramtag][datatag]:
+                            res = table[paramtag][datatag][par2]
+                            if len(res) > 1:
+                                cols.append(text_as_column(res[1]))
+                            cols.append(text_as_column(res[0], latex=res[0] != '---'))
+                else:
+                    print(' ', table[paramtag][datatag], datatag)
+            lines.append(" & ".join(cols) + args.endline)
+
+    if args.latex_filename is not None:
+        if not args.latex_filename.endswith('.tex'):
+            args.latex_filename += '.tex'
+        (outdir, outname) = os.path.split(args.latex_filename)
+        os.makedirs(os.path.dirname(outdir), exist_ok=True)
+        types.TextFile(lines).write(args.latex_filename)
+
+
 if __name__ == "__main__":
     grid_tables()

@@ -20,6 +20,7 @@ from getdist.mcsamples import loadMCSamples
 from getdist.paramnames import makeList
 
 from .conventions import input_folder, script_folder, input_folder_post, yaml_ext
+import cobaya
 from cobaya.conventions import Extension
 from cobaya.yaml import yaml_load_file
 
@@ -631,7 +632,7 @@ class BatchJob(PropertiesItem):
         else:
             return None
 
-    def resolveRoot(self, root):
+    def resolve_root(self, root):
         for jobItem in self.items(True, True):
             if jobItem.name == root:
                 return jobItem
@@ -640,7 +641,7 @@ class BatchJob(PropertiesItem):
     def save(self, filename=''):
         saveobject(self, (grid_cache_file(self.batchPath), filename)[filename != ''])
 
-    def makeDirectories(self, setting_file=None):
+    def make_directories(self, setting_file=None):
         os.makedirs(self.batchPath, exist_ok=True)
         if setting_file:
             s = self.batchPath + 'config'
@@ -649,6 +650,7 @@ class BatchJob(PropertiesItem):
             shutil.copy(setting_file, self.batchPath + 'config')
             props = self.propertiesIni()
             props.params['setting_file'] = os.path.split(setting_file)[-1]
+            props.params['cobaya_version'] = cobaya.__version__
             props.saveFile()
         for p in (input_folder, input_folder_post, script_folder):
             os.makedirs(self.batchPath + p, exist_ok=True)
