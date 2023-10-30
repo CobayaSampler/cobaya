@@ -59,3 +59,6 @@ def test_grid(tmpdir):
 
     with stdout_check("base_a_1_a_2_like1_like2"):
         grid_cleanup([f, '--confirm', '--data', 'like2'])
+
+    with stdout_check("like2", match=False):
+        grid_cleanup([f])

@@ -2,9 +2,7 @@ from io import StringIO
 import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
-from cobaya.grid_tools.gridconfig import grid_create
-from cobaya.grid_tools.gridrun import grid_run
-from cobaya.grid_tools import gridmanage
+from cobaya.grid_tools import gridmanage, grid_create, grid_run
 
 from cobaya.yaml import yaml_load_file
 from .common import stdout_check
@@ -73,5 +71,5 @@ def test_cosmo_grid(tmpdir):
     with stdout_check("Chains do not exist yet"):
         gridmanage.grid_getdist([f])
 
-    with stdout_check("Chains do not"):
+    with stdout_check("Chains do not", match=False):
         gridmanage.grid_getdist([f, '--exist'])

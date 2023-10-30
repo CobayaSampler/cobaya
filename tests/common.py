@@ -30,7 +30,7 @@ def stdout_redirector(stream):
 
 
 @contextmanager
-def stdout_check(*strs):
+def stdout_check(*strs, match=True):
     stream = StringIO()
     old_stdout = sys.stdout
     sys.stdout = stream
@@ -40,4 +40,4 @@ def stdout_check(*strs):
         sys.stdout = old_stdout
     output = stream.getvalue()
     for s in strs:
-        assert s in output, "Output should contain '%s'" % s
+        assert match == (s in output), "Output should contain '%s'" % s
