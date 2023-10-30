@@ -106,15 +106,10 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # 3.1 First: model only
             out.check_and_dump_info(info, updated_info, cache_old=True,
                                     ignore_blocks=["sampler"])
-            # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
-            # TODO: ideally, using Minimizer would *append* to the sampler block.
-            #       Some code already in place, but not possible at the moment.
-            try:
-                last_sampler = list(updated_info["sampler"])[-1]
-                last_sampler_info = {last_sampler: updated_info["sampler"][last_sampler]}
-            except (KeyError, TypeError) as excpt:
-                raise LoggedError(logger_run, "No sampler requested.") from excpt
-            sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
+            # 3.2 Then sampler -- 1st get the first sampler mentioned in the updated.yaml
+            if not (info_sampler := updated_info.get("sampler")):
+                raise LoggedError(logger_run, "No sampler requested.")
+            sampler_name, sampler_class = get_sampler_name_and_class(info_sampler)
             updated_info["sampler"] = check_sampler_info(
                 (out.get_updated_info(use_cache=True) or {}).get("sampler"),
                 updated_info["sampler"], is_resuming=out.is_resuming())
