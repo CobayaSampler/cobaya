@@ -34,10 +34,11 @@ def getArgs(vals=None):
         description='Initialize grid using settings file')
     parser.add_argument('batchPath', help=(
         'root directory containing/to contain the grid '
-        '(e.g. ./PLA where directories base, base_xx etc are under ./PLA)'))
+        '(e.g. grid_folder where output directories are created '
+        'at grid_folder/base/base_xx)'))
     parser.add_argument('settingName', nargs='?', help=(
-        'python setting file (without .py) for making or updating a grid, '
-        'usually found as python/settingName.py'))
+        'python setting file for making or updating a grid, a py filename or '
+        'full name of a python module'))
     parser.add_argument('--read-only', action='store_true', help=(
         'option to configure an already-run existing grid'))
     # Arguments related to installation of requisites
@@ -45,6 +46,9 @@ def getArgs(vals=None):
         'install required code and data for the grid in the given folder.'))
     parser.add_argument("--install-reqs-force", action="store_true", default=False,
                         help="Force re-installation of apparently installed packages.")
+    parser.add_argument("--show-covmats", action="store_true",
+                        help="Show which covmat is assigned to each chain.")
+
     return parser.parse_args(vals)
 
 
@@ -99,9 +103,10 @@ def set_minimize(info, minimize_info=None):
     return result
 
 
+# noinspection PyUnboundLocalVariable
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
              interactive=False, install_reqs_at=None, install_reqs_force=None,
-             random_state=None):
+             random_state=None, show_covmats=False):
     print("Generating grid...")
     batchPath = os.path.abspath(batchPath) + os.sep
     if not settings:
@@ -150,6 +155,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     else:
         yaml_dir = getattr(settings, 'yaml_dir', "")
         cov_dir = getattr(settings, 'cov_dir', None)
+        if getattr(settings, 'start_at_bestfit', None) is not None:
+            raise ValueError("start_at_bestfit not yet implemented")
 
     def dicts_or_load(_infos):
         return [(yaml_load_file(os.path.join(yaml_dir, _info)) if
@@ -260,6 +267,9 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                                               random_state, msg_context=jobItem.name)
             info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"]) if best_covmat else None
+            if show_covmats:
+                print(jobItem.name, '->', (best_covmat or {}).get("name"))
+
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
         info = sort_cosmetic(info)

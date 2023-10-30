@@ -23,7 +23,7 @@ covmat_folders = [
     "{%s}/data/bicep_keck_2018/BK18_cosmomc/planck_covmats/" % packages_path_input]
 
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
-_loaded_covmats_database: Optional[List[Dict]] = None
+_loaded_covmats_database: Dict[str, List[dict]] = {}
 
 
 def get_covmat_package_folders(packages_path) -> List[str]:
@@ -43,10 +43,12 @@ def get_covmat_database(packages_path, cached=True) -> List[dict]:
 
 def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
     # Get folders with corresponding components installed
-    hex = hashlib.md5(str(installed_folders).encode('utf8')).hexdigest()
-    covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file % hex)
+    _hash = hashlib.md5(str(installed_folders).encode('utf8')).hexdigest()
+    covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file % _hash)
     # Check if there is a usable cached one
     if cached:
+        if covmats_database := _loaded_covmats_database.get(_hash):
+            return covmats_database
         try:
             with open(covmats_database_fullpath, "rb") as f:
                 covmat_database = pickle.load(f)
@@ -57,6 +59,7 @@ def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
                   for folder in installed_folders])))
             assert num_files == len(covmat_database)
             log.debug("Loaded cached covmats database")
+            _loaded_covmats_database[_hash] = covmat_database
             return covmat_database
         except:
             log.info("No cached covmat database present, not usable or not up-to-date. "
@@ -68,7 +71,7 @@ def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
         for filename in os.listdir(folder_full):
             try:
                 with open(os.path.join(folder_full, filename),
-                          encoding="utf-8") as covmat:
+                          encoding="utf-8-sig") as covmat:
                     header = covmat.readline()
                 assert header.strip().startswith("#")
                 params = header.strip().lstrip("#").split()
@@ -79,28 +82,30 @@ def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
     if cached:
         with open(covmats_database_fullpath, "wb") as f:
             pickle.dump(covmat_database, f)
+        _loaded_covmats_database[_hash] = covmat_database
     return covmat_database
 
 
 def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     """
     Chooses optimal covmat from a database, based on common parameters and likelihoods.
+    Only used by GUI.
 
     Returns a dict `{folder: [folder_of_covmat], name: [file_name_of_covmat],
     params: [parameters_in_covmat], covmat: [covariance_matrix]}`.
     """
-    packages_path = packages_path or info.get(packages_path_input)
-    if not packages_path:
+
+    if not (packages_path := packages_path or info.get(packages_path_input)):
         raise LoggedError(log, "Needs a path to the external packages' installation.")
     updated_info = update_info(info, strict=False)
     for p, pinfo in list(updated_info["params"].items()):
         if not is_sampled_param(pinfo):
             updated_info["params"].pop(p)
     info_sampled_params = updated_info["params"]
-    covmat_data = get_best_covmat_ext(get_covmat_package_folders(packages_path),
-                                      updated_info["params"],
-                                      updated_info["likelihood"], random_state, cached)
-    if covmat_data is None:
+    if not (covmat_data := get_best_covmat_ext(get_covmat_package_folders(packages_path),
+                                               updated_info["params"],
+                                               updated_info["likelihood"], random_state,
+                                               cached)):
         return None
     covmat = np.atleast_2d(
         np.loadtxt(os.path.join(covmat_data["folder"], covmat_data["name"])))
@@ -111,7 +116,7 @@ def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     return covmat_data
 
 
-def get_best_covmat_ext(covmat_folders, params_info, likelihoods_info, random_state,
+def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info, random_state,
                         cached=True, msg_context="") -> Optional[dict]:
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
@@ -119,13 +124,9 @@ def get_best_covmat_ext(covmat_folders, params_info, likelihoods_info, random_st
 
     Returns the same dict as `get_best_covmat`, except for the covariance matrix itself.
     """
-    global _loaded_covmats_database
-    covmats_database = (_loaded_covmats_database
-                        or get_covmat_database_at_paths(covmat_folders, cached=cached))
-    if not covmats_database:
-        log.warning("No covariance matrices found at %s" % covmat_folders)
+    if not (covmats_database := get_covmat_database_at_paths(covmat_dirs, cached=cached)):
+        log.warning("No covariance matrices found at %s" % covmat_dirs)
         return None
-    _loaded_covmats_database = covmats_database
     # Prepare params and likes aliases
     params_renames = set(chain(*[
         [p] + str_to_list(info.get("renames", [])) for p, info in

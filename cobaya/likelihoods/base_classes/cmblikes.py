@@ -438,7 +438,7 @@ class CMBlikes(DataSetLikelihood):
             with open(froot + '_lensing_fiducial_correction', 'w', encoding="utf-8") as f:
                 f.write("#%4s %12s \n" % ('bin', 'PP'))
                 for b in range(self.nbins):
-                    f.write("%5u %12.5e\n" % (b + 1, self.fid_correction[b]))
+                    f.write("%5u %12.5e\n" % (b + 1, float(self.fid_correction[b])))
 
     def diag_sigma(self):
         return np.sqrt(np.diag(self.full_cov))

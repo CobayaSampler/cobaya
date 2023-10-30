@@ -264,7 +264,6 @@ def grid_tables(args=None):
         lines = []
         if not args.forpaper:
             lines.append('\\documentclass[10pt]{article}')
-            # lines.append('\\usepackage{fullpage}')
             lines.append('\\usepackage[pdftex]{hyperref}')
             lines.append('\\usepackage[paperheight=' + args.height +
                          ',paperwidth=' + args.width + ',margin=0.8in]{geometry}')

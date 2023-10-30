@@ -7,6 +7,8 @@ from cobaya.grid_tools.batchjob import DataSet
 
 # optional directory (or list) to look for pre-computed covmats with similar parameters
 cov_dir = ""
+
+# grid items not to include
 skip = ['base_a_1_like1_like2']
 
 default: InputDict = {
@@ -21,6 +23,7 @@ defaults = [default]
 
 importance_defaults = []
 minimize_defaults = []
+getdist_options = {'ignore_rows': 0.3, 'marker[b_0]': 0}
 
 # settings for the variation of each parameter that is varied in the grid
 params = {'a_1': {'prior': {'min': -2, 'max': 2}},
@@ -30,11 +33,12 @@ params = {'a_1': {'prior': {'min': -2, 'max': 2}},
 param_extra_opts = {'a_2': {
     'sampler': {'mcmc': {'max_samples': 100}}}}
 
-# note that must use explicit "class" parameters,
-# so when using two gaussian_mixture likelihoods at the same time the names are distinct
 like1: InputDict = {
     'likelihood':
         {'mix1': {
+            # note that must use explicit "class" parameters, so when using
+            # two gaussian_mixture likelihoods at the same time the names are distinct
+            # This is not otherwise needed
             'class': 'gaussian_mixture',
             'means': [np.array([-1, 0, 1])],
             'covs': [np.array([[1, 0, 0],
@@ -61,15 +65,16 @@ class ImportanceFilterb0:
         return "like2" in jobItem.data_set.names
 
 
+
 # Dictionary of groups of data/parameter combination to run
-# datasets is a list of DataSet objects, or tuples of data name tags combinations and
+# datasets is a list of DataSet objects, or tuples of data name tag combinations and
 # corresponding list of input dictionaries or yaml files.
 
 groups = {
     'main': {
         'params': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
         'datasets': [('like1', like1), joint],
-        "extra_opts": {},
+        "extra_opts": {},  # options specific to this group
         'importance_runs': [
             (["cut"], {"params": {"b_0": {"prior": {"min": 0, "max": 1}}}},
              ImportanceFilterb0())]

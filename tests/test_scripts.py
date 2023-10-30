@@ -1,9 +1,7 @@
-from io import StringIO
 import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
 from cobaya.grid_tools import gridmanage, grid_create, grid_run
-
 from cobaya.yaml import yaml_load_file
 from .common import stdout_check
 

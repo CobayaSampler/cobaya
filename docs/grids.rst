@@ -9,14 +9,14 @@ Using Cobaya grids, you can run and manage a set of runs using the grid scripts.
   Minimization of importance sampling jobs is not currently implemented but appears in various optional unimplemented parameters.
 
 
-To create a grid, you need a .yaml file specifying which combinations of parameters, likelihoods, etc. to use.
+To create a grid, you need a setting file specifying which combinations of parameters, likelihoods, etc. to use.
 The command line to generate the basic structure and files in the ``grid_folder`` directory is ::
 
   cobaya-grid-create grid_folder [my_file]
 
 where ``[my_file]`` is either a .py python setting file or a .yaml grid description.
 This will create ``grid_folder`` if it does not exist, and generate a set of .yaml files for running each of the runs in the grid.
-There is a simple generic `python example <https://github.com/CobayaSampler/cobaya/blob/master/tests/simple_grid.py>`_  and a cosmology `yaml example <https://github.com/CobayaSampler/cobaya/blob/master/tests/test_cosmo_grid.yaml>`_  which combes single parameter variations each with two different likelihoods.
+There is a simple generic `python example <https://github.com/CobayaSampler/cobaya/blob/master/tests/simple_grid.py>`_  and a cosmology `yaml example <https://github.com/CobayaSampler/cobaya/blob/master/tests/test_cosmo_grid.yaml>`_  which combines single parameter variations each with two different likelihoods.
 
 Once the grid is created, you can check the list of runs included using::
 

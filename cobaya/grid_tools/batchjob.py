@@ -6,15 +6,12 @@
 
 """
 
-# TODO many things not yet updated for cobaya formats
-
 import os
 import shutil
 import pickle
 import copy
 import sys
 import time
-import numpy as np
 from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
