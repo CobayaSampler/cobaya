@@ -37,7 +37,7 @@ def test_grid(tmpdir):
     with open(table_file + '.tex') as r:
         assert '68\\%' in r.read()
 
-    with stdout_check("base_like1_like (main)"):
+    with stdout_check("base_like1_like2 (main)"):
         grid_list(f)
 
     with stdout_check("10 dist files", "1 chain file"):
