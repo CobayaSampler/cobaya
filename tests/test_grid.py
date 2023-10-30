@@ -1,11 +1,8 @@
 import os
-from io import StringIO
 from cobaya.yaml import yaml_load_file
-from cobaya.grid_tools.gridconfig import grid_create
-from cobaya.grid_tools.gridrun import grid_run
-from cobaya.grid_tools.gridmanage import grid_getdist, grid_list, grid_copy
-from cobaya.grid_tools.gridtables import grid_tables, grid_param_compare
-from .common import stdout_redirector
+from cobaya.grid_tools import grid_create, grid_run, grid_converge, grid_tables, \
+    grid_param_compare, grid_getdist, grid_list, grid_copy, grid_extract, grid_cleanup
+from .common import stdout_check
 
 
 def test_grid(tmpdir):
@@ -35,23 +32,30 @@ def test_grid(tmpdir):
     grid_tables([f, table_file, '--forpaper'])  # haven't installed latex in general
     assert os.path.exists(table_file + '.tex')
 
-    grid_tables([f, table_file, '--limit', '1', '--forpaper', '--param', 'a_2', '--data',
-                 'like2'])
+    grid_tables([f, table_file, '--limit', '1', '--forpaper',
+                 '--param', 'a_2', '--data', 'like2'])
     with open(table_file + '.tex') as r:
         assert '68\\%' in r.read()
 
-    stream = StringIO()
-    with stdout_redirector(stream):
+    with stdout_check("base_like1_like (main)"):
         grid_list(f)
-    assert "base_like1_like2 (main)" in stream.getvalue()
 
-    stream = StringIO()
-    with stdout_redirector(stream):
+    with stdout_check("10 dist files", "1 chain file"):
         grid_copy([f, os.path.join(tmpdir, 'test_grid.zip'), '--dist', '--chains',
                    '--remove_burn_fraction', '0.3', '--datatag', 'like1_like2'])
-    assert "10 dist files" in stream.getvalue()
-    assert "1 chain file" in stream.getvalue()
+
+    with stdout_check("base_a_2_like1_like2 None"):
+        grid_converge([f])
+
+    with stdout_check("base_like1_like2"):
+        grid_converge([f, '--checkpoint'])
 
     grid_param_compare([f, '--params', 'a_1', 'a_2', '--latex_filename', table_file])
     with open(table_file + '.tex') as r:
         assert 'a_2 &' in r.read()
+
+    grid_extract([f, tmpdir, '.margestats', '--datatag', 'like1_like2'])
+    assert os.path.exists(os.path.join(tmpdir, 'base_a_1_a_2_like1_like2.margestats'))
+
+    with stdout_check("base_a_1_a_2_like1_like2"):
+        grid_cleanup([f, '--confirm', '--data', 'like2'])

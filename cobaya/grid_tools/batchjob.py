@@ -14,6 +14,7 @@ import pickle
 import copy
 import sys
 import time
+import numpy as np
 from typing import Callable
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
@@ -201,11 +202,10 @@ class JobGroup:
         if params is None:
             params = [[]]
         if datasets is None:
-            datasets = []
             self.params = params
             self.groupName = name
             self.importanceRuns = importanceRuns
-            self.datasets = datasets
+            self.datasets = []
 
 
 class ImportanceSetting:
@@ -464,7 +464,10 @@ class JobItem(PropertiesItem):
             if not nonEmptyFile(fname):
                 return None
             self.result_converge = types.ConvergeStats(fname)
-        return float(self.result_converge.worstR())
+        try:
+            return float(self.result_converge.worstR())
+        except (TypeError, IndexError):
+            return None
 
     def hasConvergeBetterThan(self, R, returnNotExist=False):
         try:
@@ -609,7 +612,8 @@ class BatchJob(PropertiesItem):
                 return jobItem
         return None
 
-    def normalizeDataTag(self, tag):
+    @staticmethod
+    def normalizeDataTag(tag):
         return "_".join(sorted(tag.replace('.post.', '_').split('_')))
 
     def resolveName(self, paramtag, datatag, wantSubItems=True, wantImportance=True,

@@ -6,7 +6,7 @@ Using Cobaya grids, you can run and manage a set of runs using the grid scripts.
 
 .. note::
 
-  Minimization is not currently implemented but appears in various optional unimplemented parameters.
+  Minimization of importance sampling jobs is not currently implemented but appears in various optional unimplemented parameters.
 
 
 To create a grid, you need a .yaml file specifying which combinations of parameters, likelihoods, etc. to use.
@@ -14,7 +14,7 @@ The command line to generate the basic structure and files in the ``grid_folder`
 
   cobaya-grid-create grid_folder [my_file]
 
-where ``[my_file]'' is either a .py python setting file or a .yaml grid description.
+where ``[my_file]`` is either a .py python setting file or a .yaml grid description.
 This will create ``grid_folder`` if it does not exist, and generate a set of .yaml files for running each of the runs in the grid.
 There is a simple generic `python example <https://github.com/CobayaSampler/cobaya/blob/master/tests/simple_grid.py>`_  and a cosmology `yaml example <https://github.com/CobayaSampler/cobaya/blob/master/tests/test_cosmo_grid.yaml>`_  which combes single parameter variations each with two different likelihoods.
 
@@ -70,6 +70,8 @@ There are a number of options to customize the result, compare results and give 
 
   cobaya-grid-tables grid_folder tables/baseline_params_table_95pc --limit 2 --converge 0.1 --musthave_data NPIPE lowl lowE --header_tex tableHeader.tex --skip_group nonbbn --skip_data JLA reion BK18
 
+If you want a latex table to compare different parameter and data combinations, you can use the ``cobaya-grid-tables-compare`` command, see ``-h`` for options.
+
 Exporting grid results
 ================================
 
@@ -95,6 +97,10 @@ Grid script parameters
 .. program-output:: cobaya-grid-converge -h
 
 .. program-output:: cobaya-grid-getdist -h
+
+.. program-output:: cobaya-grid-tables -h
+
+.. program-output:: cobaya-grid-tables-compare -h
 
 .. program-output:: cobaya-grid-copy -h
 

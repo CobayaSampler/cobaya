@@ -33,7 +33,8 @@ def run_and_wait(processes, commands=None, procs=1):
 
 def grid_converge(args=None):
     Opts = BatchArgs('Find chains which have failed or not converged, and show'
-                     'Gelman-Rubin R-1 values for each run.',
+                     'Gelman-Rubin R-1 values for each run. Note need more than one'
+                     'chain for getdist to calculate R-1',
                      'cobaya-grid-converge', importance=True, converge=True)
 
     Opts.parser.add_argument('--exist', action='store_true', help='chain must exist')
@@ -247,7 +248,7 @@ def grid_cleanup(args=None):
                                     if args.confirm:
                                         os.remove(fname)
 
-    print('Total size: %u MB' % int(sizeMB))
+    print('Total size: %.3g MB' % sizeMB)
     if not args.confirm:
         print('Files not actually deleted: add --confirm to delete')
 

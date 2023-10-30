@@ -13,6 +13,7 @@ import copy
 import argparse
 import numpy as np
 import importlib.util
+from itertools import chain
 from getdist.inifile import IniFile
 
 # Local
@@ -248,7 +249,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             # Ideally, we use slow+sampled parameters to look for the covariance matrix
             # but since for that we'd need to initialise a model, we approximate that set
             # as theory+sampled
-            from itertools import chain
             like_params = set(chain(*[
                 list(like.get("params") or [])
                 for like in updated_info["likelihood"].values()]))

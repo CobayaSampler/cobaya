@@ -16,9 +16,11 @@ default: InputDict = {
     'sampler': {'mcmc': {'max_samples': 500, 'burn_in': 100, 'covmat': 'auto'}},
 }
 
+# list of default settings to combine; each item can be dict or yaml file name
 defaults = [default]
 
 importance_defaults = []
+minimize_defaults = []
 
 # settings for the variation of each parameter that is varied in the grid
 params = {'a_1': {'prior': {'min': -2, 'max': 2}},
@@ -50,6 +52,7 @@ like2: InputDict = {
     'params': {'b_0': {'prior': {'min': -1, 'max': 1}}}
 }
 
+# DataSet is a combination of likelihoods, list of name tags to identify data components
 joint = DataSet(['like1', 'like2'], [like1, like2])
 
 
@@ -58,10 +61,15 @@ class ImportanceFilterb0:
         return "like2" in jobItem.data_set.names
 
 
+# Dictionary of groups of data/parameter combination to run
+# datasets is a list of DataSet objects, or tuples of data name tags combinations and
+# corresponding list of input dictionaries or yaml files.
+
 groups = {
     'main': {
         'params': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
         'datasets': [('like1', like1), joint],
+        "extra_opts": {},
         'importance_runs': [
             (["cut"], {"params": {"b_0": {"prior": {"min": 0, "max": 1}}}},
              ImportanceFilterb0())]

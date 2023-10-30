@@ -123,7 +123,7 @@ def get_best_covmat_ext(covmat_folders, params_info, likelihoods_info, random_st
     covmats_database = (_loaded_covmats_database
                         or get_covmat_database_at_paths(covmat_folders, cached=cached))
     if not covmats_database:
-        log.warning("No covariance matrices found at packages_path")
+        log.warning("No covariance matrices found at %s" % covmat_folders)
         return None
     _loaded_covmats_database = covmats_database
     # Prepare params and likes aliases
@@ -135,19 +135,22 @@ def get_best_covmat_ext(covmat_folders, params_info, likelihoods_info, random_st
     delimiters = r"[_\.]"
     likes_regexps = [re.compile(delimiters + re.escape(_like) + delimiters)
                      for _like in likes_renames]
+
     # Match number of params
-    score_params = (
-        lambda covmat: len(set(covmat["params"]).intersection(params_renames)))
-    best_p = get_best_score(covmats_database, score_params, 0)
-    if not best_p:
+    def score_params(covmat):
+        return len(set(covmat["params"]).intersection(params_renames))
+
+    if not (best_p := get_best_score(covmats_database, score_params, 0)):
         log.warning(msg_context + (':\n' if msg_context else '') +
-                    "No covariance matrix found including at least one of the given parameters")
+                    "No covariance matrix found including at least "
+                    "one of the given parameters")
         return None
 
     # Match likelihood names / keywords
     # No debug print here: way too many!
-    score_likes = (
-        lambda covmat: len([0 for r in likes_regexps if r.search(covmat["name"])]))
+    def score_likes(covmat):
+        return len([0 for r in likes_regexps if r.search(covmat["name"])])
+
     best_p_l = get_best_score(best_p, score_likes)
     if is_debug(log):
         log.debug("Subset based on params + likes:\n - " +
@@ -162,8 +165,10 @@ def get_best_covmat_ext(covmat_folders, params_info, likelihoods_info, random_st
     if is_debug(log):
         log.debug("Subset based on params + likes + fewest params:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l_sp]))
-    score_simpler_name = (
-        lambda covmat: -len(covmat["name"].replace("_", " ").replace("-", " ").split()))
+
+    def score_simpler_name(covmat):
+        return -len(covmat["name"].replace("_", " ").replace("-", " ").split())
+
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
     if is_debug(log):
         log.debug("Subset based on params + likes + fewest params + shortest name:\n - " +

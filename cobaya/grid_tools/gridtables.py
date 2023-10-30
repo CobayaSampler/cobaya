@@ -87,10 +87,10 @@ def grid_tables(args=None):
     if args.paramList is not None:
         args.paramList = paramnames.ParamNames(args.paramList)
 
-    def texEscapeText(string):
+    def tex_escape_text(string):
         return string.replace('_', '{\\textunderscore}')
 
-    def getTableLines(content, _referenceDataJobItem=None):
+    def get_table_lines(content, _referenceDataJobItem=None):
         if _referenceDataJobItem is not None:
             refResults = _referenceDataJobItem.result_marge
         else:
@@ -102,7 +102,7 @@ def grid_tables(args=None):
                                  shiftSigma_indep=args.shift_sigma_indep,
                                  shiftSigma_subset=args.shift_sigma_subset).lines
 
-    def getSystematicAverageTableLines(jobItem1, jobItem2):
+    def get_systematic_average_table_lines(jobItem1, jobItem2):
         # if you have two versions of the likelihood with the same data,
         # and don't know which is right,
         # this just crudely adds the samples with equal weight per likelihood
@@ -111,9 +111,9 @@ def grid_tables(args=None):
         samps2 = loadMCSamples(jobItem2.chainRoot, jobItem=jobItem2,
                                settings=batch.getdist_options)
         samps = samps1.getCombinedSamplesWithSamples(samps2)
-        return getTableLines(samps.getMargeStats())
+        return get_table_lines(samps.getMargeStats())
 
-    def paramResultTable(jobItem, deltaChisqJobItem=None, _referenceDataJobItem=None):
+    def param_result_table(jobItem, deltaChisqJobItem=None, _referenceDataJobItem=None):
         if deltaChisqJobItem is not None and deltaChisqJobItem.name == jobItem.name:
             deltaChisqJobItem = None
         if _referenceDataJobItem is not None:
@@ -141,7 +141,7 @@ def grid_tables(args=None):
 
         if args.bestfitonly:
             if bf is not None:
-                table_lines += getTableLines(bf)
+                table_lines += get_table_lines(bf)
         else:
             likeMarge = jobItem.result_likemarge
             if likeMarge is not None and likeMarge.meanLogLike is not None:
@@ -158,11 +158,11 @@ def grid_tables(args=None):
                 caption.append('$R-1 =' + jobItem.result_converge.worstR() + '$')
             if jobItem.result_marge is not None:
                 if args.systematic_average:
-                    table_lines += getSystematicAverageTableLines(jobItem,
-                                                                  _referenceDataJobItem)
+                    table_lines += get_systematic_average_table_lines(
+                        jobItem, _referenceDataJobItem)
                 else:
-                    table_lines += getTableLines(jobItem.result_marge,
-                                                 _referenceDataJobItem)
+                    table_lines += get_table_lines(jobItem.result_marge,
+                                                   _referenceDataJobItem)
 
         table_lines.append('')
         if not args.forpaper:
@@ -177,7 +177,7 @@ def grid_tables(args=None):
             for kind, vals in bf.sortedChiSquareds():
                 table_lines.append(kind + ' - ')
                 for val in vals:
-                    line = '  ' + texEscapeText(val.name) + ': ' + (
+                    line = '  ' + tex_escape_text(val.name) + ': ' + (
                             '%.2f' % val.chisq) + ' '
                     if compChiSq is not None:
                         comp = compChiSq.chiSquareForKindName(kind, val.name)
@@ -186,7 +186,7 @@ def grid_tables(args=None):
                     table_lines.append(line)
         return table_lines
 
-    def compareTable(jobItems, titles=None):
+    def compare_table(jobItems, titles=None):
         for job_i in jobItems:
             job_i.loadJobItemResults(paramNameFile=args.paramNameFile,
                                      bestfit=not args.nobestfit,
@@ -227,7 +227,7 @@ def grid_tables(args=None):
             raise Exception('when using changes_from_paramtag cannot have no_delta_chisq')
         args.delta_chisq_paramtag = args.changes_from_paramtag
 
-    def dataIndex(job_i):
+    def data_index(job_i):
         if args.changes_data_ignore:
             ignores = {}
             for ig in args.changes_data_ignore:
@@ -282,7 +282,7 @@ def grid_tables(args=None):
                 if isBase:
                     paramText = 'Baseline model'
                 else:
-                    paramText = texEscapeText("+".join(parambatch[0].param_set))
+                    paramText = tex_escape_text("+".join(parambatch[0].param_set))
                 section = '\\newpage\\section{ ' + paramText + '}'
             else:
                 section = ''
@@ -290,7 +290,7 @@ def grid_tables(args=None):
                 compares = Opts.filterForDataCompare(parambatch, args.compare)
                 if len(compares) == len(args.compare):
                     lines.append(section)
-                    lines += compareTable(compares, args.titles)
+                    lines += compare_table(compares, args.titles)
                 else:
                     print('no matches for compare: ' + paramtag)
             else:
@@ -342,8 +342,7 @@ def grid_tables(args=None):
                     if args.changes_adding_data is not None:
                         if job_item.normed_without is not None:
                             referenceDataJobItem = baseJobItems.get(
-                                job_item.normed_without,
-                                None)
+                                job_item.normed_without, None)
                         else:
                             referenceDataJobItem = None
                         referenceJobItem = referenceDataJobItem
@@ -362,22 +361,22 @@ def grid_tables(args=None):
                         if args.changes_only and not referenceDataJobItem:
                             continue
                     else:
-                        referenceJobItem = baseJobItems.get(dataIndex(job_item), None)
+                        referenceJobItem = baseJobItems.get(data_index(job_item), None)
                     if args.changes_from_paramtag is not None:
                         referenceDataJobItem = referenceJobItem
                     if args.systematic_average and referenceDataJobItem is None:
                         continue
                     if not args.forpaper:
                         if args.systematic_average:
-                            lines.append('\\subsection{ ' + texEscapeText(
-                                job_item.name) + '/' + texEscapeText(
+                            lines.append('\\subsection{ ' + tex_escape_text(
+                                job_item.name) + '/' + tex_escape_text(
                                 referenceDataJobItem.name) + '}')
                         else:
                             lines.append(
-                                '\\subsection{ ' + texEscapeText(job_item.name) + '}')
+                                '\\subsection{ ' + tex_escape_text(job_item.name) + '}')
                     try:
-                        tableLines = paramResultTable(job_item, referenceJobItem,
-                                                      referenceDataJobItem)
+                        tableLines = param_result_table(job_item, referenceJobItem,
+                                                        referenceDataJobItem)
                         if args.separate_tex:
                             types.TextFile(tableLines).write(job_item.distRoot + '.tex')
                         lines += tableLines
