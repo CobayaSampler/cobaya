@@ -319,6 +319,8 @@ def grid_copy(args=None):
                 return True
         return False
 
+    done = set()
+
     def do_copy(source, dest, _f, has_burn=False):
         nonlocal sizeMB
         if args.verbose:
@@ -332,6 +334,9 @@ def grid_copy(args=None):
             else:
                 lines = None
             destf = dest + _f
+            if destf in done:
+                return
+            done.add(destf)
             if args.zip:
                 if lines:
                     zipper.writestr(destf, "".join(lines))

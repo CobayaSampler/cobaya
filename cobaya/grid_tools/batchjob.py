@@ -256,15 +256,14 @@ class JobItem(PropertiesItem):
         self.parent = None
         self.dist_settings = copy.copy(data_set.dist_settings)
         self.makeIDs()
-        self.iniFile_ext = yaml_ext
 
     def yaml_file(self, variant=''):
         if not self.isImportanceJob:
             return (self.batchPath + input_folder + os.sep +
-                    self.name + variant + self.iniFile_ext)
+                    self.name + variant + yaml_ext)
         else:
             return (self.batchPath + input_folder_post + os.sep +
-                    self.name + variant + self.iniFile_ext)
+                    self.name + variant + yaml_ext)
 
     def propertiesIniFile(self):
         return self.chainRoot + '.properties.ini'
@@ -556,7 +555,7 @@ class BatchJob(PropertiesItem):
                             item.makeImportance(all_importance)
                             self.jobItems.append(item)
 
-            for item in getattr(settings, 'jobItems', []):
+            for item in getattr(settings, 'job_items', []):
                 self.jobItems.append(item)
                 item.makeImportance(all_importance)
             if hasattr(settings, 'importance_filters'):
@@ -624,9 +623,9 @@ class BatchJob(PropertiesItem):
             paramtag = [base]
             paramtags = [base]
         name = "_".join(paramtags) + '_' + self.normalizeDataTag(datatag)
-        jobItem = self.normed_name_item(name, wantSubItems, wantImportance)
-        if jobItem is not None:
-            return (jobItem.name, jobItem)[returnJobItem]
+
+        if jobItem := self.normed_name_item(name, wantSubItems, wantImportance):
+            return jobItem if returnJobItem else jobItem.name
         if raiseError:
             raise Exception('No match for paramtag, datatag... ' + "_".join(
                 paramtag) + ', ' + datatag)

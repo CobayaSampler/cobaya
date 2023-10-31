@@ -5,7 +5,7 @@ import pickle
 from itertools import chain
 import numpy as np
 import re
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple, NamedTuple
 
 # Local
 from cobaya.conventions import Extension, packages_path_input
@@ -14,7 +14,7 @@ from cobaya.parameterization import is_sampled_param
 from cobaya.input import update_info
 from cobaya.log import LoggedError, get_logger, is_debug
 
-_covmats_file = "covmats_database_%s.pkl"
+_covmats_file = "covmat_data_%s.pkl"
 
 log = get_logger(__name__)
 
@@ -22,8 +22,15 @@ covmat_folders = [
     "{%s}/data/planck_supp_data_and_covmats/covmats/" % packages_path_input,
     "{%s}/data/bicep_keck_2018/BK18_cosmomc/planck_covmats/" % packages_path_input]
 
+
+class CovmatFileKey(NamedTuple):
+    paramtags: Tuple
+    datatags: Tuple
+    base: str
+
+
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
-_loaded_covmats_database: Dict[str, List[dict]] = {}
+_loaded_covmats_database: Dict[str, Dict[CovmatFileKey, dict]] = {}
 
 
 def get_covmat_package_folders(packages_path) -> List[str]:
@@ -36,12 +43,7 @@ def get_covmat_package_folders(packages_path) -> List[str]:
     return install_folders
 
 
-def get_covmat_database(packages_path, cached=True) -> List[dict]:
-    install_folders = get_covmat_package_folders(packages_path)
-    return get_covmat_database_at_paths(install_folders, cached=cached)
-
-
-def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
+def get_covmat_database(installed_folders, cached=True) -> Dict[CovmatFileKey, dict]:
     # Get folders with corresponding components installed
     _hash = hashlib.md5(str(installed_folders).encode('utf8')).hexdigest()
     covmats_database_fullpath = os.path.join(get_cache_path(), _covmats_file % _hash)
@@ -64,9 +66,8 @@ def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
         except:
             log.info("No cached covmat database present, not usable or not up-to-date. "
                      "Will be re-created and cached.")
-            pass
     # Create it (again)
-    covmat_database = []
+    covmat_database = {}
     for folder_full in installed_folders:
         for filename in os.listdir(folder_full):
             try:
@@ -77,8 +78,13 @@ def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
                 params = header.strip().lstrip("#").split()
             except:
                 continue
-            covmat_database.append({"folder": folder_full,
-                                    "name": filename, "params": params})
+            name = os.path.splitext(filename)[0]
+            tags = name.replace('.post.', '_').replace('_post', '').split('_')
+            partags = set(tags).intersection(params)
+            datatags = set(tags[1:]) - partags
+            key = CovmatFileKey(tuple(sorted(partags)), tuple(sorted(datatags)), tags[0])
+            covmat_database[key] = {"folder": folder_full,
+                                    "name": filename, "params": params}
     if cached:
         with open(covmats_database_fullpath, "wb") as f:
             pickle.dump(covmat_database, f)
@@ -86,7 +92,7 @@ def get_covmat_database_at_paths(installed_folders, cached=True) -> List[dict]:
     return covmat_database
 
 
-def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
+def get_best_covmat(info, packages_path=None, cached=True):
     """
     Chooses optimal covmat from a database, based on common parameters and likelihoods.
     Only used by GUI.
@@ -104,8 +110,7 @@ def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     info_sampled_params = updated_info["params"]
     if not (covmat_data := get_best_covmat_ext(get_covmat_package_folders(packages_path),
                                                updated_info["params"],
-                                               updated_info["likelihood"], random_state,
-                                               cached)):
+                                               updated_info["likelihood"], cached)):
         return None
     covmat = np.atleast_2d(
         np.loadtxt(os.path.join(covmat_data["folder"], covmat_data["name"])))
@@ -116,17 +121,30 @@ def get_best_covmat(info, packages_path=None, cached=True, random_state=None):
     return covmat_data
 
 
-def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info, random_state,
-                        cached=True, msg_context="") -> Optional[dict]:
+def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
+                        cached=True, job_item=None) -> Optional[dict]:
     """
     Actual covmat finder used by `get_best_covmat`. Call directly for more control on
     the parameters used.
 
     Returns the same dict as `get_best_covmat`, except for the covariance matrix itself.
     """
-    if not (covmats_database := get_covmat_database_at_paths(covmat_dirs, cached=cached)):
+    if not (covmats_database := get_covmat_database(covmat_dirs, cached=cached)):
         log.warning("No covariance matrices found at %s" % covmat_dirs)
         return None
+
+    if job_item:
+        key_tuple = CovmatFileKey(tuple(sorted(job_item.param_set)),
+                                  tuple(sorted(job_item.data_set.names)), job_item.base)
+        # match all data tags and param tags independent of order
+        if match := covmats_database.get(key_tuple):
+            return match
+        for tup, item in covmats_database.items():
+            if tup[:2] == key_tuple[:2]:
+                return item
+    else:
+        key_tuple = ()
+
     # Prepare params and likes aliases
     params_renames = set(chain(*[
         [p] + str_to_list(info.get("renames", [])) for p, info in
@@ -138,18 +156,21 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info, random_state
                      for _like in likes_renames]
 
     # Match number of params
-    def score_params(covmat):
+    def score_params(_key, covmat):
         return len(set(covmat["params"]).intersection(params_renames))
 
     if not (best_p := get_best_score(covmats_database, score_params, 0)):
-        log.warning(msg_context + (':\n' if msg_context else '') +
+        log.warning(((job_item.name + ':\n') if job_item else '') +
                     "No covariance matrix found including at least "
                     "one of the given parameters")
         return None
 
     # Match likelihood names / keywords
     # No debug print here: way too many!
-    def score_likes(covmat):
+    def score_likes(key: CovmatFileKey, covmat):
+        if key_tuple:
+            return len(set(key.datatags).intersection(
+                likes_renames.union(key_tuple.datatags)))
         return len([0 for r in likes_regexps if r.search(covmat["name"])])
 
     best_p_l = get_best_score(best_p, score_likes)
@@ -157,35 +178,44 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info, random_state
         log.debug("Subset based on params + likes:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l]))
 
+    if key_tuple:
+        def score_left_params(key, _covmat):
+            return -len(
+                set(key.paramtags) - params_renames.union(key_tuple.paramtags))
+
+        best_p_l = get_best_score(best_p_l, score_left_params)
+
     # Finally, in case there is more than one, select shortest #params and name (simpler!)
     # #params first, to avoid extended models with shorter covmat name
-    def score_simpler_params(covmat):
+    def score_simpler_params(_key, covmat):
         return -len(covmat["params"])
 
     best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
     if is_debug(log):
         log.debug("Subset based on params + likes + fewest params:\n - " +
-                  "\n - ".join([b["name"] for b in best_p_l_sp]))
+                  "\n - ".join([b["name"] for b in best_p_l_sp.values()]))
 
-    def score_simpler_name(covmat):
-        return -len(covmat["name"].replace("_", " ").replace("-", " ").split())
+    def score_simpler_name(key, covmat):
+        if key_tuple:
+            return -len(key.datatags)
+        return -len(covmat["name"].replace(".covmat", "").replace('.post.', '_')
+                    .replace('_post', '').replace("-", "_").split('_'))
 
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
     if is_debug(log):
         log.debug("Subset based on params + likes + fewest params + shortest name:\n - " +
-                  "\n - ".join([b["name"] for b in best_p_l_sp_sn]))
-    # if there is more than one (unlikely), just pick one at random
+                  "\n - ".join([b["name"] for b in best_p_l_sp_sn.values()]))
+    # if there is more than one (unlikely), just take first
     if len(best_p_l_sp_sn) > 1:
-        log.warning(msg_context + (':\n' if msg_context else '') +
+        log.warning(((job_item.name + ':\n') if job_item else '') +
                     "WARNING: >1 possible best covmats: %r",
-                    [b["name"] for b in best_p_l_sp_sn])
-    random_state = np.random.default_rng(random_state)
-    return best_p_l_sp_sn[random_state.choice(range(len(best_p_l_sp_sn)))].copy()
+                    [b["name"] for b in best_p_l_sp_sn.values()])
+    return next(iter(best_p_l_sp_sn.values())).copy()
 
 
-def get_best_score(covmats, score_func, min_score=None) -> List[dict]:
-    scores = np.array([score_func(covmat) for covmat in covmats])
+def get_best_score(covmats, score_func, min_score=None) -> dict:
+    scores = np.array([score_func(*x) for x in covmats.items()])
     if min_score is not None and np.max(scores) <= min_score:
-        return []
+        return {}
     i_max = np.argwhere(scores == np.max(scores)).T[0]
-    return [covmats[i] for i in i_max]
+    return dict(val for i, val in enumerate(covmats.items()) if i in i_max)

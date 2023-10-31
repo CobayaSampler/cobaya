@@ -106,7 +106,7 @@ def set_minimize(info, minimize_info=None):
 # noinspection PyUnboundLocalVariable
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
              interactive=False, install_reqs_at=None, install_reqs_force=None,
-             random_state=None, show_covmats=False):
+             show_covmats=False):
     print("Generating grid...")
     batchPath = os.path.abspath(batchPath) + os.sep
     if not settings:
@@ -132,9 +132,9 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     batch = batchjob.BatchJob(batchPath)
     batch.makeItems(settings, messages=not read_only)
     if read_only:
-        for jobItem in [b for b in batch.jobItems]:
-            if not jobItem.chainExists():
-                batch.jobItems.remove(jobItem)
+        for job_item in [b for b in batch.jobItems]:
+            if not job_item.chainExists():
+                batch.jobItems.remove(job_item)
         batch.save()
         print('OK, configured grid with %u existing chains' % (len(batch.jobItems)))
         return batch
@@ -143,7 +143,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         batch.save()
     infos = {}
     components_used = {}
-    random_state = np.random.default_rng(random_state)
     from_yaml = isinstance(settings, dict)
     # Default info
     if from_yaml:
@@ -184,44 +183,44 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         importance_defaults = defaults.pop("importance_defaults", {})
         minimize_defaults = defaults.pop("minimize_defaults", {})
 
-    for jobItem in batch.items(wantSubItems=False):
+    for job_item in batch.items(wantSubItems=False):
         # Model info
-        jobItem.makeChainPath()
+        job_item.makeChainPath()
         if from_yaml:
-            model_tag = "_".join(jobItem.param_set)
+            model_tag = "_".join(job_item.param_set)
             try:
                 model_info = copy.deepcopy(models_definitions[model_tag] or {})
             except KeyError:
                 raise ValueError("Model '%s' must be defined." % model_tag)
         else:
             model_info = {'params': {}}
-            for par in jobItem.param_set:
+            for par in job_item.param_set:
                 if par not in params:
                     raise ValueError("params[%s] must be defined." % par)
                 model_info['params'][par] = params[par]
-            job_param_extra = getattr(jobItem, 'param_extra_opts', {}) or {}
-            job_extra = getattr(jobItem, 'extra_opts', {}) or {}
+            job_param_extra = getattr(job_item, 'param_extra_opts', {}) or {}
+            job_extra = getattr(job_item, 'extra_opts', {}) or {}
             extra = dict(param_extra, **job_param_extra)
             model_info = merge_info(settings_extra, job_extra, model_info,
                                     *[extra[par]
-                                      for par in jobItem.param_set if par in extra])
+                                      for par in job_item.param_set if par in extra])
 
         model_info = merge_info(defaults, model_info)
-        data_infos = dicts_or_load(jobItem.data_set.infos)
+        data_infos = dicts_or_load(job_item.data_set.infos)
         combined_info = merge_info(defaults, model_info, *data_infos)
         if "preset" in combined_info:
             preset = combined_info.pop("preset")
             combined_info = merge_info(create_input(**preset), combined_info)
-        combined_info["output"] = jobItem.chainRoot
+        combined_info["output"] = job_item.chainRoot
         # Requisites
         components_used = get_used_components(components_used, combined_info)
         if install_reqs_at:
             combined_info[packages_path_input] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
         # we need to install to add auto covmats
-        if jobItem.paramtag not in infos:
-            infos[jobItem.paramtag] = {}
-        infos[jobItem.paramtag][jobItem.data_set.tag] = combined_info
+        if job_item.paramtag not in infos:
+            infos[job_item.paramtag] = {}
+        infos[job_item.paramtag][job_item.data_set.tag] = combined_info
     # Installing requisites
     if install_reqs_at:
         print("Installing required code and data for the grid.")
@@ -229,8 +228,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         logger_setup()
         install_reqs(components_used, path=install_reqs_at, force=install_reqs_force)
     print("Adding covmats (if necessary) and writing input files")
-    for jobItem in batch.items(wantSubItems=False):
-        info = infos[jobItem.paramtag][jobItem.data_set.tag]
+    for job_item in batch.items(wantSubItems=False):
+        info = infos[job_item.paramtag][job_item.data_set.tag]
         # Covariance matrices
         # We try to find them now, instead of at run time, to check if correctly selected
         try:
@@ -264,28 +263,28 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
 
             best_covmat = get_best_covmat_ext(cov_dirs,
                                               params_info, updated_info["likelihood"],
-                                              random_state, msg_context=jobItem.name)
+                                              job_item=job_item)
             info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"]) if best_covmat else None
             if show_covmats:
-                print(jobItem.name, '->', (best_covmat or {}).get("name"))
+                print(job_item.name, '->', (best_covmat or {}).get("name"))
 
         # Write the info for this job
         # Allow overwrite since often will want to regenerate grid with tweaks
         info = sort_cosmetic(info)
-        yaml_dump_file(jobItem.yaml_file(), info, error_if_exists=False)
+        yaml_dump_file(job_item.yaml_file(), info, error_if_exists=False)
 
         # Minimize
         info = set_minimize(info, minimize_defaults)
-        yaml_dump_file(jobItem.yaml_file('_minimize'), info, error_if_exists=False)
+        yaml_dump_file(job_item.yaml_file('_minimize'), info, error_if_exists=False)
 
         # Importance sampling
-        for imp in jobItem.importanceJobs():
+        for imp in job_item.importanceJobs():
             if getattr(imp, 'importanceFilter', None):
                 continue
-            if batch.hasName(imp.name.replace('"post"', '')):
+            if batch.hasName(imp.name.replace('.post.', '_')):
                 raise Exception('importance sampling something you already have?')
-            info = {"output": jobItem.chainRoot,
+            info = {"output": job_item.chainRoot,
                     "post": post_merge_info(importance_defaults,
                                             *dicts_or_load(imp.importanceSettings)),
                     "force": True}
