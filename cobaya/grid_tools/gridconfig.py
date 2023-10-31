@@ -11,7 +11,6 @@
 import os
 import copy
 import argparse
-import numpy as np
 import importlib.util
 from itertools import chain
 from getdist.inifile import IniFile

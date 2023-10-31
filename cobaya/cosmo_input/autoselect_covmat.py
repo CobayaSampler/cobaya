@@ -195,11 +195,8 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
         log.debug("Subset based on params + likes + fewest params:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l_sp.values()]))
 
-    def score_simpler_name(key, covmat):
-        if key_tuple:
-            return -len(key.datatags)
-        return -len(covmat["name"].replace(".covmat", "").replace('.post.', '_')
-                    .replace('_post', '').replace("-", "_").split('_'))
+    def score_simpler_name(key, _covmat):
+        return -len(key.datatags)
 
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
     if is_debug(log):
@@ -208,7 +205,7 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
     # if there is more than one (unlikely), just take first
     if len(best_p_l_sp_sn) > 1:
         log.warning(((job_item.name + ':\n') if job_item else '') +
-                    "WARNING: >1 possible best covmats: %r",
+                    "WARNING: using first of >1 possible best covmats: %r",
                     [b["name"] for b in best_p_l_sp_sn.values()])
     return next(iter(best_p_l_sp_sn.values())).copy()
 
