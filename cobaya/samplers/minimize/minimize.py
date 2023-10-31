@@ -100,7 +100,6 @@ import numpy as np
 from scipy import optimize
 import pybobyqa
 from pybobyqa import controller
-import iminuit
 
 # Local
 from cobaya.sampler import Minimizer
@@ -288,6 +287,12 @@ class Minimize(Minimizer, CovmatSampler):
                             _bobyqa_errors[result.flag]
                         )
                 elif self.method.lower() == "iminuit":
+                    try:
+                        import iminuit
+                    except ImportError:
+                        raise LoggedError(
+                            self.log, "You need to install iminuit to use the "
+                            "'iminuit' minimizer. Try 'pip install iminuit'.")
                     self.kwargs = {
                         "fun": minuslogp_transf,
                         "x0": initial_point,
