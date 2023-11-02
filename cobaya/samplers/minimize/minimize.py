@@ -111,7 +111,7 @@ from cobaya.sampler import CovmatSampler
 from cobaya import mpi
 
 # Handling scipy vs BOBYQA vs iMinuit
-evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
+evals_attr = {"scipy": "fun", "bobyqa": "f"}#, "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
 # Conventions conventions
