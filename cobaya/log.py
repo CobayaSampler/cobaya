@@ -12,6 +12,7 @@ import sys
 import logging
 import platform
 import traceback
+from collections import ChainMap
 from copy import deepcopy
 import functools
 from random import shuffle, choice
@@ -282,7 +283,8 @@ class HasLogger:
         return new
 
     def __getstate__(self):
-        return deepcopy(self).__dict__
+        return ChainMap({}, self).__dict__
+        #return deepcopy(self).__dict__
 
     def __setstate__(self, d):
         self.__dict__ = d
