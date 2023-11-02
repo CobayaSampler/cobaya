@@ -70,9 +70,10 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
         cwd = os.path.join(full_code_path, directory or component_root)
         if not download_file(url, cwd, logger=logger):
             return False
-        paths = find_with_regexp('setup\\.py', cwd, True)
-        if not paths:
-            raise LoggedError(logger, "No setup.py found in %s for %s", cwd, component)
+        if not (paths := find_with_regexp('pyproject\\.toml', cwd, True)
+                         or find_with_regexp('setup\\.py', cwd, True)):
+            raise LoggedError(logger, "No setup.py or pyproject.toml "
+                                      "found in %s for %s", cwd, component)
         cwd = os.path.dirname(paths[0])
         package = '.'
 
@@ -527,12 +528,11 @@ def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     if upgrade:
         cmd += ['--upgrade']
     cmd += list(options)
+    if "env" not in kwargs:
+        kwargs["env"] = os.environ
     # Assume that if the user has installed Cobaya on the system-wide Python,
     # then it is OK to overwrite system packages:
-    kwargs = deepcopy(kwargs)
-    if "env" not in kwargs:
-        kwargs["env"] = {}
-    kwargs["env"].update({"PIP_BREAK_SYSTEM_PACKAGES": "1"})
+    kwargs["env"] = dict(kwargs["env"], PIP_BREAK_SYSTEM_PACKAGES="1")
     res = subprocess.call(cmd + packages, **kwargs)
     if res:
         msg = f"pip: error installing packages '{packages}'"
