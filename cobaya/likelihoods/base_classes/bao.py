@@ -15,12 +15,15 @@ The datasets implemented at this moment are:
 - ``bao.sdss_dr12_consensus_bao``
 - ``bao.sdss_dr12_consensus_full_shape``
 - ``bao.sdss_dr12_consensus_final`` (combined data of the previous two)
-- ``bao.sdss_dr16_baoplus_lrg`` (combining data from BOSS DR12 and eBOSS DR16)
-- ``bao.sdss_dr16_baoplus_lyauto``
-- ``bao.sdss_dr16_baoplus_lyxqso``
-- ``bao.sdss_dr16_baoplus_qso``
-- ``bao.sdss_dr12_lrg_bao_dmdh``
-- ``bao.sdss_dr16_lrg_bao_dmdh``
+- ``bao.sdss_dr16_baoplus_lrg`` (combining data from BOSS DR12 and eBOSS DR16, BAO+RSD)
+- ``bao.sdss_dr16_baoplus_qso`` (DR16 BAO+RSD)
+- ``bao.sdss_dr16_baoplus_elg`` (DR16 ELG BAO+RSD)
+- ``bao.sdss_dr12_lrg_bao_dmdh`` (DR12 LRG BAO-only, independent of DR16 below)
+- ``bao.sdss_dr16_lrg_bao_dmdh`` (DR16 LRG BAO-only, independent of DR12 above)
+- ``bao.sdss_dr16_bao_elg`` (DR16 ELG BAO-only)
+- ``bao.sdss_dr16_qso_bao_dmdh`` (DR16 QSO BAO-only)
+- ``bao.sdss_dr16_baoplus_lyauto`` (DR16 LyA BAO-only)
+- ``bao.sdss_dr16_baoplus_lyxqso`` (DR16 LyA x QSO BAO-only)
 
 
 .. |br| raw:: html
