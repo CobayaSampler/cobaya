@@ -62,7 +62,7 @@ def _get_targets_cobaya(collections_in):
         )
     # Subtract max over ALL collections: relative weights between collection would appear
     max_loglikes = max(list(chain(*loglikes)))
-    importance_weights = [np.exp(np.array(l) - max_loglikes) for l in loglikes]
+    importance_weights = [np.exp(np.array(like) - max_loglikes) for like in loglikes]
     collections_in[0].reweight(importance_weights, with_batch=collections_in[1:])
     # Merge before computing statistics
     for c in collections_in[1:]:

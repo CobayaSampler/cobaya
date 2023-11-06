@@ -32,23 +32,23 @@ def run_and_wait(processes, commands=None, procs=1):
 
 
 def grid_converge(args=None):
-    Opts = BatchArgs('Find chains which have failed or not converged, and show'
+    opts = BatchArgs('Find chains which have failed or not converged, and show'
                      'Gelman-Rubin R-1 values for each run. Note need more than one'
                      'chain for getdist to calculate R-1.',
                      'cobaya-grid-converge', importance=True, converge=True)
 
-    Opts.parser.add_argument('--exist', action='store_true', help='chain must exist')
-    Opts.parser.add_argument('--checkpoint', action='store_true',
+    opts.parser.add_argument('--exist', action='store_true', help='chain must exist')
+    opts.parser.add_argument('--checkpoint', action='store_true',
                              help='use R-1 stored in checkpoint files '
                                   '(rather than getdist output)')
-    Opts.parser.add_argument('--running', action='store_true',
+    opts.parser.add_argument('--running', action='store_true',
                              help="only check running chains")
-    Opts.parser.add_argument('--not_running', action='store_true',
+    opts.parser.add_argument('--not_running', action='store_true',
                              help="only check chains that are not running")
-    Opts.parser.add_argument('--stuck', action='store_true',
+    opts.parser.add_argument('--stuck', action='store_true',
                              help="finds chains with big spread in the last update time")
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
 
     notExist = []
     converge = []
@@ -57,12 +57,12 @@ def grid_converge(args=None):
         args.checkpoint = True
 
     if args.stuck:
-        for jobItem in Opts.filteredBatchItems():
+        for jobItem in opts.filteredBatchItems():
             if jobItem.chainExists() and jobItem.chainsDodgy():
                 print('Chain stuck?...' + jobItem.name)
     elif args.checkpoint:
         print('Convergence from checkpoint files...')
-        for jobItem in Opts.filteredBatchItems():
+        for jobItem in opts.filteredBatchItems():
             R, done = jobItem.convergeStat()
             if R is not None and not done:
                 if (not args.not_running or jobItem.notRunning()) and (
@@ -71,7 +71,7 @@ def grid_converge(args=None):
                 if args.running and jobItem.chainExists() and jobItem.chainsDodgy():
                     print('Chain stuck?...' + jobItem.name)
     else:
-        for jobItem in Opts.filteredBatchItems():
+        for jobItem in opts.filteredBatchItems():
             if not jobItem.chainExists():
                 notExist.append(jobItem)
             elif args.converge == 0 or args.checkpoint or not \
@@ -92,36 +92,36 @@ def grid_converge(args=None):
 
 def grid_getdist(args=None):
 
-    Opts = BatchArgs('Run getdist over the grid of models. '
+    opts = BatchArgs('Run getdist over the grid of models. '
                      'Use e.g. burn_remove=0.3 to remove 30% of the chain as burn in.',
                      'cobaya-grid-getdist', notExist=True)
-    Opts.parser.add_argument('--update_only', action='store_true',
+    opts.parser.add_argument('--update_only', action='store_true',
                              help='only run if getdist on chains that have been updated '
                                   'since the last run')
-    Opts.parser.add_argument('--make_plots', action='store_true',
+    opts.parser.add_argument('--make_plots', action='store_true',
                              help='run generated script plot files to make PDFs')
-    Opts.parser.add_argument('--norun', action='store_true',
+    opts.parser.add_argument('--norun', action='store_true',
                              help='just make the .ini files, do not run getdist')
-    Opts.parser.add_argument('--burn_removed', action='store_true',
+    opts.parser.add_argument('--burn_removed', action='store_true',
                              help="if burn in has already been removed from chains")
-    Opts.parser.add_argument('--burn_remove', type=float,
+    opts.parser.add_argument('--burn_remove', type=float,
                              help="fraction of chain to remove as burn in "
                                   "(if not importance sampled or already done)")
 
-    Opts.parser.add_argument('--no_plots', action='store_true',
+    opts.parser.add_argument('--no_plots', action='store_true',
                              help="just make non-plot outputs "
                                   "(faster if using old plot_data)")
-    Opts.parser.add_argument('--delay', type=int,
+    opts.parser.add_argument('--delay', type=int,
                              help="run after delay of some number of seconds")
-    Opts.parser.add_argument('--procs', type=int, default=1,
+    opts.parser.add_argument('--procs', type=int, default=1,
                              help="number of getdist instances to run in parallel")
-    Opts.parser.add_argument('--base_ini', default=getdist.default_getdist_settings,
+    opts.parser.add_argument('--base_ini', default=getdist.default_getdist_settings,
                              help="default getdist settings .ini file")
-    Opts.parser.add_argument('--command', default='getdist', help="program to run")
-    Opts.parser.add_argument('--exist', action='store_true',
+    opts.parser.add_argument('--command', default='getdist', help="program to run")
+    opts.parser.add_argument('--exist', action='store_true',
                              help="Silently skip all chains that don't exist")
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
 
     ini_dir = batch.batchPath + 'getdist' + os.sep
     os.makedirs(ini_dir, exist_ok=True)
@@ -130,7 +130,7 @@ def grid_getdist(args=None):
         time.sleep(args.delay)
     processes = set()
 
-    for jobItem in Opts.filteredBatchItems():
+    for jobItem in opts.filteredBatchItems():
         ini = IniFile()
         ini.params['file_root'] = jobItem.chainRoot
         ini.params['batch_path'] = jobItem.batchPath
@@ -172,13 +172,13 @@ def grid_getdist(args=None):
 
 
 def grid_list(args=None):
-    Opts = BatchArgs('List items in a grid', 'cobaya-grid-list',
+    opts = BatchArgs('List items in a grid', 'cobaya-grid-list',
                      importance=True, converge=True, notExist=True)
-    Opts.parser.add_argument('--exists', action='store_true', help='chain must exist')
-    Opts.parser.add_argument('--normed', action='store_true', help='Output normed names')
+    opts.parser.add_argument('--exists', action='store_true', help='chain must exist')
+    opts.parser.add_argument('--normed', action='store_true', help='Output normed names')
 
-    (batch, args) = Opts.parseForBatch(args)
-    items = Opts.sortedParamtagDict(chainExist=args.exists)
+    (batch, args) = opts.parseForBatch(args)
+    items = opts.sortedParamtagDict(chainExist=args.exists)
 
     for paramtag, parambatch in items:
         for jobItem in parambatch:
@@ -194,19 +194,19 @@ def grid_list(args=None):
 
 def grid_cleanup(args=None):
 
-    Opts = BatchArgs('Delete failed chains, files etc. Nothing is actually delete'
+    opts = BatchArgs('Delete failed chains, files etc. Nothing is actually delete'
                      'until you add --confirm, so you can check what you are doing first',
                      'cobaya-grid-cleanup', importance=True, converge=True)
 
-    Opts.parser.add_argument('--dist', action='store_true',
+    opts.parser.add_argument('--dist', action='store_true',
                              help="set to only affect getdist output files")
-    Opts.parser.add_argument('--ext', nargs='+', default=['*'],
+    opts.parser.add_argument('--ext', nargs='+', default=['*'],
                              help="file extensions to delete")
-    Opts.parser.add_argument('--empty', action='store_true')
-    Opts.parser.add_argument('--confirm', action='store_true')
-    Opts.parser.add_argument('--chainnum', default=None)
+    opts.parser.add_argument('--empty', action='store_true')
+    opts.parser.add_argument('--confirm', action='store_true')
+    opts.parser.add_argument('--chainnum', default=None)
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
 
     sizeMB = 0
 
@@ -227,7 +227,7 @@ def grid_cleanup(args=None):
         args.ext = ['.' + ext for ext in args.ext] + ['.*.' + ext for ext in args.ext]
 
     done = set()
-    for jobItem in Opts.filteredBatchItems():
+    for jobItem in opts.filteredBatchItems():
         if (args.converge == 0 or not jobItem.hasConvergeBetterThan(
                 args.converge, returnNotExist=True)) \
                 and os.path.exists(jobItem.chainPath):
@@ -255,38 +255,38 @@ def grid_cleanup(args=None):
 
 def grid_copy(args=None):
 
-    Opts = BatchArgs('copy or zip chains and optionally other files',
+    opts = BatchArgs('copy or zip chains and optionally other files',
                      'cobaya-grid-copy', importance=True, converge=True)
 
-    Opts.parser.add_argument('target_dir', help="output root directory or zip file name")
+    opts.parser.add_argument('target_dir', help="output root directory or zip file name")
 
-    Opts.parser.add_argument('--dist', action='store_true',
+    opts.parser.add_argument('--dist', action='store_true',
                              help="include getdist outputs")
-    Opts.parser.add_argument('--chains', action='store_true', help="include chain files")
-    Opts.parser.add_argument('--sym_link', action='store_true',
+    opts.parser.add_argument('--chains', action='store_true', help="include chain files")
+    opts.parser.add_argument('--sym_link', action='store_true',
                              help="just make symbolic links to source directories")
-    Opts.parser.add_argument('--no_config', action='store_true',
+    opts.parser.add_argument('--no_config', action='store_true',
                              help="don't copy grid config info")
 
-    Opts.parser.add_argument('--remove_burn_fraction', default=0.0, type=float,
+    opts.parser.add_argument('--remove_burn_fraction', default=0.0, type=float,
                              help="fraction at start of chain to remove as burn in")
 
-    Opts.parser.add_argument('--file_extensions', nargs='+', default=['.*'],
+    opts.parser.add_argument('--file_extensions', nargs='+', default=['.*'],
                              help='extensions to include')
-    Opts.parser.add_argument('--skip_extensions', nargs='+',
+    opts.parser.add_argument('--skip_extensions', nargs='+',
                              default=['.locked', '.lock_err', Extension.progress,
                                       Extension.dill, Extension.checkpoint,
                                       '.corr', '.py', '.py_mcsamples', '.pysamples'])
-    Opts.parser.add_argument('--max_age_days', default=0.0, type=float,
+    opts.parser.add_argument('--max_age_days', default=0.0, type=float,
                              help="only include files with date stamp "
                                   "at most max_age_days old")
-    Opts.parser.add_argument('--dryrun', action='store_true')
-    Opts.parser.add_argument('--verbose', action='store_true')
-    Opts.parser.add_argument('--zip', action='store_true',
+    opts.parser.add_argument('--dryrun', action='store_true')
+    opts.parser.add_argument('--verbose', action='store_true')
+    opts.parser.add_argument('--zip', action='store_true',
                              help='make a zip file. Not needed if target_dir '
                                   'is a filename ending in .zip')
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
 
     if args.target_dir.endswith('.zip'):
         args.zip = True
@@ -373,7 +373,7 @@ def grid_copy(args=None):
             for f in os.listdir(config_path):
                 do_copy(config_path, 'config' + os.sep, f)
 
-    for jobItem in Opts.filteredBatchItems():
+    for jobItem in opts.filteredBatchItems():
         if args.converge == 0 or jobItem.hasConvergeBetterThan(args.converge):
             print(jobItem.name)
             chainfiles = 0
@@ -431,19 +431,19 @@ def grid_copy(args=None):
 
 
 def grid_extract(args=None):
-    Opts = BatchArgs('copy all files of a given type from all getdist '
+    opts = BatchArgs('copy all files of a given type from all getdist '
                      'output directories in the grid', 'cobaya-grid-extract',
                      importance=True, converge=True)
 
-    Opts.parser.add_argument('target_dir')
-    Opts.parser.add_argument('file_extension', nargs='+')
-    Opts.parser.add_argument('--normalize_names', action='store_true',
+    opts.parser.add_argument('target_dir')
+    opts.parser.add_argument('file_extension', nargs='+')
+    opts.parser.add_argument('--normalize_names', action='store_true',
                              help='replace actual name tags with normalized names')
-    Opts.parser.add_argument('--tag_replacements', nargs='+',
+    opts.parser.add_argument('--tag_replacements', nargs='+',
                              help="XX YY XX2 YY2 replaces name XX "
                                   "with YY, XX2 with YY2 etc.")
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
 
     target_dir = os.path.abspath(args.target_dir) + os.sep
     if not os.path.exists(target_dir):
@@ -461,7 +461,7 @@ def grid_extract(args=None):
             pattern = '.' + ext
         else:
             pattern = ext
-        for jobItem in Opts.filteredBatchItems():
+        for jobItem in opts.filteredBatchItems():
             if os.path.exists(jobItem.distPath) and (
                     args.converge == 0 or jobItem.hasConvergeBetterThan(args.converge)):
                 for f in os.listdir(jobItem.distPath):

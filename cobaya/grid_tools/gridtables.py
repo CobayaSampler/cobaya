@@ -7,6 +7,7 @@
 """
 import os
 import copy
+from cobaya.tools import working_directory
 from cobaya.grid_tools.batchjob_args import BatchArgs
 from getdist import types, paramnames
 from getdist.mcsamples import loadMCSamples
@@ -14,72 +15,72 @@ from getdist.mcsamples import loadMCSamples
 
 def grid_tables(args=None):
 
-    Opts = BatchArgs('Make pdf tables from latex generated from getdist outputs',
+    opts = BatchArgs('Make pdf tables from latex generated from getdist outputs',
                      importance=True, converge=True)
-    Opts.parser.add_argument('latex_filename', help="name of latex/PDF file to produce")
-    Opts.parser.add_argument('--limit', type=int, default=2,
+    opts.parser.add_argument('latex_filename', help="name of latex/PDF file to produce")
+    opts.parser.add_argument('--limit', type=int, default=2,
                              help="sigmas of quoted confidence intervals")
-    Opts.parser.add_argument('--all_limits', action='store_true')
-    Opts.parser.add_argument('--bestfitonly', action='store_true')
-    Opts.parser.add_argument('--nobestfit', action='store_true')
-    Opts.parser.add_argument('--no_delta_chisq', action='store_true')
-    Opts.parser.add_argument('--delta_chisq_paramtag', default=None,
+    opts.parser.add_argument('--all_limits', action='store_true')
+    opts.parser.add_argument('--bestfitonly', action='store_true')
+    opts.parser.add_argument('--nobestfit', action='store_true')
+    opts.parser.add_argument('--no_delta_chisq', action='store_true')
+    opts.parser.add_argument('--delta_chisq_paramtag', default=None,
                              help="parameter tag to give best-fit "
                                   "chi-squared differences")
-    Opts.parser.add_argument('--changes_from_datatag', default=None,
+    opts.parser.add_argument('--changes_from_datatag', default=None,
                              help="give fractional sigma shifts compared to "
                                   "a given data combination tag")
-    Opts.parser.add_argument('--changes_from_paramtag', default=None,
+    opts.parser.add_argument('--changes_from_paramtag', default=None,
                              help="give fractional sigma shifts compared to a "
                                   "given parameter combination tag")
-    Opts.parser.add_argument('--changes_adding_data', nargs='+', default=None,
+    opts.parser.add_argument('--changes_adding_data', nargs='+', default=None,
                              help="give fractional sigma shifts when adding given data")
-    Opts.parser.add_argument('--changes_replacing', nargs='+', default=None,
+    opts.parser.add_argument('--changes_replacing', nargs='+', default=None,
                              help='give sigma shifts for results with data x, y, z '
                                   'replacing data y, z.. with x')
-    Opts.parser.add_argument('--changes_only', action='store_true',
+    opts.parser.add_argument('--changes_only', action='store_true',
                              help='Only include results in the changes_replacing set')
-    Opts.parser.add_argument('--changes_data_ignore', nargs='+',
+    opts.parser.add_argument('--changes_data_ignore', nargs='+',
                              help='ignore these data tags when mapping to '
                                   'reference for comparison')
-    Opts.parser.add_argument('--systematic_average', action='store_true',
+    opts.parser.add_argument('--systematic_average', action='store_true',
                              help='Combine two chains and quote results '
                                   'for the combination, e.g. as a crude way of '
                                   'including systematic errors between '
                                   'likelihood versions. '
                                   'Used with --changes_replacing or similar.')
 
-    Opts.parser.add_argument('--shift_sigma_indep', action='store_true',
+    opts.parser.add_argument('--shift_sigma_indep', action='store_true',
                              help="fractional shifts are relative to the sigma for "
                                   "independent data (sigma^2=sigma1^2+sigma2^2")
-    Opts.parser.add_argument('--shift_sigma_subset', action='store_true',
+    opts.parser.add_argument('--shift_sigma_subset', action='store_true',
                              help="fractional shifts are relative to the sigma "
                                   "for stricly subset data "
                                   "(sigma^2 = |sigma1^2-sigma2^2|, "
                                   "regularized to sigma/20)")
 
-    Opts.parser.add_argument('--paramNameFile',
+    opts.parser.add_argument('--paramNameFile',
                              help=".paramnames file for custom labels for parameters")
 
-    Opts.parser.add_argument('--paramList', default=None,
+    opts.parser.add_argument('--paramList', default=None,
                              help=".paramnames file listing specific "
                                   "parameters to include (only).")
-    Opts.parser.add_argument('--blockEndParams', default=None,
+    opts.parser.add_argument('--blockEndParams', default=None,
                              help='a semi-colon separated list of parameters marking '
                                   'the end of distinct parameter blocks '
                                   '(e.g. physical vs nuisance parmeters, '
                                   'sampled vs derived)')
-    Opts.parser.add_argument('--columns', type=int, nargs=1, default=3)
-    Opts.parser.add_argument('--compare', nargs='+', default=None)
+    opts.parser.add_argument('--columns', type=int, nargs=1, default=3)
+    opts.parser.add_argument('--compare', nargs='+', default=None)
 
-    Opts.parser.add_argument('--titles', default=None)  # for compare plots
-    Opts.parser.add_argument('--forpaper', action='store_true')
-    Opts.parser.add_argument('--separate_tex', action='store_true')
-    Opts.parser.add_argument('--header_tex', default=None)
-    Opts.parser.add_argument('--height', default="13in")
-    Opts.parser.add_argument('--width', default="12in")
+    opts.parser.add_argument('--titles', default=None)  # for compare plots
+    opts.parser.add_argument('--forpaper', action='store_true')
+    opts.parser.add_argument('--separate_tex', action='store_true')
+    opts.parser.add_argument('--header_tex', default=None)
+    opts.parser.add_argument('--height', default="13in")
+    opts.parser.add_argument('--width', default="12in")
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
 
     if args.blockEndParams is not None:
         args.blockEndParams = args.blockEndParams.split(';')
@@ -208,7 +209,7 @@ def grid_tables(args=None):
         if args.data is not None:
             args.data += args.changes_replacing
 
-    items = Opts.sortedParamtagDict(chainExist=not args.bestfitonly)
+    items = opts.sortedParamtagDict(chainExist=not args.bestfitonly)
 
     if args.all_limits:
         limits = [1, 2, 3]
@@ -286,7 +287,7 @@ def grid_tables(args=None):
             else:
                 section = ''
             if args.compare is not None:
-                compares = Opts.filterForDataCompare(parambatch, args.compare)
+                compares = opts.filterForDataCompare(parambatch, args.compare)
                 if len(compares) == len(args.compare):
                     lines.append(section)
                     lines += compare_table(compares, args.titles)
@@ -395,39 +396,38 @@ def grid_tables(args=None):
         if not args.forpaper:
             print('Now converting to PDF...')
             delext = ['aux', 'log', 'out', 'toc']
-            if len(outdir) > 0:
-                os.chdir(outdir)
-            for _ in range(3):
-                # iterate three times to get table of contents page numbers right
-                os.system('pdflatex ' + outname)
-            for ext in delext:
-                if os.path.exists(root + '.' + ext):
-                    os.remove(root + '.' + ext)
+            with working_directory(outdir):
+                for _ in range(3):
+                    # iterate three times to get table of contents page numbers right
+                    os.system('pdflatex ' + outname)
+                for ext in delext:
+                    if os.path.exists(root + '.' + ext):
+                        os.remove(root + '.' + ext)
 
 
 def grid_param_compare(args=None):
 
-    Opts = BatchArgs('Compare parameter constraints over set of models, producing'
+    opts = BatchArgs('Compare parameter constraints over set of models, producing'
                      'latext column content for tables (but not full tables)')
-    Opts.parser.add_argument('--params', nargs='+',
+    opts.parser.add_argument('--params', nargs='+',
                              help="list of parameters to compare in the output tables")
-    Opts.parser.add_argument('--single_extparams', nargs='+',
+    opts.parser.add_argument('--single_extparams', nargs='+',
                              help="list of single parameter extensions to restrict to")
 
-    Opts.parser.add_argument('--compare', nargs='+', default=None,
+    opts.parser.add_argument('--compare', nargs='+', default=None,
                              help="list of data tags to compare")
-    Opts.parser.add_argument('--nobestfits', action='store_true')
-    Opts.parser.add_argument('--limit', type=int, default=2)
-    Opts.parser.add_argument('--latex_filename', default=None,
+    opts.parser.add_argument('--nobestfits', action='store_true')
+    opts.parser.add_argument('--limit', type=int, default=2)
+    opts.parser.add_argument('--latex_filename', default=None,
                              help="name of latex file to produce (otherwise stdout)")
-    Opts.parser.add_argument('--math_columns', action='store_true',
+    opts.parser.add_argument('--math_columns', action='store_true',
                              help="whether to include $$ in the output for each column")
-    Opts.parser.add_argument('--endline', default='\\cr')
-    Opts.parser.add_argument('--paramNameFile',
+    opts.parser.add_argument('--endline', default='\\cr')
+    opts.parser.add_argument('--paramNameFile',
                              help="Optional parameter name file "
                                   "giving latex labels for each parameter")
 
-    (batch, args) = Opts.parseForBatch(args)
+    (batch, args) = opts.parseForBatch(args)
     formatter = types.TableFormatter()
 
     if args.paramNameFile:
@@ -445,7 +445,7 @@ def grid_param_compare(args=None):
     for par in args.params:
         paramtag_for_param[par] = []
 
-    for jobItem in Opts.filteredBatchItems():
+    for jobItem in opts.filteredBatchItems():
         if (args.compare is None or jobItem.matchesDatatag(args.compare)) and (
                 not args.single_extparams or
                 len(jobItem.param_set) == 1 and jobItem.hasParam(args.single_extparams)):

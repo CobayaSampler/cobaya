@@ -27,7 +27,7 @@ from cobaya.cosmo_input import create_input, get_best_covmat_ext, \
 from cobaya.parameterization import is_sampled_param
 
 
-def getArgs(vals=None):
+def get_args(vals=None):
     parser = argparse.ArgumentParser(
         prog="cobaya-grid-create",
         description='Initialize grid using settings file')
@@ -58,7 +58,7 @@ def path_is_grid(batchPath):
 
 def grid_create(args=None):
     warn_deprecation()
-    args = getArgs(args)
+    args = get_args(args)
     args.interactive = True
     makeGrid(**args.__dict__)
 
@@ -129,9 +129,9 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             settings = __import__(settingName, fromlist=['dummy'])
             settingName = settings.__file__
     batch = batchjob.BatchJob(batchPath)
-    batch.makeItems(settings, messages=not read_only)
+    batch.make_items(settings, messages=not read_only)
     if read_only:
-        for job_item in [b for b in batch.jobItems]:
+        for job_item in batch.jobItems.copy():
             if not job_item.chainExists():
                 batch.jobItems.remove(job_item)
         batch.save()
@@ -142,45 +142,36 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         batch.save()
     infos = {}
     components_used = {}
+
     from_yaml = isinstance(settings, dict)
-    # Default info
-    if from_yaml:
-        defaults = copy.deepcopy(settings)
-        grid_definition = defaults.pop("grid")
-        models_definitions = grid_definition["models"]
-        yaml_dir = defaults.pop("yaml_dir", "") or ""
-        cov_dir = defaults.pop("cov_dir", "") or None
-    else:
-        yaml_dir = getattr(settings, 'yaml_dir', "")
-        cov_dir = getattr(settings, 'cov_dir', None)
-        if getattr(settings, 'start_at_bestfit', None) is not None:
-            raise ValueError("start_at_bestfit not yet implemented")
+    dic = settings if from_yaml else settings.__dict__
+    yaml_dir = dic.get("yaml_dir") or ""
+    cov_dir = dic.get("cov_dir")  # None means use the default from mcmc settings
+    model_definitions = dic.get("models")
+    if 'start_at_bestfit' in dic:
+        raise ValueError("start_at_bestfit not yet implemented")
 
     def dicts_or_load(_infos):
+        if not _infos or isinstance(_infos, dict):
+            return [_infos or {}]
         return [(yaml_load_file(os.path.join(yaml_dir, _info)) if
-                 isinstance(_info, str) else _info)
-                for _info in _infos]
+                 isinstance(_info, str) else _info) for _info in _infos]
 
-    def dict_option(_name):
-        s = getattr(settings, _name, {})
-        if isinstance(s, str):
-            return yaml_load_file(os.path.join(yaml_dir, s))
-        return s
+    defaults = merge_info(*dicts_or_load(dic.get('defaults')))
+    importance_defaults = merge_info(*dicts_or_load(dic.get('importance_defaults')))
+    minimize_defaults = merge_info(*dicts_or_load(dic.get('minimize_defaults')))
 
+    # Default info
     if not from_yaml:
-        defaults = settings.defaults if isinstance(settings.defaults, dict) \
-            else merge_info(*dicts_or_load(settings.defaults or [{}]))
-        importance_defaults = settings.importance_defaults if \
-            isinstance(settings.importance_defaults, dict) \
-            else merge_info(*dicts_or_load(settings.importance_defaults or [{}]))
+        def dict_option(_name):
+            s = getattr(settings, _name, {})
+            if isinstance(s, str):
+                return yaml_load_file(os.path.join(yaml_dir, s))
+            return s
 
         params = dict_option('params')
         param_extra = dict_option('param_extra_opts')
         settings_extra = dict_option('extra_opts')
-        minimize_defaults = dict_option('minimize_defaults')
-    else:
-        importance_defaults = defaults.pop("importance_defaults", {})
-        minimize_defaults = defaults.pop("minimize_defaults", {})
 
     for job_item in batch.items(wantSubItems=False):
         # Model info
@@ -188,7 +179,7 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         if from_yaml:
             model_tag = "_".join(job_item.param_set)
             try:
-                model_info = copy.deepcopy(models_definitions[model_tag] or {})
+                model_info = copy.deepcopy(model_definitions[model_tag] or {})
             except KeyError:
                 raise ValueError("Model '%s' must be defined." % model_tag)
         else:
@@ -200,11 +191,13 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             job_param_extra = getattr(job_item, 'param_extra_opts', {}) or {}
             job_extra = getattr(job_item, 'extra_opts', {}) or {}
             extra = dict(param_extra, **job_param_extra)
+            if opts := extra.get(job_item.paramtag):
+                extra_infos = [opts]
+            else:
+                extra_infos = [extra[par] for par in job_item.param_set if par in extra]
             model_info = merge_info(settings_extra, job_extra, model_info,
-                                    *[extra[par]
-                                      for par in job_item.param_set if par in extra])
+                                    *extra_infos)
 
-        model_info = merge_info(defaults, model_info)
         data_infos = dicts_or_load(job_item.data_set.infos)
         combined_info = merge_info(defaults, model_info, *data_infos)
         if "preset" in combined_info:

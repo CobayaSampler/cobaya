@@ -28,6 +28,7 @@ from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 
 # Local
 from cobaya.conventions import subfolders, kinds, packages_path_config_file, \
@@ -111,6 +112,19 @@ class PythonPath:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.path[:] = self.old_path
+
+
+@contextmanager
+def working_directory(path):
+    if path:
+        original_cwd = os.getcwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(original_cwd)
+    else:
+        yield
 
 
 def check_module_path(module, path):

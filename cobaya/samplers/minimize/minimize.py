@@ -392,9 +392,9 @@ class Minimize(Minimizer, CovmatSampler):
 
         If non-trivial ``M`` and ``X0`` are returned, this means that the minimizer has
         been working on an affine-transformed parameter space :math:`x^\prime`, from which
-        the real space points can be obtained as :math:`x = M x^\prime + X_0`. This inverse
-        transformation needs to be applied to the coordinates appearing inside the
-        ``result_object``.
+        the real space points can be obtained as :math:`x = M x^\prime + X_0`.
+        This inverse transformation needs to be applied to the coordinates appearing
+        inside the ``result_object``.
         """
         return {"minimum": self.minimum, "result_object": self.result,
                 "M": self._inv_affine_transform_matrix,

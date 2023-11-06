@@ -18,7 +18,7 @@ default: InputDict = {
     'sampler': {'mcmc': {'max_samples': 500, 'burn_in': 100, 'covmat': 'auto'}},
 }
 
-# list of default settings to combine; each item can be dict or yaml file name
+# dict or list of default settings to combine; each item can be dict or yaml file name
 defaults = [default]
 
 importance_defaults = []
@@ -29,7 +29,9 @@ getdist_options = {'ignore_rows': 0.3, 'marker[b_0]': 0}
 params = {'a_1': {'prior': {'min': -2, 'max': 2}},
           'a_2': {'prior': {'min': -1, 'max': 3}}}
 
-# Additional (non-params) options to use when each parameter is varied
+# Additional (non-params) options to use when each parameter is varied.
+# If you need specific options (not just the union) for combinations,
+# can also use param tag (e.g. a_1_a_2) entries
 param_extra_opts = {'a_2': {
     'sampler': {'mcmc': {'max_samples': 100}}}}
 
@@ -65,14 +67,13 @@ class ImportanceFilterb0:
         return "like2" in jobItem.data_set.names
 
 
-
 # Dictionary of groups of data/parameter combination to run
 # datasets is a list of DataSet objects, or tuples of data name tag combinations and
 # corresponding list of input dictionaries or yaml files.
 
 groups = {
     'main': {
-        'params': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
+        'models': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
         'datasets': [('like1', like1), joint],
         "extra_opts": {},  # options specific to this group
         'importance_runs': [

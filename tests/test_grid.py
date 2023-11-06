@@ -17,7 +17,7 @@ def test_grid(tmpdir):
         os.path.join(f, 'input_files', 'base_a_1_a_2_like1_like2.yaml'))
     assert info['sampler']['mcmc']['max_samples'] == 100
 
-    grid_run([f, '--noqueue'])
+    grid_run([f, '--noqueue', '2'])
     grid_run([f, '--noqueue', '--importance'])
     grid_getdist([f, '--burn_remove', '0.3'])
     assert os.path.exists(os.path.join(f, 'base_a_1_a_2',

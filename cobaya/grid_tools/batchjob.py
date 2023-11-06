@@ -12,7 +12,7 @@ import pickle
 import copy
 import sys
 import time
-from typing import Callable
+from typing import Callable, Any
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
 from getdist.paramnames import makeList
@@ -21,6 +21,8 @@ from .conventions import input_folder, script_folder, input_folder_post, yaml_ex
 import cobaya
 from cobaya.conventions import Extension
 from cobaya.yaml import yaml_load_file
+from cobaya.output import use_portalocker
+from cobaya.tools import PythonPath
 
 
 def grid_cache_file(directory):
@@ -46,12 +48,11 @@ def readobject(directory=None):
         return None
     try:
         config_dir = os.path.abspath(directory) + os.sep + 'config'
-        if os.path.exists(config_dir):
+        with PythonPath(config_dir, when=os.path.exists(config_dir)):
             # set path in case using functions defined
             # and hence imported from in settings file
-            sys.path.insert(0, config_dir)
-        with open(fname, 'rb') as inp:
-            grid = pickle.load(inp)
+            with open(fname, 'rb') as inp:
+                grid = pickle.load(inp)
         if not os.path.exists(grid.batchPath):
             raise FileNotFoundError('Directory not found %s' % grid.batchPath)
         return grid
@@ -70,10 +71,6 @@ def saveobject(obj, filename):
 
 def nonEmptyFile(fname):
     return os.path.exists(fname) and os.path.getsize(fname) > 0
-
-
-def getCodeRootPath():
-    return os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..')) + os.sep
 
 
 class PropertiesItem:
@@ -192,6 +189,7 @@ class DataSet:
         return "_".join(sorted(self.namesReplacing(dic)))
 
 
+# not currently used
 class JobGroup:
     def __init__(self, name, params=None, importanceRuns=None, datasets=None):
         if importanceRuns is None:
@@ -392,6 +390,27 @@ class JobItem(PropertiesItem):
     def notRunning(self, age_qualify_minutes=5):
         if not self.chainExists():
             return False  # might be in queue
+        if use_portalocker():
+            lock_file = self.chainRoot + '.input.yaml.locked'
+            if not os.path.exists(lock_file):
+                return True
+            h: Any = None
+            import portalocker  # pylint: disable=import-outside-toplevel
+            try:
+                h = open(lock_file, 'wb')
+                portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
+            except (portalocker.exceptions.BaseLockException, OSError):
+                if h:
+                    h.close()
+                return False
+            else:
+                h.close()
+                del h
+                try:
+                    os.remove(lock_file)
+                except OSError:
+                    return False
+        # if no locking, just check if files updated recently
         lastWrite = self.chainFileDate()
         return lastWrite < time.time() - age_qualify_minutes * 60
 
@@ -510,7 +529,7 @@ class BatchJob(PropertiesItem):
     def propertiesIniFile(self):
         return os.path.join(self.batchPath, 'config', 'config.ini')
 
-    def makeItems(self, settings, messages=True, base_name='base'):
+    def make_items(self, settings, messages=True, base_name='base'):
         self.jobItems = []
         dic = settings if isinstance(settings, dict) else settings.__dict__
         self.getdist_options = dic.get('getdist_options') or self.getdist_options
@@ -518,8 +537,9 @@ class BatchJob(PropertiesItem):
         self.skip = dic.get("skip") or []
 
         if isinstance(settings, dict):
-            dataset_infos = settings["grid"]["datasets"]
-            for group_name, group in settings["grid"]["groups"].items():
+            # model_definitions = dic.get("models")
+            dataset_infos = dic["datasets"]
+            for group_name, group in dic["groups"].items():
                 for data_set in group["datasets"]:
                     try:
                         dataset_info = copy.deepcopy(dataset_infos[data_set])
@@ -527,12 +547,17 @@ class BatchJob(PropertiesItem):
                         raise ValueError(
                             "Dataset '%s' must be defined." % data_set)
                     dataset = DataSet(data_set.split('_'), [dataset_info])
-                    for param_set in group["models"]:
-                        if any(data_set in (x.get("skip", {}) or {}).get(param_set, {})
-                               for x in (settings["grid"], group)):
+                    for model_name in group["models"]:
+                        if data_set in (group.get("skip", {}) or {}).get(model_name, {}):
                             continue
-                        item = JobItem(self.batchPath,
-                                       param_set.split('_') if param_set else [],
+                        # try:
+                        #     model_info = copy.deepcopy(model_definitions[model_name] or {})
+                        # except KeyError:
+                        #     raise ValueError("Model '%s' must be defined." % model_name)
+                        # param_set = model_info.get('params')
+                        # if param_set is None:
+                        param_set = model_name.split('_')  if model_name else []
+                        item = JobItem(self.batchPath,param_set,
                                        dataset,
                                        base=group.get('base_name') or base_name,
                                        group_name=group_name)
@@ -544,7 +569,7 @@ class BatchJob(PropertiesItem):
         else:
             for group_name, group in settings.groups.items():
                 for data_set in group["datasets"]:
-                    for param_set in group["params"]:
+                    for param_set in group["models"]:
                         item = JobItem(self.batchPath, param_set, data_set,
                                        base=group.get('base_name') or base_name,
                                        group_name=group_name)
