@@ -526,11 +526,9 @@ def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     if upgrade:
         cmd += ['--upgrade']
     cmd += list(options)
-    if "env" not in kwargs:
-        kwargs["env"] = os.environ
     # Assume that if the user has installed Cobaya on the system-wide Python,
     # then it is OK to overwrite system packages:
-    kwargs["env"] = dict(kwargs["env"], PIP_BREAK_SYSTEM_PACKAGES="1")
+    kwargs["env"] = dict(kwargs.get("env", os.environ), PIP_BREAK_SYSTEM_PACKAGES="1")
     res = subprocess.call(cmd + packages, **kwargs)
     if res:
         msg = f"pip: error installing packages '{packages}'"
