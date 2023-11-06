@@ -525,10 +525,8 @@ class Minimize(Minimizer, CovmatSampler):
         desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
                       r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
                       r"ference/generated/scipy.optimize.Minimize.html}")
-        desc_iminuit = (
-            r"iminuit minimizer(check citation for the "
-            r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}"
-        )
+        desc_iminuit = (r"iminuit minimizer(check citation for the "
+                        r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}")
         if method and method.lower() == "bobyqa":
             return desc_bobyqa
         elif method and method.lower() == "scipy":
