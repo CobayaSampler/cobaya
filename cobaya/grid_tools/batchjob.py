@@ -556,8 +556,8 @@ class BatchJob(PropertiesItem):
                         #     raise ValueError("Model '%s' must be defined." % model_name)
                         # param_set = model_info.get('params')
                         # if param_set is None:
-                        param_set = model_name.split('_')  if model_name else []
-                        item = JobItem(self.batchPath,param_set,
+                        param_set = model_name.split('_') if model_name else []
+                        item = JobItem(self.batchPath, param_set,
                                        dataset,
                                        base=group.get('base_name') or base_name,
                                        group_name=group_name)
