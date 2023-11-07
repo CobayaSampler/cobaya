@@ -315,7 +315,10 @@ class HasLogger:
         return new
 
     def __getstate__(self):
-        return deepcopy_where_possible(self)
+        try:
+            return deepcopy_where_possible(self).__dict__
+        except:
+            return deepcopy_where_possible(self)
         # return deepcopy(self).__dict__
 
     def __setstate__(self, d):
