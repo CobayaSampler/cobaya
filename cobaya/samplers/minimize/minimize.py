@@ -396,12 +396,6 @@ class Minimize(Minimizer, CovmatSampler):
         self.log.info(
             "Parameter values at minimum:\n%s", self.minimum.data.to_string())
         self.minimum.out_update()
-        if len(results) > 1:
-            mins = [(getattr(r, evals_attr_) if s else np.inf)
-                    for r, s in zip(results, successes)]
-            self.full_set_minima = mins
-        else:
-            self.full_set_minima = self.minimum
         self.log.info("The complete set of minima is: %r", self.full_set_minima)
         self.dump_getdist()
 
@@ -430,7 +424,6 @@ class Minimize(Minimizer, CovmatSampler):
         ``result_object``.
         """
         return {"minimum": self.minimum, "result_object": self.result,
-                "full_set_minima": self.full_set_minima,
                 "M": self._inv_affine_transform_matrix,
                 "X0": self._affine_transform_baseline}
 
