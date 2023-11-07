@@ -57,6 +57,9 @@ def test_grid(tmpdir):
     grid_extract([f, tmpdir, '.margestats', '--datatag', 'like1_like2'])
     assert os.path.exists(os.path.join(tmpdir, 'base_a_1_a_2_like1_like2.margestats'))
 
+    with stdout_check("7 existing chains"):
+        grid_create([f])
+
     with stdout_check("base_a_1_a_2_like1_like2"):
         grid_cleanup([f, '--confirm', '--data', 'like2'])
 

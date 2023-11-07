@@ -25,16 +25,6 @@ importance_defaults = []
 minimize_defaults = []
 getdist_options = {'ignore_rows': 0.3, 'marker[b_0]': 0}
 
-# settings for the variation of each parameter that is varied in the grid
-params = {'a_1': {'prior': {'min': -2, 'max': 2}},
-          'a_2': {'prior': {'min': -1, 'max': 3}}}
-
-# Additional (non-params) options to use when each parameter is varied.
-# If you need specific options (not just the union) for combinations,
-# can also use param tag (e.g. a_1_a_2) entries
-param_extra_opts = {'a_2': {
-    'sampler': {'mcmc': {'max_samples': 100}}}}
-
 like1: InputDict = {
     'likelihood':
         {'mix1': {
@@ -75,9 +65,19 @@ groups = {
     'main': {
         'models': [[], ['a_1'], ['a_2'], ['a_1', 'a_2']],
         'datasets': [('like1', like1), joint],
-        "extra_opts": {},  # options specific to this group
+        "defaults": {},  # options specific to this group
+        "base": "base",  # optional base name tag
         'importance_runs': [
             (["cut"], {"params": {"b_0": {"prior": {"min": 0, "max": 1}}}},
              ImportanceFilterb0())]
     }
 }
+
+# settings for the variation of each parameter that is varied in the grid
+params = {'a_1': {'prior': {'min': -2, 'max': 2}},
+          'a_2': {'prior': {'min': -1, 'max': 3}}}
+
+# Additional (non-params) options to use when each parameter is varied.
+# If you need specific options (not just the union) for combinations,
+# can also use param tag (e.g. a_1_a_2) entries
+param_extra_opts = {'a_2': {'sampler': {'mcmc': {'max_samples': 100}}}}

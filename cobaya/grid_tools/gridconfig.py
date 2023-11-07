@@ -147,7 +147,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     dic = settings if from_yaml else settings.__dict__
     yaml_dir = dic.get("yaml_dir") or ""
     cov_dir = dic.get("cov_dir")  # None means use the default from mcmc settings
-    model_definitions = dic.get("models")
     if 'start_at_bestfit' in dic:
         raise ValueError("start_at_bestfit not yet implemented")
 
@@ -157,45 +156,33 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         return [(yaml_load_file(os.path.join(yaml_dir, _info)) if
                  isinstance(_info, str) else _info) for _info in _infos]
 
+    def dict_option(_name):
+        s = dic.get(_name) or {}
+        if isinstance(s, str):
+            return yaml_load_file(os.path.join(yaml_dir, s))
+        return s
+
     defaults = merge_info(*dicts_or_load(dic.get('defaults')))
     importance_defaults = merge_info(*dicts_or_load(dic.get('importance_defaults')))
     minimize_defaults = merge_info(*dicts_or_load(dic.get('minimize_defaults')))
-
-    # Default info
-    if not from_yaml:
-        def dict_option(_name):
-            s = getattr(settings, _name, {})
-            if isinstance(s, str):
-                return yaml_load_file(os.path.join(yaml_dir, s))
-            return s
-
-        params = dict_option('params')
-        param_extra = dict_option('param_extra_opts')
-        settings_extra = dict_option('extra_opts')
+    params = dict_option('params')
+    param_extra = dict_option('param_extra_opts')
 
     for job_item in batch.items(wantSubItems=False):
         # Model info
         job_item.makeChainPath()
-        if from_yaml:
-            model_tag = "_".join(job_item.param_set)
-            try:
-                model_info = copy.deepcopy(model_definitions[model_tag] or {})
-            except KeyError:
-                raise ValueError("Model '%s' must be defined." % model_tag)
-        else:
+        if (model_info := job_item.model_info) is None:
             model_info = {'params': {}}
             for par in job_item.param_set:
                 if par not in params:
                     raise ValueError("params[%s] must be defined." % par)
                 model_info['params'][par] = params[par]
-            job_param_extra = getattr(job_item, 'param_extra_opts', {}) or {}
-            job_extra = getattr(job_item, 'extra_opts', {}) or {}
-            extra = dict(param_extra, **job_param_extra)
+            extra = dict(param_extra, **job_item.param_extra_opts)
             if opts := extra.get(job_item.paramtag):
                 extra_infos = [opts]
             else:
                 extra_infos = [extra[par] for par in job_item.param_set if par in extra]
-            model_info = merge_info(settings_extra, job_extra, model_info,
+            model_info = merge_info(job_item.defaults, model_info,
                                     *extra_infos)
 
         data_infos = dicts_or_load(job_item.data_set.infos)

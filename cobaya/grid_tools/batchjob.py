@@ -536,58 +536,53 @@ class BatchJob(PropertiesItem):
         all_importance = dic.get('importance_runs') or []
         self.skip = dic.get("skip") or []
 
-        if isinstance(settings, dict):
-            # model_definitions = dic.get("models")
-            dataset_infos = dic["datasets"]
-            for group_name, group in dic["groups"].items():
-                for data_set in group["datasets"]:
-                    try:
-                        dataset_info = copy.deepcopy(dataset_infos[data_set])
-                    except KeyError:
+        dataset_infos = dic.get("datasets") or {}
+        model_infos = dic.get("models") or {}
+        for group_name, group in dic["groups"].items():
+            skip = group.get("skip") or {}
+            for data_set in group["datasets"]:
+                if isinstance(data_set, str):
+                    if not data_set in dataset_infos:
                         raise ValueError(
-                            "Dataset '%s' must be defined." % data_set)
-                    dataset = DataSet(data_set.split('_'), [dataset_info])
-                    for model_name in group["models"]:
-                        if data_set in (group.get("skip", {}) or {}).get(model_name, {}):
+                            "Dataset name '%s' must be defined." % data_set)
+                    info = (dataset_infos.get(data_set) or {}).copy()
+                    dataset = DataSet(info.pop("tags", data_set.split('_')), info)
+                else:
+                    dataset = data_set
+                for model in group["models"]:
+                    model_info = None
+                    if isinstance(model, str):
+                        if isinstance(skip, dict) and isinstance(data_set, str) \
+                                and data_set in skip.get(model, {}):
                             continue
-                        # try:
-                        #     model_info = copy.deepcopy(model_definitions[model_name] or {})
-                        # except KeyError:
-                        #     raise ValueError("Model '%s' must be defined." % model_name)
-                        # param_set = model_info.get('params')
-                        # if param_set is None:
-                        param_set = model_name.split('_') if model_name else []
-                        item = JobItem(self.batchPath, param_set,
-                                       dataset,
-                                       base=group.get('base_name') or base_name,
-                                       group_name=group_name)
+                        if model not in model_infos:
+                            raise ValueError("Model '%s' must be defined." % model)
+                        model_info = (model_infos[model] or {}).copy()
+                        model = (model_info.pop('tags', []) or []) \
+                            if "tags" in model_info else model.split('_')
+                    elif not isinstance(model, (list, tuple)):
+                        raise ValueError(
+                            "models must be model name strings or list of model names")
 
-                        if item.name not in self.skip:
-                            item.makeImportance(group.get("importance_runs") or [])
-                            item.makeImportance(all_importance)
-                            self.jobItems.append(item)
-        else:
-            for group_name, group in settings.groups.items():
-                for data_set in group["datasets"]:
-                    for param_set in group["models"]:
-                        item = JobItem(self.batchPath, param_set, data_set,
-                                       base=group.get('base_name') or base_name,
-                                       group_name=group_name)
-                        item.extra_opts = group.get("extra_opts") or {}
-                        item.param_extra_opts = group.get("param_extra_opts") or {}
-                        if item.name not in self.skip:
-                            item.makeImportance(group.get("importance_runs") or [])
-                            item.makeImportance(all_importance)
-                            self.jobItems.append(item)
+                    item = JobItem(self.batchPath, model, dataset,
+                                   base=group.get('base') or dic.get('base') or base_name,
+                                   group_name=group_name)
+                    item.model_info = model_info
+                    item.defaults = group.get("defaults") or {}
+                    item.param_extra_opts = group.get("param_extra_opts") or {}
+                    if item.name not in self.skip and item.name not in skip:
+                        item.makeImportance(group.get("importance_runs") or [])
+                        item.makeImportance(all_importance)
+                        self.jobItems.append(item)
 
-            for item in getattr(settings, 'job_items', []):
-                self.jobItems.append(item)
-                item.makeImportance(all_importance)
-            if hasattr(settings, 'importance_filters'):
-                for job in self.jobItems:
-                    for item in job.importanceJobs():
-                        item.makeImportance(settings.importance_filters)
-                    job.makeImportance(settings.importance_filters)
+        for item in (dic.get('job_items') or []):
+            self.jobItems.append(item)
+            item.makeImportance(all_importance)
+        if filters := dic.get('importance_filters'):
+            for job in self.jobItems:
+                for item in job.importanceJobs():
+                    item.makeImportance(filters)
+                job.makeImportance(filters)
 
         for item in list(self.items()):
             for x in [imp for imp in item.importanceJobsRecursive()]:
