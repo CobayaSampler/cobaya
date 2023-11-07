@@ -319,7 +319,6 @@ class HasLogger:
             return deepcopy_where_possible(self).__dict__
         except:
             return deepcopy_where_possible(self)
-        # return deepcopy(self).__dict__
 
     def __setstate__(self, d):
         self.__dict__ = d
