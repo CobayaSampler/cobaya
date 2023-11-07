@@ -15,7 +15,7 @@ import traceback
 from copy import deepcopy
 import functools
 from random import shuffle, choice
-from typing import Mapping
+from typing import Mapping, TypeVar, Callable
 
 # Local
 from cobaya import mpi
@@ -263,6 +263,37 @@ def get_traceback_text(exec_info):
                    ["\n"] + ["-"] * 37)
 
 
+_R = TypeVar('_R')
+
+
+def deepcopy_where_possible(base: _R) -> _R:
+    """
+    Deepcopies an object whenever possible. If the object cannot be copied, returns a
+    reference to the original object (this applies recursively to values of
+    a dictionary, and converts all Mapping objects into dict).
+
+    Rationale: cobaya tries to manipulate its input as non-destructively as possible,
+    and to do that it works on a copy of it; but some of the values passed to cobaya
+    may not be copyable (if they are not pickleable). This function provides a
+    compromise solution. To allow dict comparisons and make the copy mutable it converts
+    MappingProxyType and other Mapping types into plain dict.
+    """
+    if isinstance(base, Mapping):
+        _copy = {}
+        for key, value in base.items():
+            _copy[key] = deepcopy_where_possible(value)
+        return _copy  # type: ignore
+    if isinstance(base, (HasLogger, type)):
+        return base  # type: ignore
+    else:
+        # Special case: instance methods can be copied, but should not be.
+        if isinstance(base, Callable) and hasattr(base, "__self__"):
+            return base
+        try:
+            return deepcopy(base)
+        except:
+            return base
+
 class HasLogger:
     """
     Class having a logger with its name (or an alternative one).
@@ -283,10 +314,7 @@ class HasLogger:
         return new
 
     def __getstate__(self):
-        if isinstance(self, Mapping):
-            return {k: self.__getstate__(v) for k, v in self.items()}
-        else:
-            return self
+        return deepcopy_where_possible(self).__dict__
         # return deepcopy(self).__dict__
 
     def __setstate__(self, d):
