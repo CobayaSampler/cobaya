@@ -15,6 +15,7 @@ import traceback
 from copy import deepcopy
 import functools
 from random import shuffle, choice
+from typing import Mapping
 
 # Local
 from cobaya import mpi
@@ -282,7 +283,10 @@ class HasLogger:
         return new
 
     def __getstate__(self):
-        return self.__deepcopy__().__dict__
+        if isinstance(self, Mapping):
+            return {k: self.__getstate__(v) for k, v in self.items()}
+        else:
+            return self
         # return deepcopy(self).__dict__
 
     def __setstate__(self, d):
