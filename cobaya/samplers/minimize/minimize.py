@@ -396,7 +396,6 @@ class Minimize(Minimizer, CovmatSampler):
         self.log.info(
             "Parameter values at minimum:\n%s", self.minimum.data.to_string())
         self.minimum.out_update()
-        self.log.info("The complete set of minima is: %r", self.full_set_minima)
         self.dump_getdist()
 
     def products(self):
