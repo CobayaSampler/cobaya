@@ -30,7 +30,7 @@ override_bobyqa:
 # iminuit:
 #  - https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface
 #  - options for individual methods
-# override_iminuit:
+override_iminuit:
 # option: value
 # File (including path) or matrix defining a covariance matrix for the proposal:
 # - null (default): will be generated from params info (prior and proposal)

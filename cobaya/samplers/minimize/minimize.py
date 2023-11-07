@@ -111,7 +111,7 @@ from cobaya.sampler import CovmatSampler
 from cobaya import mpi
 
 # Handling scipy vs BOBYQA vs iMinuit
-evals_attr = {"scipy": "fun", "bobyqa": "f"} #, "iminuit": "fun"}
+evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
 # Conventions conventions
@@ -146,7 +146,7 @@ class Minimize(Minimizer, CovmatSampler):
     best_of: int
     override_bobyqa: Optional[dict]
     override_scipy: Optional[dict]
-    # override_iminuit: Optional[dict]
+    override_iminuit: Optional[dict]
     max_evals: Union[str, int]
 
     def initialize(self):
@@ -286,31 +286,31 @@ class Minimize(Minimizer, CovmatSampler):
                             "Finished unsuccessfully. Reason: %s",
                             _bobyqa_errors[result.flag]
                         )
-                # elif self.method.lower() == "iminuit":
-                #     try:
-                #         import iminuit
-                #     except ImportError:
-                #         raise LoggedError(
-                #             self.log, "You need to install iminuit to use the "
-                #             "'iminuit' minimizer. Try 'pip install iminuit'.")
-                #     self.kwargs = {
-                #         "fun": minuslogp_transf,
-                #         "x0": initial_point,
-                #         "bounds": bounds,
-                #         "options": {
-                #             "maxfun": self.max_iter,
-                #             "disp": self.is_debug()}}
-                #     self.kwargs = recursive_update(
-                #         self.kwargs, self.override_iminuit or {}
-                #     )
-                #     self.log.debug(
-                #         "Arguments for iminuit.Minimize:\n%r",
-                #         {k: v for k, v in self.kwargs.items() if k != "fun"},
-                #     )
-                #     result = iminuit.minimize(**self.kwargs, method="migrad")
-                #     success = result.success
-                #     if not success:
-                #         self.log.error("Finished unsuccessfully.")
+                elif self.method.lower() == "iminuit":
+                    try:
+                        import iminuit
+                    except ImportError:
+                        raise LoggedError(
+                            self.log, "You need to install iminuit to use the "
+                            "'iminuit' minimizer. Try 'pip install iminuit'.")
+                    self.kwargs = {
+                        "fun": minuslogp_transf,
+                        "x0": initial_point,
+                        "bounds": bounds,
+                        "options": {
+                            "maxfun": self.max_iter,
+                            "disp": self.is_debug()}}
+                    self.kwargs = recursive_update(
+                        self.kwargs, self.override_iminuit or {}
+                    )
+                    self.log.debug(
+                        "Arguments for iminuit.Minimize:\n%r",
+                        {k: v for k, v in self.kwargs.items() if k != "fun"},
+                    )
+                    result = iminuit.minimize(**self.kwargs, method="migrad")
+                    success = result.success
+                    if not success:
+                        self.log.error("Finished unsuccessfully.")
                 else:
                     self.kwargs = {
                         "fun": minuslogp_transf,
@@ -525,15 +525,14 @@ class Minimize(Minimizer, CovmatSampler):
         desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
                       r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
                       r"ference/generated/scipy.optimize.Minimize.html}")
-
-        # desc_iminuit = (r"iminuit minimizer(check citation for the "
-        #                 r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}")
+        desc_iminuit = (r"iminuit minimizer(check citation for the "
+                        r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}")
         if method and method.lower() == "bobyqa":
             return desc_bobyqa
         elif method and method.lower() == "scipy":
             return desc_scipy
-        # elif method and method.lower() == "iminuit":
-        #     return desc_iminuit
+        elif method and method.lower() == "iminuit":
+            return desc_iminuit
         else:  # unknown method or no info passed (None)
             return ("Minimizer -- method unknown, possibly one of:"
                     "\na) " + desc_bobyqa + "\nb) " + desc_scipy)
