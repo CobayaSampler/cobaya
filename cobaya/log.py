@@ -294,6 +294,7 @@ def deepcopy_where_possible(base: _R) -> _R:
         except:
             return base
 
+
 class HasLogger:
     """
     Class having a logger with its name (or an alternative one).
@@ -314,7 +315,7 @@ class HasLogger:
         return new
 
     def __getstate__(self):
-        return deepcopy_where_possible(self).__dict__
+        return deepcopy_where_possible(self)
         # return deepcopy(self).__dict__
 
     def __setstate__(self, d):
