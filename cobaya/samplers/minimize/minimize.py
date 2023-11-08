@@ -239,6 +239,7 @@ class Minimize(Minimizer, CovmatSampler):
         self.kwargs = None
         self.result = None
         self.minimum = None
+        self.full_set_of_mins = None
 
     def affine_transform(self, x):
         """Transforms a point into the search space."""
@@ -343,7 +344,7 @@ class Minimize(Minimizer, CovmatSampler):
              [self._inv_affine_transform_matrix] * len(self.initial_points)]))
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
-                        "result", "minimum"))
+                        "result", "minimum", "full_set_of_mins"))
     def process_results(self, results, successes, affine_transform_baselines,
                         transform_matrices):
         """
@@ -400,14 +401,9 @@ class Minimize(Minimizer, CovmatSampler):
             "Parameter values at minimum:\n%s", self.minimum.data.to_string())
         self.minimum.out_update()
         self.dump_getdist()
-
         if len(results) > 1:
-            mins = [(getattr(r, evals_attr_) if s else np.inf)
-                    for r, s in zip(results, successes)]
             self.full_set_of_mins = mins
             self.log.info("Full set of minima:\n%s", self.full_set_of_mins)
-        else:
-            self.full_set_of_mins = None
 
     def products(self):
         r"""
