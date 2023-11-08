@@ -6,7 +6,7 @@ r"""
 
 This is a **maximizer** for posteriors or likelihoods, based on
 `scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
- `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_ ,and
+ `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_, and
  `iminuit <https://iminuit.readthedocs.io/>`_.
 
 The default is BOBYQA, which tends to work better than scipy on Cosmological problems with default
