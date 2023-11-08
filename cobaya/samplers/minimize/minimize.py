@@ -292,7 +292,7 @@ class Minimize(Minimizer, CovmatSampler):
                     except ImportError:
                         raise LoggedError(
                             self.log, "You need to install iminuit to use the "
-                            "'iminuit' minimizer. Try 'pip install iminuit'.")
+                                      "'iminuit' minimizer. Try 'pip install iminuit'.")
                     self.kwargs = {
                         "fun": minuslogp_transf,
                         "x0": initial_point,
@@ -311,6 +311,7 @@ class Minimize(Minimizer, CovmatSampler):
                     success = result.success
                     if not success:
                         self.log.error("Finished unsuccessfully.")
+                    result.pop("minuit")  # problem with pickle/mpi?
                 else:
                     self.kwargs = {
                         "fun": minuslogp_transf,
@@ -327,9 +328,7 @@ class Minimize(Minimizer, CovmatSampler):
                     if not success:
                         self.log.error("Finished unsuccessfully.")
                 if success:
-                    self.log.info(
-                        "Run %d/%d converged.", i + 1, len(self.initial_points)
-                    )
+                    self.log.info("Run %d/%d converged.", i + 1, len(self.initial_points))
             except Exception as excpt:
                 self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
                 raise excpt
