@@ -417,6 +417,9 @@ class Minimize(Minimizer, CovmatSampler):
           or `pyBOBYQA
           <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
 
+        - ``full_set_of_mins``: list of minima obtained from multiple initial points.
+          ``None`` if only one initial point was used. ``inf`` indicates a failed run.
+
         - ``M``: inverse of the affine transform matrix (see below).
           ``None`` if no transformation applied.
 

@@ -49,6 +49,20 @@ def test_minimize_gaussian(tmpdir):
 
 
 @mpi.sync_errors
+def test_minimize_multiple_points(tmpdir):
+    for method in reversed(valid_methods):
+        NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
+        info: InputDict = {'likelihood': {'like': NoisyCovLike},
+                           "sampler": {"minimize": {"ignore_prior": True,
+                                                    "method": method,
+                                                    "best_of": 2}}}
+        info['output'] = os.path.join(tmpdir, 'testmin')
+        products = run(info, force=True)[1].products()
+        if mpi.is_main_process():
+            assert isinstance(products["full_set_of_mins"], list)
+
+
+@mpi.sync_errors
 def test_run_minimize(tmpdir):
     NoisyCovLike.noise = 0
     info: InputDict = {'likelihood': {'like': NoisyCovLike},
