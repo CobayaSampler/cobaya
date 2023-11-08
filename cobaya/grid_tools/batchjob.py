@@ -542,7 +542,7 @@ class BatchJob(PropertiesItem):
             skip = group.get("skip") or {}
             for data_set in group["datasets"]:
                 if isinstance(data_set, str):
-                    if not data_set in dataset_infos:
+                    if data_set not in dataset_infos:
                         raise ValueError(
                             "Dataset name '%s' must be defined." % data_set)
                     info = (dataset_infos.get(data_set) or {}).copy()
