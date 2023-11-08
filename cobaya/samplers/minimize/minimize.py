@@ -401,6 +401,14 @@ class Minimize(Minimizer, CovmatSampler):
         self.minimum.out_update()
         self.dump_getdist()
 
+        if len(results) > 1:
+            mins = [(getattr(r, evals_attr_) if s else np.inf)
+                    for r, s in zip(results, successes)]
+            self.full_set_of_mins = mins
+            self.log.info("Full set of minima:\n%s", self.full_set_of_mins)
+        else:
+            self.full_set_of_mins = None
+
     def products(self):
         r"""
         Returns a dictionary containing:
@@ -426,6 +434,7 @@ class Minimize(Minimizer, CovmatSampler):
         ``result_object``.
         """
         return {"minimum": self.minimum, "result_object": self.result,
+                "full_set_of_mins": self.full_set_of_mins,
                 "M": self._inv_affine_transform_matrix,
                 "X0": self._affine_transform_baseline}
 
