@@ -94,10 +94,10 @@ before_install:
     conda info -a;
     conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML pytest pytest-forked pytest-cov flaky dill coverage flake8;
     source activate test-environment;
-    conda install -c conda-forge mpi4py openmpi;
+    conda install -c conda-forge mpi4py openmpi iminuit;
     else
     python -m pip install --upgrade pip setuptools wheel;
-    pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8;
+    pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8 iminuit;
     fi
   - python --version
 
