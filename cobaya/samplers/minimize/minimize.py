@@ -5,10 +5,11 @@ r"""
 :Author: Jesus Torrado
 
 This is a **maximizer** for posteriors or likelihoods, based on
-`scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
-and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_.
+`scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+ `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_ ,and
+ `iminuit <https://iminuit.readthedocs.io/>`_.
 
-The default is BOBYQA, which tends to work better on Cosmological problems with default
+The default is BOBYQA, which tends to work better than scipy on Cosmological problems with default
 settings.
 
 .. |br| raw:: html
@@ -29,10 +30,13 @@ settings.
    `M.J.D. Powell,
    "The BOBYQA Algorithm for Bound Constrained Optimization without Derivatives",
    (Technical Report 2009/NA06, DAMTP, University of Cambridge)
-   <http://www.damtp.cam.ac.uk/user/na/NA_papers/NA2009_06.pdf>`_
+   <https://www.damtp.cam.ac.uk/user/na/NA_papers/NA2009_06.pdf>`_
 
    **If you use scipy**, you can find `the appropriate references here
    <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+   **If you use iminuit**, see the `references here
+   <https://iminuit.readthedocs.io/en/stable/citation.html>`_.
 
 It works more effectively when run on top of a Monte Carlo sample: it will use the maximum
 a posteriori as a starting point (or the best fit, depending on whether the prior is
