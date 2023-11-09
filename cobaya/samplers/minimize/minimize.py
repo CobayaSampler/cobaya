@@ -247,7 +247,7 @@ class Minimize(Minimizer, CovmatSampler):
 
     def run(self):
         """
-        Runs `scipy.Minimize`
+        Runs minimization functions
         """
         results = []
         successes = []

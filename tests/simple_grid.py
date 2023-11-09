@@ -5,9 +5,6 @@ import numpy as np
 from cobaya import InputDict
 from cobaya.grid_tools.batchjob import DataSet
 
-# optional directory (or list) to look for pre-computed covmats with similar parameters
-cov_dir = ""
-
 # grid items not to include
 skip = ['base_a_1_like1_like2']
 
@@ -81,3 +78,11 @@ params = {'a_1': {'prior': {'min': -2, 'max': 2}},
 # If you need specific options (not just the union) for combinations,
 # can also use param tag (e.g. a_1_a_2) entries
 param_extra_opts = {'a_2': {'sampler': {'mcmc': {'max_samples': 100}}}}
+
+# optional directory (or list) to look for pre-computed covmats with similar parameters
+# here we don't want covmats so set to empty string
+cov_dir = ""
+# optional mapping of name tags onto pre-computed covmat file names
+cov_map = {"without": ['lensing', 'BAO'],
+           "remame": {'NPIPE': 'plikHM', 'lowl': ('lowl', 'lowE')}
+           }

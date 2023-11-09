@@ -9,11 +9,11 @@
 
 # Global
 import os
-import copy
 import argparse
 import importlib.util
 from itertools import chain
 from getdist.inifile import IniFile
+from getdist.paramnames import makeList as make_list
 
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
@@ -146,7 +146,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     from_yaml = isinstance(settings, dict)
     dic = settings if from_yaml else settings.__dict__
     yaml_dir = dic.get("yaml_dir") or ""
-    cov_dir = dic.get("cov_dir")  # None means use the default from mcmc settings
     if 'start_at_bestfit' in dic:
         raise ValueError("start_at_bestfit not yet implemented")
 
@@ -207,6 +206,8 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         logger_setup()
         install_reqs(components_used, path=install_reqs_at, force=install_reqs_force)
     print("Adding covmats (if necessary) and writing input files")
+    cov_dir = dic.get("cov_dir")  # None means use the default from mcmc settings
+    def_packages = cov_dir or install_reqs_at or resolve_packages_path()
     for job_item in batch.items(wantSubItems=False):
         info = infos[job_item.paramtag][job_item.data_set.tag]
         # Covariance matrices
@@ -214,17 +215,12 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         try:
             sampler = list(info["sampler"])[0]
         except KeyError:
-            raise ValueError("No sampler has been chosen")
+            raise ValueError("No sampler has been chosen: %s" % job_item.name)
         if sampler == "mcmc" and (cov_dir or cov_dir is None and
                                   info["sampler"][sampler].get("covmat") == "auto"):
-            if cov_dir:
-                if isinstance(cov_dir, str):
-                    cov_dirs = [cov_dir]
-                else:
-                    cov_dirs = cov_dir
-            else:
+            if not (cov_dirs := make_list(cov_dir or [])):
                 if not (packages_path := install_reqs_at or info.get(packages_path_input)
-                                         or resolve_packages_path()):
+                                         or def_packages):
                     raise ValueError(
                         "Cannot assign automatic covariance matrices because no "
                         "external packages path has been defined.")
@@ -240,9 +236,10 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             params_info = {p: v for p, v in updated_info["params"].items()
                            if is_sampled_param(v) and p not in like_params}
 
-            best_covmat = get_best_covmat_ext(cov_dirs,
-                                              params_info, updated_info["likelihood"],
-                                              job_item=job_item)
+            best_covmat = get_best_covmat_ext(cov_dirs, params_info,
+                                              updated_info["likelihood"],
+                                              job_item=job_item,
+                                              cov_map=dic.get("cov_map") or {})
             info["sampler"][sampler]["covmat"] = os.path.join(
                 best_covmat["folder"], best_covmat["name"]) if best_covmat else None
             if show_covmats:

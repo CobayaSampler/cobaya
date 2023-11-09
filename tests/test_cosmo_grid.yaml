@@ -24,7 +24,7 @@ importance_defaults: # defaults for importance runs
 minimize_defaults: # defaults for minimization runs
 getdist_options: # any non-default options to pass to getdist
 groups: # the list of groups sub-grids to run
-  camb:
+  main:
     models:
       - ""
       - r
@@ -82,11 +82,10 @@ datasets:
       planck_2018_lowl.EE:
       planck_NPIPE_highl_CamSpec.TT:
 
-cov_dir: null # where to look for covariance matrices
-#    # try to match each new run name to existing covmat (covariance matrix for efficient exploration)
-#    # e.g. try to map to get name without particular data combinations
-#    ##covWithoutNameOrder = ['lensing', 'BAO']
-#    # or try replacing various names (these are standard for the provided planck_covmats)
-#    ##covNameMappings = {'plikHM': 'plik', 'plikLite': 'plik'}
-#    # for mapping to nominal mission names try
-#    # covNameMappings = {'plikHM':'planck','TT':'', 'lowTEB':'lowLike'}
+cov_dir: null # where to look for covariance matrices  (for efficient exploration)
+cov_map:
+ # try to match each new run name to existing covmat
+  without: ['lensing', 'BAO']
+  rename:
+      NPIPE: plikHM
+      lowl: ['lowl', 'lowE']

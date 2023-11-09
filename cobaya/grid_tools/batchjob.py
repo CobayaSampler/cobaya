@@ -15,7 +15,7 @@ import time
 from typing import Callable, Any
 from getdist import types, IniFile
 from getdist.mcsamples import loadMCSamples
-from getdist.paramnames import makeList
+from getdist.paramnames import makeList as make_list
 
 from .conventions import input_folder, script_folder, input_folder_post, yaml_ext
 import cobaya
@@ -207,8 +207,8 @@ class ImportanceSetting:
     def __init__(self, names, inis=None, dist_settings=None, minimize=True):
         if not inis:
             inis = []
-        self.names = makeList(names)
-        self.inis = makeList(inis)
+        self.names = make_list(names)
+        self.inis = make_list(inis)
         self.dist_settings = dist_settings or {}
         self.want_minimize = minimize
 
