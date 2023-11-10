@@ -350,7 +350,7 @@ class Output(HasLogger, OutputReadOnly):
                         "file_input", "file_updated", "dump_file_updated",
                         "_resuming", "prefix_regexp_str", "log"))
     def __init__(self, prefix, resume=resume_default, force=False, infix=None):
-        OutputReadOnly.__init__(self, prefix)
+        OutputReadOnly.__init__(self, prefix, infix)
         self.name = "output"
         self.set_logger(self.name)
         self.lock = FileLock()
