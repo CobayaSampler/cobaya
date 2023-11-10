@@ -402,7 +402,11 @@ class Minimize(Minimizer, CovmatSampler):
         self.minimum.out_update()
         self.dump_getdist()
         if len(results) > 1:
-            self.full_set_of_mins = mins
+            all_mins = {
+                f"{i}": (getattr(res[0], evals_attr_), res[1])
+                for i, res in enumerate(zip(results, successes))
+            }
+            self.full_set_of_mins = all_mins
             self.log.info("Full set of minima:\n%s", self.full_set_of_mins)
 
     def products(self):
@@ -417,8 +421,10 @@ class Minimize(Minimizer, CovmatSampler):
           or `pyBOBYQA
           <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
 
-        - ``full_set_of_mins``: list of minima obtained from multiple initial points.
-          ``None`` if only one initial point was used. ``inf`` indicates a failed run.
+        - ``full_set_of_mins``: dictionary of minima obtained from multiple initial
+          points. For each it stores the value of the minimized function and a boolean
+          indicating whether the minimization was successful or not.
+          ``None`` if only one initial point was run.
 
         - ``M``: inverse of the affine transform matrix (see below).
           ``None`` if no transformation applied.

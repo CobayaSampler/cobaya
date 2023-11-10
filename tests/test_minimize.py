@@ -46,7 +46,7 @@ def test_minimize_gaussian(tmpdir):
             assert np.isclose(res["loglike"], products["minimum"]["minuslogpost"])
             for p, v in list(res.items())[:-2]:
                 assert np.isclose(products["minimum"][p], v)
-            assert isinstance(products["full_set_of_mins"], list)
+            assert isinstance(products["full_set_of_mins"], dict)
 
 
 @mpi.sync_errors
