@@ -60,7 +60,7 @@ def test_minimize_single_point(tmpdir):
         info['output'] = os.path.join(tmpdir, 'testmin')
         products = run(info, force=True)[1].products()
         if mpi.is_main_process():
-            assert isinstance(products["full_set_of_mins"], None)
+            assert products["full_set_of_mins"] is None
 
 
 @mpi.sync_errors
