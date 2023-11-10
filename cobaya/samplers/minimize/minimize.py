@@ -5,10 +5,11 @@ r"""
 :Author: Jesus Torrado
 
 This is a **maximizer** for posteriors or likelihoods, based on
-`scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_
-and `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_.
+`scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
+ `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_ ,and
+ `iminuit <https://iminuit.readthedocs.io/>`_.
 
-The default is BOBYQA, which tends to work better on Cosmological problems with default
+The default is BOBYQA, which tends to work better than scipy on Cosmological problems with default
 settings.
 
 .. |br| raw:: html
@@ -29,10 +30,13 @@ settings.
    `M.J.D. Powell,
    "The BOBYQA Algorithm for Bound Constrained Optimization without Derivatives",
    (Technical Report 2009/NA06, DAMTP, University of Cambridge)
-   <http://www.damtp.cam.ac.uk/user/na/NA_papers/NA2009_06.pdf>`_
+   <https://www.damtp.cam.ac.uk/user/na/NA_papers/NA2009_06.pdf>`_
 
    **If you use scipy**, you can find `the appropriate references here
    <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+   **If you use iminuit**, see the `references here
+   <https://iminuit.readthedocs.io/en/stable/citation.html>`_.
 
 It works more effectively when run on top of a Monte Carlo sample: it will use the maximum
 a posteriori as a starting point (or the best fit, depending on whether the prior is
@@ -110,8 +114,8 @@ from cobaya.tools import read_dnumber, recursive_update
 from cobaya.sampler import CovmatSampler
 from cobaya import mpi
 
-# Handling scipy vs BOBYQA
-evals_attr = {"scipy": "fun", "bobyqa": "f"}
+# Handling scipy vs BOBYQA vs iMinuit
+evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
 # Conventions conventions
@@ -146,6 +150,7 @@ class Minimize(Minimizer, CovmatSampler):
     best_of: int
     override_bobyqa: Optional[dict]
     override_scipy: Optional[dict]
+    override_iminuit: Optional[dict]
     max_evals: Union[str, int]
 
     def initialize(self):
@@ -285,6 +290,32 @@ class Minimize(Minimizer, CovmatSampler):
                             "Finished unsuccessfully. Reason: %s",
                             _bobyqa_errors[result.flag]
                         )
+                elif self.method.lower() == "iminuit":
+                    try:
+                        import iminuit
+                    except ImportError:
+                        raise LoggedError(
+                            self.log, "You need to install iminuit to use the "
+                                      "'iminuit' minimizer. Try 'pip install iminuit'.")
+                    self.kwargs = {
+                        "fun": minuslogp_transf,
+                        "x0": initial_point,
+                        "bounds": bounds,
+                        "options": {
+                            "maxfun": self.max_iter,
+                            "disp": self.is_debug()}}
+                    self.kwargs = recursive_update(
+                        self.kwargs, self.override_iminuit or {}
+                    )
+                    self.log.debug(
+                        "Arguments for iminuit.Minimize:\n%r",
+                        {k: v for k, v in self.kwargs.items() if k != "fun"},
+                    )
+                    result = iminuit.minimize(**self.kwargs, method="migrad")
+                    success = result.success
+                    if not success:
+                        self.log.error("Finished unsuccessfully.")
+                    result.pop("minuit")  # problem with pickle/mpi?
                 else:
                     self.kwargs = {
                         "fun": minuslogp_transf,
@@ -301,9 +332,7 @@ class Minimize(Minimizer, CovmatSampler):
                     if not success:
                         self.log.error("Finished unsuccessfully.")
                 if success:
-                    self.log.info(
-                        "Run %d/%d converged.", i + 1, len(self.initial_points)
-                    )
+                    self.log.info("Run %d/%d converged.", i + 1, len(self.initial_points))
             except Exception as excpt:
                 self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
                 raise excpt
@@ -495,10 +524,14 @@ class Minimize(Minimizer, CovmatSampler):
         desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
                       r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
                       r"ference/generated/scipy.optimize.Minimize.html}")
+        desc_iminuit = (r"iminuit minimizer(check citation for the "
+                        r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}")
         if method and method.lower() == "bobyqa":
             return desc_bobyqa
         elif method and method.lower() == "scipy":
             return desc_scipy
+        elif method and method.lower() == "iminuit":
+            return desc_iminuit
         else:  # unknown method or no info passed (None)
             return ("Minimizer -- method unknown, possibly one of:"
                     "\na) " + desc_bobyqa + "\nb) " + desc_scipy)
