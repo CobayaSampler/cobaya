@@ -207,24 +207,24 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
                   "\n - ".join([b["name"] for b in best_p_l]))
 
     if key_tuple:
-        def score_left_params(key, _covmat):
+        def score_left_params(_key, _covmat):
             return -len(
-                set(key.paramtags) - params_renames.union(key_tuple.paramtags))
+                set(_key.paramtags) - params_renames.union(key_tuple.paramtags))
 
         best_p_l = get_best_score(best_p_l, score_left_params)
 
     # Finally, in case there is more than one, select shortest #params and name (simpler!)
     # #params first, to avoid extended models with shorter covmat name
-    def score_simpler_params(_key, covmat):
-        return -len(covmat["params"])
+    def score_simpler_params(_key, _covmat):
+        return -len(_covmat["params"])
 
     best_p_l_sp = get_best_score(best_p_l, score_simpler_params)
     if is_debug(log):
         log.debug("Subset based on params + likes + fewest params:\n - " +
                   "\n - ".join([b["name"] for b in best_p_l_sp.values()]))
 
-    def score_simpler_name(key, _covmat):
-        return -len(key.datatags)
+    def score_simpler_name(_key, _covmat):
+        return -len(_key.datatags)
 
     best_p_l_sp_sn = get_best_score(best_p_l_sp, score_simpler_name)
     if is_debug(log):

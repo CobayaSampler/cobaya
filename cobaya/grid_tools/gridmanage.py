@@ -50,44 +50,44 @@ def grid_converge(args=None):
 
     (batch, args) = opts.parseForBatch(args)
 
-    notExist = []
+    not_exist = []
     converge = []
 
     if args.running:
         args.checkpoint = True
 
     if args.stuck:
-        for jobItem in opts.filteredBatchItems():
-            if jobItem.chainExists() and jobItem.chainsDodgy():
-                print('Chain stuck?...' + jobItem.name)
+        for job_item in opts.filteredBatchItems():
+            if job_item.chainExists() and job_item.chainsDodgy():
+                print('Chain stuck?...' + job_item.name)
     elif args.checkpoint:
         print('Convergence from checkpoint files...')
-        for jobItem in opts.filteredBatchItems():
-            R, done = jobItem.convergeStat()
+        for job_item in opts.filteredBatchItems():
+            R, done = job_item.convergeStat()
             if R is not None and not done:
-                if (not args.not_running or jobItem.notRunning()) and (
-                        not args.running or not jobItem.notRunning()):
-                    print('...', jobItem.chainRoot, R)
-                if args.running and jobItem.chainExists() and jobItem.chainsDodgy():
-                    print('Chain stuck?...' + jobItem.name)
+                if (not args.not_running or job_item.notRunning()) and (
+                        not args.running or not job_item.notRunning()):
+                    print('...', job_item.chainRoot, R)
+                if args.running and job_item.chainExists() and job_item.chainsDodgy():
+                    print('Chain stuck?...' + job_item.name)
     else:
-        for jobItem in opts.filteredBatchItems():
-            if not jobItem.chainExists():
-                notExist.append(jobItem)
+        for job_item in opts.filteredBatchItems():
+            if not job_item.chainExists():
+                not_exist.append(job_item)
             elif args.converge == 0 or args.checkpoint or not \
-                    jobItem.hasConvergeBetterThan(args.converge, returnNotExist=True):
-                if not args.not_running or jobItem.notRunning():
-                    converge.append(jobItem)
+                    job_item.hasConvergeBetterThan(args.converge, returnNotExist=True):
+                if not args.not_running or job_item.notRunning():
+                    converge.append(job_item)
 
         print('Checking batch (from last grid getdist output):')
-        if not args.exist and len(notExist) > 0:
+        if not args.exist and len(not_exist) > 0:
             print('Not exist...')
-            for jobItem in notExist:
-                print('...', jobItem.chainRoot)
+            for job_item in not_exist:
+                print('...', job_item.chainRoot)
 
         print('Converge check...')
-        for jobItem in converge:
-            print('...', jobItem.chainRoot, jobItem.R())
+        for job_item in converge:
+            print('...', job_item.chainRoot, job_item.R())
 
 
 def grid_getdist(args=None):
@@ -130,12 +130,12 @@ def grid_getdist(args=None):
         time.sleep(args.delay)
     processes = set()
 
-    for jobItem in opts.filteredBatchItems():
+    for job_item in opts.filteredBatchItems():
         ini = IniFile()
-        ini.params['file_root'] = jobItem.chainRoot
-        ini.params['batch_path'] = jobItem.batchPath
-        os.makedirs(jobItem.distPath, exist_ok=True)
-        ini.params['out_dir'] = jobItem.distPath
+        ini.params['file_root'] = job_item.chainRoot
+        ini.params['batch_path'] = job_item.batchPath
+        os.makedirs(job_item.distPath, exist_ok=True)
+        ini.params['out_dir'] = job_item.distPath
         if os.path.exists(args.base_ini):
             ini.defaults.append(args.base_ini)
         else:
@@ -143,29 +143,29 @@ def grid_getdist(args=None):
         if hasattr(batch, 'getdist_options'):
             ini.params.update(batch.getdist_options)
         tag = ''
-        if jobItem.isImportanceJob or args.burn_removed or jobItem.isBurnRemoved():
+        if job_item.isImportanceJob or args.burn_removed or job_item.isBurnRemoved():
             ini.params['ignore_rows'] = 0
         elif args.burn_remove is not None:
             ini.params['ignore_rows'] = args.burn_remove
 
-        if jobItem.isImportanceJob:
+        if job_item.isImportanceJob:
             ini.params['compare_num'] = 1
-            ini.params['compare1'] = jobItem.parent.chainRoot
+            ini.params['compare1'] = job_item.parent.chainRoot
         if args.no_plots:
             ini.params['no_plots'] = True
         if args.make_plots:
             ini.params['make_plots'] = True
-        fname = ini_dir + jobItem.name + tag + '.ini'
-        ini.params.update(jobItem.dist_settings)
+        fname = ini_dir + job_item.name + tag + '.ini'
+        ini.params.update(job_item.dist_settings)
         ini.saveFile(fname)
-        if not args.norun and (not args.notexist or not jobItem.getDistExists()) and (
-                not args.update_only or jobItem.getDistNeedsUpdate()):
-            if jobItem.chainExists():
+        if not args.norun and (not args.notexist or not job_item.getDistExists()) and (
+                not args.update_only or job_item.getDistNeedsUpdate()):
+            if job_item.chainExists():
                 print("running: " + fname)
                 run_and_wait(processes, [args.command] + [fname], args.procs)
             else:
                 if not args.exist:
-                    print("Chains do not exist yet: " + jobItem.chainRoot)
+                    print("Chains do not exist yet: " + job_item.chainRoot)
 
     if args.procs > 1:
         run_and_wait(processes)
@@ -310,7 +310,7 @@ def grid_copy(args=None):
     if args.sym_link and (args.remove_burn_fraction or args.zip):
         raise Exception('option not compatible with --sym_link')
 
-    def fileMatches(_f, name):
+    def file_matches(_f, name):
         for ext in args.file_extensions:
             if fnmatch.fnmatch(_f, name + ext):
                 for ext2 in args.skip_extensions:
@@ -400,7 +400,7 @@ def grid_copy(args=None):
                     doneProperties = True
 
             for f in os.listdir(jobItem.chainPath):
-                if fileMatches(f, jobItem.name):
+                if file_matches(f, jobItem.name):
                     if doneProperties and '.properties.ini' in f:
                         continue
                     if not args.max_age_days or datetime.fromtimestamp(
@@ -415,7 +415,7 @@ def grid_copy(args=None):
                     s2 = target_dir + outdir
                     os.makedirs(s2, exist_ok=True)
                 for f in os.listdir(jobItem.distPath):
-                    if fileMatches(f, jobItem.name) \
+                    if file_matches(f, jobItem.name) \
                             and (not args.max_age_days or
                                  datetime.fromtimestamp(os.path.getmtime(
                                      jobItem.distPath + f)) > max_age):

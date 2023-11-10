@@ -15,7 +15,6 @@ import traceback
 import shutil
 import tempfile
 import logging
-from copy import deepcopy
 from itertools import chain
 import importlib
 from typing import List, Mapping, Union
