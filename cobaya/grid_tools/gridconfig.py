@@ -260,14 +260,14 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                 continue
             if batch.hasName(imp.name.replace('.post.', '_')):
                 raise Exception('importance sampling something you already have?')
-            info = {"output": job_item.chainRoot,
-                    "post": post_merge_info(importance_defaults,
-                                            *dicts_or_load(imp.importanceSettings)),
-                    "force": True}
-            info["post"]["suffix"] = imp.importanceTag
-            yaml_dump_file(imp.yaml_file(), info, error_if_exists=False)
+            info_post = {"output": job_item.chainRoot,
+                         "post": post_merge_info(importance_defaults,
+                                                 *dicts_or_load(imp.importanceSettings)),
+                         "force": True}
+            info_post["post"]["suffix"] = imp.importanceTag
+            yaml_dump_file(imp.yaml_file(), info_post, error_if_exists=False)
             if getattr(imp, 'want_minimize', True):
-                info = set_minimize(info, minimize_defaults)
+                info = set_minimize(dict(info, **info_post), minimize_defaults)
                 yaml_dump_file(imp.yaml_file('_minimize'), info, error_if_exists=False)
 
     if not interactive:
