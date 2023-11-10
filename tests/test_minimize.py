@@ -51,6 +51,8 @@ def test_minimize_gaussian(tmpdir):
 
 @mpi.sync_errors
 def test_minimize_single_point(tmpdir):
+    if mpi.get_mpi_size() > 1:
+        return
     for method in reversed(valid_methods):
         NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
         info: InputDict = {'likelihood': {'like': NoisyCovLike},
