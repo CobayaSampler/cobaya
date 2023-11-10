@@ -28,6 +28,11 @@ def test_grid(tmpdir):
     grid_run([f, '--noqueue', '--minimize', '--name', 'base_a_2_like1'])
     assert os.path.exists(os.path.join(f, 'base_a_2', 'like1', 'base_a_2_like1.minimum'))
 
+    grid_run([f, '--noqueue', '--importance_minimize', '--name',
+              'base_a_1_a_2_like1_like2.post.cut'])
+    assert os.path.exists(os.path.join(f, 'base_a_1_a_2', 'like1_like2',
+                                       'base_a_1_a_2_like1_like2.post.cut.minimum'))
+
     table_file = os.path.join(tmpdir, 'table')
     grid_tables([f, table_file, '--forpaper'])  # haven't installed latex in general
     assert os.path.exists(table_file + '.tex')

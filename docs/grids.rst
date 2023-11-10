@@ -4,11 +4,6 @@ Running grids of jobs
 Often you need to investigate multiple combinations of parameters and/or likelihoods, or explore a range of different options.
 Using Cobaya grids, you can run and manage a set of runs using the grid scripts. This includes tools for submitting jobs to the cluster, managing running jobs, analysing results, and producing tables of results (like the Planck parameter tables).
 
-.. note::
-
-  Minimization of importance sampling jobs is not currently implemented but appears in various optional unimplemented parameters.
-
-
 To create a grid, you need a setting file specifying which combinations of parameters, likelihoods, etc. to use.
 The command line to generate the basic structure and files in the ``grid_folder`` directory is ::
 
@@ -33,6 +28,10 @@ You can use ``cobaya-running-jobs grid_folder`` to and monitor which jobs are qu
 After the main samples are generated, if you have ``importance_runs`` set you can do the corresponding importance sampling on the generated chains using::
 
   cobaya-grid-run grid_folder --importance
+
+For best-fits from importance sampled grid combinations, run::
+
+  cobaya-grid-run grid_folder --importance_minimize
 
 For any run that is expected to be fast, you can use ``--noqueue`` to run each item directly rather than using a queue submission.
 

@@ -312,10 +312,10 @@ class Minimize(Minimizer, CovmatSampler):
                         {k: v for k, v in self.kwargs.items() if k != "fun"},
                     )
                     result = iminuit.minimize(**self.kwargs, method="migrad")
-                    success = result.success
-                    if not success:
-                        self.log.error("Finished unsuccessfully.")
-                    result.pop("minuit")  # problem with pickle/mpi?
+                    if not (success := result.success):
+                        self.log.error(result.message)
+                    if mpi.get_mpi_size() > 1:
+                        result.pop("minuit")  # problem with pickle/mpi?
                 else:
                     self.kwargs = {
                         "fun": minuslogp_transf,
@@ -328,8 +328,7 @@ class Minimize(Minimizer, CovmatSampler):
                     self.log.debug("Arguments for scipy.optimize.Minimize:\n%r",
                                    {k: v for k, v in self.kwargs.items() if k != "fun"})
                     result = optimize.minimize(**self.kwargs)
-                    success = result.success
-                    if not success:
+                    if not (success := result.success):
                         self.log.error("Finished unsuccessfully.")
                 if success:
                     self.log.info("Run %d/%d converged.", i + 1, len(self.initial_points))
@@ -452,6 +451,7 @@ class Minimize(Minimizer, CovmatSampler):
                     lines.append("%5d  %-17.9e %-*s %s" % (num, val, width, p, lab))
                 else:
                     lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
+
         add_section(
             [(p, params[p]) for p in self.model.parameterization.sampled_params()])
         lines.append('')

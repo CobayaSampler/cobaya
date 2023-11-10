@@ -266,16 +266,14 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
                     "force": True}
             info["post"]["suffix"] = imp.importanceTag
             yaml_dump_file(imp.yaml_file(), info, error_if_exists=False)
-
-            # for minimize in (False, True):
-            #         if minimize and not getattr(imp, 'want_minimize', True):
-            #             continue
-            #         if not minimize:
+            if getattr(imp, 'want_minimize', True):
+                info = set_minimize(info, minimize_defaults)
+                yaml_dump_file(imp.yaml_file('_minimize'), info, error_if_exists=False)
 
     if not interactive:
         return batch
     print('Done... to run do: cobaya-grid-run %s' % batchPath)
     print('....... for best fits: cobaya-grid-run %s --minimize' % batchPath)
     print('For importance sampled: cobaya-grid-run %s --importance' % batchPath)
-#    print('for best-fit for importance sampled: '
-#          'cobaya-grid-run %s --importance_minimize'%batchPath)
+    print('for best-fit for importance sampled: '
+          'cobaya-grid-run %s --importance_minimize' % batchPath)

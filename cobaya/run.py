@@ -65,20 +65,8 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                  "minimize": minimize, "test": test}
         info: InputDict = load_info_overrides(
             info_or_yaml_or_file, override or {}, **flags)
-        if info.get("post"):
-            if info.get("minimize"):  # type: ignore
-                raise ValueError(
-                    "``minimize`` option is incompatible with post-processing.")
-            if isinstance(output, str) or output is False:
-                info["post"]["output"] = output or None
-            return post(info)
-        # Set up output and logging
-        if isinstance(output, str) or output is False:
-            info["output"] = output or None
         logger_setup(info.get("debug"))
         logger_run = get_logger(run.__name__)
-        # 1. Prepare output driver, if requested by defining an output prefix
-        # GetDist needs to know the original sampler, so don't overwrite if minimizer
         try:
             which_sampler = list(info["sampler"])[0]
             if info.get("minimize"):  # type: ignore
@@ -87,9 +75,19 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     info["sampler"] = {"minimize": None}
                     which_sampler = "minimize"
         except (KeyError, TypeError) as excpt:
-            raise LoggedError(
-                logger_run, "You need to specify a sampler using the 'sampler' key "
-                            "as e.g. `sampler: {mcmc: None}.`") from excpt
+            if not info.get("post"):
+                raise LoggedError(
+                    logger_run,
+                    "You need to specify a sampler using the 'sampler' key "
+                    "as e.g. `sampler: {mcmc: None}.`") from excpt
+        if info.get("post"):
+            if isinstance(output, str) or output is False:
+                info["post"]["output"] = output or None
+            return post(info)
+        # Set up output and logging
+        if isinstance(output, str) or output is False:
+            info["output"] = output or None
+        # 1. Prepare output driver, if requested by defining an output prefix
         infix = "minimize" if which_sampler == "minimize" else None
         with get_output(prefix=info.get("output"), resume=info.get("resume"),
                         force=info.get("force"), infix=infix) as out:

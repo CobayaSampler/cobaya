@@ -65,7 +65,6 @@ def grid_run(args=None):
         variant = '_minimize'
         if args.importance is None:
             args.importance = []
-        raise ValueError("importance_minimize is not yet supported")
     if args.minimize:
         args.noimportance = True
         variant = '_minimize'
