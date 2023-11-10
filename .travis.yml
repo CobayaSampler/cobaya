@@ -58,7 +58,7 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.10"
-    - name: "Latest jammy Python 3.11"
+    - name: "Latest jammy Python 3.12"
       dist: jammy
       addons:
         apt:
@@ -66,7 +66,7 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.11"
+      python: "3.12"
 
 
 before_install:
