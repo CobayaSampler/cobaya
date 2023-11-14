@@ -46,6 +46,23 @@ def test_minimize_gaussian(tmpdir):
             assert np.isclose(res["loglike"], products["minimum"]["minuslogpost"])
             for p, v in list(res.items())[:-2]:
                 assert np.isclose(products["minimum"][p], v)
+            assert isinstance(products["full_set_of_mins"], dict)
+
+
+@mpi.sync_errors
+def test_minimize_single_point(tmpdir):
+    if mpi.get_mpi_size() > 1:
+        return
+    for method in reversed(valid_methods):
+        NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
+        info: InputDict = {'likelihood': {'like': NoisyCovLike},
+                           "sampler": {"minimize": {"ignore_prior": True,
+                                                    "method": method,
+                                                    "best_of": 1}}}
+        info['output'] = os.path.join(tmpdir, 'testmin')
+        products = run(info, force=True)[1].products()
+        if mpi.is_main_process():
+            assert products["full_set_of_mins"] is None
 
 
 @mpi.sync_errors
