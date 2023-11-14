@@ -19,6 +19,7 @@ List of external packages
 
  * `Planck NPIPE lensing <https://github.com/carronj/planck_PR4_lensing>`_
  * `Planck NPIPE hillipop and lollipop <https://github.com/planck-npipe>`_
+ * `MFLike-plik <https://github.com/simonsobs/LAT_MFLike/tree/mflike-plik>`_
  * `ACTPol DR4 <https://github.com/ACTCollaboration/pyactlike>`_
  * `ACT DR6 Lensing <https://github.com/ACTCollaboration/act_dr6_lenslike>`_
  * `SPT-SZ, SPTPol & SPT-3G <https://github.com/xgarrido/spt_likelihoods>`_
