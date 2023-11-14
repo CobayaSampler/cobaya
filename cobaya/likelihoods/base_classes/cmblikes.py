@@ -212,7 +212,7 @@ class CMBlikes(DataSetLikelihood):
             theory_ij: List[int]
             CL: np.ndarray
 
-        cls = np.empty((nmaps, nmaps), dtype=object)
+        cls = np.empty((nmaps, nmaps), dtype=CrossPowerSpectrum)
         for i in range(nmaps):
             for j in range(i + 1):
                 CL = CrossPowerSpectrum()

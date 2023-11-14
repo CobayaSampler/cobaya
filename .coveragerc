@@ -28,4 +28,6 @@ omit =
     cobaya/likelihoods/base_classes/planck_2018_CamSpec*
     cobaya/cosmo_input/*
     cobaya/containers.py
+    cobaya/grid_tools/*jobs*
+    cobaya/grid_tools/*MPI*
     tests/*
