@@ -239,6 +239,7 @@ class Minimize(Minimizer, CovmatSampler):
         self.kwargs = None
         self.result = None
         self.minimum = None
+        self.full_set_of_mins = None
 
     def affine_transform(self, x):
         """Transforms a point into the search space."""
@@ -343,7 +344,7 @@ class Minimize(Minimizer, CovmatSampler):
              [self._inv_affine_transform_matrix] * len(self.initial_points)]))
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
-                        "result", "minimum"))
+                        "result", "minimum", "full_set_of_mins"))
     def process_results(self, results, successes, affine_transform_baselines,
                         transform_matrices):
         """
@@ -400,6 +401,13 @@ class Minimize(Minimizer, CovmatSampler):
             "Parameter values at minimum:\n%s", self.minimum.data.to_string())
         self.minimum.out_update()
         self.dump_getdist()
+        if len(results) > 1:
+            all_mins = {
+                f"{i}": (getattr(res[0], evals_attr_), res[1])
+                for i, res in enumerate(zip(results, successes))
+            }
+            self.full_set_of_mins = all_mins
+            self.log.info("Full set of minima:\n%s", self.full_set_of_mins)
 
     def products(self):
         r"""
@@ -412,6 +420,11 @@ class Minimize(Minimizer, CovmatSampler):
           `scipy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
           or `pyBOBYQA
           <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
+
+        - ``full_set_of_mins``: dictionary of minima obtained from multiple initial
+          points. For each it stores the value of the minimized function and a boolean
+          indicating whether the minimization was successful or not.
+          ``None`` if only one initial point was run.
 
         - ``M``: inverse of the affine transform matrix (see below).
           ``None`` if no transformation applied.
@@ -426,6 +439,7 @@ class Minimize(Minimizer, CovmatSampler):
         ``result_object``.
         """
         return {"minimum": self.minimum, "result_object": self.result,
+                "full_set_of_mins": self.full_set_of_mins,
                 "M": self._inv_affine_transform_matrix,
                 "X0": self._affine_transform_baseline}
 
