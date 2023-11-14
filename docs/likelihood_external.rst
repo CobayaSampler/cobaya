@@ -13,6 +13,15 @@ After installing an external package, when running Cobaya reference your likelih
          # .. any parameters you want to override
 
 The python_path is not needed if the package has been pip installed.
+External packages can also automatically be pip installed from an input yaml using ``cobaya-install``, e.g.
+
+.. code:: yaml
+
+    likelihood:
+      planckpr4lensing:
+         package_install:
+             github_repository: carronj/planck_PR4_lensing
+             min_version: 1.0.2
 
 List of external packages
 ==========================

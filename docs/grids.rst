@@ -5,7 +5,7 @@ Often you need to investigate multiple combinations of parameters and/or likelih
 Using Cobaya grids, you can run and manage a set of runs using the grid scripts. This includes tools for submitting jobs to the cluster, managing running jobs, analysing results, and producing tables of results (like the Planck parameter tables).
 
 To create a grid, you need a setting file specifying which combinations of parameters, likelihoods, etc. to use.
-The command line to generate the basic structure and files in the ``grid_folder`` directory is ::
+The command line to generate the basic structure and files in the ``grid_folder`` directory is::
 
   cobaya-grid-create grid_folder [my_file]
 
@@ -28,6 +28,12 @@ You can use ``cobaya-running-jobs grid_folder`` to and monitor which jobs are qu
 After the main samples are generated, if you have ``importance_runs`` set you can do the corresponding importance sampling on the generated chains using::
 
   cobaya-grid-run grid_folder --importance
+
+The grid also generates input files for minimization rather than sampling runs. If you also want best fits, run::
+
+ cobaya-grid-run grid_folder --minimize
+
+Any custom settings for minimization come from the ``minimize_defaults`` dictionary in the input grid settings.
 
 For best-fits from importance sampled grid combinations, run::
 
@@ -52,7 +58,7 @@ To see parameter constraints, and convergence statistics using the written chain
 
  cobaya-grid-getdist grid_folder --burn_remove 0.3
 
-This will run getdist on all the chains in the folder, removing the first 30% of each chain as burn in. You can use this while chains are still running, and incrementally update later by adding the ``--update_only`` switch (which only re-analyses chains which have changed). Getdist text file outputs are stored under a ``/dist`` folder in each subfolder of the grid results. To view getdist-generated convergence numbers use::
+This will run GetDist on all the chains in the folder, removing the first 30% of each chain as burn in. You can use this while chains are still running, and incrementally update later by adding the ``--update_only`` switch (which only re-analyses chains which have changed). GetDist text file outputs are stored under a ``/dist`` folder in each subfolder of the grid results. To view GetDist-generated convergence numbers use::
 
  cobaya-grid-converge grid_folder
 
@@ -78,9 +84,9 @@ To copy a grid for distribution, without including unwanted files, use::
 
   cobaya-grid-copy grid_folder grid_folder_export.zip
 
-Add the ``--dist`` option to include getdist outputs, or ``--remove_burn_fraction 0.3`` to delete the first 30% of each chain file as burn in.
+Add the ``--dist`` option to include GetDist outputs, or ``--remove_burn_fraction 0.3`` to delete the first 30% of each chain file as burn in. You can also copy to a folder rather than .zip.
 
-To extract a set of files from a grid, e.g. all getdist ``.margestats`` table outputs and ``.covmats``, use e.g.::
+To extract a set of files from a grid, e.g. all GetDist ``.margestats`` table outputs and ``.covmats``, use e.g.::
 
   cobaya-grid-extract grid_folder output_dir .margestats .covmat
 
