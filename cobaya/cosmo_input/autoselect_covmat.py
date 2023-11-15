@@ -5,7 +5,7 @@ import pickle
 from itertools import chain
 import numpy as np
 import re
-from typing import Optional, List, Dict, Tuple, NamedTuple
+from typing import Optional, List, Dict, FrozenSet, NamedTuple
 
 # Local
 from cobaya.conventions import Extension, packages_path_input
@@ -15,7 +15,7 @@ from cobaya.input import update_info
 from cobaya.log import LoggedError, get_logger, is_debug
 from cobaya.typing import empty_dict
 
-_covmats_file = "covmat_data_%s.pkl"
+_covmats_file = "covmat_%s.pkl"
 
 log = get_logger(__name__)
 
@@ -25,9 +25,13 @@ covmat_folders = [
 
 
 class CovmatFileKey(NamedTuple):
-    paramtags: Tuple
-    datatags: Tuple
+    paramtags: FrozenSet
+    datatags: FrozenSet
     base: str
+
+
+def covmat_file_key(paramtags, datatags, base):
+    return CovmatFileKey(frozenset(paramtags), frozenset(datatags), base)
 
 
 # Global instance of loaded database, for fast calls to get_best_covmat in GUI
@@ -83,7 +87,7 @@ def get_covmat_database(installed_folders, cached=True) -> Dict[CovmatFileKey, d
             tags = name.replace('.post.', '_').replace('_post', '').split('_')
             partags = set(tags).intersection(params)
             datatags = set(tags[1:]) - partags
-            key = CovmatFileKey(tuple(sorted(partags)), tuple(sorted(datatags)), tags[0])
+            key = covmat_file_key(partags, datatags, tags[0])
             covmat_database[key] = {"folder": folder_full,
                                     "name": filename, "params": params}
     if cached:
@@ -135,8 +139,8 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
         return None
 
     if job_item:
-        key_tuple = CovmatFileKey(tuple(sorted(job_item.param_set)),
-                                  tuple(sorted(job_item.data_set.names)), job_item.base)
+        key_tuple = covmat_file_key(job_item.param_set, job_item.data_set.names,
+                                    job_item.base)
 
         # match all data tags and param tags independent of order
         if match := covmats_database.get(key_tuple):
@@ -149,9 +153,7 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
         keys = {key_tuple}
         for remove in (cov_map.get('without') or []):
             for param, data, base in keys.copy():
-                key = CovmatFileKey(tuple(sorted(set(param) - {remove})),
-                                    tuple(sorted(set(data) - {remove})),
-                                    base)
+                key = covmat_file_key(set(param) - {remove}, set(data) - {remove}, base)
                 if match := covmats_database.get(key):
                     return match
                 keys.add(key)
@@ -160,19 +162,18 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
             renames = {x: (v,) if isinstance(v, str) else v for x, v in
                        rename.items()}
             for param, data, base in keys.copy():
-                key = CovmatFileKey(
-                    tuple(sorted(set(chain(*[renames.get(p, [p]) for p in param])))),
-                    tuple(sorted(set(chain(*[renames.get(p, [p]) for p in data])))),
-                    rename.get(base, base))
+                key = covmat_file_key(chain(*[renames.get(p, [p]) for p in param]),
+                                      chain(*[renames.get(p, [p]) for p in data]),
+                                      rename.get(base, base))
                 if match := covmats_database.get(key):
                     return match
                 keys.add(key)
         # include all renamed tag variants
-        key_tuple = CovmatFileKey(tuple(set(chain(*[x.paramtags for x in keys]))),
-                                  tuple(set(chain(*[x.datatags for x in keys]))),
-                                  key_tuple.base)
+        key_tuple = covmat_file_key(chain(*[x.paramtags for x in keys]),
+                                    chain(*[x.datatags for x in keys]),
+                                    key_tuple.base)
     else:
-        key_tuple = ()
+        key_tuple = None
 
     # Prepare params and likes aliases
     params_renames = set(chain(*[[p] + str_to_list(info.get("renames", []))
@@ -197,7 +198,7 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
     # No debug print here: way too many!
     def score_likes(_key: CovmatFileKey, covmat):
         if key_tuple:
-            return len(set(_key.datatags).intersection(
+            return len(_key.datatags.intersection(
                 likes_renames.union(key_tuple.datatags)))
         return len([0 for r in likes_regexps if r.search(covmat["name"])])
 
@@ -208,8 +209,7 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
 
     if key_tuple:
         def score_left_params(_key, _covmat):
-            return -len(
-                set(_key.paramtags) - params_renames.union(key_tuple.paramtags))
+            return -len(_key.paramtags - params_renames.union(key_tuple.paramtags))
 
         best_p_l = get_best_score(best_p_l, score_left_params)
 
