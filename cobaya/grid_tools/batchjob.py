@@ -551,8 +551,8 @@ class BatchJob(PropertiesItem):
                 else:
                     dataset = data_set
 
-                if (data_tags := tuple(dataset.names if isinstance(dataset, DataSet)
-                                       else dataset[0])) in data_used:
+                if (data_tags := frozenset(dataset.names if isinstance(dataset, DataSet)
+                                           else dataset[0])) in data_used:
                     raise ValueError("Duplicate dataset tags %s" % data_tags)
                 data_used.add(data_tags)
                 models_used = set()
@@ -570,9 +570,9 @@ class BatchJob(PropertiesItem):
                     elif not isinstance(model, (list, tuple)):
                         raise ValueError(
                             "models must be model name strings or list of model names")
-                    if tuple(model) in models_used:
+                    if frozenset(model) in models_used:
                         raise ValueError("Duplicate model (parameter) tags %s" % model)
-                    models_used.add(tuple(model))
+                    models_used.add(frozenset(model))
                     item = JobItem(self.batchPath, model, dataset,
                                    base=group.get('base') or dic.get('base') or base_name,
                                    group_name=group_name)
@@ -668,7 +668,7 @@ class BatchJob(PropertiesItem):
         return self.normed_name_item(root, True, True)
 
     def save(self, filename=''):
-        saveobject(self, (grid_cache_file(self.batchPath), filename)[filename != ''])
+        saveobject(self, filename if filename else grid_cache_file(self.batchPath))
 
     def make_directories(self, setting_file=None):
         os.makedirs(self.batchPath, exist_ok=True)
