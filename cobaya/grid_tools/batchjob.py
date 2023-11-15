@@ -540,6 +540,7 @@ class BatchJob(PropertiesItem):
         model_infos = dic.get("models") or {}
         for group_name, group in dic["groups"].items():
             skip = group.get("skip") or {}
+            data_used = set()
             for data_set in group["datasets"]:
                 if isinstance(data_set, str):
                     if data_set not in dataset_infos:
@@ -549,6 +550,12 @@ class BatchJob(PropertiesItem):
                     dataset = DataSet(info.pop("tags", data_set.split('_')), info)
                 else:
                     dataset = data_set
+
+                if (data_tags := tuple(dataset.names if isinstance(dataset, DataSet)
+                                       else dataset[0])) in data_used:
+                    raise ValueError("Duplicate dataset tags %s" % data_tags)
+                data_used.add(data_tags)
+                models_used = set()
                 for model in group["models"]:
                     model_info = None
                     if isinstance(model, str):
@@ -563,7 +570,9 @@ class BatchJob(PropertiesItem):
                     elif not isinstance(model, (list, tuple)):
                         raise ValueError(
                             "models must be model name strings or list of model names")
-
+                    if tuple(model) in models_used:
+                        raise ValueError("Duplicate model (parameter) tags %s" % model)
+                    models_used.add(tuple(model))
                     item = JobItem(self.batchPath, model, dataset,
                                    base=group.get('base') or dic.get('base') or base_name,
                                    group_name=group_name)
