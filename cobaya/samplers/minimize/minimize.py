@@ -6,7 +6,7 @@ r"""
 
 This is a **maximizer** for posteriors or likelihoods, based on
 `scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
- `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_ ,and
+ `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_, and
  `iminuit <https://iminuit.readthedocs.io/>`_.
 
 The default is BOBYQA, which tends to work better than scipy on Cosmological problems with default
@@ -253,7 +253,7 @@ class Minimize(Minimizer, CovmatSampler):
 
     def run(self):
         """
-        Runs `scipy.Minimize`
+        Runs minimization functions
         """
         results = []
         successes = []
@@ -313,10 +313,10 @@ class Minimize(Minimizer, CovmatSampler):
                         {k: v for k, v in self.kwargs.items() if k != "fun"},
                     )
                     result = iminuit.minimize(**self.kwargs, method="migrad")
-                    success = result.success
-                    if not success:
-                        self.log.error("Finished unsuccessfully.")
-                    result.pop("minuit")  # problem with pickle/mpi?
+                    if not (success := result.success):
+                        self.log.error(result.message)
+                    if mpi.get_mpi_size() > 1:
+                        result.pop("minuit")  # problem with pickle/mpi?
                 else:
                     self.kwargs = {
                         "fun": minuslogp_transf,
@@ -329,8 +329,7 @@ class Minimize(Minimizer, CovmatSampler):
                     self.log.debug("Arguments for scipy.optimize.Minimize:\n%r",
                                    {k: v for k, v in self.kwargs.items() if k != "fun"})
                     result = optimize.minimize(**self.kwargs)
-                    success = result.success
-                    if not success:
+                    if not (success := result.success):
                         self.log.error("Finished unsuccessfully.")
                 if success:
                     self.log.info("Run %d/%d converged.", i + 1, len(self.initial_points))
@@ -434,9 +433,9 @@ class Minimize(Minimizer, CovmatSampler):
 
         If non-trivial ``M`` and ``X0`` are returned, this means that the minimizer has
         been working on an affine-transformed parameter space :math:`x^\prime`, from which
-        the real space points can be obtained as :math:`x = M x^\prime + X_0`. This inverse
-        transformation needs to be applied to the coordinates appearing inside the
-        ``result_object``.
+        the real space points can be obtained as :math:`x = M x^\prime + X_0`.
+        This inverse transformation needs to be applied to the coordinates appearing
+        inside the ``result_object``.
         """
         return {"minimum": self.minimum, "result_object": self.result,
                 "full_set_of_mins": self.full_set_of_mins,
@@ -466,6 +465,7 @@ class Minimize(Minimizer, CovmatSampler):
                     lines.append("%5d  %-17.9e %-*s %s" % (num, val, width, p, lab))
                 else:
                     lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
+
         add_section(
             [(p, params[p]) for p in self.model.parameterization.sampled_params()])
         lines.append('')

@@ -220,7 +220,8 @@ def get_used_components(*infos, return_infos=False):
                     kind, kind)
             if return_infos:
                 for c in comps[kind]:
-                    comp_infos[c].update(info[kind][c] or {})
+                    comp_infos[c].update((info[kind][c] or {}) if
+                                         isinstance(info[kind], Mapping) else {})
     # return dictionary of non-empty blocks
     components = {k: v for k, v in comps.items() if v}
     return (components, dict(comp_infos)) if return_infos else components
@@ -274,14 +275,13 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
     updated_info: _Dict = {}
     default_params_info = {}
     default_prior_info = {}
-    used_kind_members = get_used_components(input_info)
     from cobaya.component import CobayaComponent
-    for block in used_kind_members:
+    for block, block_info in get_used_components(input_info).items():
         updated: InfoDict = {}
         updated_info[block] = updated
         input_block = input_info[block]
         name: str
-        for name in used_kind_members[block]:
+        for name in block_info:
             # Preprocess "no options" and "external function" in input
             try:
                 input_block[name] = input_block[name] or {}
@@ -299,9 +299,9 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
             if isinstance(input_block[name], type) or \
                     not isinstance(input_block[name], dict):
                 input_block[name] = {"external": input_block[name]}
-            ext = input_block[name].get("external")
+
             annotations = {}
-            if ext:
+            if ext := input_block[name].get("external"):
                 if isinstance(ext, type):
                     default_class_info, annotations = \
                         get_default_info(ext, block, input_options=input_block[name],
@@ -327,9 +327,9 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
             reserved = {"external", "class", "provides", "requires", "renames",
                         "input_params", "output_params", "python_path", "aliases",
                         "package_install"}
-            options_not_recognized = set(input_block[name]).difference(
-                chain(reserved, updated[name], annotations))
-            if options_not_recognized:
+
+            if options_not_recognized := set(input_block[name]).difference(
+                    chain(reserved, updated[name], annotations)):
                 alternatives = {}
                 available = {"external", "class", "requires", "renames"}.union(
                     updated_info[block][name])
@@ -377,8 +377,7 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
     for name in ("theory", "likelihood"):
         if isinstance(updated_info.get(name), dict):
             for item in updated_info[name].values():
-                renames = item.get("renames")
-                if renames:
+                if renames := item.get("renames"):
                     if not isinstance(renames, Mapping):
                         raise LoggedError(
                             logger, ("'renames' should be a dictionary of name mappings "
@@ -469,6 +468,8 @@ def merge_info(*infos):
         return previous_info
     current_info = None
     for new_info in infos[1:]:
+        if isinstance(previous_info, str):
+            raise LoggedError(logger, previous_info)
         previous_params_info = deepcopy(previous_info.pop("params", {}) or {})
         new_params_info = deepcopy(new_info).pop("params", {}) or {}
         # NS: params have been popped, since they have their own merge function

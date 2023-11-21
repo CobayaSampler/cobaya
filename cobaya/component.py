@@ -207,7 +207,7 @@ class HasDefaults:
             if sys.version_info < (3, 9):
                 return resources.read_text(package, file_name)
             with (resources.files(package) / file_name).open(
-                    "r", encoding="utf-8", errors="strict") as fp:
+                    "r", encoding="utf-8-sig", errors="strict") as fp:
                 text_content = fp.read()
             return text_content
         except Exception:

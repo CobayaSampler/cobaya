@@ -8,6 +8,8 @@ env:
   global:
     - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
 
+if: (type = pull_request) OR (branch = master) OR (branch =~ ^test.*)
+
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
   directories:
@@ -58,7 +60,7 @@ jobs:
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
       python: "3.10"
-    - name: "Latest jammy Python 3.11"
+    - name: "Latest jammy Python 3.12"
       dist: jammy
       addons:
         apt:
@@ -66,7 +68,7 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.11"
+      python: "3.12"
 
 
 before_install:

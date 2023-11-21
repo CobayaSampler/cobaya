@@ -15,7 +15,6 @@ import traceback
 import shutil
 import tempfile
 import logging
-from copy import deepcopy
 from itertools import chain
 import importlib
 from typing import List, Mapping, Union
@@ -121,9 +120,7 @@ def install(*infos, **kwargs):
              if isinstance(info, str) and info.split('.')[-1] in Extension.yamls
              else info for info in infos]
     infos_not_single_names = [info for info in infos if isinstance(info, Mapping)]
-    if not path:
-        path = resolve_packages_path(*infos_not_single_names)
-    if not path:
+    if not (path := path or resolve_packages_path(*infos_not_single_names)):
         raise LoggedError(
             logger, ("No 'path' argument given, and none could be found in input infos "
                      "(as %r), the %r env variable or the config file. "
@@ -528,11 +525,9 @@ def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     if upgrade:
         cmd += ['--upgrade']
     cmd += list(options)
-    if "env" not in kwargs:
-        kwargs["env"] = os.environ
     # Assume that if the user has installed Cobaya on the system-wide Python,
     # then it is OK to overwrite system packages:
-    kwargs["env"] = dict(kwargs["env"], PIP_BREAK_SYSTEM_PACKAGES="1")
+    kwargs["env"] = dict(kwargs.get("env", os.environ), PIP_BREAK_SYSTEM_PACKAGES="1")
     res = subprocess.call(cmd + packages, **kwargs)
     if res:
         msg = f"pip: error installing packages '{packages}'"

@@ -544,16 +544,16 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("fsigma8", z)
 
-    def get_auto_covmat(self, params_info, likes_info, random_state=None):
+    def get_auto_covmat(self, params_info, likes_info):
         r"""
         Tries to get match to a database of existing covariance matrix files for the
         current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        from cobaya.cosmo_input import get_best_covmat_ext
-        return get_best_covmat_ext(self.packages_path, params_info, likes_info,
-                                   random_state)
+        from cobaya.cosmo_input import get_best_covmat_ext, get_covmat_package_folders
+        return get_best_covmat_ext(get_covmat_package_folders(self.packages_path),
+                                   params_info, likes_info)
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):

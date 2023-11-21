@@ -58,8 +58,8 @@ def test_minimize_single_point(tmpdir):
         info: InputDict = {'likelihood': {'like': NoisyCovLike},
                            "sampler": {"minimize": {"ignore_prior": True,
                                                     "method": method,
-                                                    "best_of": 1}}}
-        info['output'] = os.path.join(tmpdir, 'testmin')
+                                                    "best_of": 1}},
+                           'output': os.path.join(tmpdir, 'testmin')}
         products = run(info, force=True)[1].products()
         if mpi.is_main_process():
             assert products["full_set_of_mins"] is None

@@ -515,12 +515,12 @@ class CovmatSampler(Sampler):
                 raise LoggedError(
                     self.log,
                     "Parameter(s) %r appear more than once in %s", duplicated, str_msg)
+            loaded_covmat = np.atleast_2d(loaded_covmat)
             if len(loaded_params) != loaded_covmat.shape[0]:
                 raise LoggedError(
                     self.log, "The number of parameters in %s and the "
                               "dimensions of the matrix do not agree: %d vs %r",
                     str_msg, len(loaded_params), loaded_covmat.shape)
-            loaded_covmat = np.atleast_2d(loaded_covmat)
             is_square_symmetric = (len(loaded_covmat.shape) == 2 and
                                    loaded_covmat.shape[0] == loaded_covmat.shape[1] and
                                    np.allclose(loaded_covmat.T, loaded_covmat))

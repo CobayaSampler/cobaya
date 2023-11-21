@@ -182,8 +182,8 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     # since the YAML load fails otherwise
     if stringy == info_logpdf:
         updated_output_file = os.path.join(prefix, FileSuffix.updated + ".yaml")
-        with open(updated_output_file) as updated:
-            updated_yaml = yaml_load("".join(updated.readlines()))
+        with open(updated_output_file, encoding='utf-8') as updated:
+            updated_yaml = yaml_load(updated.read())
         for k, v in stringy.items():
             to_test = updated_yaml[kind][k]
             if kind == "likelihood":

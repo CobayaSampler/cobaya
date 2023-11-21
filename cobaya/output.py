@@ -350,12 +350,12 @@ class Output(HasLogger, OutputReadOnly):
                         "file_input", "file_updated", "dump_file_updated",
                         "_resuming", "prefix_regexp_str", "log"))
     def __init__(self, prefix, resume=resume_default, force=False, infix=None):
-        OutputReadOnly.__init__(self, prefix, infix=None)
+        OutputReadOnly.__init__(self, prefix, infix)
         self.name = "output"
         self.set_logger(self.name)
         self.lock = FileLock()
         self.force = force
-        if resume and force and prefix:
+        if resume and force and prefix and infix != "minimize":
             # No resume and force at the same time (if output)
             raise LoggedError(
                 self.log,
@@ -730,8 +730,9 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
     """
     # yaml: load and look for "output", or use file name without extension
     is_yaml_filename = (
-        isinstance(prefix, str) and
-        any(os.path.splitext(prefix)[1].lower() == ext.lower() for ext in Extension.yamls)
+            isinstance(prefix, str) and
+            any(os.path.splitext(prefix)[1].lower() == ext.lower() for ext in
+                Extension.yamls)
     )
     if is_yaml_filename:
         file_name, _ = os.path.splitext(prefix)

@@ -28,6 +28,7 @@ from types import ModuleType
 from inspect import cleandoc, getfullargspec
 from ast import parse
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 
 # Local
 from cobaya.conventions import subfolders, kinds, packages_path_config_file, \
@@ -111,6 +112,19 @@ class PythonPath:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.path[:] = self.old_path
+
+
+@contextmanager
+def working_directory(path):
+    if path:
+        original_cwd = os.getcwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(original_cwd)
+    else:
+        yield
 
 
 def check_module_path(module, path):
@@ -528,7 +542,7 @@ def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
     if isinstance(definition, numbers.Real):
         kwargs = {"dist": "uniform", "loc": definition, "scale": 0}
     elif isinstance(definition, Sequence) and len(definition) == 2 and \
-       all(isinstance(n, numbers.Real) for n in definition):
+            all(isinstance(n, numbers.Real) for n in definition):
         kwargs = {"dist": "uniform", "min": definition[0], "max": definition[1]}
     elif isinstance(definition, Dict):
         kwargs = deepcopy(definition)
@@ -1023,10 +1037,7 @@ def resolve_packages_path(infos=None):
                  "Cannot resolve a unique one to use. "
                  "Maybe specify one via a command line argument '-%s [...]'?",
             packages_path_arg[0])
-    path_env = os.environ.get(packages_path_env)
-    if path_env:
-        return path_env
-    return load_packages_path_from_config_file()
+    return os.environ.get(packages_path_env) or load_packages_path_from_config_file()
 
 
 def sort_cosmetic(info):

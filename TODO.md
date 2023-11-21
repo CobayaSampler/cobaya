@@ -1,7 +1,5 @@
 # Incomplete implementations/bigger jobs
 
-## Grids/rest of cosmomc scripts
-## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
 ## containers
 
 # cosmetic/consistency/speed
@@ -27,7 +25,6 @@
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## minimize:
 + unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution? e.g. auto-extend uniform priors.]
-+ add MINUIT
 ## mcmc:
 * finish removing .checkpoint in favour of updated.yaml and .progress
 * For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.

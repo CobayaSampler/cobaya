@@ -1,5 +1,6 @@
 input_folder = "input_files"
+input_folder_post = "input_files_post"
 script_folder = "scripts"
-log_folder = 'log'
 script_ext = ".sh"
 jobid_ext = ".job_id"
+yaml_ext = ".yaml"

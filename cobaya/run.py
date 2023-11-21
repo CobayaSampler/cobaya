@@ -65,20 +65,8 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                  "minimize": minimize, "test": test}
         info: InputDict = load_info_overrides(
             info_or_yaml_or_file, override or {}, **flags)
-        if info.get("post"):
-            if info.get("minimize"):  # type: ignore
-                raise ValueError(
-                    "``minimize`` option is incompatible with post-processing.")
-            if isinstance(output, str) or output is False:
-                info["post"]["output"] = output or None
-            return post(info)
-        # Set up output and logging
-        if isinstance(output, str) or output is False:
-            info["output"] = output or None
         logger_setup(info.get("debug"))
         logger_run = get_logger(run.__name__)
-        # 1. Prepare output driver, if requested by defining an output prefix
-        # GetDist needs to know the original sampler, so don't overwrite if minimizer
         try:
             which_sampler = list(info["sampler"])[0]
             if info.get("minimize"):  # type: ignore
@@ -87,9 +75,19 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     info["sampler"] = {"minimize": None}
                     which_sampler = "minimize"
         except (KeyError, TypeError) as excpt:
-            raise LoggedError(
-                logger_run, "You need to specify a sampler using the 'sampler' key "
-                            "as e.g. `sampler: {mcmc: None}.`") from excpt
+            if not info.get("post"):
+                raise LoggedError(
+                    logger_run,
+                    "You need to specify a sampler using the 'sampler' key "
+                    "as e.g. `sampler: {mcmc: None}.`") from excpt
+        if info.get("post"):
+            if isinstance(output, str) or output is False:
+                info["post"]["output"] = output or None
+            return post(info)
+        # Set up output and logging
+        if isinstance(output, str) or output is False:
+            info["output"] = output or None
+        # 1. Prepare output driver, if requested by defining an output prefix
         infix = "minimize" if which_sampler == "minimize" else None
         with get_output(prefix=info.get("output"), resume=info.get("resume"),
                         force=info.get("force"), infix=infix) as out:
@@ -106,15 +104,10 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # 3.1 First: model only
             out.check_and_dump_info(info, updated_info, cache_old=True,
                                     ignore_blocks=["sampler"])
-            # 3.2 Then sampler -- 1st get the last sampler mentioned in the updated.yaml
-            # TODO: ideally, using Minimizer would *append* to the sampler block.
-            #       Some code already in place, but not possible at the moment.
-            try:
-                last_sampler = list(updated_info["sampler"])[-1]
-                last_sampler_info = {last_sampler: updated_info["sampler"][last_sampler]}
-            except (KeyError, TypeError) as excpt:
-                raise LoggedError(logger_run, "No sampler requested.") from excpt
-            sampler_name, sampler_class = get_sampler_name_and_class(last_sampler_info)
+            # 3.2 Then sampler -- 1st get the first sampler mentioned in the updated.yaml
+            if not (info_sampler := updated_info.get("sampler")):
+                raise LoggedError(logger_run, "No sampler requested.")
+            sampler_name, sampler_class = get_sampler_name_and_class(info_sampler)
             updated_info["sampler"] = check_sampler_info(
                 (out.get_updated_info(use_cache=True) or {}).get("sampler"),
                 updated_info["sampler"], is_resuming=out.is_resuming())
@@ -142,7 +135,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                                      sampler.info())
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
                 mpi.sync_processes()
-                if info.get("test", False):
+                if info.get("test"):
                     logger_run.info("Test initialization successful! "
                                     "You can probably run now without `--%s`.", "test")
                     return updated_info, sampler

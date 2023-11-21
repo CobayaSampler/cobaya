@@ -251,6 +251,7 @@ def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minm
         if isinstance(rootNames, str):
             rootNames = [rootNames]
         jobIds.update(index.rootNames.get(name) for name in rootNames)
+        jobIds.discard(None)
     if jobNames is not None:
         if isinstance(jobNames, str):
             jobNames = [jobNames]

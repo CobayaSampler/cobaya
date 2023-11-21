@@ -1,7 +1,7 @@
 Submitting and running jobs
 ===========================
 
-More time-consuming runs are usually run on a remote cluster, via a job queue. A good configuration for running MCMC chains is often to run 4-6 chains, each using some number of cores (e.g. in cosmology, for OPENMP threading in the cosmology codes, for  a total of 4-24 hours running time). Cobaya has a convenience script to produce, submit and manage job submission scripts that can be adapted for different systems. Once configured you can do::
+More time-consuming runs are usually run on a remote cluster, via a job queue. A good configuration for running MCMC chains is often to run 4-6 chains, each using some number of cores (e.g. in cosmology, for OPENMP threading in the cosmology codes, for  a total of 4-24 hours running time). Cobaya has a convenient script to produce, submit and manage job submission scripts that can be adapted for different systems. Once configured you can do::
 
   cobaya-run-job --queue regular --walltime 12:00:00 [yaml_file].yaml
 
@@ -11,10 +11,12 @@ To do this, it loads a template for your job submission script. This template ca
 
  cobaya-run-job --walltime 12:00:00 --job-template job_script_NERSC [yaml_file].yaml
 
-However it is usually more convenient to set an environment variable on each/any cluster that you use so that the appropriate job script template is automatically used. You can then submit jobs on different clusters with the same commands, without worrying about local differences. To set the environment variable put in your .bashrc (or equivalent)::
+However, it is usually more convenient to set an environment variable on each/any cluster that you use so that the appropriate job script template is automatically used. You can then submit jobs on different clusters with the same commands, without worrying about local differences. To set the environment variable put in your .bashrc (or equivalent)::
 
  export COBAYA_job_template=/path/to/my_cluster_job_script_template
 
+
+The job sript templates are also used by :doc:`grids <grids>`, which can be used to manage running a batch of jobs at once.
 
 Job script templates
 ======================
@@ -26,9 +28,11 @@ There are also lines to specify default settings for the different cobaya-run-jo
    :language: shell
 
 Here each word in {} braces is replaced with a value taken (or computed) from your cobaya-run-script arguments.
-The ##RUN line specified the actual command. If you run more than one run per job, this may be used multiple times in the generated script file.
+The ##RUN line specifies the actual command. If you run more than one run per job, this may be used multiple times in the generated script file.
 
 The lines starting ## are used to define default settings for jobs, in this case 4 chains each running with 4 cores each (this does not use a complete NERSC node).
+
+You can see some `sample templates <https://github.com/CobayaSampler/cobaya/tree/master/cobaya/grid_tools/script_templates>`_ for different grid management systems.
 
 The available placeholder variables are:
 
@@ -86,7 +90,7 @@ You can change various arguments when submitting jobs, running `cobaya-run-job -
 
 .. program-output:: cobaya-run-job -h
 
-To set default `yy` for option `xx` in your job script template, add a line::
+To set default value `yy` for option `xx` in your job script template, add a line::
 
  ##DEFAULT_xx: yy
 

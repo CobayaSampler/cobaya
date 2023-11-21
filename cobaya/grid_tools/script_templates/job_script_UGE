@@ -11,24 +11,18 @@
 #$ -cwd
 #$ -V
 # --- Resource allocation with optimal MPI+OpenMP interaction ------------------
-#$ -pe openmpi_mixed_{CHAINSPERNODE} {NUMMPI}
-#$ -binding pe striding:{CHAINSPERNODE}:{OMP}
+#$ -pe openmpi {NUMSLOTS}
+###$ -binding pe striding:{CHAINSPERNODE}:{OMP}
 #$ -R y
-#$ -l exclusive=True
-export OMP_NUM_THREADS={OMP}
-#$ -l h_rt={WALLTIME}
-# --- Logging ------------------------------------------------------------------
-#$ -j y
-#$ -o {LOGDIR}
-# --- E-mail notifications (optional) ------------------------------------------
-#     (add your e-mail and remove one #+space from the following 2 lines)
-# #$ -m bea
-# #$ -M your_email@here.com
+#$ -l h_vmem=3G
+#$ -l m_mem_free=3G
 
-# Your C/Fortran compiler + MPI + Python here
-module load python/2.7.12
-module load gcc/5.4.0
-module load openmpi/2.0.1/gcc/5.4.0
+export OMP_NUM_THREADS={OMP}
+
+module load Python
+module load gompic
+
+
 
 cd {ROOTDIR}
 
@@ -47,12 +41,13 @@ echo Hostfile `cat $PE_HOSTFILE`
 ## which extracts text from here with ##XX: ...##
 
 ## Command to use for each run in the batch
-##RUN: mpirun -n $NSLOTS {PROGRAM} {INI}##
+##RUN: mpirun -n {NUMMPI} {PROGRAM} {INI} > {JOBSCRIPTDIR}/{INIBASE}.log 2>&1##
 
 ## Commands to submit and delete
 ##DEFAULT_qsub: qsub##
 ##DEFAULT_qdel: qdel##
 
+
 ## These defaults specific to Sussex apollo
-##DEFAULT_QUEUE: mps.q##
-##DEFAULT_JOBCLASS: mps.long##
+##DEFAULT_queue: parallel.q##
+##DEFAULT_jobclass: test.long##

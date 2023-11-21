@@ -294,8 +294,8 @@ class MainWindow(QWidget):
             self.covmat_table.setVerticalHeaderLabels(
                 list(self.current_params_in_covmat))
             # Color map for correlations
-            from matplotlib import cm as cmap
-            cmap_corr = cmap.get_cmap("coolwarm_r")
+            from matplotlib import colormaps
+            cmap_corr = colormaps["coolwarm_r"]
             for i, pi in enumerate(self.current_params_in_covmat):
                 for j, pj in enumerate(self.current_params_in_covmat):
                     self.covmat_table.setItem(

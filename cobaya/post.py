@@ -167,33 +167,7 @@ def value_or_list(lst: list):
         return lst
 
 
-@mpi.sync_state
-def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
-         sample: Union[SampleCollection, List[SampleCollection], None] = None
-         ) -> Tuple[InputDict, PostResult]:
-    info = load_input_dict(info_or_yaml_or_file)
-    logger_setup(info.get("debug"))
-    log = get_logger(__name__)
-    info_post: PostDict = info.get("post") or {}
-    if not info_post:
-        raise LoggedError(log, "No 'post' block given. Nothing to do!")
-    if mpi.is_main_process() and info.get("resume"):
-        log.warning("Resuming not implemented for post-processing. Re-starting.")
-    if not info.get("output") and info_post.get("output") \
-            and not info.get("params"):
-        raise LoggedError(log, "The input dictionary must be a full option "
-                               "dictionary, or have an existing 'output' root to load "
-                               "previous settings from ('output' to read from is in the "
-                               "main block not under 'post'). ")
-    # 1. Load existing sample
-    output_in = get_output(prefix=info.get("output"))
-    if output_in:
-        info_in = output_in.get_updated_info() or update_info(info)
-    else:
-        info_in = update_info(info)
-    params_in: ExpandedParamsDict = info_in["params"]  # type: ignore
-    dummy_model_in = DummyModel(params_in, info_in.get("likelihood", {}),
-                                info_in.get("prior"))
+def get_collections(info, output_in, info_post, sample, dummy_model_in, log):
 
     in_collections = []
     thin = info_post.get("thin", 1)
@@ -265,6 +239,35 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                  "or skipping or thinning less.")
     mpi.sync_processes()
     log.info("Will process %d sample points.", sum(len(c) for c in in_collections))
+    return in_collections
+
+
+@mpi.sync_state
+def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
+         sample: Union[SampleCollection, List[SampleCollection], None] = None
+         ) -> Tuple[InputDict, PostResult]:
+    info = load_input_dict(info_or_yaml_or_file)
+    logger_setup(info.get("debug"))
+    log = get_logger(__name__)
+    info_post: PostDict = info.get("post")
+    if not info_post:
+        raise LoggedError(log, "No 'post' block given. Nothing to do!")
+    if mpi.is_main_process() and info.get("resume"):
+        log.warning("Resuming not implemented for post-processing. Re-starting.")
+    if not info.get("output") and info_post.get("output") \
+            and not info.get("params"):
+        raise LoggedError(log, "The input dictionary must be a full option "
+                               "dictionary, or have an existing 'output' root to load "
+                               "previous settings from ('output' to read from is in the "
+                               "main block not under 'post'). ")
+    # 1. Load existing sample
+    if output_in := get_output(prefix=info.get("output")):
+        info_in = output_in.get_updated_info() or update_info(info)
+    else:
+        info_in = update_info(info)
+    params_in: ExpandedParamsDict = info_in["params"]  # type: ignore
+    dummy_model_in = DummyModel(params_in, info_in.get("likelihood", {}),
+                                info_in.get("prior"))
 
     # 2. Compare old and new info: determine what to do
     add = info_post.get("add") or {}
@@ -350,10 +353,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
-        if (
-            is_derived_param(pinfo) and "value" not in pinfo and
-            p not in add_params
-        ):
+        if (is_derived_param(pinfo) and "value" not in pinfo and
+                p not in add_params):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
@@ -406,6 +407,27 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     recursive_update(theory_info, added_theory.pop(theory))
         out_combined["theory"].update(added_theory)
 
+    # Use default prefix if it exists. If it does not, produce no output by default.
+    # {post: {output: None}} suppresses output, and if it's a string, updates it.
+    out_prefix = info_post.get("output", info.get("output"))
+    if out_prefix:
+        suffix = info_post.get("suffix")
+        if not suffix:
+            raise LoggedError(log, "You need to provide a '%s' for your output chains.",
+                              "suffix")
+        out_prefix += separator_files + "post" + separator_files + suffix
+
+    if 'minimize' in (info.get("sampler") or []):
+        # actually minimizing with importance-sampled combination of likelihoods
+        out_combined = dict(info, **out_combined)
+        out_combined.pop("post")
+        out_combined["output"] = out_prefix
+        from cobaya.run import run
+        return run(out_combined)
+
+    in_collections = get_collections(info, output_in, info_post, sample, dummy_model_in,
+                                     log)
+
     # Prepare recomputation of aggregated chi2
     # (they need to be recomputed by hand, because auto-computation won't pick up
     #  old likelihoods for a given type)
@@ -417,15 +439,6 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     add_aggregated_chi2_params(out_combined_params, types)
 
     # 3. Create output collection
-    # Use default prefix if it exists. If it does not, produce no output by default.
-    # {post: {output: None}} suppresses output, and if it's a string, updates it.
-    out_prefix = info_post.get("output", info.get("output"))
-    if out_prefix:
-        suffix = info_post.get("suffix")
-        if not suffix:
-            raise LoggedError(log, "You need to provide a '%s' for your output chains.",
-                              "suffix")
-        out_prefix += separator_files + "post" + separator_files + suffix
     output_out = get_output(prefix=out_prefix, force=info.get("force"))
     output_out.set_lock()
 
@@ -469,11 +482,11 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     last_percent = None
     known_constants = dummy_model_out.parameterization.constant_params()
     known_constants.update(dummy_model_in.parameterization.constant_params())
-    missing_params = dummy_model_in.parameterization.sampled_params().keys() - set(
-        collection_in.columns)
-    if missing_params:
-        raise LoggedError(log, "Input samples do not contain expected sampled parameter "
-                               "values: %s", missing_params)
+
+    if missing_params := dummy_model_in.parameterization.sampled_params().keys() - set(
+            collection_in.columns):
+        raise LoggedError(log, "Input samples do not contain expected "
+                               "sampled parameter values: %s", missing_params)
 
     missing_priors = set(name for name in collection_out.minuslogprior_names if
                          name not in mlprior_names_add and
