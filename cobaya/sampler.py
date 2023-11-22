@@ -410,6 +410,11 @@ class Minimizer(Sampler):
     base class for minimizers
     """
 
+class Profiler(Sampler):
+    """
+    base class for profilers
+    """
+
 
 class CovmatSampler(Sampler):
     """

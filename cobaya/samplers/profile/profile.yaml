@@ -1,0 +1,41 @@
+# Default arguments for the -logposterior/chi^2 minimizer
+
+# Method: bobyqa|scipy
+method: bobyqa
+# Minimizes the full posterior (False) or just the likelihood (True)
+# Likelihood maximization is subject to prior bounds!
+ignore_prior: False
+# Maximum number of iterations (default: practically infinite)
+max_evals: 1e6d
+# Number of different starting positions to try minimizing from (may be rounded up if MPI)
+best_of: 2
+# Treatment of unbounded parameters: confidence level to use
+# (Use with care if there are likelihood modes close to the edge of the prior)
+confidence_for_unbounded: 0.9999995  # 5 sigmas of the prior
+# Seeding runs
+seed:  # an initial seed (entropy) for the numpy random generator
+# Override keyword arguments for `scipy.optimize.minimize()` or `pybobyqa.solve()` or `iminuit.minimize()`
+# scipy:
+#  - https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
+#  - options for individual methods
+override_scipy:
+# option: value
+# bobyqa:
+#  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html
+#  - https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/advanced.html
+override_bobyqa:
+  # option: value
+  # Relaxed convergence criterion for numerically-noisy likelihoods
+  rhoend: 0.05
+# iminuit:
+#  - https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface
+#  - options for individual methods
+override_iminuit:
+# option: value
+# File (including path) or matrix defining a covariance matrix for the proposal:
+# - null (default): will be generated from params info (prior and proposal)
+# - matrix: remember to set `covmat_params` to the parameters in the matrix
+# - "auto" (cosmology runs only): will be looked up in a library
+# In any case, if an old chain its present, its covmat will be loaded instead.
+covmat:
+covmat_params:
