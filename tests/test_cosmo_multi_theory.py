@@ -259,9 +259,14 @@ class BinnedPk(Theory):
         # here test the non-regular option for coverage
         state['primordial_scalar_pk'] = {'k': self.ks,
                                          'Pk': pk, 'log_regular': False}
+        state['primordial_tensor_pk'] = {'k': self.ks,
+                                         'Pk': pk*0.1, 'log_regular': False}
 
     def get_primordial_scalar_pk(self):
         return self.current_state['primordial_scalar_pk']
+
+    def get_primordial_tensor_pk(self):
+        return self.current_state['primordial_tensor_pk']
 
     @classmethod
     def get_class_options(cls, input_options=empty_dict):
@@ -271,7 +276,7 @@ class BinnedPk(Theory):
         bin_par = input_options.get('bin_par', cls.bin_par)
         params = {}
         for b in range(nbins):
-            par = deepcopy(bin_par.copy())
+            par = deepcopy(bin_par)
             par['latex'] = 'b_%s' % (b + 1)
             params['b%s' % (b + 1)] = par
         options['params'] = params
@@ -289,7 +294,8 @@ def test_pk_binning(packages_path, skip_not_installed):
     _info: InputDict = \
         {'packages_path': process_packages_path(packages_path),
          'likelihood': {'cmb': Pklike},
-         'theory': {'camb': {"external_primordial_pk": True},
+         'theory': {'camb': {"external_primordial_pk": True,
+                             "extra_args": {"WantTensors": True}},
                     'my_pk': {"external": BinnedPk,
                               'nbins': nbins, 'k_min_bin': k_min_bin,
                               'k_max_bin': k_max_bin
