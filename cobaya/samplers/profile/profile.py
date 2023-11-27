@@ -397,7 +397,7 @@ class Profile(Profiler, CovmatSampler):
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
                         "result", "minimum", "full_set_of_mins"))
-    def process_results(self, results, successes, affine_transform_baselines,
+    def process_results(self, model, results, successes, affine_transform_baselines,
                         transform_matrices):
         """
         Determines success (or not), chooses best (if MPI or multiple starts)
@@ -414,13 +414,16 @@ class Profile(Profiler, CovmatSampler):
             i_min: int = np.argmin(mins)  # type: ignore
         else:
             i_min = 0
-        self.result = results[i_min]
+        result = results[i_min]
+        # Store results for profiled point
+        self.results.append(result)
+        self._affine_transform_baselines.append(affine_transform_baselines[i_min])
         self._affine_transform_baseline = affine_transform_baselines[i_min]
         self._inv_affine_transform_matrix = transform_matrices[i_min]
         if not any(successes):
             raise LoggedError(
                 self.log, "Minimization failed! Here is the raw result object:\n%s",
-                str(self.result))
+                str(result))
         elif not all(successes):
             self.log.warning('Some minimizations failed!')
         elif len(results) > 1:
@@ -430,11 +433,11 @@ class Profile(Profiler, CovmatSampler):
                 self.log.warning('Big spread in minima: %r', mins)
             elif max(mins) - min(mins) > 0.2:
                 self.log.warning('Modest spread in minima: %r', mins)
-        logp_min = -np.array(getattr(self.result, evals_attr_))
-        x_min = self.inv_affine_transform(self.result.x)
+        logp_min = -np.array(getattr(result, evals_attr_))
+        x_min = self.inv_affine_transform(result.x)
         self.log.info("-log(%s) minimized to %g",
                       "likelihood" if self.ignore_prior else "posterior", -logp_min)
-        recomputed_post_min = self.model.logposterior(x_min, cached=False)
+        recomputed_post_min = model.logposterior(x_min, cached=False)
         recomputed_logp_min = (recomputed_post_min.loglike if self.ignore_prior
                                else recomputed_post_min.logpost)
         if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
@@ -443,23 +446,25 @@ class Profile(Profiler, CovmatSampler):
                           "likelihood is stochastic or large numerical error? "
                           "Recomputed min: %g (was %g) at %r",
                 recomputed_logp_min, logp_min, x_min)
-        self.minimum = OnePoint(self.model, self.output, name="",
+        minimum = OnePoint(model, self.output, name="",
                                 extension=get_collection_extension(self.ignore_prior))
-        self.minimum.add(x_min, derived=recomputed_post_min.derived,
+        minimum.add(x_min, derived=recomputed_post_min.derived,
                          logpost=recomputed_post_min.logpost,
                          logpriors=recomputed_post_min.logpriors,
                          loglikes=recomputed_post_min.loglikes)
+        minimum.data.insert(0, self.profiled_param, model.parameterization.constant_params()[self.profiled_param])
+        # Add minimum to collection
+        self.minima._append(minimum)
         self.log.info(
-            "Parameter values at minimum:\n%s", self.minimum.data.to_string())
-        self.minimum.out_update()
-        self.dump_getdist()
+            "Parameter values at minimum:\n%s", minimum.data.to_string())
         if len(results) > 1:
             all_mins = {
                 f"{i}": (getattr(res[0], evals_attr_), res[1])
                 for i, res in enumerate(zip(results, successes))
             }
-            self.full_set_of_mins = all_mins
-            self.log.info("Full set of minima:\n%s", self.full_set_of_mins)
+            full_set_of_mins = all_mins
+            self.log.info("Full set of minima:\n%s", full_set_of_mins)
+            self.full_sets_of_mins.append(full_set_of_mins)
 
     def products(self):
         r"""
