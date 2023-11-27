@@ -72,7 +72,6 @@ def test_run_profile(tmpdir):
                                             'seed': 2}},
                        "output": os.path.join(tmpdir, 'testchain')}
     run(info, force=True)
-
     min_info: InputDict = dict(info, sampler={'profile': {
                                                     "profiled_param": "c",
                                                    "profiled_values": profiled_values
