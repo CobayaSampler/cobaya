@@ -1,5 +1,14 @@
-# Default arguments for the -logposterior/chi^2 minimizer
+# Default arguments for the -logposterior/chi^2 profiler
 
+# String identifying the profiled parameter
+profiled_param: # (e.g. some CAMB parameter as "logA", "ns", "tau")
+# Values of the profiled parameter where to perform the minimization
+profiled_values: # list of values
+# Alternative: starting point, end point and number of steps (note that end point is included)
+# If both are given, the list of values is used
+start: # float value where to start the profile
+stop: # float value where to stop the profile
+steps: # integer number of steps
 # Method: bobyqa|scipy
 method: bobyqa
 # Minimizes the full posterior (False) or just the likelihood (True)
