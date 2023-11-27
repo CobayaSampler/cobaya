@@ -32,6 +32,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         stop_at_error: Optional[bool] = None,
         resume: Optional[bool] = None, force: Optional[bool] = None,
         minimize: Optional[bool] = None,
+        profile: Optional[bool] = None,
         no_mpi: bool = False, test: Optional[bool] = None,
         override: Optional[InputDict] = None,
         ) -> Tuple[InputDict, Union[Sampler, PostResult]]:
@@ -47,6 +48,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     :param resume: continue an existing run
     :param force: overwrite existing output if it exists
     :param minimize: if true, ignores the sampler and runs default minimizer
+    :param profile: if true, ignores the sampler and runs the profiler
     :param no_mpi: run without MPI
     :param test: only test initialization rather than actually running
     :param override: option dictionary to merge into the input one, overriding settings
@@ -62,7 +64,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     with mpi.ProcessState("run"):
         flags = {packages_path_input: packages_path, "debug": debug,
                  "stop_at_error": stop_at_error, "resume": resume, "force": force,
-                 "minimize": minimize, "test": test}
+                 "minimize": minimize, "profile": profile, "test": test}
         info: InputDict = load_info_overrides(
             info_or_yaml_or_file, override or {}, **flags)
         logger_setup(info.get("debug"))
@@ -74,6 +76,11 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 if which_sampler.lower() != "minimize":
                     info["sampler"] = {"minimize": None}
                     which_sampler = "minimize"
+            if info.get("profile"):  # type: ignore
+                # Preserve options if "profile" was already the sampler
+                if which_sampler.lower() != "profile":
+                    info["sampler"] = {"profile": None}
+                    which_sampler = "profile"
         except (KeyError, TypeError) as excpt:
             if not info.get("post"):
                 raise LoggedError(
@@ -175,6 +182,10 @@ def run_script(args=None):
                         help="Initialize model and sampler, and exit.", **trueNone_kwargs)
     parser.add_argument("-M", "--minimize",
                         help=("Replaces the sampler in the input and runs a minimization "
+                              "process (incompatible with post-processing)."),
+                        **trueNone_kwargs)
+    parser.add_argument("-P", "--profile",
+                        help=("Replaces the sampler in the input and runs a profiling "
                               "process (incompatible with post-processing)."),
                         **trueNone_kwargs)
     parser.add_argument("--version", action="version", version=get_version())
