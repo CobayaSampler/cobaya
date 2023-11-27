@@ -301,95 +301,99 @@ class Profile(Profiler, CovmatSampler):
                        self._bounds[:, 0], self._bounds[:, 1])
 
     def run(self):
-        """
-        Runs minimization functions
-        """
-        results = []
-        successes = []
+        """Runs multiple minimizations to profile the likelihood/posterior."""
+        for idx in range(self.steps):
+            results = []
+            successes = []
 
-        def minuslogp_transf(x):
-            return -self.logp(self.inv_affine_transform(x))
+            def minuslogp_transf(x):
+                return -self.logps[idx](self.inv_affine_transform(x))
 
-        for i, initial_point in enumerate(self.initial_points):
-            self.log.info("Starting run %d/%d", i + 1, len(self.initial_points))
-            self.log.debug("Starting point: %r", initial_point)
-            self._affine_transform_baseline = initial_point
-            initial_point = self.affine_transform(initial_point)
-            np.testing.assert_allclose(initial_point, np.zeros(initial_point.shape))
-            bounds = np.array(
-                [self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
-            try:
-                # Configure method
-                if self.method.lower() == "bobyqa":
-                    self.kwargs = {
-                        "objfun": minuslogp_transf,
-                        "x0": initial_point,
-                        "bounds": np.array(list(zip(*bounds))),
-                        "maxfun": self.max_iter,
-                        "rhobeg": 1.,
-                        "do_logging": self.is_debug()}
-                    self.kwargs = recursive_update(self.kwargs,
-                                                   self.override_bobyqa or {})
-                    self.log.debug("Arguments for pybobyqa.solve:\n%r",
-                                   {k: v for k, v in self.kwargs.items() if
-                                    k != "objfun"})
-                    result = pybobyqa.solve(**self.kwargs)
-                    success = result.flag == result.EXIT_SUCCESS
-                    if not success:
-                        self.log.error(
-                            "Finished unsuccessfully. Reason: %s",
-                            _bobyqa_errors[result.flag]
-                        )
-                elif self.method.lower() == "iminuit":
-                    try:
-                        import iminuit
-                    except ImportError:
-                        raise LoggedError(
-                            self.log, "You need to install iminuit to use the "
-                                      "'iminuit' minimizer. Try 'pip install iminuit'.")
-                    self.kwargs = {
-                        "fun": minuslogp_transf,
-                        "x0": initial_point,
-                        "bounds": bounds,
-                        "options": {
+            self.log.info("Running profiled point %d out of %d (%s = %s).", idx + 1, len(self.profiled_values), self.profiled_param, self.profiled_values[idx])
+            for i, initial_point in enumerate(self.profiled_initial_points[idx]):
+                self.log.info("Starting run %d/%d", i + 1, len(self.initial_points))
+                self.log.debug("Starting point: %r", initial_point)
+                self._affine_transform_baseline = initial_point
+                initial_point = self.affine_transform(initial_point)
+                np.testing.assert_allclose(initial_point, np.zeros(initial_point.shape))
+                bounds = np.array(
+                    [self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
+                try:
+                    # Configure method
+                    if self.method.lower() == "bobyqa":
+                        self.kwargs = {
+                            "objfun": minuslogp_transf,
+                            "x0": initial_point,
+                            "bounds": np.array(list(zip(*bounds))),
                             "maxfun": self.max_iter,
-                            "disp": self.is_debug()}}
-                    self.kwargs = recursive_update(
-                        self.kwargs, self.override_iminuit or {}
-                    )
-                    self.log.debug(
-                        "Arguments for iminuit.Minimize:\n%r",
-                        {k: v for k, v in self.kwargs.items() if k != "fun"},
-                    )
-                    result = iminuit.minimize(**self.kwargs, method="migrad")
-                    if not (success := result.success):
-                        self.log.error(result.message)
-                    if mpi.get_mpi_size() > 1:
-                        result.pop("minuit")  # problem with pickle/mpi?
-                else:
-                    self.kwargs = {
-                        "fun": minuslogp_transf,
-                        "x0": initial_point,
-                        "bounds": bounds,
-                        "options": {
-                            "maxiter": self.max_iter,
-                            "disp": self.is_debug()}}
-                    self.kwargs = recursive_update(self.kwargs, self.override_scipy or {})
-                    self.log.debug("Arguments for scipy.optimize.Minimize:\n%r",
-                                   {k: v for k, v in self.kwargs.items() if k != "fun"})
-                    result = optimize.minimize(**self.kwargs)
-                    if not (success := result.success):
-                        self.log.error("Finished unsuccessfully.")
-                if success:
-                    self.log.info("Run %d/%d converged.", i + 1, len(self.initial_points))
-            except Exception as excpt:
-                self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
-                raise excpt
-            results += [result]
-            successes += [success]
-        self.process_results(*mpi.zip_gather(
-            [results, successes, self.initial_points,
-             [self._inv_affine_transform_matrix] * len(self.initial_points)]))
+                            "rhobeg": 1.,
+                            "do_logging": self.is_debug()}
+                        self.kwargs = recursive_update(self.kwargs,
+                                                    self.override_bobyqa or {})
+                        self.log.debug("Arguments for pybobyqa.solve:\n%r",
+                                    {k: v for k, v in self.kwargs.items() if
+                                        k != "objfun"})
+                        result = pybobyqa.solve(**self.kwargs)
+                        success = result.flag == result.EXIT_SUCCESS
+                        if not success:
+                            self.log.error(
+                                "Finished unsuccessfully. Reason: %s",
+                                _bobyqa_errors[result.flag]
+                            )
+                    elif self.method.lower() == "iminuit":
+                        try:
+                            import iminuit
+                        except ImportError:
+                            raise LoggedError(
+                                self.log, "You need to install iminuit to use the "
+                                        "'iminuit' minimizer. Try 'pip install iminuit'.")
+                        self.kwargs = {
+                            "fun": minuslogp_transf,
+                            "x0": initial_point,
+                            "bounds": bounds,
+                            "options": {
+                                "maxfun": self.max_iter,
+                                "disp": self.is_debug()}}
+                        self.kwargs = recursive_update(
+                            self.kwargs, self.override_iminuit or {}
+                        )
+                        self.log.debug(
+                            "Arguments for iminuit.Minimize:\n%r",
+                            {k: v for k, v in self.kwargs.items() if k != "fun"},
+                        )
+                        result = iminuit.minimize(**self.kwargs, method="migrad")
+                        if not (success := result.success):
+                            self.log.error(result.message)
+                        if mpi.get_mpi_size() > 1:
+                            result.pop("minuit")  # problem with pickle/mpi?
+                    else:
+                        self.kwargs = {
+                            "fun": minuslogp_transf,
+                            "x0": initial_point,
+                            "bounds": bounds,
+                            "options": {
+                                "maxiter": self.max_iter,
+                                "disp": self.is_debug()}}
+                        self.kwargs = recursive_update(self.kwargs, self.override_scipy or {})
+                        self.log.debug("Arguments for scipy.optimize.Minimize:\n%r",
+                                    {k: v for k, v in self.kwargs.items() if k != "fun"})
+                        result = optimize.minimize(**self.kwargs)
+                        if not (success := result.success):
+                            self.log.error("Finished unsuccessfully.")
+                    if success:
+                        self.log.info("Run %d/%d converged.", i + 1, len(self.profiled_initial_points[idx]))
+                except Exception as excpt:
+                    self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
+                    raise excpt
+                results += [result]
+                successes += [success]
+
+            self.process_results(self.models[idx], *mpi.zip_gather(
+                [results, successes, self.profiled_initial_points[idx],
+                [self._inv_affine_transform_matrix] * len(self.profiled_initial_points[idx])]))
+            self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
+
+        self.minima.out_update()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
                         "result", "minimum", "full_set_of_mins"))
