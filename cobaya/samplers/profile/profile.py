@@ -1,10 +1,10 @@
 r"""
-.. module:: samplers.Minimize
+.. module:: samplers.Profile
 
-:Synopsis: Posterior/likelihood *maximization* (i.e. -log(post) and chi^2 minimization).
-:Author: Jesus Torrado
+:Synopsis: Posterior/likelihood *profiling*.
+:Author: Giacomo Galloni
 
-This is a **maximizer** for posteriors or likelihoods, based on
+This is a **profiler** for posteriors or likelihoods, based on
 `scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
  `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_, and
  `iminuit <https://iminuit.readthedocs.io/>`_.
@@ -45,22 +45,30 @@ posterior to rescale the variables.
 
 To take advantage of a previous run with a Monte Carlo sampler, either:
 
-- change the ``sampler`` to ``minimize`` in the input file,
+- change the ``sampler`` to ``profile`` in the input file,
 
 - or, if running from the shell, repeat the ``cobaya-run`` command used for the original
-  run, adding the ``--minimize`` flag.
+  run, adding the ``--profile`` flag.
 
 When called from a Python script, Cobaya's ``run`` function returns the updated info
 and the products described below in the method
-:func:`samplers.minimize.Minimize.products` (see below).
+:func:`samplers.profile.Profile.products` (see below).
 
-If text output is requested, it produces two different files:
+Independently from the minimizer used, the profiler will run a sequential for loop over
+the requested profiled points (depending on the set of likelihoods, this can be very fast
+or very slow). At the end, it will pick the best among the results and store them in a
+single collection representing the profile.
 
-- ``[output prefix].minimum.txt``, in
+If text output is requested, it produces two different files depending on the settings:
+
+- if the priors are ignored, ``[output prefix].like_profile.txt``, in
   :ref:`the same format as Cobaya samples <output_format>`,
-  but containing a single line.
+  but containing a number of lines equal to the requested profiled points.
 
-- ``[output prefix].minimum``, the equivalent **GetDist-formatted** file.
+- if the priors are not ignored, ``[output prefix].post_profile.txt``, the equivalent **GetDist-formatted** file.
+
+Note that the profiled parameter will appear together with the others, but will be set
+to the requested values throughout the profiling.
 
 .. warning::
 
@@ -70,8 +78,9 @@ If text output is requested, it produces two different files:
    :math:`-2` times the sum of the individual :math:`\chi^2` (``chi2__``, with double
    underscore) in the table that follows these first lines.
 
-It is recommended to run a couple of parallel MPI processes:
-it will finally pick the best among the results.
+Since typically the goal of a profiling is to get the most accurate parameter
+behavior as possible, it is recommended to run a couple of parallel MPI processes:
+this will help in finding the global minimum in each point. Still, it may be required to modify the default settings of the minimizers (see below).
 
 .. warning::
 
@@ -87,11 +96,7 @@ it will finally pick the best among the results.
 Maximizing the likelihood instead of the posterior
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To maximize the likelihood, add ``ignore_prior: True`` in the ``minimize`` input block.
-
-When producing text output, the generated files are named ``.bestfit[.txt]`` instead of
-``minimum``, and contain the best-fit (maximum of the likelihood) instead of the MAP
-(maximum of the posterior).
+To maximize the likelihood, add ``ignore_prior: True`` in the ``profile`` input block.
 
 """
 
