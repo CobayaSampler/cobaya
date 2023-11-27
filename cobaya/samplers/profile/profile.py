@@ -470,88 +470,42 @@ class Profile(Profiler, CovmatSampler):
         r"""
         Returns a dictionary containing:
 
-        - ``minimum``: :class:`OnePoint` that maximizes the posterior or likelihood
-          (depending on ``ignore_prior``).
+        - ``minima``: :class:`SampleCollection` that maximizes the posterior or likelihood
+          (depending on ``ignore_prior``) in each profiled point.
 
-        - ``result_object``: instance of results class of
+        - ``profiled_param``: name of the profiled parameter.
+
+        - ``profiled_values``: requested values of the profiled parameter where the
+          minimization was performed.        
+
+        - ``results_object``: instances of results class of
           `scipy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
           or `pyBOBYQA
-          <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_.
+          <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_ 
+          or `iMinuit <https://iminuit.readthedocs.io/en/stable/citation.html>`.
 
-        - ``full_set_of_mins``: dictionary of minima obtained from multiple initial
-          points. For each it stores the value of the minimized function and a boolean
-          indicating whether the minimization was successful or not.
-          ``None`` if only one initial point was run.
+        - ``full_sets_of_mins``: dictionaries of minima obtained from multiple initial
+          points and multiple profiled points. For each it stores the value of the
+          minimized function and a boolean indicating whether the minimization was
+          successful or not.
+          This returns an empty list if only one initial point was run.
 
         - ``M``: inverse of the affine transform matrix (see below).
           ``None`` if no transformation applied.
 
-        - ``X0``: offset of the affine transform matrix (see below)
+        - ``X0s``: offsets of the affine transform matrix (see below)
           ``None`` if no transformation applied.
 
-        If non-trivial ``M`` and ``X0`` are returned, this means that the minimizer has
-        been working on an affine-transformed parameter space :math:`x^\prime`, from which
-        the real space points can be obtained as :math:`x = M x^\prime + X_0`.
+        If non-trivial ``M`` and ``X0s`` are returned, this means that the minimizer has
+        been working on an affine-transformed parameter space :math:`x^\prime`. Indicating with ``idx`` the index spanning the profiled points, the real space points can be obtained as :math:`x = M x^\prime + X_0^{\rm idx}`.
         This inverse transformation needs to be applied to the coordinates appearing
-        inside the ``result_object``.
+        inside the ``results_object``.
         """
-        return {"minimum": self.minimum, "result_object": self.result,
-                "full_set_of_mins": self.full_set_of_mins,
+        return {"minima": self.minima, "profiled_param": self.profiled_param,
+                "profiled_values": self.profiled_values, "result_objects": self.results,
+                "full_sets_of_mins": self.full_sets_of_mins,
                 "M": self._inv_affine_transform_matrix,
-                "X0": self._affine_transform_baseline}
-
-    def getdist_point_text(self, params, weight=None, minuslogpost=None):
-        """Creates the multi-line string containing the minumum in GetDist format."""
-        lines = []
-        if weight is not None:
-            lines.append('  weight    = %s' % weight)
-        if minuslogpost is not None:
-            lines.append(' -log(Like) = %s' % minuslogpost)
-            lines.append('  chi-sq    = %s' % (2 * minuslogpost))
-        lines.append('')
-        labels = self.model.parameterization.labels()
-        label_list = list(labels)
-        if hasattr(params, 'chi2_names'):
-            label_list += params.chi2_names
-        width = max(len(lab) for lab in label_list) + 2
-
-        def add_section(pars):
-            for p, val in pars:
-                lab = labels.get(p, p)
-                num = label_list.index(p) + 1
-                if isinstance(val, (float, np.floating)) and len(str(val)) > 10:
-                    lines.append("%5d  %-17.9e %-*s %s" % (num, val, width, p, lab))
-                else:
-                    lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
-
-        add_section(
-            [(p, params[p]) for p in self.model.parameterization.sampled_params()])
-        lines.append('')
-        add_section([[p, value] for p, value in
-                     self.model.parameterization.constant_params().items()])
-        lines.append('')
-        add_section(
-            [[p, params[p]] for p in self.model.parameterization.derived_params()])
-        if hasattr(params, 'chi2_names'):
-            labels.update(
-                {p: r'\chi^2_{\rm %s}' % (
-                    undo_chi2_name(p).replace("_", r"\ "))
-                 for p in params.chi2_names}
-            )
-            add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
-        return "\n".join(lines)
-
-    def dump_getdist(self):
-        """Writes the GetDist format point."""
-        if not self.output:
-            return
-        getdist_bf = self.getdist_point_text(self.minimum,
-                                             minuslogpost=self.minimum['minuslogpost'])
-        out_filename = os.path.join(
-            self.output.folder,
-            self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])
-        with open(out_filename, 'w', encoding="utf-8") as f:
-            f.write(getdist_bf)
+                "X0s": self._affine_transform_baselines}
 
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
