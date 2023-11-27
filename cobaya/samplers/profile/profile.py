@@ -111,8 +111,8 @@ import pybobyqa
 from pybobyqa import controller
 
 # Local
-from cobaya.sampler import Minimizer, Profiler
-from cobaya.conventions import undo_chi2_name
+from cobaya.model import get_model
+from cobaya.sampler import Profiler
 from cobaya.collection import OnePoint, SampleCollection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
@@ -124,7 +124,7 @@ evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
 # Conventions conventions
-getdist_ext_ignore_prior = {True: ".like_profile", False: ".MAP_profile"}
+getdist_ext_ignore_prior = {True: ".like_profile", False: ".post_profile"}
 get_collection_extension = (
     lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
 
@@ -150,9 +150,10 @@ class Profile(Profiler, CovmatSampler):
     file_base_name = 'profile'
 
     profiled_param: str
-    start: float
-    stop: float
-    steps: int
+    profiled_values: list
+    start: Optional[float]
+    stop: Optional[float]
+    steps: Optional[int]
     ignore_prior: bool
     confidence_for_unbounded: float
     method: str
@@ -172,68 +173,83 @@ class Profile(Profiler, CovmatSampler):
                               self.method, list(evals_attr))
         self.mpi_info("Initializing")
         self.max_iter = int(read_dnumber(self.max_evals, self.model.prior.d()))
-        # Configure target
-        method = self.model.loglike if self.ignore_prior else self.model.logpost
-        kwargs = {"make_finite": True}
-        if self.ignore_prior:
-            kwargs["return_derived"] = False
-        self.logp = lambda x: method(x, **kwargs)
+         # Get profiled parameter, its values and its index in the sampled parameters
+        self.index_profiled_param = list(self.model.parameterization.sampled_params()).index(self.profiled_param)
+        self.profiled_values = self.get_profiled_values()
+        self.steps = len(self.profiled_values)
+        # Configure targets and store models
+        models = []
+        logps = []
+        for value in self.profiled_values:
+            model = self.get_profiled_model(value)
+            models.append(model)
+            logps.append(self.get_logp(model))
+        self.logps = logps
+        self.models = models
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
-        self.initial_points = []
         assert self.best_of > 0
         num_starts = int(np.ceil(self.best_of / mpi.size()))
         if self.output:
             files = self.output.find_collections()
         else:
             files = None
-        for start in range(num_starts):
-            initial_point = None
-            if files:
-                collection_in: Optional[SampleCollection]
-                if mpi.more_than_one_process() or num_starts > 1:
-                    index = 1 + mpi.rank() * num_starts + start
-                    if index <= len(files):
-                        collection_in = SampleCollection(
-                            self.model, self.output, name=str(index), resuming=True)
+
+        self.profiled_initial_points = {}
+        for idx in range(self.steps):
+            initial_points = []
+            for start in range(num_starts):
+                initial_point = None
+                if files:
+                    collection_in: Optional[SampleCollection]
+                    if mpi.more_than_one_process() or num_starts > 1:
+                        index = 1 + mpi.rank() * num_starts + start
+                        if index <= len(files):
+                            collection_in = SampleCollection(
+                                self.models[idx], self.output, name=str(index), resuming=True)
+                        else:
+                            collection_in = None
                     else:
-                        collection_in = None
-                else:
-                    collection_in = self.output.load_collections(self.model,
-                                                                 concatenate=True)
-                if collection_in:
-                    initial_point = (collection_in.bestfit() if self.ignore_prior
-                                     else collection_in.MAP())
-                    initial_point = initial_point[
-                        list(self.model.parameterization.sampled_params())].values
+                        collection_in = self.output.load_collections(self.models[idx],
+                                                                    concatenate=True)
+                    if collection_in:
+                        initial_point = (collection_in.bestfit() if self.ignore_prior
+                                        else collection_in.MAP())
+                        initial_point = initial_point[
+                            list(self.models[idx].parameterization.sampled_params())].values
+                        self.log.info(
+                            "Run %d/%d will start from %s of previous sample:",
+                            start + 1, num_starts, "best fit" if self.ignore_prior else "MAP"
+                        )
+                        # Compute covmat if input but no .covmat file (e.g. with PolyChord)
+                        # Prefer old over `covmat` definition in yaml (same as MCMC)
+                        self.covmat = collection_in.cov(derived=False)
+                        self.covmat_params = list(
+                            self.models[idx].parameterization.sampled_params())
+                if initial_point is None:
+                    for _ in range(self.max_iter // 10 + 5):
+                        initial_point = self.models[idx].prior.reference(random_state=self._rng)
+                        if np.isfinite(self.logps[idx](initial_point)):
+                            break
+                    else:
+                        raise LoggedError(self.log, "Could not find random starting point "
+                                                    "giving finite posterior")
                     self.log.info(
-                        "Run %d/%d will start from %s of previous sample:",
-                        start + 1, num_starts, "best fit" if self.ignore_prior else "MAP"
+                        "Run %d/%d (profiled point %d out of %d) will start from random initial point:",
+                        start + 1, num_starts, idx + 1, self.steps
                     )
-                    # Compute covmat if input but no .covmat file (e.g. with PolyChord)
-                    # Prefer old over `covmat` definition in yaml (same as MCMC)
-                    self.covmat = collection_in.cov(derived=False)
-                    self.covmat_params = list(
-                        self.model.parameterization.sampled_params())
-            if initial_point is None:
-                for _ in range(self.max_iter // 10 + 5):
-                    initial_point = self.model.prior.reference(random_state=self._rng)
-                    if np.isfinite(self.logp(initial_point)):
-                        break
-                else:
-                    raise LoggedError(self.log, "Could not find random starting point "
-                                                "giving finite posterior")
                 self.log.info(
-                    "Run %d/%d will start from random initial point:",
-                    start + 1, num_starts
-                )
-            self.log.info(
-                dict(zip(self.model.parameterization.sampled_params(), initial_point)))
-            self.initial_points.append(initial_point)
-        self._bounds = self.model.prior.bounds(
+                    dict(zip(self.models[idx].parameterization.sampled_params(), initial_point)))
+                initial_points.append(initial_point)
+            self.profiled_initial_points[idx] = initial_points
+            
+        self._bounds = self.models[0].prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
         covmat = self._load_covmat(prefer_load_old=self.output)[0]
+        # Remove profiled parameter from covmat
+        covmat = np.delete(covmat, self.index_profiled_param, axis=0)  # delete row
+        covmat = np.delete(covmat, self.index_profiled_param, axis=1)  # delete column
         # scale by conditional parameter widths (since not using correlation structure)
         scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
                             (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
@@ -246,9 +262,33 @@ class Profile(Profiler, CovmatSampler):
         self._affine_transform_baseline = None
         self._scales = scales
         self.kwargs = None
-        self.result = None
-        self.minimum = None
-        self.full_set_of_mins = None
+        self.results = []
+        self.minima = SampleCollection(self.model, self.output, name="", extension=get_collection_extension(self.ignore_prior))
+        self.full_sets_of_mins = []
+        self._affine_transform_baselines = []
+
+    def get_profiled_values(self):
+        """
+        Returns the values of the profiled parameter at which the likelihood/posterior
+        must be evaluated.
+        """
+        if self.profiled_values is not None:
+            return self.profiled_values
+        return np.linspace(self.start, self.stop, self.steps, endpoint=True)
+
+    def get_profiled_model(self, value):
+        """Returns a new model with the profiled parameter fixed to a given value."""
+        new_model = self.model.info()
+        new_model["params"][self.profiled_param] = {"value": value}
+        return get_model(new_model)
+
+    def get_logp(self, model):
+        """Returns the logp function of the model."""
+        method = model.loglike if self.ignore_prior else model.logpost
+        kwargs = {"make_finite": True}
+        if self.ignore_prior:
+            kwargs["return_derived"] = False
+        return lambda x: method(x, **kwargs)
 
     def affine_transform(self, x):
         """Transforms a point into the search space."""
