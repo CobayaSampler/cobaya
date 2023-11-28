@@ -265,6 +265,7 @@ class Profile(Profiler, CovmatSampler):
         self.results = []
         self.minima = SampleCollection(self.model, self.output, name="", extension=get_collection_extension(self.ignore_prior))
         self.full_sets_of_mins = []
+        self._affine_transform_baselines = []
 
     def get_profiled_values(self):
         """
