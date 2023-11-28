@@ -124,7 +124,7 @@ evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
 # Conventions conventions
-getdist_ext_ignore_prior = {True: ".like_profile", False: ".post_profile"}
+getdist_ext_ignore_prior = {True: ".like", False: ".post"}
 get_collection_extension = (
     lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
 
@@ -515,8 +515,7 @@ class Profile(Profiler, CovmatSampler):
         Returns a list of tuples `(regexp, root)` of output files potentially produced.
         If `root` in the tuple is `None`, `output.folder` is used.
 
-        If `minimal=True`, returns regexp's for the files that should really not be there
-        when we are not resuming.
+        If `minimal=True`, returns regexp's for the files that should really not be there when we are not resuming.
         """
         ignore_prior = bool(info.get("ignore_prior", False))
         ext_collection = get_collection_extension(ignore_prior)

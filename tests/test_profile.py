@@ -50,7 +50,7 @@ def test_profile_gaussian(tmpdir):
                                                    "profiled_param": "c",
                                                    "profiled_values": profiled_values,
                                                    "method": method}}}
-        products = run(info)[1].products()
+        products = run(info, force=True)[1].products()
         errors = abs(loglikes_vals - -products["minima"]["chi2"])
         assert all(error < 0.01 for error in errors)
 
@@ -60,7 +60,7 @@ def test_profile_gaussian(tmpdir):
         if mpi.is_main_process():
             model = get_model(info)
             output = get_output(prefix=info.get("output"), force=False)
-            res = SampleCollection(model, output, load=True, name="like_profile")
+            res = SampleCollection(model, output, load=True, name="like")
             assert all(np.isclose(res["chi2"], products["minima"]["chi2"]))
             res = res.data.to_dict()
             for p, v in list(res.items())[:-2]:

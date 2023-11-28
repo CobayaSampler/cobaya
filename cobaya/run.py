@@ -96,6 +96,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             info["output"] = output or None
         # 1. Prepare output driver, if requested by defining an output prefix
         infix = "minimize" if which_sampler == "minimize" else None
+        infix = "profile" if which_sampler == "profile" else None
         with get_output(prefix=info.get("output"), resume=info.get("resume"),
                         force=info.get("force"), infix=infix) as out:
             # 2. Update the input info with the defaults for each component
