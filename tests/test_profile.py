@@ -50,7 +50,7 @@ def test_profile_gaussian(tmpdir):
                                                    "profiled_param": "c",
                                                    "profiled_values": profiled_values,
                                                    "method": method}}}
-        products = run(info, force=True)[1].products()
+        products = run(info)[1].products()
         errors = abs(loglikes_vals - -products["minima"]["chi2"])
         assert all(error < 0.01 for error in errors)
 

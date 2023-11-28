@@ -124,7 +124,7 @@ evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
 # Conventions conventions
-getdist_ext_ignore_prior = {True: ".like", False: ".post"}
+getdist_ext_ignore_prior = {True: ".like_profile", False: ".post_profile"}
 get_collection_extension = (
     lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
 

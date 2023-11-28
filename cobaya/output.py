@@ -355,7 +355,7 @@ class Output(HasLogger, OutputReadOnly):
         self.set_logger(self.name)
         self.lock = FileLock()
         self.force = force
-        if resume and force and prefix and infix != "minimize" and infix != "profile":
+        if resume and force and prefix and (infix != "minimize" or infix != "profile"):
             # No resume and force at the same time (if output)
             raise LoggedError(
                 self.log,
@@ -404,6 +404,7 @@ class Output(HasLogger, OutputReadOnly):
     @mpi.root_only
     def delete_infos(self):
         self.check_lock()
+        print([self.file_input, self.file_updated, self.dump_file_updated])
         for f in [self.file_input, self.file_updated, self.dump_file_updated]:
             try:
                 os.remove(f)
