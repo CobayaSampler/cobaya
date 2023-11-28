@@ -68,14 +68,16 @@ def test_profile_gaussian(tmpdir):
 def test_run_profile(tmpdir):
     NoisyCovLike.noise = 0
     info: InputDict = {'likelihood': {'like': NoisyCovLike},
-                       "sampler": {"mcmc": {"Rminus1_stop": 0.5, 'Rminus1_cl_stop': 0.4,
+                       'params': {'c': 0.5},
+                       "sampler": {"mcmc": {"Rminus1_stop": 0.5,
+                                            'Rminus1_cl_stop': 0.4,
                                             'seed': 2}},
                        "output": os.path.join(tmpdir, 'testchain')}
     run(info, force=True)
     min_info: InputDict = dict(info, sampler={'profile': {
-                                                    "profiled_param": "c",
-                                                   "profiled_values": profiled_values
-                                                   }})
+                                                "profiled_param": "c",
+                                                "profiled_values": profiled_values
+                                                }})
     output_info, sampler = run(min_info, force=True)
     # Select third value where c is equal to mean_c
     assert (abs(sampler.products()["minima"]["a"][2] - mean[0]) < 0.01)

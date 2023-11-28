@@ -173,7 +173,7 @@ class Profile(Profiler, CovmatSampler):
                               self.method, list(evals_attr))
         self.mpi_info("Initializing")
         self.max_iter = int(read_dnumber(self.max_evals, self.model.prior.d()))
-         # Get profiled parameter, its values and its index in the sampled parameters
+        # Get profiled parameter, its values and its index in the sampled parameters
         self.index_profiled_param = list(self.model.parameterization.sampled_params()).index(self.profiled_param)
         self.profiled_values = self.get_profiled_values()
         self.steps = len(self.profiled_values)
@@ -242,7 +242,7 @@ class Profile(Profiler, CovmatSampler):
                     dict(zip(self.models[idx].parameterization.sampled_params(), initial_point)))
                 initial_points.append(initial_point)
             self.profiled_initial_points[idx] = initial_points
-            
+
         self._bounds = self.models[0].prior.bounds(
             confidence_for_unbounded=self.confidence_for_unbounded)
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
@@ -311,7 +311,9 @@ class Profile(Profiler, CovmatSampler):
 
             self.log.info("Running profiled point %d out of %d (%s = %s).", idx + 1, len(self.profiled_values), self.profiled_param, self.profiled_values[idx])
             for i, initial_point in enumerate(self.profiled_initial_points[idx]):
-                self.log.info("Starting run %d/%d", i + 1, len(self.initial_points))
+                self.log.info(
+                    "Starting run %d/%d",
+                    i + 1, len(self.self.profiled_initial_points[idx]))
                 self.log.debug("Starting point: %r", initial_point)
                 self._affine_transform_baseline = initial_point
                 initial_point = self.affine_transform(initial_point)
@@ -470,18 +472,18 @@ class Profile(Profiler, CovmatSampler):
         r"""
         Returns a dictionary containing:
 
-        - ``minima``: :class:`SampleCollection` that maximizes the posterior or likelihood
-          (depending on ``ignore_prior``) in each profiled point.
+        - ``minima``: :class:`SampleCollection` that maximizes the posterior
+          or likelihood (depending on ``ignore_prior``) in each profiled point.
 
         - ``profiled_param``: name of the profiled parameter.
 
-        - ``profiled_values``: requested values of the profiled parameter where the
-          minimization was performed.        
+        - ``profiled_values``: requested values of the profiled parameter where
+          the minimization was performed.
 
         - ``results_object``: instances of results class of
           `scipy <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html>`_
           or `pyBOBYQA
-          <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_ 
+          <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/userguide.html>`_
           or `iMinuit <https://iminuit.readthedocs.io/en/stable/citation.html>`.
 
         - ``full_sets_of_mins``: dictionaries of minima obtained from multiple initial
