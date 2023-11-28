@@ -394,6 +394,8 @@ class Profile(Profiler, CovmatSampler):
                 [results, successes, self.profiled_initial_points[idx],
                 [self._inv_affine_transform_matrix] * len(self.profiled_initial_points[idx])]))
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
+        self.log.info("Finished profiling.\nProfiled parameter: %s\nResults: %s",
+                      self.profiled_param, self.minima)
         self.save_results()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
@@ -456,7 +458,6 @@ class Profile(Profiler, CovmatSampler):
         minimum.data.insert(0, self.profiled_param, model.parameterization.constant_params()[self.profiled_param])
         # Add minimum to collection
         self.minima._append(minimum)
-        self.minima.out_update()
         self.log.info(
             "Parameter values at minimum:\n%s", minimum.data.to_string())
         if len(results) > 1:
