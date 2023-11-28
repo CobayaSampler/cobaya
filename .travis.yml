@@ -8,7 +8,7 @@ env:
   global:
     - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
 
-if: (type = pull_request) OR (branch = master) OR (branch =~ ^test.*)
+# if: (type = pull_request) OR (branch = master) OR (branch =~ ^test.*)
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
