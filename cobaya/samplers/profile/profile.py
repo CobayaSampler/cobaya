@@ -146,6 +146,7 @@ _bobyqa_errors = {
         "singular linear system."}
 
 
+
 class Profile(Profiler, CovmatSampler):
     file_base_name = 'profile'
 
@@ -397,8 +398,8 @@ class Profile(Profiler, CovmatSampler):
 
         self.minima.out_update()
 
-    @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
-                        "result", "minimum", "full_set_of_mins"))
+    @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
+                        "results", "minima", "full_sets_of_mins"))
     def process_results(self, model, results, successes, affine_transform_baselines,
                         transform_matrices):
         """
