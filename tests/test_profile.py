@@ -66,7 +66,6 @@ def test_profile_gaussian(tmpdir):
             res = res.data.to_dict()
             for p, v in list(res.items())[:-2]:
                 assert all(np.isclose(products["minima"][p], list(v.values())))
-            res._out_delete()
 
 
 @mpi.sync_errors
