@@ -355,7 +355,7 @@ class Output(HasLogger, OutputReadOnly):
         self.set_logger(self.name)
         self.lock = FileLock()
         self.force = force
-        if resume and force and prefix and (infix != "minimize" or infix != "profile"):
+        if resume and force and prefix and infix != "minimize":
             # No resume and force at the same time (if output)
             raise LoggedError(
                 self.log,
