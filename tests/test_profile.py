@@ -57,15 +57,15 @@ def test_profile_gaussian(tmpdir):
         info['output'] = os.path.join(tmpdir, 'testmin')
         info['force'] = True
         products = run(info, force=True)[1].products()
-        # if mpi.is_main_process():
-        #     model = get_model(info)
-        #     output = get_output(prefix=info.get("output"))
-        #     filename = os.path.join(output.folder, output.prefix + ".like_profile.txt")
-        #     res = SampleCollection(model, output, load=True, file_name=filename)
-        #     assert all(np.isclose(res["chi2"], products["minima"]["chi2"]))
-        #     res = res.data.to_dict()
-        #     for p, v in list(res.items())[:-2]:
-        #         assert all(np.isclose(products["minima"][p], list(v.values())))
+        if mpi.is_main_process():
+            model = get_model(info)
+            output = get_output(prefix=info.get("output"))
+            filename = os.path.join(output.folder, output.prefix + ".like_profile.txt")
+            res = SampleCollection(model, output, load=True, file_name=filename)
+            assert all(np.isclose(res["chi2"], products["minima"]["chi2"]))
+            res = res.data.to_dict()
+            for p, v in list(res.items())[:-2]:
+                assert all(np.isclose(products["minima"][p], list(v.values())))
 
 
 @mpi.sync_errors
