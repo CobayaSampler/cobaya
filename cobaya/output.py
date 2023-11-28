@@ -404,7 +404,6 @@ class Output(HasLogger, OutputReadOnly):
     @mpi.root_only
     def delete_infos(self):
         self.check_lock()
-        print([self.file_input, self.file_updated, self.dump_file_updated])
         for f in [self.file_input, self.file_updated, self.dump_file_updated]:
             try:
                 os.remove(f)

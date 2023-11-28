@@ -114,7 +114,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
     #     info_new.update({"minimize": aux})
     #     info_old = {}
     #     keep_old = {}
-    if list(info_old) != list(info_new) and list(info_new) == ["minimize"]:
+    if list(info_old) != list(info_new) and (list(info_new) == ["minimize"] or list(info_new) == ["profile"]):
         return
     if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
@@ -252,7 +252,7 @@ class Sampler(CobayaComponent):
             self.mpi_warning("No sampled parameters requested! "
                              "This will fail for non-mock samplers.")
         # Load checkpoint info, if resuming
-        if self.output.is_resuming() and not isinstance(self, Minimizer):
+        if self.output.is_resuming() and not isinstance(self, Minimizer) and not isinstance(self, Profiler):
             checkpoint_info = None
             if mpi.is_main_process():
                 try:
@@ -269,7 +269,7 @@ class Sampler(CobayaComponent):
             if checkpoint_info:
                 self.set_checkpoint_info(checkpoint_info)
                 self.mpi_info("Resuming from previous sample!")
-        elif not isinstance(self, Minimizer) and mpi.is_main_process():
+        elif not isinstance(self, Minimizer) and not isinstance(self, Profiler) and mpi.is_main_process():
             try:
                 output.delete_file_or_folder(self.checkpoint_filename())
                 output.delete_file_or_folder(self.progress_filename())
