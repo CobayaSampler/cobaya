@@ -206,11 +206,11 @@ class Profile(Profiler, CovmatSampler):
                         index = 1 + mpi.rank() * num_starts + start
                         if index <= len(files):
                             collection_in = SampleCollection(
-                                self.models[idx], self.output, name=str(index), resuming=True)
+                                self.model, self.output, name=str(index), resuming=True)
                         else:
                             collection_in = None
                     else:
-                        collection_in = self.output.load_collections(self.models[idx],
+                        collection_in = self.output.load_collections(self.model,
                                                                     concatenate=True)
                     if collection_in:
                         initial_point = (collection_in.bestfit() if self.ignore_prior
@@ -313,7 +313,7 @@ class Profile(Profiler, CovmatSampler):
             for i, initial_point in enumerate(self.profiled_initial_points[idx]):
                 self.log.info(
                     "Starting run %d/%d",
-                    i + 1, len(self.self.profiled_initial_points[idx]))
+                    i + 1, len(self.profiled_initial_points[idx]))
                 self.log.debug("Starting point: %r", initial_point)
                 self._affine_transform_baseline = initial_point
                 initial_point = self.affine_transform(initial_point)
