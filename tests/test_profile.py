@@ -72,7 +72,6 @@ def test_profile_gaussian(tmpdir):
 def test_run_profile(tmpdir):
     NoisyCovLike.noise = 0
     info: InputDict = {'likelihood': {'like': NoisyCovLike},
-                    #    'params': {'c': 0.5},
                        "sampler": {"mcmc": {"Rminus1_stop": 0.5,
                                             'Rminus1_cl_stop': 0.4,
                                             'seed': 2}},
