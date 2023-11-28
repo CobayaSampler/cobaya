@@ -29,6 +29,7 @@ profiled_values = [
      mean_c + 2 * sigma_c
 ]
 
+
 class NoisyCovLike(Likelihood):
     params = {'a': [0, 1, 0.5, 0.3, 0.08], 'b': [0, 1, 0.5, 0.3, 0.08],
               'c': [0, 1, 0.5, 0.3, 0.08]}
@@ -43,7 +44,7 @@ class NoisyCovLike(Likelihood):
 def test_profile_gaussian(tmpdir):
     loglikes_vals = [-4, -1, 0, -1, -4]
     for method in reversed(valid_methods):
-        NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
+        NoisyCovLike.noise = 0.001 if method == 'bobyqa' else 0
         info: InputDict = {'likelihood': {'like': NoisyCovLike},
                            "sampler": {"profile": {"ignore_prior": True,
                                                    "profiled_param": "c",
@@ -54,6 +55,7 @@ def test_profile_gaussian(tmpdir):
         assert all(error < 0.01 for error in errors)
 
         info['output'] = os.path.join(tmpdir, 'testmin')
+        info['force'] = True
         products = run(info, force=True)[1].products()
         if mpi.is_main_process():
             model = get_model(info)
@@ -63,6 +65,7 @@ def test_profile_gaussian(tmpdir):
             res = res.data.to_dict()
             for p, v in list(res.items())[:-2]:
                 assert all(np.isclose(products["minima"][p], list(v.values())))
+
 
 @mpi.sync_errors
 def test_run_profile(tmpdir):

@@ -146,7 +146,6 @@ _bobyqa_errors = {
         "singular linear system."}
 
 
-
 class Profile(Profiler, CovmatSampler):
     file_base_name = 'profile'
 
