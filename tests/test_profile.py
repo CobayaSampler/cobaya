@@ -60,7 +60,8 @@ def test_profile_gaussian(tmpdir):
         if mpi.is_main_process():
             model = get_model(info)
             output = get_output(prefix=info.get("output"))
-            res = SampleCollection(model, output, load=True, file_name="like_profile")
+            filename = os.path.join(output.folder, output.prefix + ".like_profile.txt")
+            res = SampleCollection(model, output, load=True, file_name=filename)
             assert all(np.isclose(res["chi2"], products["minima"]["chi2"]))
             res = res.data.to_dict()
             for p, v in list(res.items())[:-2]:
