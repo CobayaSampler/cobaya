@@ -265,7 +265,6 @@ class Profile(Profiler, CovmatSampler):
         self.results = []
         self.minima = SampleCollection(self.model, self.output, name="", extension=get_collection_extension(self.ignore_prior))
         self.full_sets_of_mins = []
-        self._affine_transform_baselines = []
 
     def get_profiled_values(self):
         """
@@ -396,7 +395,12 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
         self.log.info("Finished profiling.\nProfiled parameter: %s\nResults: %s",
                       self.profiled_param, self.minima)
-        self.save_results()
+        self.save_results(self.minima)
+
+    @mpi.set_from_root(("minima",))
+    def save_results(self, minima):
+        """Saves the results of the profiling."""
+        minima.out_update()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
@@ -468,11 +472,6 @@ class Profile(Profiler, CovmatSampler):
             full_set_of_mins = all_mins
             self.log.info("Full set of minima:\n%s", full_set_of_mins)
             self.full_sets_of_mins.append(full_set_of_mins)
-
-    @mpi.set_from_root("minima")
-    def save_results(self):
-        """Saves the results of the profiling."""
-        self.minima.out_update()
 
     def products(self):
         r"""
