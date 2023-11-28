@@ -394,6 +394,7 @@ class Profile(Profiler, CovmatSampler):
                 [results, successes, self.profiled_initial_points[idx],
                 [self._inv_affine_transform_matrix] * len(self.profiled_initial_points[idx])]))
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
+        self.save_results()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
@@ -466,6 +467,11 @@ class Profile(Profiler, CovmatSampler):
             full_set_of_mins = all_mins
             self.log.info("Full set of minima:\n%s", full_set_of_mins)
             self.full_sets_of_mins.append(full_set_of_mins)
+
+    @mpi.set_from_root("minima")
+    def save_results(self):
+        """Saves the results of the profiling."""
+        self.minima.out_update()
 
     def products(self):
         r"""
