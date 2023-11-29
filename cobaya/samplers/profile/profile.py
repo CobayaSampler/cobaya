@@ -472,6 +472,7 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Full set of minima:\n%s", full_set_of_mins)
             self.full_sets_of_mins.append(full_set_of_mins)
 
+    @mpi.set_from_root(("minima", ))
     def dump_txt(self):
         """Writes the results of the profiling to a text file."""
         if not self.output:
