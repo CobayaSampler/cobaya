@@ -51,8 +51,9 @@ def test_profile_gaussian(tmpdir):
                                                    "profiled_values": profiled_values,
                                                    "method": method}}}
         products = run(info)[1].products()
-        errors = abs(loglikes_vals - -products["minima"]["chi2"])
-        assert all(error < 0.01 for error in errors)
+        if mpi.is_main_process():
+            errors = abs(loglikes_vals - -products["minima"]["chi2"])
+            assert all(error < 0.01 for error in errors)
 
         info['output'] = os.path.join(tmpdir, 'testmin')
         info['force'] = True
@@ -82,6 +83,7 @@ def test_run_profile(tmpdir):
                                                 "profiled_values": profiled_values
                                                 }})
     output_info, sampler = run(min_info, force=True)
-    # Select third value where c is equal to mean_c
-    assert (abs(sampler.products()["minima"]["a"][2] - mean[0]) < 0.01)
-    assert (abs(sampler.products()["minima"]["b"][2] - mean[1]) < 0.01)
+    if mpi.is_main_process():
+        # Select third value where c is equal to mean_c
+        assert (abs(sampler.products()["minima"]["a"][2] - mean[0]) < 0.01)
+        assert (abs(sampler.products()["minima"]["b"][2] - mean[1]) < 0.01)
