@@ -397,8 +397,8 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
         self.log.info("Finished profiling.\nProfiled parameter: %s\nResults: %s",
                       self.profiled_param, self.minima)
-        if mpi.is_main_process():
-            self.dump_txt()
+        mpi.sync_processes()
+        self.dump_txt()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
