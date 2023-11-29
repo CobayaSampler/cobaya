@@ -7,9 +7,6 @@ import os
 from cobaya import mpi, run, InputDict, Likelihood
 from cobaya.samplers.profile import valid_methods
 
-from cobaya.collection import SampleCollection
-from cobaya.model import get_model
-from cobaya.output import get_output
 
 pytestmark = pytest.mark.mpi
 
@@ -59,14 +56,15 @@ def test_profile_gaussian(tmpdir):
         info['force'] = True
         products = run(info, force=True)[1].products()
         if mpi.is_main_process():
-            model = get_model(info)
-            output = get_output(prefix=info.get("output"))
-            filename = os.path.join(output.folder, output.prefix + ".like_profile.txt")
-            res = SampleCollection(model, output, load=True, file_name=filename)
+            filename = info['output'] + ".like_profile.txt"
+            res = np.loadtxt(filename, skiprows=1)
+            with open(filename, "rb") as f:
+                lines = f.readlines()
+                header = lines[0].decode("utf-8").split()[1:]
+            res = dict(zip(header, res.T))
             assert all(np.isclose(res["chi2"], products["minima"]["chi2"]))
-            res = res.data.to_dict()
             for p, v in list(res.items())[:-2]:
-                assert all(np.isclose(products["minima"][p], list(v.values())))
+                assert all(np.isclose(products["minima"][p], list(v)))
 
 
 @mpi.sync_errors
@@ -82,7 +80,7 @@ def test_run_profile(tmpdir):
                                                 "profiled_param": "c",
                                                 "profiled_values": profiled_values
                                                 }})
-    output_info, sampler = run(min_info, force=True)
+    sampler = run(min_info, force=True)[1]
     if mpi.is_main_process():
         # Select third value where c is equal to mean_c
         assert (abs(sampler.products()["minima"]["a"][2] - mean[0]) < 0.01)
