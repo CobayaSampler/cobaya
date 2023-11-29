@@ -398,11 +398,6 @@ class Profile(Profiler, CovmatSampler):
                       self.profiled_param, self.minima)
         self.save_results(self.minima)
 
-    @mpi.set_from_root(("minima",))
-    def save_results(self, minima):
-        """Saves the results of the profiling."""
-        minima.out_update()
-
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
     def process_results(self, model, results, successes, affine_transform_baselines,
@@ -473,6 +468,24 @@ class Profile(Profiler, CovmatSampler):
             full_set_of_mins = all_mins
             self.log.info("Full set of minima:\n%s", full_set_of_mins)
             self.full_sets_of_mins.append(full_set_of_mins)
+
+    @mpi.set_from_root(("minima",))
+    def save_results(self, minima: SampleCollection):
+        """Saves the results of the profiling."""
+        self.dump_txt(minima)
+
+    def dump_txt(self, minima: SampleCollection):
+        if os.path.exists(minima.file_name):
+            self.log.warning("Output file %s already exists, resetting it.",
+                             minima.file_name)
+            os.remove(minima.file_name)
+        with open(minima.file_name, "w", encoding="utf-8") as out:
+            out.write("#" + " ".join(
+                f(col) for f, col
+                in zip(minima._header_formatter, minima.data.columns))[1:] + "\n")
+        with open(minima.file_name, "a", encoding="utf-8") as out:
+            np.savetxt(out, minima.data.to_numpy(dtype=np.float64),
+                       fmt=minima._numpy_fmts)
 
     def products(self):
         r"""
