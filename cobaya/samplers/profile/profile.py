@@ -174,6 +174,7 @@ class Profile(Profiler, CovmatSampler):
         self.mpi_info("Initializing")
         self.max_iter = int(read_dnumber(self.max_evals, self.model.prior.d()))
         # Get profiled parameter, its values and its index in the sampled parameters
+        assert self.profiled_param in self.model.parameterization.sampled_params()
         self.index_profiled_param = list(self.model.parameterization.sampled_params()).index(self.profiled_param)
         self.profiled_values = self.get_profiled_values()
         self.steps = len(self.profiled_values)
@@ -396,7 +397,8 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
         self.log.info("Finished profiling.\nProfiled parameter: %s\nResults: %s",
                       self.profiled_param, self.minima)
-        self.dump_txt()
+        if mpi.is_main_process():
+            self.dump_txt()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
@@ -469,7 +471,6 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Full set of minima:\n%s", full_set_of_mins)
             self.full_sets_of_mins.append(full_set_of_mins)
 
-    @mpi.set_from_root(("minima", ))
     def dump_txt(self):
         """Writes the results of the profiling to a text file."""
         if not self.output:
