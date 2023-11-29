@@ -396,7 +396,7 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
         self.log.info("Finished profiling.\nProfiled parameter: %s\nResults: %s",
                       self.profiled_param, self.minima)
-        self.save_results(self.minima)
+        self.dump_txt()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
@@ -469,12 +469,10 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Full set of minima:\n%s", full_set_of_mins)
             self.full_sets_of_mins.append(full_set_of_mins)
 
-    @mpi.set_from_root(("minima",))
-    def save_results(self, minima: SampleCollection):
-        """Saves the results of the profiling."""
-        self.dump_txt(minima)
-
-    def dump_txt(self, minima: SampleCollection):
+    def dump_txt(self):
+        """Writes the results of the profiling to a text file."""
+        if not self.output:
+            return
         ext_collection = get_collection_extension(self.ignore_prior)
         file_name, _ = self.output.prepare_collection(name="", extension=ext_collection)
         if os.path.exists(file_name):
@@ -484,10 +482,10 @@ class Profile(Profiler, CovmatSampler):
         with open(file_name, "w", encoding="utf-8") as out:
             out.write("#" + " ".join(
                 f(col) for f, col
-                in zip(minima._header_formatter, minima.data.columns))[1:] + "\n")
+                in zip(self.minima._header_formatter, self.minima.data.columns))[1:] + "\n")
         with open(file_name, "a", encoding="utf-8") as out:
-            np.savetxt(out, minima.data.to_numpy(dtype=np.float64),
-                       fmt=minima._numpy_fmts)
+            np.savetxt(out, self.minima.data.to_numpy(dtype=np.float64),
+                       fmt=self.minima._numpy_fmts)
 
     def products(self):
         r"""
