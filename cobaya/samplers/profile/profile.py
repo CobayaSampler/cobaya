@@ -264,7 +264,9 @@ class Profile(Profiler, CovmatSampler):
         self._scales = scales
         self.kwargs = None
         self.results = []
-        self.minima = SampleCollection(self.model, self.output, name="", extension=get_collection_extension(self.ignore_prior))
+        self.minima = SampleCollection(
+            self.model, self.output, name="",
+            extension=get_collection_extension(self.ignore_prior))
         self.full_sets_of_mins = []
         self._affine_transform_baselines = []
 
@@ -397,7 +399,6 @@ class Profile(Profiler, CovmatSampler):
             self.log.info("Finished profiled point %d out of %d.", idx + 1, len(self.profiled_initial_points))
         self.log.info("Finished profiling.\nProfiled parameter: %s\nResults: %s",
                       self.profiled_param, self.minima)
-        self.dump_txt()
 
     @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baselines",
                         "results", "minima", "full_sets_of_mins"))
@@ -459,6 +460,7 @@ class Profile(Profiler, CovmatSampler):
         minimum.data.insert(0, self.profiled_param, model.parameterization.constant_params()[self.profiled_param])
         # Add minimum to collection
         self.minima._append(minimum)
+        self.dump_txt()
         self.log.info(
             "Parameter values at minimum:\n%s", minimum.data.to_string())
         if len(results) > 1:
@@ -477,9 +479,7 @@ class Profile(Profiler, CovmatSampler):
         ext_collection = get_collection_extension(self.ignore_prior)
         file_name, _ = self.output.prepare_collection(name="", extension=ext_collection)
         if os.path.exists(file_name):
-            self.log.warning("Output file %s already exists, resetting it.",
-                             file_name)
-            os.remove(file_name)
+            pass
         with open(file_name, "w", encoding="utf-8") as out:
             out.write("#" + " ".join(
                 f(col) for f, col
