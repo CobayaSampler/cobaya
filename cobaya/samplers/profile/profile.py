@@ -479,6 +479,7 @@ class Profile(Profiler, CovmatSampler):
             return
         ext_collection = get_collection_extension(self.ignore_prior)
         file_name, _ = self.output.prepare_collection(name="", extension=ext_collection)
+        # TODO: if file exists, update it instead of overwriting
         if os.path.exists(file_name):
             pass
         with open(file_name, "w", encoding="utf-8") as out:
