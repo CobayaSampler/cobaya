@@ -475,15 +475,17 @@ class Profile(Profiler, CovmatSampler):
         self.dump_txt(minima)
 
     def dump_txt(self, minima: SampleCollection):
-        if os.path.exists(minima.file_name):
+        ext_collection = get_collection_extension(self.ignore_prior)
+        file_name, _ = self.output.prepare_collection(name="", extension=ext_collection)
+        if os.path.exists(file_name):
             self.log.warning("Output file %s already exists, resetting it.",
-                             minima.file_name)
-            os.remove(minima.file_name)
-        with open(minima.file_name, "w", encoding="utf-8") as out:
+                             file_name)
+            os.remove(file_name)
+        with open(file_name, "w", encoding="utf-8") as out:
             out.write("#" + " ".join(
                 f(col) for f, col
                 in zip(minima._header_formatter, minima.data.columns))[1:] + "\n")
-        with open(minima.file_name, "a", encoding="utf-8") as out:
+        with open(file_name, "a", encoding="utf-8") as out:
             np.savetxt(out, minima.data.to_numpy(dtype=np.float64),
                        fmt=minima._numpy_fmts)
 
