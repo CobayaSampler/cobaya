@@ -41,7 +41,7 @@ settings.
 It works more effectively when run on top of a Monte Carlo sample: it will use the maximum
 a posteriori as a starting point (or the best fit, depending on whether the prior is
 ignored, :ref:`see below <minimize_like>`), and the recovered covariance matrix of the
-posterior to rescale the variables.
+posterior to rescale the variables. Indeed, even when the requested profiled points of a certain parameter are not equal to the best fit, the values of the other parameters are expected to be near the best fit.
 
 To take advantage of a previous run with a Monte Carlo sampler, either:
 
@@ -66,6 +66,8 @@ If text output is requested, it produces two different files depending on the se
   but containing a number of lines equal to the requested profiled points.
 
 - if the priors are not ignored, ``[output prefix].post_profile.txt``, the equivalent **GetDist-formatted** file.
+
+This also means that the quantity getting profiled is either **posterior** or the **likelihood** depending on the choice of ignoring the priors.
 
 Note that the profiled parameter will appear together with the others, but will be set
 to the requested values throughout the profiling.
