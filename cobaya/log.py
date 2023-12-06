@@ -282,7 +282,7 @@ class HasLogger:
         return new
 
     def __getstate__(self):
-        return deepcopy(self).__dict__
+        return {k: v for k, v in self.__dict__.items() if k != "log"}
 
     def __setstate__(self, d):
         self.__dict__ = d

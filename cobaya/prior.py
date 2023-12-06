@@ -392,9 +392,9 @@ class Prior(HasLogger):
                     self.log,
                     f"Error when creating prior for parameter '{p}': {str(excpt)}"
                 ) from excpt
-            fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
-            if fast_logpdf:
-                self.pdf[-1].logpdf = MethodType(fast_logpdf, self.pdf[-1])
+            # fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
+            # if fast_logpdf:
+            #     self.pdf[-1].logpdf = MethodType(fast_logpdf, self.pdf[-1])
             self._bounds[i] = [-np.inf, np.inf]
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
