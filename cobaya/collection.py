@@ -1194,7 +1194,7 @@ class SampleCollection(BaseCollection):
     # Make it picklable -- formatters are deleted
     # (they will be generated next time txt is dumped)
     def __getstate__(self):
-        attributes = super().__getstate__().copy()
+        attributes = super().__getstate__()
         for attr in ['_numpy_fmts', '_header_formatter']:
             try:
                 del attributes[attr]
