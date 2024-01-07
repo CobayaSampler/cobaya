@@ -396,15 +396,15 @@ class BAO(InstallableLikelihood):
                 obs_used_not_implemented, list(theory_reqs))
         requisites = {}
         if self.has_type:
-            for observable in theory_reqs:
-                for req,req_values in theory_reqs[observable].items():
+            for observable in self.data["observable"].unique():
+                for req, req_values in theory_reqs[observable].items():
                     if req not in requisites.keys():
                         requisites[req] = req_values
                     else:
-                        if isinstance(req_values,dict):
-                            for k,v in req_values.items():
+                        if isinstance(req_values, dict):
+                            for k, v in req_values.items():
                                 if v is not None:
-                                    requisites[req][k] = np.unique(np.concatenate((requisites[req][k],v)))
+                                    requisites[req][k] = np.unique(np.concatenate((requisites[req][k], v)))
         return requisites
 
     def theory_fun(self, z, observable):
