@@ -326,14 +326,14 @@ class BAO(InstallableLikelihood):
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
                 elif self.invcov_file:
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
-                    self.cov = np.linalg.inv(invcov)
+                    self.cov = np.linalg.inv(np.atleast_2d(invcov))
                 elif "error" in self.data.columns:
                     self.cov = np.diag(self.data["error"] ** 2)
                 else:
                     raise LoggedError(
                         self.log, "No errors provided, either as cov, invcov "
                                   "or as the 3rd column in the data file.")
-                self.invcov = np.linalg.inv(self.cov)
+                self.invcov = np.linalg.inv(np.atleast_2d(self.cov))
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find (inv)cov file '%s' in folder '%s'. " % (
