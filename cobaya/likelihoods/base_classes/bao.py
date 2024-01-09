@@ -156,7 +156,7 @@ class BAO(InstallableLikelihood):
     type = "BAO"
 
     install_options = {"github_repository": "CobayaSampler/bao_data",
-                       "github_release": "v2.2"}
+                       "github_release": "v2.3"}
 
     prob_dist_bounds: Optional[Sequence[float]]
     measurements_file: Optional[str] = None
@@ -326,14 +326,14 @@ class BAO(InstallableLikelihood):
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
                 elif self.invcov_file:
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
-                    self.cov = np.linalg.inv(invcov)
+                    self.cov = np.linalg.inv(np.atleast_2d(invcov))
                 elif "error" in self.data.columns:
                     self.cov = np.diag(self.data["error"] ** 2)
                 else:
                     raise LoggedError(
                         self.log, "No errors provided, either as cov, invcov "
                                   "or as the 3rd column in the data file.")
-                self.invcov = np.linalg.inv(self.cov)
+                self.invcov = np.linalg.inv(np.atleast_2d(self.cov))
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find (inv)cov file '%s' in folder '%s'. " % (
@@ -396,8 +396,15 @@ class BAO(InstallableLikelihood):
                 obs_used_not_implemented, list(theory_reqs))
         requisites = {}
         if self.has_type:
-            for obs in self.data["observable"].unique():
-                requisites.update(theory_reqs[obs])
+            for observable in self.data["observable"].unique():
+                for req, req_values in theory_reqs[observable].items():
+                    if req not in requisites.keys():
+                        requisites[req] = req_values
+                    else:
+                        if isinstance(req_values, dict):
+                            for k, v in req_values.items():
+                                if v is not None:
+                                    requisites[req][k] = np.unique(np.concatenate((requisites[req][k], v)))
         return requisites
 
     def theory_fun(self, z, observable):
