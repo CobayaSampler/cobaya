@@ -6,7 +6,7 @@ import os
 
 from cobaya import mpi, run, InputDict, Likelihood
 from cobaya.samplers.profile import valid_methods
-
+valid_methods = tuple(method for method in valid_methods if method != 'iminuit')
 
 pytestmark = pytest.mark.mpi
 

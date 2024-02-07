@@ -156,14 +156,6 @@ class Profile(Profiler, CovmatSampler):
     start: Optional[float]
     stop: Optional[float]
     steps: Optional[int]
-    # ignore_prior: bool
-    # confidence_for_unbounded: float
-    # method: str
-    # best_of: int
-    # override_bobyqa: Optional[dict]
-    # override_scipy: Optional[dict]
-    # override_iminuit: Optional[dict]
-    # max_evals: Union[str, int]
 
     def initialize(self):
         """
@@ -171,11 +163,6 @@ class Profile(Profiler, CovmatSampler):
         points and sets up the affine transformation.
         """
         Profiler.initialize(self)
-        # if self.method not in evals_attr:
-        #     raise LoggedError(self.log, "Method '%s' not recognized. Try one of %r.",
-        #                       self.method, list(evals_attr))
-        # self.mpi_info("Initializing")
-        # self.max_iter = int(read_dnumber(self.max_evals, self.model.prior.d()))
         # Get profiled parameter, its values and its index in the sampled parameters
         assert self.profiled_param in self.model.parameterization.sampled_params()
         self.index_profiled_param = list(self.model.parameterization.sampled_params()).index(self.profiled_param)
@@ -192,7 +179,6 @@ class Profile(Profiler, CovmatSampler):
         self.models = models
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
-        # assert self.best_of > 0
         num_starts = int(np.ceil(self.best_of / mpi.size()))
         if self.output:
             files = self.output.find_collections()
@@ -247,25 +233,6 @@ class Profile(Profiler, CovmatSampler):
                 initial_points.append(initial_point)
             self.profiled_initial_points[idx] = initial_points
 
-        # self._bounds = self.models[0].prior.bounds(
-        #     confidence_for_unbounded=self.confidence_for_unbounded)
-        # # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
-        # covmat = self._load_covmat(prefer_load_old=self.output)[0]
-        # # Remove profiled parameter from covmat
-        # covmat = np.delete(covmat, self.index_profiled_param, axis=0)  # delete row
-        # covmat = np.delete(covmat, self.index_profiled_param, axis=1)  # delete column
-        # # scale by conditional parameter widths (since not using correlation structure)
-        # scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
-        #                     (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
-        # # Cov and affine transformation
-        # # Transform to space where initial point is at centre, and cov is normalised
-        # # Cannot do rotation, as supported minimization routines assume bounds aligned
-        # # with the parameter axes.
-        # self._affine_transform_matrix = np.diag(1 / scales)
-        # self._inv_affine_transform_matrix = np.diag(scales)
-        # self._affine_transform_baseline = None
-        # self._scales = scales
-        # self.kwargs = None
         self.results = []
         self.minima = SampleCollection(
             self.model, self.output, name="",
@@ -295,16 +262,6 @@ class Profile(Profiler, CovmatSampler):
         if self.ignore_prior:
             kwargs["return_derived"] = False
         return lambda x: method(x, **kwargs)
-
-    # def affine_transform(self, x):
-    #     """Transforms a point into the search space."""
-    #     return (x - self._affine_transform_baseline) / self._scales
-
-    # def inv_affine_transform(self, x):
-    #     """Transforms a point from the search space back into the parameter space."""
-    #     # Fix up rounding errors on bounds to avoid -np.inf likelihoods
-    #     return np.clip(x * self._scales + self._affine_transform_baseline,
-    #                    self._bounds[:, 0], self._bounds[:, 1])
 
     def run(self):
         """Runs multiple minimizations to profile the likelihood/posterior."""
@@ -533,57 +490,3 @@ class Profile(Profiler, CovmatSampler):
                 "full_sets_of_mins": self.full_sets_of_mins,
                 "M": self._inv_affine_transform_matrix,
                 "X0s": self._affine_transform_baselines}
-
-    # @classmethod
-    # def output_files_regexps(cls, output, info=None, minimal=False):
-    #     """
-    #     Returns a list of tuples `(regexp, root)` of output files potentially produced.
-    #     If `root` in the tuple is `None`, `output.folder` is used.
-
-    #     If `minimal=True`, returns regexp's for the files that should really not be there when we are not resuming.
-    #     """
-    #     ignore_prior = bool(info.get("ignore_prior", False))
-    #     ext_collection = get_collection_extension(ignore_prior)
-    #     ext_getdist = getdist_ext_ignore_prior[ignore_prior]
-    #     regexps = [
-    #         re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$")
-    #         for ext in [ext_collection, ext_getdist]]
-    #     return [(r, None) for r in regexps]
-
-    # @classmethod
-    # def check_force_resume(cls, output, info=None):
-    #     """
-    #     Performs the necessary checks on existing files if resuming or forcing
-    #     (including deleting some output files when forcing).
-    #     """
-    #     if output.is_resuming():
-    #         if mpi.is_main_process():
-    #             raise LoggedError(
-    #                 output.log, "Minimizer does not support resuming. "
-    #                             "If you want to start over, force "
-    #                             "('-f', '--force', 'force: True')")
-    #     super().check_force_resume(output, info=info)
-
-    # @classmethod
-    # def _get_desc(cls, info=None):
-    #     if info is None:
-    #         method = None
-    #     else:
-    #         method = info.get("method", cls.get_defaults()["method"])
-    #     desc_bobyqa = (r"Py-BOBYQA implementation "
-    #                    r"\cite{2018arXiv180400154C,2018arXiv181211343C} of the BOBYQA "
-    #                    r"minimization algorithm \cite{BOBYQA}")
-    #     desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
-    #                   r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
-    #                   r"ference/generated/scipy.optimize.Minimize.html}")
-    #     desc_iminuit = (r"iminuit minimizer(check citation for the "
-    #                     r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}")
-    #     if method and method.lower() == "bobyqa":
-    #         return desc_bobyqa
-    #     elif method and method.lower() == "scipy":
-    #         return desc_scipy
-    #     elif method and method.lower() == "iminuit":
-    #         return desc_iminuit
-    #     else:  # unknown method or no info passed (None)
-    #         return ("Minimizer -- method unknown, possibly one of:"
-    #                 "\na) " + desc_bobyqa + "\nb) " + desc_scipy)
