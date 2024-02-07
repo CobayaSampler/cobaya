@@ -454,8 +454,7 @@ class CovmatSampler(Sampler):
             for p in list(params_infos_covmat):
                 if p not in (auto_params or []):
                     params_infos_covmat.pop(p, None)
-            auto_covmat = self.model.get_auto_covmat(params_infos_covmat,
-                                                     random_state=self._rng)
+            auto_covmat = self.model.get_auto_covmat(params_infos_covmat)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)
