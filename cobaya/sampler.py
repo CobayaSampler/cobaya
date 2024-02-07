@@ -411,7 +411,7 @@ class Minimizer(Sampler):
     """
 
 
-class Profiler(Sampler):
+class Profiler(Minimizer):
     """
     base class for profilers
     """
