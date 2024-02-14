@@ -276,13 +276,9 @@ class HasLogger:
         self.log = logging.getLogger(add_color_to_name(name))
 
     # Copying and pickling
-    def __deepcopy__(self, memo=None):
-        new = (lambda cls: cls.__new__(cls))(self.__class__)
-        new.__dict__ = {k: deepcopy(v) for k, v in self.__dict__.items() if k != "log"}
-        return new
-
     def __getstate__(self):
-        return deepcopy(self).__dict__
+        """Returns the current state, removing the logger (not picklable)."""
+        return {k: v for k, v in self.__dict__.items() if k != "log"}
 
     def __setstate__(self, d):
         self.__dict__ = d
