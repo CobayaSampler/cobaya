@@ -92,7 +92,7 @@ def remove_temperature_cov(cov, temperature):
     return cov / temperature
 
 
-def compute_temperature(logpost, logprior, loglike, check=True):
+def compute_temperature(logpost, logprior, loglike, check=True, extra_tolerance=False):
     """
     Returns the temperature of a sample.
 
@@ -103,7 +103,8 @@ def compute_temperature(logpost, logprior, loglike, check=True):
     if not isinstance(temp, Number):
         if len(temp) > 1:
             if check:
-                assert np.allclose(temp, temp[0], rtol=1e-3), \
+                rtol = 1e-3 * (10 if extra_tolerance else 1)
+                assert np.allclose(temp, temp[0], rtol=rtol), \
                     "Inconsistent temperature in sample."
             temp = np.mean(temp)
         else:
@@ -288,7 +289,14 @@ class SampleCollection(BaseCollection):
         samples_loaded = len(self) > 0
         if samples_loaded:
             try:
-                self.temperature = self._check_logps()
+                try:
+                    self.temperature = self._check_logps(extra_tolerance=False)
+                except LoggedError:
+                    self.log.warning(
+                        "Needed to relax tolerances when checking consistency of "
+                        "log probabilities and temperature (if present)."
+                    )
+                    self.temperature = self._check_logps(extra_tolerance=True)
                 if temperature is not None and \
                         not np.isclose(temperature, self.temperature):
                     raise LoggedError(
@@ -464,10 +472,13 @@ class SampleCollection(BaseCollection):
             self._cache[:self._cache_last + 1]
         self._cache_reset()
 
-    def _check_logps(self, temperature_only=False):
+    def _check_logps(self, temperature_only=False, extra_tolerance=False):
         """
         Checks the correct sums for the logpriors and likelihoods' chi-squared's, as well
         as the posterior temperature, which is returned.
+
+        If ``extra_tolerance=True`` (default: ``False``), lets the tests pass with lower
+        precision.
 
         Raises ``LoggedError`` if the sums or the temperature of the sample are not
         consistent.
@@ -475,33 +486,29 @@ class SampleCollection(BaseCollection):
         try:
             temperature = compute_temperature(
                 -self["minuslogpost"], -self["minuslogprior"], -self["chi2"] * 0.5,
-                check=True)
+                check=True, extra_tolerance=extra_tolerance)
         except AssertionError as excpt:
             raise LoggedError(
                 self.log, "The sample seems to have an inconsistent temperature.") \
                 from excpt
         if not temperature_only:
-            if not np.allclose(
-                    self[OutPar.minuslogprior],
-                    np.sum(
-                        np.atleast_2d(
-                            self[self.minuslogprior_names].to_numpy(dtype=np.float64)),
-                        axis=-1,
-                    ),
-                    rtol=1e-4,
-            ):
+            tols = {
+                "rtol": 1e-4 * (10 if extra_tolerance else 1),
+                "atol": 1e-7 * (10 if extra_tolerance else 1),
+            }
+            minuslogprior = np.sum(
+                np.atleast_2d(self[self.minuslogprior_names].to_numpy(dtype=np.float64)),
+                axis=-1,
+            )
+            if not np.allclose(self[OutPar.minuslogprior], minuslogprior, **tols):
                 raise LoggedError(
                     self.log,
                     "The sum of logpriors in the sample is not consistent."
                 )
-            if not np.allclose(
-                    self[OutPar.chi2],
-                    np.sum(
-                        np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)),
-                        axis=-1,
-                    ),
-                    rtol=1e-4,
-            ):
+            chi2 = np.sum(
+                np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)), axis=-1,
+            )
+            if not np.allclose(self[OutPar.chi2], chi2, **tols):
                 raise LoggedError(
                     self.log,
                     "The sum of likelihood's chi2's in the sample is not consistent."
