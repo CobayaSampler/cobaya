@@ -112,6 +112,7 @@ from cobaya.collection import OnePoint, SampleCollection
 from cobaya.log import LoggedError
 from cobaya.tools import read_dnumber, recursive_update
 from cobaya.sampler import CovmatSampler
+from cobaya.component import ComponentNotInstalledError
 from cobaya import mpi
 
 # Handling scipy vs BOBYQA vs iMinuit
@@ -295,7 +296,7 @@ class Minimize(Minimizer, CovmatSampler):
                     try:
                         import iminuit
                     except ImportError:
-                        raise LoggedError(
+                        raise ComponentNotInstalledError(
                             self.log, "You need to install iminuit to use the "
                                       "'iminuit' minimizer. Try 'pip install iminuit'.")
                     self.kwargs = {
