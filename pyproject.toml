@@ -49,6 +49,7 @@ version = { attr = "cobaya.__version__" }
 "*" = ["*.yaml", "*.bibtex"]
 
 [project.scripts]
+cobaya = "cobaya.__main__:run_command"
 cobaya-install = "cobaya.install:install_script"
 cobaya-run = "cobaya.run:run_script"
 cobaya-doc = "cobaya.doc:doc_script"
