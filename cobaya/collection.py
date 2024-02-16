@@ -702,19 +702,6 @@ class SampleCollection(BaseCollection):
         """
         return self.data.__getitem__(*args)
 
-    # MARKED FOR DEPRECATION IN v3.2
-    @property
-    def values(self) -> np.ndarray:
-        """
-        Deprecated in favour of ``SampleCollection.to_numpy``, following Pandas.
-        """
-        raise LoggedError(
-            self.log,
-            "Following Pandas, the 'SampleCollection.values()' method has been deprecated"
-            " in favour of 'SampleCollection.to_numpy()'."
-        )
-        # END OF DEPRECATION BLOCK
-
     def to_numpy(self, dtype=None, copy=False) -> np.ndarray:
         """Returns the sample collection as a numpy array."""
         return self.data.to_numpy(copy=copy, dtype=dtype or np.float64)
