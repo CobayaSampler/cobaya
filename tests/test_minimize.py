@@ -9,8 +9,6 @@ from cobaya import mpi, run, InputDict, Likelihood
 from cobaya.component import ComponentNotInstalledError
 from cobaya.samplers.minimize import valid_methods
 
-from .conftest import install_test_wrapper
-
 pytestmark = pytest.mark.mpi
 
 mean = np.array([0.30245268, 0.61884443, 0.5])

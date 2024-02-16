@@ -12,7 +12,6 @@ import sys
 import logging
 import platform
 import traceback
-from copy import deepcopy
 import functools
 from random import shuffle, choice
 
