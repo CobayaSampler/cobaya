@@ -11,7 +11,12 @@ from importlib import import_module, metadata
 def run_command():
     commands = {}
     prefix = "cobaya-"
-    for script in metadata.entry_points().select(group="console_scripts"):
+    console_scripts = (
+        metadata.entry_points().select(group="console_scripts")
+        if sys.version_info > (3, 9)
+        else metadata.entry_points()["console_scripts"]
+    )
+    for script in console_scripts:
         if script.name.startswith(prefix):
             commands[script.name] = script.value
     commands_trimmed = [c[len(prefix):] for c in commands]
