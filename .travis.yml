@@ -148,6 +148,7 @@ deploy:
     repo: CobayaSampler/cobaya
 ###############################################################################
   edge: true
+  username: "__token__"
   password:
     secure: rSeqVE21XQnzKbY5bjvDgKofhxdoBOSQ+4h7tU+/HaCPNThTYpXD2vfJgtU+y+9ONoGm0l1665JwcIpajP3O8ruFI79ahD773qisgjukIwvO/pHhLsA8othdNAS4f7nOCBVScVMa92UNYpFFHZ6Kom2eJDLLLfqBJxYNfvAn7sPfetHfuYUe55YMF806xf+2ounXBYjHLZFw9V2iks0OVS3gQOSZYuPUn4oPCV32jojD3ZdYIz6tEDigLG9L+dbrzYfg7tOFkXW4OCpDhgB9XIuIrVcfM2oBByI5AmN0gUwBV2i77T3TjoIL6a+Ea0Y6Gn3lgGtgWVHxC6UGVu8uq6+iUc9+NmkRaJu0+kSLRQNb6AJFx+a+xdI2kMw27hy+S/mOzPowJMLcSjtBEjuuvmSFQzdzwldzFfZL5mYBwKdlLl1O/vca9RTaj+FouQyq6NHngBJ2ifhyuLclgyv35F2Ych13dPSToIIid3oJiDCnUHowcQtaUMqiPJW64tY8hbWMriGd9JgggwKg13Zr3bmsyOI4eh8VQG36OyMNEUYuJVJCuOrFtY8AZrs+/6YLqt2WCs3Mboz84ZgfE4d1cch1HQJzLlUOwW14b05XXfXER/iTylN87BV/q9qieY9q9Zwe3XzbG/TWkyHDXpY+Zm0+4AsZgoOapDSZJKwlUb4=
 notifications:
