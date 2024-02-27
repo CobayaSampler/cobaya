@@ -252,7 +252,7 @@ class Sampler(CobayaComponent):
             self.mpi_warning("No sampled parameters requested! "
                              "This will fail for non-mock samplers.")
         # Load checkpoint info, if resuming
-        if self.output.is_resuming() and not isinstance(self, Minimizer) and not isinstance(self, Profiler):
+        if self.output.is_resuming() and not isinstance(self, Minimizer):
             checkpoint_info = None
             if mpi.is_main_process():
                 try:
@@ -269,7 +269,7 @@ class Sampler(CobayaComponent):
             if checkpoint_info:
                 self.set_checkpoint_info(checkpoint_info)
                 self.mpi_info("Resuming from previous sample!")
-        elif not isinstance(self, Minimizer) and not isinstance(self, Profiler) and mpi.is_main_process():
+        elif not isinstance(self, Minimizer) and mpi.is_main_process():
             try:
                 output.delete_file_or_folder(self.checkpoint_filename())
                 output.delete_file_or_folder(self.progress_filename())
@@ -409,13 +409,6 @@ class Minimizer(Sampler):
     """
     base class for minimizers
     """
-
-
-class Profiler(Sampler):
-    """
-    base class for profilers
-    """
-
 
 class CovmatSampler(Sampler):
     """
