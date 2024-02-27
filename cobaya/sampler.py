@@ -410,6 +410,7 @@ class Minimizer(Sampler):
     base class for minimizers
     """
 
+
 class CovmatSampler(Sampler):
     """
     Parent class for samplers that are initialised with a covariance matrix.

@@ -1,1 +1,1 @@
-from .profile import Profile, valid_methods
+from .profile import Profile
