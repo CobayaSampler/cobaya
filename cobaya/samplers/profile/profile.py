@@ -4,43 +4,11 @@ r"""
 :Synopsis: Posterior/likelihood *profiling*.
 :Author: Giacomo Galloni
 
-This is a **profiler** for posteriors or likelihoods, based on
-`scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
- `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_, and
- `iminuit <https://iminuit.readthedocs.io/>`_.
+This is a **profiler** for posteriors or likelihoods, based on the `Minimize` sampler. For details on the minimization methods and settings, see the documentation of the `Minimize` sampler.
 
-The default is BOBYQA, which tends to work better than scipy on Cosmological problems with default
-settings.
-
-.. |br| raw:: html
-
-   <br />
-
-.. note::
-   **If you use BOBYQA, please cite it as:**
-   |br|
-   `C. Cartis, J. Fiala, B. Marteau, L. Roberts,
-   "Improving the Flexibility and Robustness of Model-Based Derivative-Free Optimization Solvers"
-   (arXiv:1804.00154) <https://arxiv.org/abs/1804.00154>`_
-   |br|
-   `C. Cartis, L. Roberts, O. Sheridan-Methven,
-   "Escaping local minima with derivative-free methods: a numerical investigation"
-   (arXiv:1812.11343) <https://arxiv.org/abs/1812.11343>`_
-   |br|
-   `M.J.D. Powell,
-   "The BOBYQA Algorithm for Bound Constrained Optimization without Derivatives",
-   (Technical Report 2009/NA06, DAMTP, University of Cambridge)
-   <https://www.damtp.cam.ac.uk/user/na/NA_papers/NA2009_06.pdf>`_
-
-   **If you use scipy**, you can find `the appropriate references here
-   <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
-
-   **If you use iminuit**, see the `references here
-   <https://iminuit.readthedocs.io/en/stable/citation.html>`_.
-
-It works more effectively when run on top of a Monte Carlo sample: it will use the maximum
+Similarly to a Minimize run, this works more effectively when run on top of a Monte Carlo sample: it will use the maximum
 a posteriori as a starting point (or the best fit, depending on whether the prior is
-ignored, :ref:`see below <minimize_like>`), and the recovered covariance matrix of the
+ignored, :ref:`see below <profile_like>`), and the recovered covariance matrix of the
 posterior to rescale the variables. Indeed, even when the requested profiled points of a certain parameter are not equal to the best fit, the values of the other parameters are expected to be near the best fit.
 
 To take advantage of a previous run with a Monte Carlo sampler, either:
@@ -93,12 +61,12 @@ this will help in finding the global minimum in each point. Still, it may be req
    below).
 
 
-.. _minimize_like:
+.. _profile_like:
 
-Maximizing the likelihood instead of the posterior
+Profiling the likelihood instead of the posterior
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To maximize the likelihood, add ``ignore_prior: True`` in the ``profile`` input block.
+To profile the likelihood, add ``ignore_prior: True`` in the ``profile`` input block.
 
 """
 
