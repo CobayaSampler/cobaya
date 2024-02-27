@@ -174,6 +174,14 @@ class Profile(Minimize, CovmatSampler):
             logps.append(self.get_logp(model))
         self.logps = logps
         self.models = models
+        # Try to load info from previous samples.
+        # If none, sample from reference (make sure that it has finite like/post)
+        assert self.best_of > 0
+        num_starts = int(np.ceil(self.best_of / mpi.size()))
+        if self.output:
+            files = self.output.find_collections()
+        else:
+            files = None
 
         self.profiled_initial_points = {}
         for idx in range(self.steps):
