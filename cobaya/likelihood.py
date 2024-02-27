@@ -95,16 +95,6 @@ class Likelihood(Theory, LikelihoodInterface):
                          packages_path=packages_path, initialize=initialize,
                          standalone=standalone)
 
-    # MARKED FOR DEPRECATION IN v3.3
-    @property
-    def theory(self):
-        raise LoggedError(
-            self.log,
-            "The 'theory' attribute of likelihoods has been deprecated. "
-            "Please use the equivalent 'provider' attribute instead."
-        )
-        # END OF DEPRECATION BLOCK
-
     def logp(self, **params_values):
         """
         Computes and returns the log likelihood value.

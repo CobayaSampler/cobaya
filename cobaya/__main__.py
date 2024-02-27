@@ -7,28 +7,36 @@ Allows calling `cobaya-[command]` as `python -m cobaya [command]`.
 import sys
 from importlib import import_module, metadata
 
-if __name__ == "__main__":
-    commands = {}
-    for script in metadata.entry_points().select(group='console_scripts'):
-        if script.name.startswith('cobaya-'):
-            commands[script.name] = script.value
-    help_msg = ("Add a one of the following commands and its arguments "
-                "(`<command> -h` for help): %r" % list(commands))
 
+def run_command():
+    commands = {}
+    prefix = "cobaya-"
+    console_scripts = (
+        metadata.entry_points().select(group="console_scripts")
+        if sys.version_info > (3, 9)
+        else metadata.entry_points()["console_scripts"]
+    )
+    for script in console_scripts:
+        if script.name.startswith(prefix):
+            commands[script.name] = script.value
+    commands_trimmed = [c[len(prefix):] for c in commands]
+    help_msg = (
+        "Add a one of the following commands and its arguments "
+        f"(`<command> -h` for help): {commands_trimmed}"
+    )
     try:
         command_or_input = sys.argv[1].lower()
     except IndexError:  # no command
         print(help_msg)
     else:
-        if command := commands.get("cobaya-" + command_or_input):
+        command = commands.get("cobaya-" + command_or_input)
+        if command is not None:
             module, func = command.split(":")
             sys.argv.pop(1)
             assert func is not None
             getattr(import_module(module), func)()
         else:
             if command_or_input in ["-h", "--help"]:
-                help_msg = ("Add a one of the following commands and its arguments "
-                            "(`<command> -h` for help): %r" % list(commands))
                 print(help_msg)
             else:
                 # no command --> assume run with input file as 1st arg (don't pop!)

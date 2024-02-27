@@ -20,6 +20,24 @@ def test_generic_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_generic, skip_not_installed=skip_not_installed)
 
+# Test generic bao class with different kind of observables
+def test_generic_mixed_camb(packages_path, skip_not_installed):
+    like = "bao.sdss_dr12_consensus_bao"
+    like_rename = "bao_mixed_observables"
+    chi2_generic = deepcopy(chi2_sdss_dr12_consensus_bao)
+    chi2_generic.pop(like)
+    chi2_generic[like_rename] = 5.0
+    likelihood_defaults = get_component_class(like).get_defaults()
+    likelihood_defaults.pop("path")
+    likelihood_defaults["class"] = "bao.generic"
+    likelihood_defaults['measurements_file'] = 'bao_data/test_bao_mixed_observables_mean.txt'
+    likelihood_defaults['cov_file'] = 'bao_data/test_bao_mixed_observables_cov.txt'
+    likelihood_defaults['rs_fid'] = 1.0
+    info_likelihood = {like_rename: likelihood_defaults}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_generic, skip_not_installed=skip_not_installed)
+
 
 def test_sdss_dr16_consensus_baoplus_lrg_camb(packages_path, skip_not_installed):
     like = "bao.sdss_dr16_baoplus_lrg"
