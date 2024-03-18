@@ -114,7 +114,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
     #     info_new.update({"minimize": aux})
     #     info_old = {}
     #     keep_old = {}
-    if list(info_old) != list(info_new) and list(info_new) == ["minimize"]:
+    if list(info_old) != list(info_new) and (list(info_new) == ["minimize"] or list(info_new) == ["profile"]):
         return
     if list(info_old) == list(info_new):
         # Restore some selected old values for some classes
