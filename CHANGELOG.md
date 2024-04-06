@@ -1,7 +1,7 @@
 ## 3.x
 
 ### Cosmology
-- Added DESI 1yr BAO data and Pantheon Plus (thanks DESI team)
+- Added DESI 1yr BAO data and Pantheon Plus (thanks DESI team, @WillMatt4 and @rodri981)
 
 ## 3.5 – 2024-02-16
 
