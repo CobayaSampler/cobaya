@@ -494,6 +494,11 @@ for name, m in like_cmb.items():
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 
 like_bao = {none: {},
+            'BAO_desi_2024': {
+                'desc': 'Combined BAO from DESI 2024',
+                'theory': theory,
+                'likelihood': {'bao.desi_2024_bao_all': None}
+            },
             'BAO_planck_2018': {
                 'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF '
                         '(Planck 2018 papers)',
@@ -534,6 +539,10 @@ for key, value in like_des.items():
         value['sampler'] = cmb_sampler_recommended
 
 like_sn: InfoDict = {none: {},
+                     "PantheonPlus": {
+                         "desc": "Supernovae data from the Pantheon+ sample",
+                         "theory": theory,
+                         "likelihood": {"sn.pantheonplus": None}},
                      "Pantheon": {
                          "desc": "Supernovae data from the Pantheon sample",
                          "theory": theory,

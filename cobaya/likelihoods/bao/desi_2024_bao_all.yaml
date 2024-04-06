@@ -1,0 +1,9 @@
+# DESI BAO results for all tracers
+measurements_file: bao_data/desi_2024_gaussian_bao_ALL_GCcomb_mean.txt
+cov_file: bao_data/desi_2024_gaussian_bao_ALL_GCcomb_cov.txt
+# Fiducial sound horizon with which data have been stored
+rs_fid: 1  # Mpc
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000

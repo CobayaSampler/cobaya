@@ -1,7 +1,0 @@
-# BAO measurement from DESI Y1
-# https://arxiv.org/abs/2404.03002
-
-measurements_file: bao_data/DESI-BAO-y1.dat
-cov_file: bao_data/DESI-BAO-y1-cov.dat
-rs_fid: 1
-aliases: [BAO]

@@ -302,7 +302,7 @@ def test_sdss_dr7_mgs_classy(packages_path, skip_not_installed):
 
 
 def test_DESI_y1_camb(packages_path, skip_not_installed):
-    like = "bao.DESI_BAO_y1"
+    like = "bao.desi_2024_bao_all"
     info_likelihood = {like: {}}
     info_theory = {"camb": None}
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
@@ -346,4 +346,4 @@ chi2_sixdf_2011_bao = {
 chi2_sdss_dr7_mgs = {
     "bao.sdss_dr7_mgs": 0.92689, "tolerance": 0.02}
 chi2_DESI_y1_bao = {
-    "bao.DESI_BAO_y1": 24.81, "tolerance": 0.02}
+    "bao.desi_2024_bao_all": 21.37, "tolerance": 0.02}
