@@ -1,7 +1,7 @@
 ## 3.x
 
 ### Cosmology
-- Added DESI 1yr BAO data and Pantheon Plus (thanks DESI team, @WillMatt4 and @rodri981)
+- Added DESI 1yr BAO data, Pantheon Plus and DESY5 SN (thanks DESI team, @WillMatt4 and @rodri981)
 
 ## 3.5 – 2024-02-16
 
@@ -16,7 +16,7 @@
 
 ### Minimization
 - Support for iminuit minimizer and getting best-fits for all mpi runs (#332, thanks @ggalloni)
-- Support for minimzation with an importance-sampled input yaml config
+- Support for minimization with an importance-sampled input yaml config
 
 ## 3.4.1 – 2023-10-12
 

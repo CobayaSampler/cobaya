@@ -119,7 +119,7 @@ class SN(DataSetLikelihood):
     type = "SN"
 
     install_options = {"github_repository": "CobayaSampler/sn_data",
-                       "github_release": "v1.4"}
+                       "github_release": "v1.5"}
 
     def init_params(self, ini):
 
