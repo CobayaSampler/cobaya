@@ -543,6 +543,14 @@ like_sn: InfoDict = {none: {},
                          "desc": "Supernovae data from the Pantheon+ sample",
                          "theory": theory,
                          "likelihood": {"sn.pantheonplus": None}},
+                     "Union3": {
+                         "desc": "Supernovae data from Union3",
+                         "theory": theory,
+                         "likelihood": {"sn.union3": None}},
+                     "DESY5": {
+                         "desc": "Supernovae data from the DES Y5 sample",
+                         "theory": theory,
+                         "likelihood": {"sn.desy5": None}},
                      "Pantheon": {
                          "desc": "Supernovae data from the Pantheon sample",
                          "theory": theory,

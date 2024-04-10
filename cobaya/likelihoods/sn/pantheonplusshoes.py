@@ -1,5 +1,3 @@
-import os
-import numpy as np
 from .pantheonplus import PantheonPlus
 
 
@@ -16,7 +14,7 @@ class PantheonPlusShoes(PantheonPlus):
         self._apply_mask((self.zcmb > 0.01) | self.is_calibrator)
         self.pre_vars = 0.  # diagonal component
 
-    def alpha_beta_logp(self, lumdists, Mb=0):
+    def alpha_beta_logp(self, lumdists, Mb=0, **kwargs):
         if self.use_abs_mag:
             estimated_scriptm = Mb + 25
         else:

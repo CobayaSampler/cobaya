@@ -1,5 +1,3 @@
-import os
-import numpy as np
 from .pantheonplus import PantheonPlus
 
 

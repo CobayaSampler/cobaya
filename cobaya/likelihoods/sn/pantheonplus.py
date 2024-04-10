@@ -72,7 +72,7 @@ class PantheonPlus(SN):
         fisher = deriv.T.dot(derivp)
         self.invcov = self.invcov - derivp.dot(np.linalg.solve(fisher, derivp.T))
 
-    def alpha_beta_logp(self, lumdists, Mb=0):
+    def alpha_beta_logp(self, lumdists, Mb=0., **kwargs):
         if self.use_abs_mag:
             estimated_scriptm = Mb + 25
         else:
