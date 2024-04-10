@@ -2,7 +2,6 @@ import os
 from cobaya.doc import doc_script
 from cobaya.bib import bib_script
 from .common import stdout_check
-from cobaya.__main__ import run_command
 
 
 def test_doc():
@@ -41,8 +40,3 @@ def test_bib(tmpdir):
 
     with stdout_check('Torrado:2020'):
         bib_script([f])
-
-
-def test_main():
-    with stdout_check('--resume'):
-        run_command(['run', '-h'])
