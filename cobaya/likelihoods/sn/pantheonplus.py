@@ -79,3 +79,4 @@ class PantheonPlus(SN):
             estimated_scriptm = 0.
         diffmag = self.mag - lumdists - estimated_scriptm
         return - diffmag.dot(self.invcov).dot(diffmag) / 2.
+

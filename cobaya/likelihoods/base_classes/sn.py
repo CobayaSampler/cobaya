@@ -388,3 +388,7 @@ class SN(DataSetLikelihood):
                                             params_values[self.beta_name], Mb)
             else:
                 return self.alpha_beta_logp(lumdists, Mb=Mb)
+
+    @classmethod
+    def get_file_base_name(cls) -> str:
+        return cls.__dict__.get('file_base_name') or cls.__name__.lower()
