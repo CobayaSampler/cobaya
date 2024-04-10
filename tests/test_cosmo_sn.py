@@ -68,6 +68,30 @@ def test_sn_pantheon_Mb(packages_path, skip_not_installed):
                  chi2_sn_pantheon_Mb, skip_not_installed=skip_not_installed)
 
 
+def test_sn_pantheonplus_camb(packages_path, skip_not_installed):
+    lik = "sn.pantheonplus"
+    info_likelihood = {lik: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sn_pantheonplus, skip_not_installed=skip_not_installed)
+
+
+def test_sn_union3_camb(packages_path, skip_not_installed):
+    lik = "sn.union3"
+    info_likelihood = {lik: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sn_union3, skip_not_installed=skip_not_installed)
+
+
+def test_sn_desy5_camb(packages_path, skip_not_installed):
+    lik = "sn.desy5"
+    info_likelihood = {lik: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_sn_desy5, skip_not_installed=skip_not_installed)
+
+
 # BEST FIT AND REFERENCE VALUES ##########################################################
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
@@ -78,3 +102,6 @@ chi2_sn_pantheon = {"sn.pantheon": 1035.30, "tolerance": 0.1}
 chi2_sn_pantheon_Mb = {"sn.pantheon": 4025.30, "H0.riess2020Mb": 1.65, "tolerance": 0.1}
 chi2_sn_jla = {"sn.jla": 700.582, "tolerance": 0.1}
 chi2_sn_jla_lite = {"sn.jla_lite": 706.882, "tolerance": 0.1}
+chi2_sn_pantheonplus = {"sn.pantheonplus": 1403.69, "tolerance": 0.1}
+chi2_sn_union3 = {"sn.union3": 26.31, "tolerance": 0.1}
+chi2_sn_desy5 = {"sn.desy5": 1644.94, "tolerance": 0.1}

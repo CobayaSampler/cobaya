@@ -3,7 +3,7 @@ import numpy as np
 from cobaya.likelihoods.base_classes import SN
 
 
-class pantheonplus(SN):
+class PantheonPlus(SN):
     """
     Likelihood for Pantheon+ (without SH0ES) type Ia supernovae sample.
 
@@ -14,8 +14,6 @@ class pantheonplus(SN):
 
     def init_params(self, ini):
         self.twoscriptmfit = False
-        # self.pecz = 0.
-        # self.has_third_var = False
         data_file = os.path.normpath(os.path.join(self.path, ini.string("data_file")))
         self._read_data_file(data_file)
         self.covs = {}
@@ -24,38 +22,49 @@ class pantheonplus(SN):
             self.covs[name] = self._read_covmat(
                 os.path.join(self.path, ini.string('%s_covmat_file' % name)))
         self.alphabeta_covmat = False
-        zmask = self.zcmb > 0.01
-        for col in self.cols:
-            setattr(self, col, getattr(self, col)[zmask])
-        for name, cov in self.covs.items():
-            self.covs[name] = cov[np.ix_(zmask, zmask)]
-        self.pre_vars = 0.  # diagonal component
+        self.configure()
         self.inverse_covariance_matrix()
         if not self.use_abs_mag:
             self._marginalize_abs_mag()
         self.marginalize = False
 
-    def _read_data_file(self, data_file):
+    def _apply_mask(self, zmask):
+        for col in self.cols:
+            setattr(self, col, getattr(self, col)[zmask])
+        for name, cov in self.covs.items():
+            self.covs[name] = cov[np.ix_(zmask, zmask)]
+
+    def configure(self):
+        self._apply_mask(zmask=self.zcmb > 0.01)
+        self.pre_vars = 0.  # diagonal component
+
+    def _read_cols(self, data_file, file_cols, sep=None):
         self.log.debug('Reading %s' % data_file)
-        oldcols = ['m_b_corr', 'zhd', 'zhel', 'is_calibrator']
-        self.cols = ['mag', 'zcmb', 'zhel', 'is_calibrator']
         with open(data_file, 'r') as f:
             lines = f.readlines()
             line = lines[0]
-            cols = [col.strip().lower() for col in line.split()]
-            indices = [cols.index(col) for col in oldcols]
+            if line.startswith('#'):
+                line = line[1:]
+            cols = [col.strip().lower() for col in line.split(sep)]
+            assert cols[0].isalpha()
+            indices = [cols.index(col) for col in file_cols]
             zeros = np.zeros(len(lines) - 1)
             dtypes = {'is_calibrator': '?'}
             for col in self.cols:
                 setattr(self, col, zeros.astype(dtype=dtypes.get(col, 'f8'), copy=True))
             for ix, line in enumerate(lines[1:]):
-                vals = [val.strip() for val in line.split()]
+                vals = [val.strip() for val in line.split(sep)]
                 vals = [vals[i] for i in indices]
                 for i, (col, val) in enumerate(zip(self.cols, vals)):
                     tmp = getattr(self, col)
                     tmp[ix] = np.asarray(val, dtype=tmp.dtype)
         self.nsn = ix + 1
         self.log.debug('Number of SN read: %s ' % self.nsn)
+
+    def _read_data_file(self, data_file):
+        file_cols = ['m_b_corr', 'zhd', 'zhel', 'is_calibrator']
+        self.cols = ['mag', 'zcmb', 'zhel', 'is_calibrator']
+        self._read_cols(data_file, file_cols)
 
     def _marginalize_abs_mag(self):
         deriv = np.ones_like(self.mag)[:, None]
