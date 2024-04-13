@@ -275,11 +275,11 @@ def install(*infos, **kwargs):
                     continue
             elif is_old_version_msg:
                 logger.info(f"Version check failed: {is_old_version_msg}")
-                obsolete_components += [name_w_kind]
                 if kwargs.get("test"):
                     continue
                 if not kwargs.get("upgrade") and not kwargs.get("force"):
                     logger.info("Skipping because '--upgrade' not requested.")
+                    obsolete_components += [name_w_kind]
                     continue
             else:
                 logger.info("Check found no existing installation")
