@@ -1,7 +1,7 @@
 ## 3.x
 
 ### Cosmology
-- Added DESI 1yr BAO data and SN from Pantheon Plus, DESY5 and Union3 (thanks DESI team, @rubind, @WillMatt4 and @rodri981)
+- Added DESI 1yr BAO data and SN from Pantheon Plus, DESY5 and Union3 (thanks DESI team, @adematti, @rubind, @WillMatt4 and @rodri981)
 
 ## 3.5 – 2024-02-16
 

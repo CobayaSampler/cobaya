@@ -396,7 +396,7 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
        file (e.g. when running on a cluster).
     :param logger: logger to use for reporting information; a new logger is created if not
        specified.
-    :return: ``True`` if the download (and decompression, if requested) was successfull,
+    :return: ``True`` if the download (and decompression, if requested) was successful,
        and ``False`` otherwise.
     """
     logger = logger or get_logger("install")
@@ -471,7 +471,7 @@ def download_github_release(base_directory, repo_name, release_name=None, *, ass
        file (e.g. when running on a cluster).
     :param logger: logger to use for reporting information; a new logger is created if not
        specified.
-    :return: ``True`` if the download was successfull, and ``False`` otherwise.
+    :return: ``True`` if the download was successful, and ``False`` otherwise.
     """
     logger = logger or get_logger("install")
     if "/" in repo_name:
