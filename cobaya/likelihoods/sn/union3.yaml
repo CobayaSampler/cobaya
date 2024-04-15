@@ -1,14 +1,12 @@
-# Settings for the Pantheon SN Ia sample, including on Pan-STARRS1 MDS and others.
+# Settings for the Union3 SN Ia analysis.
 
-# Path to the data: where the sn_data has been cloned
-path: null
 # .dataset file with settings
-dataset_file: Pantheon/full_long.dataset
+dataset_file: Union3/full_long.dataset
 # Overriding of .dataset parameters
 dataset_params:
 # field: value
 # Aliases for automatic covariance matrix
-aliases: [ Pantheon, Pantheon18 ]
+aliases: [ Union3 ]
 # Use absolute magnitude
 use_abs_mag: False
 # Speed in evaluations/second
