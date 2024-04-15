@@ -49,9 +49,8 @@ class PantheonPlus(SN):
             assert cols[0].isalpha()
             indices = [cols.index(col) for col in file_cols]
             zeros = np.zeros(len(lines) - 1)
-            dtypes = {'is_calibrator': '?'}
             for col in self.cols:
-                setattr(self, col, zeros.astype(dtype=dtypes.get(col, 'f8'), copy=True))
+                setattr(self, col, zeros.astype(dtype='f8', copy=True))
             for ix, line in enumerate(lines[1:]):
                 vals = [val.strip() for val in line.split(sep)]
                 vals = [vals[i] for i in indices]
@@ -62,8 +61,8 @@ class PantheonPlus(SN):
         self.log.debug('Number of SN read: %s ' % self.nsn)
 
     def _read_data_file(self, data_file):
-        file_cols = ['m_b_corr', 'zhd', 'zhel', 'is_calibrator']
-        self.cols = ['mag', 'zcmb', 'zhel', 'is_calibrator']
+        file_cols = ['m_b_corr', 'zhd', 'zhel']
+        self.cols = ['mag', 'zcmb', 'zhel']
         self._read_cols(data_file, file_cols)
 
     def _marginalize_abs_mag(self):
