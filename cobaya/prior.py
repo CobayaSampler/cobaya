@@ -282,7 +282,7 @@ parameters, we insert the functions defining them under a ``derived`` property
           prior: [...]
           drop: True
         x:
-          value: "lambda logx: np.exp(x)"
+          value: "lambda logx: np.exp(logx)"
 
    Now, if you want to fix the value of ``logx`` without changing the structure of the
    input, do
@@ -294,7 +294,7 @@ parameters, we insert the functions defining them under a ``derived`` property
           value: [fixed_value]
           drop: True
         x:
-          value: "lambda logx: np.exp(x)"
+          value: "lambda logx: np.exp(logx)"
 
 
 .. _prior_inheritance:
