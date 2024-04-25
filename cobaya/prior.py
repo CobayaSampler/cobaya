@@ -297,6 +297,43 @@ parameters, we insert the functions defining them under a ``derived`` property
           value: "lambda logx: np.exp(logx)"
 
 
+Vector parameters
+-----------------
+
+If your theory/likelihood takes an array of parameters as an argument, you can define the
+individual components' priors separately, and then combine them into an array of any shape
+using a  dynamically defined parameter.
+
+Notice that the individual components must have
+``drop: True`` in order not to be passed down the pipeline, and the dynamically-defined
+vector must carry ``derived: False``, since only numbers, not arrays, can be saved as
+derived parameters.
+
+You can see an example below, defining a Gaussian likelihood on the sum of two parameters,
+which are taken as components of a single array-like argument:
+
+
+.. code:: Python
+
+   from scipy import stats
+
+
+   def gauss_band(x_vector):
+       return stats.norm.logpdf(
+           x_vector[0] + x_vector[1], loc=1, scale=0.02)
+
+   # NB: don't forget the 'drop: True' in the individual parameters
+   #     and 'derived: False' in the vector parameters
+
+   info = {
+       "likelihood": {"band": gauss_band},
+       "params": {
+           "x": {"prior": {"min": 0, "max": 2}, "proposal": 0.1, "drop": True},
+           "y": {"prior": {"min": 0, "max": 2}, "proposal": 0.1, "drop": True},
+           "x_vector": {"value": lambda x, y: [x, y], "derived": False}},
+       "sampler": {"mcmc": None}}
+
+
 .. _prior_inheritance:
 
 Changing and redefining parameters; inheritance

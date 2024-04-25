@@ -267,7 +267,7 @@ class Minimize(Minimizer, CovmatSampler):
             self.log.debug("Starting point: %r", initial_point)
             self._affine_transform_baseline = initial_point
             initial_point = self.affine_transform(initial_point)
-            np.testing.assert_allclose(initial_point, np.zeros(initial_point.shape))
+            assert np.allclose(initial_point, 0.)
             bounds = np.array(
                 [self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
             try:
@@ -444,7 +444,7 @@ class Minimize(Minimizer, CovmatSampler):
                 "X0": self._affine_transform_baseline}
 
     def getdist_point_text(self, params, weight=None, minuslogpost=None):
-        """Creates the multi-line string containing the minumum in GetDist format."""
+        """Creates the multi-line string containing the minimum in GetDist format."""
         lines = []
         if weight is not None:
             lines.append('  weight    = %s' % weight)

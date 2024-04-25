@@ -458,8 +458,18 @@ class SampleCollection(BaseCollection):
                 self._cache[pos, self._icol[name]] = -2 * value
             self._cache[pos, self._icol[OutPar.chi2]] = -2 * logposterior.loglike
         if len(logposterior.derived):
-            for name, value in zip(self.derived_params, logposterior.derived):
-                self._cache[pos, self._icol[name]] = value
+            try:
+                for name, value in zip(self.derived_params, logposterior.derived):
+                    self._cache[pos, self._icol[name]] = value
+            except ValueError:
+                raise LoggedError(
+                    self.log, "Was expecting float for derived parameter %r, but "
+                              "got %r (type %r) instead. If you have defined this "
+                              "parameter manually (e.g. with a 'lambda') either make "
+                              "sure that it returns a number (or nan), or set "
+                              "'derived: False' for this parameter, so that its value"
+                              " is not stored in the sample.",
+                    name, value, type(value).__class__)
 
     def _cache_dump(self):
         """
