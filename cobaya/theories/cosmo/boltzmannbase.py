@@ -31,7 +31,7 @@ class BoltzmannBase(Theory):
 
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
-        # Additional input parameters to pass to CAMB, and attributes to set_ manually
+        # Additional input parameters (e.g. to pass to setter function, to set as attr...)
         self.extra_args = deepcopy_where_possible(self.extra_args) or {}
         self._must_provide = {}
 
@@ -215,11 +215,18 @@ class BoltzmannBase(Theory):
                 #                 "Source %r requested twice with different specification"
                 #                 ": %r vs %r.", source, window, self.sources[source])
                 self._must_provide[k].update(v)
-            elif k in ["Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
+            elif k in {"Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
                        "angular_diameter_distance", "comoving_radial_distance",
-                       "sigma8_z", "fsigma8"]:
+                       "sigma8_z", "fsigma8"}:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
+                if not isinstance(v, Mapping) or "z" not in v:
+                    raise LoggedError(
+                        self.log,
+                        f"The value in the dictionary of requisites {k} must be a "
+                        "dictionary containing the key 'z' with a list of redshifts "
+                        f"(got instead {{{k}: {v}}})"
+                    )
                 self._must_provide[k]["z"] = combine_1d(
                     v["z"], self._must_provide[k].get("z"))
             elif k == "angular_diameter_distance_2":
@@ -322,8 +329,9 @@ class BoltzmannBase(Theory):
         The ``muK2`` and ``K2`` options use the model's CMB temperature.
 
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
-        :math:`\ell(\ell+1)/(2\pi)` (or by :math:`\ell^2(\ell+1)^2/(2\pi)` in the case of
-        the lensing potential ``pp`` spectrum).
+        :math:`\ell(\ell+1)/(2\pi)` (or by :math:`[\ell(\ell+1)]^2/(2\pi)` in the case of
+        the lensing potential ``pp`` spectrum, and :math:`[\ell(\ell+1)]^{3/2}/(2\pi)` for
+        the the cross spectra ``tp`` and ``ep``).
         """
 
     @abstract
@@ -419,9 +427,9 @@ class BoltzmannBase(Theory):
         Get a :math:`P(z,k)` bicubic interpolation object
         (:class:`PowerSpectrumInterpolator`).
 
-        In the interpolator returned, both the input :math:`k` and resulting
-        :math:`P(z,k)` values are in units of :math:`1/\mathrm{Mpc}` (not :math:`h^{-1}`
-        units).
+        In the interpolator returned, the input :math:`k` and resulting
+        :math:`P(z,k)` are in units of :math:`1/\mathrm{Mpc}` and
+        :math:`\mathrm{Mpc}^3` respectively (not in :math:`h^{-1}` units).
 
         :param var_pair: variable pair for power spectrum
         :param nonlinear: non-linear spectrum (default True)
@@ -464,9 +472,10 @@ class BoltzmannBase(Theory):
         Returned arrays may be bigger or more densely sampled than requested, but will
         include required values.
 
-        In the grid returned, both :math:`k` and :math:`P(z,k)` values are in units of
-        :math:`1/\mathrm{Mpc}` (not :math:`h^{-1}` units), and :math:`z` and :math:`k`
-        are in **ascending** order.
+        In the grid returned, :math:`k` and :math:`P(z,k)` are in units of
+        :math:`1/\mathrm{Mpc}` and :math:`\mathrm{Mpc}^3` respectively
+        (not in :math:`h^{-1}` units), and :math:`z` and :math:`k` are in
+        **ascending** order.
 
         :param nonlinear: whether the linear or non-linear spectrum
         :param var_pair: which power spectrum
@@ -535,16 +544,16 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("fsigma8", z)
 
-    def get_auto_covmat(self, params_info, likes_info, random_state=None):
+    def get_auto_covmat(self, params_info, likes_info):
         r"""
         Tries to get match to a database of existing covariance matrix files for the
         current model and data.
 
         ``params_info`` should contain preferably the slow parameters only.
         """
-        from cobaya.cosmo_input import get_best_covmat_ext
-        return get_best_covmat_ext(self.packages_path, params_info, likes_info,
-                                   random_state)
+        from cobaya.cosmo_input import get_best_covmat_ext, get_covmat_package_folders
+        return get_best_covmat_ext(get_covmat_package_folders(self.packages_path),
+                                   params_info, likes_info)
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):
@@ -572,7 +581,7 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         z, k = (np.atleast_1d(x) for x in [z, k])
         if len(z) < 4:
             raise ValueError('Require at least four redshifts for Pk interpolation.'
-                             'Consider using Pk_grid if you just need a a small number'
+                             'Consider using Pk_grid if you just need a small number'
                              'of specific redshifts (doing 1D splines in k yourself).')
         z, k, P_or_logP = np.array(z), np.array(k), np.array(P_or_logP)
         i_z = np.argsort(z)

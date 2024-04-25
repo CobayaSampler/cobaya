@@ -180,10 +180,58 @@ Likelihoods, like Theory classes,  can also provide derived parameters. To do th
 Alternatively, you could implement the Theory-inherited ``calculate`` method,
 and set both ``state['logp']`` and ``state['derived']``.
 
+If you distribute your package on pypi or github, any user will have to install your package before using it. This can be done automatically from an input yaml file (using ``cobaya-install``) if the user specifies a ``package_install`` block. For example, the Planck NPIPE cosmology likelihoods can be used from a yaml block
+
+.. code:: yaml
+
+    likelihood:
+      planck_2018_lowl.TT_native: null
+      planck_2018_lowl.EE_native: null
+      planck_NPIPE_highl_CamSpec.TTTEEE: null
+      planckpr4lensing:
+        package_install:
+          github_repository: carronj/planck_PR4_lensing
+          min_version: 1.0.2
+
+Running ``cobaya-install`` on this input will download planckpr4lensing from
+github and then pip install it (since it is not an internal package provided with Cobaya, unlike the other likelihoods). The ``package_install`` block can instead use ``download_url`` for a zip download, or just "pip" to install from pypi. The options are the same as the ``install_options`` for installing likelihood data using the ``InstallableLikelihood`` class described below.
+
+Automatically showing bibliography
+----------------------------------
+
+You can store bibliography information together with your class, so that it is shown when
+using the ``cobaya-bib`` script, as explained in :ref:`this section <citations>`. To do
+that, you can simply include the corresponding bibtex code in a file named as your class
+with ``.bibtex`` extension placed in the same folder as the module defining the class.
+
+As an alternative, you can implement a ``get_bibtex`` class method in your class that
+returns the bibtex code:
+
+.. code:: python
+
+    @classmethod
+    def get_bibtex(cls):
+        from inspect import cleandoc  # to remove indentation
+        return cleandoc(r"""
+            # Your bibtex code here! e.g.:
+            @article{Torrado:2020dgo,
+                author = "Torrado, Jesus and Lewis, Antony",
+                 title = "{Cobaya: Code for Bayesian Analysis of hierarchical physical models}",
+                 eprint = "2005.05290",
+                 archivePrefix = "arXiv",
+                 primaryClass = "astro-ph.IM",
+                 reportNumber = "TTK-20-15",
+                 doi = "10.1088/1475-7516/2021/05/057",
+                 journal = "JCAP",
+                 volume = "05",
+                 pages = "057",
+                 year = "2021"
+            }""")
+
 InstallableLikelihood
 ---------------------
 
-This supports the default auto-installation. Just add a class-level string specifying installation options, e.g.
+This supports the default data auto-installation. Just add a class-level string specifying installation options, e.g.
 
 .. code:: python
 
@@ -284,4 +332,3 @@ Inheritance diagram for internal cosmology likelihoods
     :parts: 1
     :private-bases:
     :top-classes: cobaya.likelihood.Likelihood
-

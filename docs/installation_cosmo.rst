@@ -8,11 +8,25 @@ To keep it light, maintainable and easily extensible, **cobaya** does not includ
 Installing a basic set of codes and likelihoods
 -----------------------------------------------
 
-To install a comprehensive set of cosmology requisites (CAMB, CLASS, Planck, BICEP-Keck, BAO, SN), in a ``/path/to/packages`` folders of your choice:
+To install a basic set of cosmology requisites (CAMB, CLASS, Planck, BAO, SN), in a ``/path/to/packages`` folders of your choice:
 
 .. code:: bash
 
    $ cobaya-install cosmo -p /path/to/packages
+
+This does not install the Planck 2018 **clik** likelihoods, just the more recent NPIPE (PR4) native python version.
+The original packages can then be installed using e.g.
+
+.. code:: bash
+
+   $ cobaya-install planck_2018_highl_plik.TTTEEE
+
+If you have your input .yaml file that you want to run set up, you can also install just the likelihoods you need  using
+
+.. code:: bash
+
+   $ cobaya-install MyFile.yaml
+
 
 If this fails (see last printed message), keep on reading this section. Otherwise, you can go straight to :doc:`cosmo_basic_runs`.
 
@@ -115,9 +129,17 @@ Individual likelihood or theory components can be installed using
    $ cobaya-install component_name --packages-path /path/to/packages
 
 This will also work with your own or third-party :ref:`likelihood classes <likelihood_classes>`.
-To force reinstallation of a package that is already installed, you can use the ``-f`` option, e.g. to
-update an auto-installed *camb* use
+
+To force reinstallation of a package that is already installed, e.g. because you modified it manually, you can use the ``-f`` (or ``--force``) option, e.g.
 
 .. code:: bash
 
-   $ cobaya-install -f --packages-path /path/to/packages camb
+   $ cobaya-install camb -f --packages-path /path/to/packages
+
+To upgrade an obsolete requisite, use the ``--upgrade`` argument.
+
+
+``install`` function
+--------------------
+
+.. autofunction:: install.install

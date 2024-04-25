@@ -1,0 +1,13 @@
+# eBOSS LRG results, measurements from eBOSS DR12
+# as described in, Alam et al. 2016
+# https://arxiv.org/pdf/1607.03155.pdf
+
+path: null
+measurements_file: bao_data/sdss_DR12_LRG_BAO_DMDH.dat
+cov_file: bao_data/sdss_DR12_LRG_BAO_DMDH_covtot.txt
+# Fiducial sound horizon with which data have been stored
+rs_fid: 1  # Mpc
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000

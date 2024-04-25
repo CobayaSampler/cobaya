@@ -1,5 +1,5 @@
 """
-Automatic tests of the cosmo_externa_likelihood example in the documentation,
+Automatic tests of the cosmo_external_likelihood example in the documentation,
 to make sure it remains up to date.
 """
 

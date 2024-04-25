@@ -20,10 +20,9 @@ cl_names = ['tt', 'te', 'ee']
 
 
 class PlanckPlikLite(DataSetLikelihood):
-    install_options = {
-        "download_url": "https://github.com/CobayaSampler/planck_native_data"
-                        "/releases/download/v1/plik_lite_2018_AL.zip",
-        "data_path": "planck_2018_pliklite_native"}
+    install_options = {"github_repository": "CobayaSampler/planck_native_data",
+                       "github_release": "v1", "asset": "plik_lite_2018_AL.zip",
+                       "directory": "planck_2018_pliklite_native"}
 
     bibtex_file = 'planck2018.bibtex'
     type = "CMB"
@@ -131,7 +130,7 @@ class PlanckPlikLite(DataSetLikelihood):
                                                                   self.blmax[i] + 1]
         return lmin, lmax, m
 
-    def get_chi_squared(self, L0, ctt, cte, cee, calPlanck=1):
+    def get_chi_squared(self, L0, ctt, cte, cee, A_planck=1):
         cl = np.empty(self.used_indices.shape)
         ix = 0
         for tp, cell in enumerate([ctt, cte, cee]):
@@ -139,21 +138,21 @@ class PlanckPlikLite(DataSetLikelihood):
                 cl[ix] = np.dot(cell[self.blmin[i] - L0:self.blmax[i] - L0 + 1],
                                 self.weights[self.blmin[i]:self.blmax[i] + 1])
                 ix += 1
-        cl /= calPlanck ** 2
+        cl /= A_planck ** 2
         diff = self.X_data - cl
         return self._fast_chi_squared(self.invcov, diff)
 
-    def chi_squared(self, c_l_arr, calPlanck=1):
+    def chi_squared(self, c_l_arr, A_planck=1):
         r"""
         Get chi squared from CL array from file
 
         :param c_l_arr: file of L and L(L+1)CL/2\pi values for C_TT, C_TE, C_EE
-        :param calPlanck: calibration parameter
+        :param A_planck: calibration parameter
         :return: chi-squared
         """
         L0 = int(c_l_arr[0, 0])
         return self.get_chi_squared(L0, c_l_arr[:, 1], c_l_arr[:, 2], c_l_arr[:, 3],
-                                    calPlanck)
+                                    A_planck)
 
     def logp(self, **data_params):
         Cls = self.provider.get_Cl(ell_factor=True)

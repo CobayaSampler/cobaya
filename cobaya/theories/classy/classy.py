@@ -45,8 +45,55 @@ You can specify any parameter that CLASS understands in the ``params`` block:
 If you want to use your own version of CLASS, you need to specify its location with a
 ``path`` option inside the ``classy`` block. If you do not specify a ``path``,
 CLASS will be loaded from the automatic-install ``packages_path`` folder, if specified, or
-otherwise imported as a globally-installed Python package. Cobaya will print at
-initialisation where it is getting CLASS from.
+otherwise imported as a globally-installed Python package. If you want to force that
+the global ``classy`` installation is used, pass ``path='global'``. Cobaya will print at
+initialisation where CLASS was actually loaded from.
+
+
+.. _classy_access:
+
+Access to CLASS computation products
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can retrieve CLASS computation products within likelihoods (or other pipeline
+components in general) or manually from a :class:`~model.Model` as long as you have added
+them as requisites; see :doc:`cosmo_external_likelihood` or
+:doc:`cosmo_external_likelihood_class` for the likelihood case, and :doc:`cosmo_model` for
+the manual case.
+
+The products that you can request and later retrieve are listed in
+:func:`~theories.cosmo.BoltzmannBase.must_provide`.
+
+For scalar parameters, you can add them as derived parameters in your input file. In
+principle, you can add most of the parameters that you can retrieve manually in the CLASS
+Python wrapper (the ones appearing inside the definition of the
+``get_current_derived_parameters()`` function of the `python CLASS interface
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_). If any of
+them does not work (usually because it has been added to CLASS since Cobaya was last
+updated), you can still add them as derived parameters in you input as long as you add
+them also to the ``classy`` block as
+
+.. code:: yaml
+
+   theory:
+     classy:
+       [...]
+       output_params: ["param1", "param2", ...]
+
+If you would like to access a CLASS result that is not accessible in any of these ways,
+you can access directly the return value of the `python CLASS interface
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_ functions
+``get_background()``, ``get_thermodynamics()``, ``get_primordial()``,
+``get_perturbations()`` and  ``get_sources()``. To do that add to the requisites
+``{get_CLASS_[...]: None}`` respectively, and retrieve it with
+``provider.get_CLASS_[...]``.
+
+In general, the use of these methods for direct access to CLASS results should be avoided
+in public code, since it breaks compatibility with other Boltzmann codes at the likelihood
+interface level. If you need a quantity for a public code that is not generally interfaced
+in :func:`~theories.cosmo.BoltzmannBase.must_provide`, let us know if you think it makes
+sense to add it.
+
 
 String-vector parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -68,6 +115,9 @@ exposed in the Python interface
 If you follow those instructions you do not need to make any additional modification in
 Cobaya.
 
+If your modification involves new computed quantities, add the new quantities to the
+return value of some of the direct-access methods listed in :ref:`classy_access`.
+
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by
 evaluating observables or getting derived quantities at known points in the parameter
 space (set ``debug: True`` to get more detailed information of what exactly is passed to
@@ -78,6 +128,15 @@ whenever the computation of any observable would fail, but you do not expect tha
 observable to be compatible with the data (e.g. at the fringes of the parameter
 space). Whenever such an error is raised during sampling, the likelihood is assumed to be
 zero, and the run is not interrupted.
+
+.. note::
+
+   If your modified CLASS has a lower version number than the minimum required by Cobaya,
+   you will get an error at initialisation. You may still be able to use it by setting the
+   option ``ignore_obsolete: True`` in the ``classy`` block (though you would be doing
+   that at your own risk; ideally you should translate your modification to a newer CLASS
+   version, in case there have been important fixes since the release of your baseline
+   version).
 
 
 Installation
@@ -105,57 +164,76 @@ script.
 Manual installation (or using your own version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you are planning to modify CLASS or use an already modified version,
-you should not use the automatic installation script. Use the method below instead.
-
-CLASS's python interface utilizes the ``cython`` compiler. If typing ``cython`` in the
-shell produces an error, install it with ``python -m pip install cython``.
+You may prefer to install CLASS manually e.g. if you are planning to modify it.
 
 .. note::
-   The fast way, assuming you are installing all your cosmological codes under
-   ``/path/to/cosmo/``:
+
+   *Pre-requisite*: CLASS' Python wrapper needs `Cython <https://cython.org/>`_, which you
+   can install with
 
    .. code:: bash
 
-      $ cd /path/to/cosmo/
-      $ git clone https://github.com/lesgourg/class_public.git
-      $ mv class_public CLASS
-      $ cd CLASS
-      $ make
+      $ python -m pip install 'cython'
 
-   If the **second** line produces an error (because you don't have ``git`` installed),
-   try
+   In particular, if working with a modified CLASS version based on a version previous
+   to v3.2.1, you need to change above ``'cython'`` by ``'cython<3'`` (see `this issue
+   <https://github.com/lesgourg/class_public/issues/531>`_).
+
+To download and install CLASS manually in a folder called ``CLASS`` under
+``/path/to/cosmo``, simply do:
+
+.. code:: bash
+
+   $ cd /path/to/cosmo/
+   $ git clone https://github.com/lesgourg/class_public.git CLASS --depth=1
+   $ cd CLASS
+   $ make
+
+If the **second** line produces an error (because you don't have ``git`` installed),
+download the latest snapshot from `here
+<https://github.com/lesgourg/class_public/archive/master.zip>`_, decompress it, rename the
+resulting ``class_public-master`` folder to ``CLASS`` (optional) and run the ``make``
+command from there.
+
+.. note::
+
+   If CLASS seems to compile and install correctly, but you cannot import it from Python
+   manually, or Cobaya fails to import it, it may be that the CLASS installation script is
+   not using the right Python version. To fix that, if your preferred Python command is
+   e.g. ``python3``, re-do the ``make`` step as
 
    .. code:: bash
 
-      $ cd /path/to/cosmo/
-      $ wget https://github.com/lesgourg/class_public/archive/master.zip
-      $ unzip master.zip
-      $ rm master.zip
-      $ mv class_public-master CLASS
-      $ cd CLASS
-      $ make
+      $ PYTHON=python3 make
 
 If the instructions above failed, follow those in the
-`official CLASS web page <http://class-code.net/>`_ to get CLASS compiled with the Python
-interface ready.
+`official CLASS web page <https://class-code.net/>`_.
+
+Finally, in order for Cobaya to use this CLASS installation, you must specify the path to
+it in the ``classy`` input block (otherwise a system-wide CLASS may be used instead):
+
+.. code:: yaml
+
+    theory:
+      classy:
+        path: /path/to/cosmo/CLASS
 """
 
 # Global
 import sys
 import os
-import numpy as np
+import platform
 from copy import deepcopy
 from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
+import numpy as np
 
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, pip_install, NotInstalledError, \
-    check_gcc_version
-from cobaya.tools import load_module, VersionCheckError, Pool1D, Pool2D, PoolND, \
-    combine_1d
-from cobaya.typing import empty_dict
+from cobaya.install import download_github_release, pip_install, check_gcc_version
+from cobaya.component import ComponentNotInstalledError, load_external_module
+from cobaya.tools import Pool1D, Pool2D, PoolND, combine_1d, get_compiled_import_path, \
+    VersionCheckError
 
 
 # Result collector
@@ -173,6 +251,7 @@ class Collector(NamedTuple):
 
 # default non linear code -- same as CAMB
 non_linear_default_code = "hmcode"
+non_linear_null_value = "none"
 
 
 class classy(BoltzmannBase):
@@ -182,23 +261,33 @@ class classy(BoltzmannBase):
 
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v3.1.2"
+    _min_classy_version = "v3.2.1"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', _min_classy_version)
 
     classy_module: Any
+    ignore_obsolete: bool
 
     def initialize(self):
         """Importing CLASS from the correct path, if given, and if not, globally."""
-        # Allow global import if no direct path specification
-        allow_global = not self.path
-        if not self.path and self.packages_path:
-            self.path = self.get_path(self.packages_path)
-        self.classy_module = self.is_installed(path=self.path, allow_global=allow_global,
-                                               check=False)
-        if not self.classy_module:
-            raise NotInstalledError(
-                self.log, "Could not find CLASS. Check error message above.")
+        install_path = None
+        if self.packages_path is not None:
+            install_path = self.get_path(self.packages_path)
+        min_version = None if self.ignore_obsolete else self._classy_repo_version
+        try:
+            self.classy_module = load_external_module(
+                "classy", path=self.path, install_path=install_path,
+                min_version=min_version, get_import_path=self.get_import_path,
+                logger=self.log, not_installed_level="debug")
+        except VersionCheckError as vc_excpt:
+            raise VersionCheckError(
+                str(vc_excpt) + " If you are using CLASS unmodified, upgrade with"
+                "`cobaya-install classy --upgrade`. If you are using a modified CLASS, "
+                "set the option `ignore_obsolete: True` for CLASS.") from vc_excpt
+        except ComponentNotInstalledError as ni_excpt:
+            raise ComponentNotInstalledError(
+                self.log, (f"Could not find CLASS: {ni_excpt}. "
+                           "To install it, run `cobaya-install classy`")) from ni_excpt
         self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
@@ -206,9 +295,23 @@ class classy(BoltzmannBase):
         if "sBBN file" in self.extra_args:
             self.extra_args["sBBN file"] = (
                 self.extra_args["sBBN file"].format(classy=self.path))
+        # Normalize `non_linear` vs `non linear`: prefer underscore
+        # Keep this convention throughout the rest of this module!
+        if "non linear" in self.extra_args:
+            if "non_linear" in self.extra_args:
+                raise LoggedError(
+                    self.log, ("In `extra_args`, only one of `non_linear` or `non linear`"
+                               " should be defined."))
+            self.extra_args["non_linear"] = self.extra_args.pop("non linear")
+        # Normalize non_linear None|False --> "none"
+        # Use default one if not specified
+        if self.extra_args.get("non_linear", "dummy_string") in (None, False):
+            self.extra_args["non_linear"] = non_linear_null_value
+        elif ("non_linear" not in self.extra_args or
+              self.extra_args["non_linear"] is True):
+            self.extra_args["non_linear"] = non_linear_default_code
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
-        self.log.info("Initialized!")
 
     def set_cl_reqs(self, reqs):
         """
@@ -268,8 +371,15 @@ class classy(BoltzmannBase):
                 # (default: 0.1). But let's leave it like this in case this changes
                 # in the future.
                 self.add_z_for_matter_power(v.pop("z"))
-                if v["nonlinear"] and "non linear" not in self.extra_args:
-                    self.extra_args["non linear"] = non_linear_default_code
+                if v["nonlinear"]:
+                    if "non_linear" not in self.extra_args:
+                        # this is redundant with initialisation, but just in case
+                        self.extra_args["non_linear"] = non_linear_default_code
+                    elif self.extra_args["non_linear"] == non_linear_null_value:
+                        raise LoggedError(
+                            self.log, ("Non-linear Pk requested, but `non_linear: "
+                                       f"{non_linear_null_value}` imposed in "
+                                       "`extra_args`"))
                 pair = k[2:]
                 if pair == ("delta_tot", "delta_tot"):
                     v["only_clustering_species"] = False
@@ -309,12 +419,17 @@ class classy(BoltzmannBase):
                 try:
                     method = {("delta_tot", "delta_tot"): "sigma",
                               ("delta_nonu", "delta_nonu"): "sigma_cb"}[pair]
-                except KeyError:
-                    raise LoggedError(self.log, f"sigma(R,z) not implemented for {pair}")
+                except KeyError as excpt:
+                    raise LoggedError(
+                        self.log, f"sigma(R,z) not implemented for {pair}") from excpt
                 self.collectors[k] = Collector(
                     method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
                     args_names=["R", "z"], arg_array=[[0], [1]],
                     post=(lambda R, z, sigma: (z, R, sigma.T)))
+            elif k in [f"CLASS_{q}" for q in ["background", "thermodynamics",
+                                              "primordial", "perturbations", "sources"]]:
+                # Get direct CLASS results
+                self.collectors[k] = Collector(method=f"get_{k.lower()[len('CLASS_'):]}")
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -328,12 +443,13 @@ class classy(BoltzmannBase):
         # Adding tensor modes if requested
         if self.extra_args.get("r") or "r" in self.input_params:
             self.extra_args["modes"] = "s,t"
-        # If B spectrum with l>50, or lensing, recommend using Halofit
+        # If B spectrum with l>50, or lensing, recommend using a non-linear code
         cls = self._must_provide.get("Cl", {})
         has_BB_l_gt_50 = (any(("b" in cl.lower()) for cl in cls) and
                           max(cls[cl] for cl in cls if "b" in cl.lower()) > 50)
         has_lensing = any(("p" in cl.lower()) for cl in cls)
-        if (has_BB_l_gt_50 or has_lensing) and not self.extra_args.get("non linear"):
+        if (has_BB_l_gt_50 or has_lensing) and \
+           self.extra_args.get("non_linear") == non_linear_null_value:
             self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
                              "using a non-linear code is recommended (and you are not "
                              "using any). To activate it, set "
@@ -406,10 +522,10 @@ class classy(BoltzmannBase):
 
     def set(self, params_values_dict):
         # If no output requested, remove arguments that produce an error
-        # (e.g. complaints if halofit requested but no Cl's computed.)
+        # (e.g. complaints if halofit requested but no Cl's computed.) ?????
         # Needed for facilitating post-processing
         if not self.extra_args["output"]:
-            for k in ["non linear"]:
+            for k in ["non_linear"]:
                 self.extra_args.pop(k, None)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
@@ -436,7 +552,7 @@ class classy(BoltzmannBase):
             else:
                 self.log.debug("Computation of cosmological products failed. "
                                "Assigning 0 likelihood and going on. "
-                               "The output of the CLASS error was %s" % e)
+                               "The output of the CLASS error was %s", e)
             return False
         # CLASS not correctly initialized, or input parameters not correct
         except self.classy_module.CosmoSevereError:
@@ -525,7 +641,7 @@ class classy(BoltzmannBase):
         requested = [self.translate_param(p) for p in (
             self.output_params if derived_requested else [])]
         requested_and_extra = dict.fromkeys(set(requested).union(self.derived_extra))
-        # Parameters with their own getters
+        # Parameters with their own getters or different CLASS internal names
         if "rs_drag" in requested_and_extra:
             requested_and_extra["rs_drag"] = self.classy.rs_drag()
         if "Omega_nu" in requested_and_extra:
@@ -552,19 +668,29 @@ class classy(BoltzmannBase):
         which_error = "lensed" if lensed else "unlensed"
         try:
             cls = deepcopy(self.current_state[which_key])
-        except:
-            raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
-                                        "have requested them?", which_error)
+        except Exception as excpt:
+            raise LoggedError(
+                self.log,
+                "No %s Cl's were computed. Are you sure that you have requested them?",
+                which_error
+            ) from excpt
         # unit conversion and ell_factor
         ells_factor = \
             ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
         units_factor = self._cmb_unit_factor(
             units, self.current_state['derived_extra']['T_cmb'])
         for cl in cls:
-            if cl not in ['pp', 'ell']:
-                cls[cl][2:] *= units_factor ** 2 * ells_factor
-        if lensed and "pp" in cls and ell_factor:
-            cls['pp'][2:] *= ells_factor ** 2 * (2 * np.pi)
+            if cl == "ell":
+                continue
+            units_power = float(sum(cl.count(p) for p in ["t", "e", "b"]))
+            cls[cl][2:] *= units_factor**units_power
+            if ell_factor:
+                if "p" not in cl:
+                    cls[cl][2:] *= ells_factor
+                elif cl == "pp" and lensed:
+                    cls[cl][2:] *= ells_factor ** 2 * (2 * np.pi)
+                elif "p" in cl and lensed:
+                    cls[cl][2:] *= ells_factor ** (3 / 2) * np.sqrt(2 * np.pi)
         return cls
 
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
@@ -573,12 +699,34 @@ class classy(BoltzmannBase):
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
+    def get_CLASS_background(self):
+        """Direct access to ``get_background`` from the CLASS python interface."""
+        return self.current_state["CLASS_background"]
+
+    def get_CLASS_thermodynamics(self):
+        """Direct access to ``get_thermodynamics`` from the CLASS python interface."""
+        return self.current_state["CLASS_thermodynamics"]
+
+    def get_CLASS_primordial(self):
+        """Direct access to ``get_primordial`` from the CLASS python interface."""
+        return self.current_state["CLASS_primordial"]
+
+    def get_CLASS_perturbations(self):
+        """Direct access to ``get_perturbations`` from the CLASS python interface."""
+        return self.current_state["CLASS_perturbations"]
+
+    def get_CLASS_sources(self):
+        """Direct access to ``get_sources`` from the CLASS python interface."""
+        return self.current_state["CLASS_sources"]
+
     def close(self):
         self.classy.empty()
 
     def get_can_provide_params(self):
-        names = ['Omega_Lambda', 'Omega_cdm', 'Omega_b', 'Omega_m', 'rs_drag', 'z_reio',
-                 'YHe', 'Omega_k', 'age', 'sigma8']
+        names = ["h", "H0", "Omega_Lambda", "Omega_cdm", "Omega_b", "Omega_m", "Omega_k",
+                 "rs_drag", "tau_reio", "z_reio", "z_rec", "tau_rec", "m_ncdm_tot",
+                 "Neff", "YHe", "age", "conformal_age", "sigma8", "sigma8_cb",
+                 "theta_s_100"]
         for name, mapped in self.renames.items():
             if mapped in names:
                 names.append(name)
@@ -598,71 +746,26 @@ class classy(BoltzmannBase):
     def get_path(cls, path):
         return os.path.realpath(os.path.join(path, "code", cls.__name__))
 
-    @classmethod
-    def get_import_path(cls, path):
-        log = get_logger(cls.__name__)
-        classy_build_path = os.path.join(path, "python", "build")
-        if not os.path.isdir(classy_build_path):
-            log.error("Either CLASS is not in the given folder, "
-                      "'%s', or you have not compiled it.", path)
-            return None
-        py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
-        try:
-            post = next(d for d in os.listdir(classy_build_path)
-                        if (d.startswith("lib.") and py_version in d))
-        except StopIteration:
-            log.error("The CLASS installation at '%s' has not been compiled for the "
-                      "current Python version.", path)
-            return None
-        return os.path.join(classy_build_path, post)
+    @staticmethod
+    def get_import_path(path):
+        return get_compiled_import_path(os.path.join(path, "python"))
 
     @classmethod
     def is_compatible(cls):
-        import platform
         if platform.system() == "Windows":
             return False
         return True
 
     @classmethod
-    def is_installed(cls, **kwargs):
+    def is_installed(cls, reload=False, **kwargs):
         if not kwargs.get("code", True):
             return True
-        log = get_logger(cls.__name__)
-        check = kwargs.get("check", True)
-        func = log.info if check else log.error
-        path = kwargs["path"]
-        if path is not None and path.lower() == "global":
-            path = None
-        if path and not kwargs.get("allow_global"):
-            log.info("Importing *local* CLASS from '%s'.", path)
-            assert path is not None
-            if not os.path.exists(path):
-                func("The given folder does not exist: '%s'", path)
-                return False
-            classy_build_path = cls.get_import_path(path)
-            if not classy_build_path:
-                return False
-        elif not path:
-            log.info("Importing *global* CLASS.")
-            classy_build_path = None
-        else:
-            log.info("Importing *auto-installed* CLASS (but defaulting to *global*).")
-            classy_build_path = cls.get_import_path(path)
         try:
-            return load_module(
-                'classy', path=classy_build_path, min_version=cls._classy_repo_version)
-        except ImportError:
-            if path is not None and path.lower() != "global":
-                func("Couldn't find the CLASS python interface at '%s'. "
-                     "Are you sure it has been installed there?", path)
-            elif not check:
-                log.error("Could not import global CLASS installation. "
-                          "Specify a Cobaya or CLASS installation path, "
-                          "or install the CLASS Python interface globally with "
-                          "'cd /path/to/class/python/ ; python setup.py install'")
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
+            return bool(load_external_module(
+                "classy", path=kwargs["path"], get_import_path=cls.get_import_path,
+                min_version=cls._classy_repo_version, reload=reload,
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
+        except ComponentNotInstalledError:
             return False
 
     @classmethod
@@ -672,6 +775,8 @@ class classy(BoltzmannBase):
             log.info("Code not requested. Nothing to do.")
             return True
         log.info("Installing pre-requisites...")
+        # TODO: remove version restriction below when this issue is fixed:
+        # https://github.com/lesgourg/class_public/issues/531
         exit_status = pip_install("cython")
         if exit_status:
             log.error("Could not install pre-requisite: cython")
@@ -679,7 +784,7 @@ class classy(BoltzmannBase):
         log.info("Downloading classy...")
         success = download_github_release(
             os.path.join(path, "code"), cls._classy_repo_name, cls._classy_repo_version,
-            repo_rename=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
+            directory=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
         if not success:
             log.error("Could not download classy.")
             return False

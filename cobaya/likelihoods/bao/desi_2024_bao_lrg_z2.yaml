@@ -1,0 +1,9 @@
+# DESI BAO results for LRG in 0.6 < z < 0.8
+measurements_file: bao_data/desi_2024_gaussian_bao_LRG_GCcomb_z0.6-0.8_mean.txt
+cov_file: bao_data/desi_2024_gaussian_bao_LRG_GCcomb_z0.6-0.8_cov.txt
+# Fiducial sound horizon with which data have been stored
+rs_fid: 1  # Mpc
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000

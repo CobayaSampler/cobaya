@@ -1,12 +1,19 @@
+import os
+import sys
 import time
+import inspect
+from inspect import cleandoc
 from packaging import version
-from typing import Optional, Union, List
+from importlib import import_module, resources
+from typing import Optional, Union, List, Set
 
-from cobaya.log import HasLogger, LoggedError
-from cobaya.input import HasDefaults
-from cobaya.typing import InfoDict, InfoDictIn, empty_dict
-from cobaya.tools import resolve_packages_path
-from cobaya.conventions import packages_path_input
+from cobaya.log import HasLogger, LoggedError, get_logger
+from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
+from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
+    get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
+from cobaya.conventions import kinds, cobaya_package, reserved_attributes
+from cobaya.yaml import yaml_load_file, yaml_dump
+from cobaya.mpi import is_main_process
 
 
 class Timer:
@@ -50,11 +57,261 @@ class Timer:
             logger.debug("Average evaluation time: %g s", self.get_time_avg())
 
 
+class Description:
+    """Allows for calling get_desc as both class and instance method."""
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return_func = lambda info=None: cls._get_desc(info)
+        else:
+            return_func = lambda info=None: cls._get_desc(info=instance.__dict__)
+        return_func.__doc__ = cleandoc("""
+            Returns a short description of the class. By default, returns the class'
+            docstring.
+
+            You can redefine this method to dynamically generate the description based
+            on the class initialisation ``info`` (see e.g. the source code of MCMC's
+            *class method* :meth:`~.mcmc._get_desc`).""")
+        return return_func
+
+
+class HasDefaults:
+    """
+    Base class for components that can read settings from a .yaml file.
+    Class methods provide the methods needed to get the defaults information
+    and associated data.
+
+    """
+
+    @classmethod
+    def get_qualified_names(cls) -> List[str]:
+        if cls.__module__ == '__main__':
+            return [cls.__name__]
+        parts = cls.__module__.split('.')
+        if len(parts) > 1:
+            # get shortest reference
+            try:
+                imported = import_module(".".join(parts[:-1]))
+            except ImportError:
+                pass
+            else:
+                if getattr(imported, cls.__name__, None) is cls:
+                    parts = parts[:-1]
+        # allow removing class name that is CamelCase equivalent of module name
+        if parts[-1] == cls.__name__ or (cls.__name__.lower() ==
+                                         parts[-1][:1] + parts[-1][1:].replace('_', '')):
+            return ['.'.join(parts[i:]) for i in range(len(parts))]
+        else:
+            return ['.'.join(parts[i:]) + '.' + cls.__name__ for i in
+                    range(len(parts) + 1)]
+
+    @classmethod
+    def get_qualified_class_name(cls) -> str:
+        """
+        Get the distinct shortest reference name for the class of the form
+        module.ClassName or module.submodule.ClassName etc.
+        For Cobaya components the name is relative to subpackage for the relevant kind of
+        class (e.g. Likelihood names are relative to cobaya.likelihoods).
+
+        For external classes it loads the shortest fully qualified name of the form
+        package.ClassName or package.module.ClassName or
+        package.subpackage.module.ClassName, etc.
+        """
+        qualified_names = cls.get_qualified_names()
+        if qualified_names[0].startswith('cobaya.'):
+            return qualified_names[2]
+        else:
+            # external
+            return qualified_names[0]
+
+    @classmethod
+    def get_class_path(cls) -> str:
+        """
+        Get the file path for the class.
+        """
+        return os.path.abspath(os.path.dirname(inspect.getfile(cls)))
+
+    @classmethod
+    def get_file_base_name(cls) -> str:
+        """
+        Gets the string used as the name for .yaml, .bib files, typically the
+        class name or an un-CamelCased class name
+        """
+        return cls.__dict__.get('file_base_name') or cls.__name__
+
+    @classmethod
+    def get_root_file_name(cls) -> str:
+        return os.path.join(cls.get_class_path(), cls.get_file_base_name())
+
+    @classmethod
+    def get_yaml_file(cls) -> Optional[str]:
+        """
+        Gets the file name of the .yaml file for this component if it exists on file
+        (otherwise None).
+        """
+        filename = cls.get_root_file_name() + ".yaml"
+        if os.path.exists(filename):
+            return filename
+        return None
+
+    get_desc = Description()
+
+    @classmethod
+    def _get_desc(cls, info=None):
+        return cleandoc(cls.__doc__) if cls.__doc__ else ""
+
+    @classmethod
+    def get_bibtex(cls) -> Optional[str]:
+        """
+        Get the content of .bibtex file for this component. If no specific bibtex
+        from this class, it will return the result from an inherited class if that
+        provides bibtex.
+        """
+        filename = cls.__dict__.get('bibtex_file')
+        if filename:
+            bib = cls.get_text_file_content(filename)
+        else:
+            bib = cls.get_associated_file_content('.bibtex')
+        if bib:
+            return bib
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults) and base is not HasDefaults:
+                return base.get_bibtex()
+        return None
+
+    @classmethod
+    def get_associated_file_content(cls, ext: str,
+                                    file_root: Optional[str] = None) -> Optional[str]:
+        """
+        Return the content of the associated file, if it exists.
+
+        This function handles extracting package files when they may be
+        inside a zipped package and thus not directly accessible.
+
+        Returns:
+            The content of the file as a string, if it exists and can be read. None otherwise.
+        """
+
+        return cls.get_text_file_content((file_root or cls.get_file_base_name()) + ext)
+
+    @classmethod
+    def get_text_file_content(cls, file_name: str) -> Optional[str]:
+        """
+        Return the content of a file in the directory of the module, if it exists.
+        """
+        package = inspect.getmodule(cls).__package__
+        try:
+            if os.path.split(str(file_name))[0]:
+                raise ValueError(f"{file_name} must be a bare file name, without path.")
+            # NB: resources.read_text is considered deprecated from 3.9, and will fail
+            if sys.version_info < (3, 9):
+                return resources.read_text(package, file_name)
+            with (resources.files(package) / file_name).open(
+                    "r", encoding="utf-8-sig", errors="strict") as fp:
+                text_content = fp.read()
+            return text_content
+        except Exception:
+            return None
+
+    @classmethod
+    def get_class_options(cls, input_options=empty_dict) -> InfoDict:
+        """
+        Returns dictionary of names and values for class variables that can also be
+        input and output in yaml files, by default it takes all the
+        (non-inherited and non-private) attributes of the class excluding known
+        specials.
+
+        Could be overridden using input_options to dynamically generate defaults,
+        e.g. a set of input parameters generated depending on the input_options.
+
+        :param input_options: optional dictionary of input parameters
+        :return:  dict of names and values
+        """
+        return {k: v for k, v in cls.__dict__.items() if not k.startswith('_') and
+                k not in reserved_attributes and not inspect.isroutine(v) and
+                not isinstance(v, property)}
+
+    @classmethod
+    def get_defaults(cls, return_yaml=False, yaml_expand_defaults=True,
+                     input_options=empty_dict):
+        """
+        Return defaults for this component_or_class, with syntax:
+
+        .. code::
+
+           option: value
+           [...]
+
+           params:
+             [...]  # if required
+
+           prior:
+             [...]  # if required
+
+        If keyword `return_yaml` is set to True, it returns literally that,
+        whereas if False (default), it returns the corresponding Python dict.
+
+        Note that in external components installed as zip_safe=True packages files cannot
+        be accessed directly.
+        In this case using !default .yaml includes currently does not work.
+
+        Also note that if you return a dictionary it may be modified (return a deep copy
+        if you want to keep it).
+
+        if yaml_expand_defaults then !default: file includes will be expanded
+
+        input_options may be a dictionary of input options, e.g. in case default params
+        are dynamically dependent on an input variable
+        """
+        if 'class_options' in cls.__dict__:
+            log = get_logger(cls.get_qualified_class_name())
+            raise LoggedError(log, "class_options (in %s) should now be replaced by "
+                                   "public attributes defined directly in the class" %
+                              cls.get_qualified_class_name())
+        yaml_text = cls.get_associated_file_content('.yaml')
+        options = cls.get_class_options(input_options=input_options)
+        if options and yaml_text:
+            log = get_logger(cls.get_qualified_class_name())
+            raise LoggedError(log,
+                              "%s: any class can either have .yaml or class variables "
+                              "but not both (type declarations without values are fine "
+                              "also with yaml file). You have class attributes: %s",
+                              cls.get_qualified_class_name(), list(options))
+        if return_yaml and not yaml_expand_defaults:
+            return yaml_text or ""
+        this_defaults = yaml_load_file(cls.get_yaml_file(), yaml_text) \
+            if yaml_text else deepcopy_where_possible(options)
+        # start with this one to keep the order such that most recent class options
+        # near the top. Update below to actually override parameters with these.
+        defaults = this_defaults.copy()
+        if not return_yaml:
+            for base in cls.__bases__:
+                if issubclass(base, HasDefaults) and base is not HasDefaults:
+                    defaults.update(base.get_defaults(input_options=input_options))
+        defaults.update(this_defaults)
+        if return_yaml:
+            return yaml_dump(defaults)
+        else:
+            return defaults
+
+    @classmethod
+    def get_annotations(cls) -> InfoDict:
+        d = {}
+        for base in cls.__bases__:
+            if issubclass(base, HasDefaults) and base is not HasDefaults:
+                d.update(base.get_annotations())
+
+            d.update({k: v for k, v in cls.__dict__.get("__annotations__", {}).items()
+                      if not k.startswith('_')})
+        return d
+
+
 class CobayaComponent(HasLogger, HasDefaults):
     """
     Base class for a theory, likelihood or sampler with associated .yaml parameter file
     that can set attributes.
     """
+
     # The next lists of options apply when comparing existing versus new info at resuming.
     # When defining it for subclasses, redefine append adding this list to new entries.
     _at_resume_prefer_new: List[str] = ["version"]
@@ -75,18 +332,10 @@ class CobayaComponent(HasLogger, HasDefaults):
         self._name = name or self.get_qualified_class_name()
         self.packages_path = packages_path or resolve_packages_path()
         # set attributes from the info (from yaml file or directly input dictionary)
+        annotations = self.get_annotations()
         for k, value in info.items():
+            self.validate_info(k, value, annotations)
             try:
-                # MARKED FOR DEPRECATION IN v3.0
-                # NB: cannot ever raise an error, since users may use "path_install" for
-                #     their own purposes. When considered *fully* deprecated, simply
-                #     remove this whole block.
-                if k == "path_install":
-                    self.log.warning(
-                        "*DEPRECATION*: `path_install` will be deprecated "
-                        "in the next version. Please use `packages_path` instead.")
-                    setattr(self, packages_path_input, value)
-                # END OF DEPRECATION BLOCK
                 setattr(self, k, value)
             except AttributeError:
                 raise AttributeError("Cannot set {} attribute for {}!".format(k, self))
@@ -112,7 +361,7 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         :return: name string
         """
-        return self._name
+        return getattr(self, "_name", self.__class__.__name__)
 
     def __repr__(self):
         return self.get_name()
@@ -147,6 +396,28 @@ class CobayaComponent(HasLogger, HasDefaults):
         Whether to track version information for this component
         """
         return True
+
+    def validate_info(self, k: str, value: Any, annotations: dict):
+        """
+        Does any validation on parameter k read from an input dictionary or yaml file,
+        before setting the corresponding class attribute.
+        You could enforce consistency with annotations here, but does not by default.
+
+        :param k: name of parameter
+        :param value: value
+        :param annotations: resolved inherited dictionary of attributes for this class
+        """
+
+        # by default just test booleans, e.g. for typos of "false" which evaluate true
+        if annotations.get(k) is bool and value and isinstance(value, str):
+            raise AttributeError("Class '%s' parameter '%s' should be True "
+                                 "or False, got '%s'" % (self, k, value))
+
+    @classmethod
+    def get_kind(cls):
+        """Return, as a string, the kind of this component."""
+        return next(k for k, k_cls in get_base_classes().items()
+                    if issubclass(cls, k_cls))
 
     @classmethod
     def compare_versions(cls, version_a, version_b, equal=True):
@@ -223,3 +494,340 @@ class ComponentCollection(dict, HasLogger):
     def __exit__(self, exception_type, exception_value, traceback):
         for component in self.values():
             component.__exit__(exception_type, exception_value, traceback)
+
+
+class ComponentNotFoundError(LoggedError):
+    """
+    Exception to be raised when a component class name could not be identified
+    (in order to distinguish that case from any other error occurring at import time).
+    """
+
+    pass  # necessary or it won't print the given error message!
+
+
+def get_component_class(name, kind=None, component_path=None, class_name=None,
+                        allow_external=True, allow_internal=True, logger=None,
+                        not_found_level=None, min_package_version=None):
+    """
+    Retrieves the requested component class from its reference name. The name can be a
+    fully-qualified package.module.classname string, or an internal name of the particular
+    kind. If the last element of name is not a class, assume class has the same name and
+    is in that module.
+
+    The name can be a fully-qualified package.module.classname string, or an internal name
+    of the particular kind. If the last element of name is not a class, assume class has
+    the same name and is in that module.
+
+    If ``class_name`` is passed, it will be looked up instead of the first argument.
+
+    If the first argument is a class, it is simply returned.
+
+    By default tries to load internal components first, then if that fails external ones.
+    ``component_path`` can be used to specify a specific external location, and in that
+    case the class is only looked-for there.
+
+    If the class is not found, it raises :class:`component.ComponentNotFoundError`. If
+    this exception will be handled at a higher level, you may pass
+    `not_found_level='debug'` to prevent printing non-important messages at error-level
+    logging.
+
+    Any other exception means that the component was found but could not be imported.
+
+    If ``allow_external=True`` (default), allows loading explicit name from anywhere on
+    path.
+
+    If ``allow_internal=True`` (default), will first try to load internal components. In
+    this case, if ``kind=None`` (default), instead of ``theory|likelihood|sampler``, it
+    tries to guess it if the name is unique (slow!).
+
+    If allow_external=True, min_package_version can specify a minimum version of the
+    external package.
+    """
+    if not isinstance(name, str):
+        return name
+    if class_name:
+        return get_component_class(
+            class_name, kind=kind, component_path=component_path,
+            allow_external=allow_external, allow_internal=allow_internal, logger=logger)
+    if '.' in name:
+        module_name, class_name = name.rsplit('.', 1)
+    else:
+        module_name = name
+        class_name = None
+    assert allow_internal or allow_external
+    _not_found_msg = f"'{name}' could not be found."
+    if not logger:
+        logger = get_logger(__name__)
+
+    def get_matching_class_name(_module: Any, _class_name, none=False):
+        cls = getattr(_module, _class_name, None)
+        if cls is None and _class_name == _class_name.lower():
+            # where the _class_name may be a module name, find CamelCased class
+            cls = module_class_for_name(_module, _class_name)
+        if cls or none:
+            return cls
+        else:
+            return getattr(_module, _class_name)
+
+    def return_class(_module_name, **kwargs):
+        _module: Any = load_module(_module_name, path=component_path, **kwargs)
+        if not class_name and hasattr(_module, "get_cobaya_class"):
+            return _module.get_cobaya_class()
+        _class_name = class_name or module_name
+        if not (cls := get_matching_class_name(_module, _class_name, none=True)):
+            _module = load_module(_module_name + '.' + _class_name,
+                                  path=component_path, **kwargs)
+            cls = get_matching_class_name(_module, _class_name)
+        if not isinstance(cls, type):
+            return get_matching_class_name(cls, _class_name)
+        else:
+            return cls
+
+    def check_kind_and_return(cls):
+        """
+        If a component kind is specified, checks that the class ``cls`` has the correct
+        inheritance, and raises ``TypeError`` if it doesn't.
+
+        Returns the original class if no error occurred.
+        """
+        if kind is not None:
+            if not issubclass(cls, get_base_classes()[kind]):
+                raise TypeError(f"Class '{name}' is not a standard class of type {kind}.")
+        return cls
+
+    def check_if_ComponentNotFoundError_and_raise(_excpt, not_found_msg=_not_found_msg,
+                                                  logger=logger, level="debug"):
+        """
+        If the exception looks like the target class not being found, turns it into a
+        `ComponentNotFoundError`, so that it can be caught appropriately.
+        """
+        # Could not find this module in particular (ensuring that it does not mean one
+        # imported within it).
+        is_module_not_found = isinstance(_excpt, ModuleNotFoundError)
+        # the module to be imported may not be the last field in the name
+        did_not_find_this_module_in_particular = any(
+            str(_excpt).rstrip("'").endswith(module) for module in name.split("."))
+        if is_module_not_found and did_not_find_this_module_in_particular:
+            raise ComponentNotFoundError(logger, not_found_msg, level=level)
+        logger.error(f"There was a problem when importing '{name}':")
+        raise _excpt
+
+    # Lookup logic:
+    # 1. If `component_path` is specified, load the class from there or fail.
+    # 2. Otherwise (if allow_internal), look for an internal class with the given name,
+    #    looping over possible kinds (theory, likelihood, sampler) if kind not given
+    # 3. If internal class-lookup failed (and no `component_path` was provided),
+    #    look for an external class in a module *in the current folder* (otherwise handled
+    #    already in step 1).
+    if component_path:
+        try:
+            return check_kind_and_return(return_class(module_name,
+                                                      min_version=min_package_version))
+        except VersionCheckError:
+            raise
+        except Exception as excpt:
+            check_if_ComponentNotFoundError_and_raise(
+                excpt, not_found_msg=(_not_found_msg +
+                                      f" Tried loading from {component_path}"))
+    if allow_internal:
+        # If unknown type, loop recursive call with all possible types
+        if kind is None:
+            for this_kind in kinds:
+                try:
+                    return get_component_class(
+                        name, this_kind, allow_external=False, allow_internal=True,
+                        logger=logger, not_found_level="debug")
+                except ComponentNotFoundError:
+                    pass  # do not raise it yet. check all kinds.
+            # If we get here, the class was not found for any kind
+        else:
+            internal_module_name = get_internal_class_component_name(module_name, kind)
+            try:
+                # No need to check kind
+                return return_class(internal_module_name, package=cobaya_package)
+            except Exception as excpt:
+                try:
+                    check_if_ComponentNotFoundError_and_raise(
+                        excpt, not_found_msg=_not_found_msg[:-1]
+                                             + (" as internal, trying external."
+                                                if allow_external
+                                                else " as internal component."))
+                except ComponentNotFoundError:
+                    pass  # do not raise it yet. try external (if allowed)
+    if allow_external:
+        try:
+            # Now looking in the current folder only (component_path case handled above)
+            return check_kind_and_return(return_class(module_name,
+                                                      min_version=min_package_version))
+        except VersionCheckError:
+            raise
+        except Exception as excpt:
+            try:
+                check_if_ComponentNotFoundError_and_raise(
+                    excpt, not_found_msg=(_not_found_msg[:-1] +
+                                          " as external component in the current path."))
+            except ComponentNotFoundError:
+                pass  # do not raise it yet. Give a report below.
+    # If we got here, didn't work. Give a report of what has been tried.
+    tried = " and ".join(allow_internal * ["internal"] + allow_external * ["external"])
+    add_msg = f" Tried loading {tried} classes. No component path was given."
+    raise ComponentNotFoundError(logger, _not_found_msg + add_msg, level=not_found_level)
+
+
+def module_class_for_name(m, name):
+    """Get Camel- or uppercase class name matching name in module m."""
+    result = None
+    valid_names = {name, name[:1] + name[1:].replace('_', '')}
+    for cls in classes_in_module(m, subclass_of=CobayaComponent):
+        if cls.__name__.lower() in valid_names:
+            if result is not None:
+                raise ValueError('More than one class with same lowercase name %s',
+                                 name)
+            result = cls
+    return result
+
+
+def classes_in_module(m, subclass_of=None, allow_imported=False) -> Set[type]:
+    """
+    Returns all classes in a module, optionally imposing that they are a subclass of
+    ``subclass_of``, and optionally including imported ones with ``allow_imported=True``
+    (default False).
+    """
+    return set(cls for _, cls in inspect.getmembers(m, inspect.isclass)
+               if (not subclass_of or issubclass(cls, subclass_of)) and
+               (allow_imported or cls.__module__ == m.__name__))
+
+
+class ComponentNotInstalledError(LoggedError):
+    """
+    Exception to be raised manually at component initialization or install check if some
+    external dependency of the component is missing.
+    """
+
+    pass  # necessary or it won't print the given error message!
+
+
+def _bare_load_external_module(name, path=None, min_version=None, reload=False,
+                               get_import_path=None, logger=None,
+                               not_installed_level=None):
+    """
+    Loads an external module ``name``.
+
+    If a ``path`` is given, it looks for an installation there and fails if it does
+    not find one. If ``path`` is not given, tries a global
+    ``import``.
+
+    Raises :class:`component.ComponetNotInstalledError` if the module could not be
+    imported.
+
+    If ``min_version`` given, may raise :class:`~tools.VersionCheckError`.
+
+    If ``get_import_path`` (callable, takes ``path``) and ``path`` are given, the function
+    is called before attempting to load the module, and is expected to return the
+    directory from which the module should be imported (useful e.g. if different from the
+    root source directory). It can check e.g. for compilation of non-Python source. It
+    should raise ``FileNotFoundError`` with a meaningful error message if the expected
+    import directory does not exist.
+
+    If ``reload=True`` (default: ``False``), deletes the module from memory previous
+    to loading it.
+    """
+    if not logger:
+        logger = get_logger(__name__)
+    import_path = None
+    if path:
+        try:
+            if get_import_path:
+                import_path = get_import_path(path)
+                if is_main_process():
+                    logger.debug(
+                        f"'{name}' to be imported from (sub)directory {import_path}")
+            else:
+                import_path = path
+                if not os.path.exists(import_path):
+                    raise FileNotFoundError
+        except FileNotFoundError as excpt:
+            raise ComponentNotInstalledError(
+                logger, f"No (compiled) installation of '{name}' at {path}: {excpt}",
+                level=not_installed_level)
+    try:
+        # check_path=True may be redundant with check_external_module above
+        return load_module(name, path=import_path, min_version=min_version,
+                           check_path=bool(path), reload=reload)
+    except ModuleNotFoundError as excpt:
+        path_msg = f"from {path}" if path else "(tried global import)"
+        raise ComponentNotInstalledError(
+            logger, f"Could not import '{name}' {path_msg}: {excpt}",
+            level=not_installed_level)
+
+
+def load_external_module(module_name=None, path=None, install_path=None, min_version=None,
+                         get_import_path=None, reload=False, logger=None,
+                         not_installed_level=None):
+    """
+    Tries to load an external module at initialisation, dealing with explicit paths
+    and Cobaya's installation path.
+
+    If a ``path`` was given, it is enforced (may use ``path="global"`` to force a global
+    import).
+
+    If no explicit ``path`` was given, try first from Cobaya's ``install_path``,
+    and if it fails try a global import.
+
+    ``install_path`` is the path where Cobaya installed this requisite, up to and
+    including the source for the requisite, e.g. ``[...]/cobaya_packages/code/[requisite]`
+
+    If ``get_import_path`` (callable, takes ``path``) and ``path`` are given, the function
+    is called before attempting to load the module, and is expected to return the
+    directory from which the module should be imported (useful e.g. if different from the
+    root source directory). It can check e.g. for compilation of non-Python source. It
+    should raise ``FileNotFoundError`` with a meaningful error message if the expected
+    import directory does not exist.
+
+    If ``reload=True`` (default: ``False``), deletes the module from memory previous
+    to loading it.
+
+    If ``min_version`` given, may raise :class:`~tools.VersionCheckError`.
+
+    May raise :class:`component.ComponentNotInstalledError` if the module was not
+    found. If this exception will be handled at a higher level, you may pass
+    `not_installed_level='debug'` to prevent printing non-important messages at
+    error-level logging.
+    """
+    if not logger:
+        logger = get_logger(__name__)
+    load_kwargs = {"name": module_name, "path": path, "get_import_path": get_import_path,
+                   "min_version": min_version, "reload": reload, "logger": logger}
+    default_global = False
+    if isinstance(path, str):
+        if path.lower() == "global":
+            msg_tried = "global import (`path='global'` given)"
+            load_kwargs["path"] = None
+        else:
+            msg_tried = f"import from {path}"
+    elif install_path:
+        load_kwargs["path"] = install_path
+        default_global = True
+        msg_tried = ("import of Cobaya-installed version, but "
+                     "defaulting to global import if not found")
+    else:
+        msg_tried = "global import (no `path` or Cobaya installation path given)"
+    try:
+        if is_main_process():
+            logger.debug(f"Attempting {msg_tried}.")
+        module = _bare_load_external_module(not_installed_level="debug", **load_kwargs)
+    except ComponentNotInstalledError:
+        if default_global:
+            if is_main_process():
+                logger.debug("Defaulting to global import.")
+            load_kwargs["path"] = None
+            module = _bare_load_external_module(
+                not_installed_level=not_installed_level, **load_kwargs)
+        else:
+            raise
+    # Check from where was the module actually loaded
+    if is_main_process():
+        logger.info(
+            f"`{module_name}` module loaded successfully from "
+            f"{os.path.dirname(os.path.realpath(os.path.abspath(module.__file__)))}")
+    return module

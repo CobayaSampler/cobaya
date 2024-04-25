@@ -53,7 +53,7 @@ For an application, check out the :ref:`advanced example <example_advanced_likde
 
 If your external likelihood needs the products of a **theory code**:
 
-1. In your function definition, define a *keyword* argument ``_self`` through which at runtime you will get accesst to an instance of the Cobaya likelihood wrapper of your function.
+1. In your function definition, define a *keyword* argument ``_self`` through which at runtime you will get access to an instance of the Cobaya likelihood wrapper of your function.
 2. When preparing Cobaya's input, add to your external likelihood info an option ``requires`` stating the requirements of your likelihood.
 3. At run-time, you can call ``get_[...]`` methods of ``_self.provider`` to get the requested quantities.
 
@@ -61,7 +61,7 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 
 .. note::
 
-   Obviously, ``_theory`` is a reserved parameter name that you cannot use as an argument in your likelihood definition, except for the purposes explained above.
+   Obviously, ``_self`` is a reserved parameter name that you cannot use as an argument in your likelihood definition, except for the purposes explained above.
 
 .. note::
 

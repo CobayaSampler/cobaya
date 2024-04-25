@@ -35,7 +35,7 @@ params:
       scale: 0.004
     proposal: 0.002
     latex: n_\mathrm{s}
-  theta_s_1e2:
+  theta_s_100:
     prior:
       min: 0.5
       max: 10
@@ -45,10 +45,6 @@ params:
       scale: 0.0004
     proposal: 0.0002
     latex: 100\theta_\mathrm{s}
-    drop: true
-  100*theta_s:
-    value: 'lambda theta_s_1e2: theta_s_1e2'
-    derived: false
   H0:
     latex: H_0
   omega_b:

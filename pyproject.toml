@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cobaya"
+dynamic = ["version"]
+authors = [
+    { name = "Jesus Torrado" },
+    { name = "Antony Lewis" },
+]
+description = "Code for Bayesian Analysis"
+readme = "README.rst"
+license = { file = "LICENCE.txt" }
+keywords = ["montecarlo", "sampling", "MCMC", "cosmology"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
+requires-python = ">=3.8.0"
+dependencies = [
+    "numpy>=1.17.0", "scipy>=1.5", "pandas>=1.0.1",
+    "PyYAML>=5.1", "requests>=2.18", "py-bobyqa>=1.4",
+    "GetDist>=1.3.1", "fuzzywuzzy>=0.17", "packaging", "tqdm",
+    "portalocker>=2.3.0", "dill>=0.3.3"
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-forked", "flaky", "mpi4py", "iminuit"]
+gui = ["pyside6", "matplotlib"]
+docs = [
+    "sphinx", "sphinx_rtd_theme>=1.0", "sphinxcontrib-jquery",
+    "sphinx-autodoc-typehints", "sphinxcontrib-programoutput",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "cobaya.__version__" }
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.bibtex"]
+
+[project.scripts]
+cobaya = "cobaya.__main__:run_command"
+cobaya-install = "cobaya.install:install_script"
+cobaya-run = "cobaya.run:run_script"
+cobaya-doc = "cobaya.doc:doc_script"
+cobaya-bib = "cobaya.bib:bib_script"
+cobaya-grid-create = "cobaya.grid_tools:grid_create"
+cobaya-grid-run = "cobaya.grid_tools.gridrun:grid_run"
+cobaya-grid-tables = "cobaya.grid_tools.gridtables:grid_tables"
+cobaya-grid-tables-compare = "cobaya.grid_tools.gridtables:grid_param_compare"
+cobaya-grid-list = "cobaya.grid_tools.gridmanage:grid_list"
+cobaya-grid-getdist = "cobaya.grid_tools.gridmanage:grid_getdist"
+cobaya-grid-converge = "cobaya.grid_tools.gridmanage:grid_converge"
+cobaya-grid-cleanup = "cobaya.grid_tools.gridmanage:grid_cleanup"
+cobaya-grid-copy = "cobaya.grid_tools.gridmanage:grid_copy"
+cobaya-grid-extract = "cobaya.grid_tools.gridmanage:grid_extract"
+cobaya-run-job = "cobaya.grid_tools.runMPI:run_single"
+cobaya-running-jobs = "cobaya.grid_tools.running_jobs:running_jobs"
+cobaya-delete-jobs = "cobaya.grid_tools.delete_jobs:delete_jobs"
+cobaya-cosmo-generator = "cobaya.cosmo_input:gui_script"
+cobaya-create-image = "cobaya.containers:create_image_script"
+cobaya-prepare-data = "cobaya.containers:prepare_data_script"
+
+[tool.setuptools.packages.find]
+exclude = ["docs", "tests"]
+
+[project.urls]
+Homepage = "https://cobaya.readthedocs.io"
+Documentation = "https://cobaya.readthedocs.io"
+Source = "https://github.com/CobayaSampler/cobaya"
+Tracker = "https://github.com/CobayaSampler/cobaya/issues"
+Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"

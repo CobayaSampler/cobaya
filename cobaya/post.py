@@ -7,20 +7,18 @@
 """
 
 import os
-import sys
 import time
 from itertools import chain
-from typing import List, Union, NamedTuple, Optional
+from typing import List, Union, Optional, Tuple, TypedDict, TYPE_CHECKING
 import numpy as np
 
 from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
-    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names, \
-    packages_path_input
+    undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
 from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
-from cobaya.model import Model
+from cobaya.model import Model, DummyModel
 from cobaya.output import get_output
 from cobaya.parameterization import Parameterization
 from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param, \
@@ -29,19 +27,127 @@ from cobaya.prior import Prior
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
     str_to_list
 from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
-    InfoDict, PostDict
+    PostDict
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
+if TYPE_CHECKING:
+    from getdist import MCSamples
 
 
-    class PostResultDict(TypedDict):
-        sample: Union[SampleCollection, List[SampleCollection]]
-        stats: ParamValuesDict
-        logpost_weight_offset: float
-        weights: Union[np.ndarray, List[np.ndarray]]
-else:
-    globals()['PostResultDict'] = InfoDict
+class PostResultDict(TypedDict):
+    sample: Union[SampleCollection, List[SampleCollection], "MCSamples"]
+    stats: ParamValuesDict
+    logpost_weight_offset: float
+    weights: Union[np.ndarray, List[np.ndarray]]
+
+
+class PostResult:
+
+    def __init__(self, post_results: PostResultDict):
+        self.results = post_results
+
+    # For backwards compatibility
+    def __getitem__(self, key):
+        # noinspection PyTypedDict
+        return self.results[key]
+
+    # For compatibility with Sampler, when returned by run()
+    def samples(self,
+                combined: bool = False,
+                skip_samples: float = 0,
+                to_getdist: bool = False,
+                ) -> Union[SampleCollection, List[SampleCollection], "MCSamples"]:
+        """
+        Returns the post-processed sample.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, returns for all processes
+            a single sample collection including, all parallel chains concatenated,
+            instead of the chain of the current process only. For this to work, this
+            method needs to be called from all MPI processes simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied before concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples (``combined`` is ignored).
+
+        Returns
+        -------
+        SampleCollection, List[SampleCollection], getdist.MCSamples
+            The post-processed samples.
+        """
+        # Difference with MCMC: self.results["sample"] may contain one collection or a
+        # list of them pre-process
+        collections = self.results["sample"]
+        if not isinstance(collections, list):
+            collections = [collections]
+        collections = [c.skip_samples(skip_samples, inplace=False) for c in collections]
+        if not (to_getdist or combined):
+            return collections
+        # In all the remaining cases, we'll concatenate the chains
+        collection = None
+        all_collections = mpi.gather(collections)
+        if mpi.is_main_process():
+            all_collections = list(chain(*all_collections))
+            if to_getdist:
+                collection = all_collections[0].to_getdist(
+                    combine_with=all_collections[1:])
+            else:
+                if len(all_collections) > 1:
+                    for collection in all_collections[1:]:
+                        # pylint: disable=protected-access
+                        # noinspection PyProtectedMember
+                        all_collections[0]._append(collection)
+                collection = all_collections[0]
+        return mpi.share_mpi(collection)
+
+    # For compatibility with Sampler, when returned by run()
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> PostResultDict:
+        """
+        Returns the products of post-processing.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` and running more than one MPI process, the ``sample`` key of the
+            returned dictionary contains a concatenated sample including all parallel
+            chains concatenated, instead of the chain of the current process only. For
+            this to work, this method needs to be called from all MPI processes
+            simultaneously.
+        skip_samples: int or float, default: 0
+            Skips some amount of initial samples (if ``int``), or an initial fraction of
+            them (if ``float < 1``). If concatenating (``combined=True``), skipping is
+            applied previously to concatenation. Forces the return of a copy.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples (``combined`` is ignored).
+
+        Returns
+        -------
+        PostResultDict
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sample"``, and stats about the post-processing.
+        """
+        products_dict: PostResultDict = {
+            "sample": self.samples(
+                combined=combined,
+                skip_samples=skip_samples,
+                to_getdist=to_getdist
+            ),
+            "stats": self.results["stats"],
+            "logpost_weight_offset": self.results["logpost_weight_offset"],
+            "weights": self.results["weights"],
+        }
+        return products_dict
+
 
 _minuslogprior_1d_name = get_minuslogpior_name(prior_1d_name)
 
@@ -54,11 +160,6 @@ class OutputOptions:
     output_inteveral_s = 60
 
 
-class PostTuple(NamedTuple):
-    info: InputDict
-    products: PostResultDict
-
-
 def value_or_list(lst: list):
     if len(lst) == 1:
         return lst[0]
@@ -66,48 +167,7 @@ def value_or_list(lst: list):
         return lst
 
 
-# Dummy classes for loading chains for post processing
-
-class DummyModel:
-
-    def __init__(self, info_params, info_likelihood, info_prior=None):
-        self.parameterization = Parameterization(info_params, ignore_unused_sampled=True)
-        self.prior = [prior_1d_name] + list(info_prior or [])
-        self.likelihood = list(info_likelihood)
-
-
-@mpi.sync_state
-def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
-         sample: Union[SampleCollection, List[SampleCollection], None] = None
-         ) -> PostTuple:
-    info = load_input_dict(info_or_yaml_or_file)
-    logger_setup(info.get("debug"), info.get("debug_file"))
-    log = get_logger(__name__)
-    # MARKED FOR DEPRECATION IN v3.0
-    if info.get("modules"):
-        raise LoggedError(log, "The input field 'modules' has been deprecated."
-                               "Please use instead %r", packages_path_input)
-    # END OF DEPRECATION BLOCK
-    info_post: PostDict = info.get("post") or {}
-    if not info_post:
-        raise LoggedError(log, "No 'post' block given. Nothing to do!")
-    if mpi.is_main_process() and info.get("resume"):
-        log.warning("Resuming not implemented for post-processing. Re-starting.")
-    if not info.get("output") and info_post.get("output") \
-            and not info.get("params"):
-        raise LoggedError(log, "The input dictionary must have be a full option "
-                               "dictionary, or have an existing 'output' root to load "
-                               "previous settings from ('output' to read from is in the "
-                               "main block not under 'post'). ")
-    # 1. Load existing sample
-    output_in = get_output(prefix=info.get("output"))
-    if output_in:
-        info_in = output_in.load_updated_info() or update_info(info)
-    else:
-        info_in = update_info(info)
-    params_in: ExpandedParamsDict = info_in["params"]  # type: ignore
-    dummy_model_in = DummyModel(params_in, info_in.get("likelihood", {}),
-                                info_in.get("prior"))
+def get_collections(info, output_in, info_post, sample, dummy_model_in, log):
 
     in_collections = []
     thin = info_post.get("thin", 1)
@@ -126,11 +186,9 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             in_collections = sample
         for i, collection in enumerate(in_collections):
             if skip:
-                if 0 < skip < 1:
-                    skip = int(round(skip * len(collection)))
-                collection = collection.filtered_copy(slice(skip, None))
+                collection = collection.skip_samples(skip)
             if thin != 1:
-                collection = collection.thin_samples(thin)
+                collection = collection.thin_samples(thin or 0)
             in_collections[i] = collection
     elif output_in:
         files = output_in.find_collections()
@@ -155,12 +213,61 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     else:
         raise LoggedError(log, "No output from where to load from, "
                                "nor input collections given.")
+    # Let's make sure we work on a copy if the chain is going to be altered
+    already_copied = bool(output_in) or (sample is not None and (skip or thin != 1))
+    for i, collection in enumerate(in_collections):
+        if not already_copied:
+            collection = collection.copy()
+        in_collections[i] = collection
+    # A note on tempered chains: detempering happens automatically when reweighting,
+    # which is done later in this function in most cases.
+    # But for the sake of robustness, we detemper all chains at init.
+    # In order not to introduce reweighting errors coming from subtractions of the max
+    # log-posterior at detempering, we need to detemper all samples at once
+    all_in_collections = mpi.gather(in_collections)
+    if mpi.is_main_process():
+        flat_in_collections = list(chain(*all_in_collections))
+        if any(c.is_tempered for c in flat_in_collections):
+            log.info("Starting from tempered chains. Will detemper before proceeding.")
+        flat_in_collections[0].reset_temperature(with_batch=flat_in_collections[1:])
+    # Detempering happens in place, so one can scatter back the original
+    # all_in_collections object to preserve the in_collection dist across processes
+    in_collections = mpi.scatter(all_in_collections)
     if any(len(c) <= 1 for c in in_collections):
         raise LoggedError(
             log, "Not enough samples for post-processing. Try using a larger sample, "
                  "or skipping or thinning less.")
     mpi.sync_processes()
     log.info("Will process %d sample points.", sum(len(c) for c in in_collections))
+    return in_collections
+
+
+@mpi.sync_state
+def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
+         sample: Union[SampleCollection, List[SampleCollection], None] = None
+         ) -> Tuple[InputDict, PostResult]:
+    info = load_input_dict(info_or_yaml_or_file)
+    logger_setup(info.get("debug"))
+    log = get_logger(__name__)
+    info_post: PostDict = info.get("post")
+    if not info_post:
+        raise LoggedError(log, "No 'post' block given. Nothing to do!")
+    if mpi.is_main_process() and info.get("resume"):
+        log.warning("Resuming not implemented for post-processing. Re-starting.")
+    if not info.get("output") and info_post.get("output") \
+            and not info.get("params"):
+        raise LoggedError(log, "The input dictionary must be a full option "
+                               "dictionary, or have an existing 'output' root to load "
+                               "previous settings from ('output' to read from is in the "
+                               "main block not under 'post'). ")
+    # 1. Load existing sample
+    if output_in := get_output(prefix=info.get("output")):
+        info_in = output_in.get_updated_info() or update_info(info)
+    else:
+        info_in = update_info(info)
+    params_in: ExpandedParamsDict = info_in["params"]  # type: ignore
+    dummy_model_in = DummyModel(params_in, info_in.get("likelihood", {}),
+                                info_in.get("prior"))
 
     # 2. Compare old and new info: determine what to do
     add = info_post.get("add") or {}
@@ -238,7 +345,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # so that the likelihoods do not try to recompute them
     # But be careful to exclude *input* params that have a "derived: True" value
     # (which in "updated info" turns into "derived: 'lambda [x]: [x]'")
-    # Don't assign to derived parameters to theories, only likelihoods, so they can be
+    # Don't assign derived parameters to theories, only likelihoods, so they can be
     # recomputed if needed. If the theory does not need to be computed, it doesn't matter
     # if it is already assigned parameters in the usual way; likelihoods can get
     # the required derived parameters from the stored sample derived parameter inputs.
@@ -246,8 +353,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
     dropped_theory = set()
     for p, pinfo in out_params_with_computed.items():
-        if (is_derived_param(pinfo) and "value" not in pinfo
-                and p not in add_params):
+        if (is_derived_param(pinfo) and "value" not in pinfo and
+                p not in add_params):
             out_params_with_computed[p] = {"value": np.nan}
             dropped_theory.add(p)
     # 2.2 Manage adding/removing priors and likelihoods
@@ -260,10 +367,12 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 out_combined[kind].pop(remove_item, None)
                 if remove_item not in (add.get(kind) or []) and kind != "theory":
                     warn_remove = True
-            except ValueError:
+            except ValueError as excpt:
                 raise LoggedError(
-                    log, "Trying to remove %s '%s', but it is not present. "
-                         "Existing ones: %r", kind, remove_item, list(out_combined[kind]))
+                    log,
+                    "Trying to remove %s '%s', but it is not present. Existing ones: %r",
+                    kind, remove_item, list(out_combined[kind]),
+                ) from excpt
         if kind != "theory" and kind in add:
             dups = set(add.get(kind) or []).intersection(out_combined[kind]) - {"one"}
             if dups:
@@ -280,8 +389,7 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     "it is probably safer to explore it directly.")
 
     mlprior_names_add = minuslogprior_names(add.get("prior") or [])
-    chi2_names_add = [get_chi2_name(name) for name in add["likelihood"] if
-                      name != "one"]
+
     out_combined["likelihood"].pop("one", None)
 
     add_theory = add.get("theory")
@@ -299,6 +407,27 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                     recursive_update(theory_info, added_theory.pop(theory))
         out_combined["theory"].update(added_theory)
 
+    # Use default prefix if it exists. If it does not, produce no output by default.
+    # {post: {output: None}} suppresses output, and if it's a string, updates it.
+    out_prefix = info_post.get("output", info.get("output"))
+    if out_prefix:
+        suffix = info_post.get("suffix")
+        if not suffix:
+            raise LoggedError(log, "You need to provide a '%s' for your output chains.",
+                              "suffix")
+        out_prefix += separator_files + "post" + separator_files + suffix
+
+    if 'minimize' in (info.get("sampler") or []):
+        # actually minimizing with importance-sampled combination of likelihoods
+        out_combined = dict(info, **out_combined)
+        out_combined.pop("post")
+        out_combined["output"] = out_prefix
+        from cobaya.run import run
+        return run(out_combined)
+
+    in_collections = get_collections(info, output_in, info_post, sample, dummy_model_in,
+                                     log)
+
     # Prepare recomputation of aggregated chi2
     # (they need to be recomputed by hand, because auto-computation won't pick up
     #  old likelihoods for a given type)
@@ -310,15 +439,6 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     add_aggregated_chi2_params(out_combined_params, types)
 
     # 3. Create output collection
-    # Use default prefix if it exists. If it does not, produce no output by default.
-    # {post: {output: None}} suppresses output, and if it's a string, updates it.
-    out_prefix = info_post.get("output", info.get("output"))
-    if out_prefix:
-        suffix = info_post.get("suffix")
-        if not suffix:
-            raise LoggedError(log, "You need to provide a '%s' for your output chains.",
-                              "suffix")
-        out_prefix += separator_files + "post" + separator_files + suffix
     output_out = get_output(prefix=out_prefix, force=info.get("force"))
     output_out.set_lock()
 
@@ -344,8 +464,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # TODO: check allow_renames=False?
     model_add = Model(out_params_with_computed, add["likelihood"],
                       info_prior=add.get("prior"), info_theory=out_combined["theory"],
-                      packages_path=(info_post.get(packages_path_input) or
-                                     info.get(packages_path_input)),
+                      packages_path=(info_post.get("packages_path") or
+                                     info.get("packages_path")),
                       allow_renames=False, post=True,
                       stop_at_error=info.get('stop_at_error', False),
                       skip_unused_theories=True, dropped_theory_params=dropped_theory)
@@ -362,15 +482,15 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     last_percent = None
     known_constants = dummy_model_out.parameterization.constant_params()
     known_constants.update(dummy_model_in.parameterization.constant_params())
-    missing_params = dummy_model_in.parameterization.sampled_params().keys() - set(
-        collection_in.columns)
-    if missing_params:
-        raise LoggedError(log, "Input samples do not contain expected sampled parameter "
-                               "values: %s", missing_params)
+
+    if missing_params := dummy_model_in.parameterization.sampled_params().keys() - set(
+            collection_in.columns):
+        raise LoggedError(log, "Input samples do not contain expected "
+                               "sampled parameter values: %s", missing_params)
 
     missing_priors = set(name for name in collection_out.minuslogprior_names if
-                         name not in mlprior_names_add
-                         and name not in collection_in.columns)
+                         name not in mlprior_names_add and
+                         name not in collection_in.columns)
     if _minuslogprior_1d_name in missing_priors:
         prior_recompute_1d = True
     if prior_recompute_1d:
@@ -424,13 +544,14 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             importance_weights.extend(_weights)
             collection_out.reweight(_weights)
 
+        sampled_params = dummy_model_in.parameterization.sampled_params()
+
         for i, point in collection_in.data.iterrows():
             all_params = point.to_dict()
             for p in remove_params:
                 all_params.pop(p, None)
             log.debug("Point: %r", point)
-            sampled = np.array([all_params[param] for param in
-                                dummy_model_in.parameterization.sampled_params()])
+            sampled = np.array([all_params[param] for param in sampled_params])
             all_params = out_func_parameterization.to_input(all_params).copy()
 
             # Add/remove priors
@@ -459,10 +580,15 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             if -np.inf in logpriors_new:
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
+            # pylint: disable=protected-access
+            # noinspection PyProtectedMember
             loglikes_add, output_derived = model_add._loglikes_input_params(
-                all_params, return_output_params=True)
-            loglikes_add = dict(zip(chi2_names_add, loglikes_add))
-            output_derived = dict(zip(model_add.output_params, output_derived))
+                all_params, return_output_params=True, as_dict=True)
+            loglikes_add = {get_chi2_name(name): loglikes_add[name] for name in
+                            model_add.likelihood if name != "one"}
+            output_derived = {_p: output_derived[_p] for _p in
+                              model_add.output_params}
+
             loglikes_new = [loglikes_add.get(name, -0.5 * point.get(name, 0))
                             for name in collection_out.chi2_names]
             if is_debug(log):
@@ -498,8 +624,8 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
 
             if difflogmax is not None:
                 logpost_new = sum(logpriors_new) + sum(loglikes_new)
-                importance_weight = np.exp(logpost_new + point.get(OutPar.minuslogpost)
-                                           - difflogmax)
+                importance_weight = np.exp(
+                    logpost_new + point.get(OutPar.minuslogpost) - difflogmax)
                 weight = weight * importance_weight
                 importance_weights.append(importance_weight)
                 if time.time() - last_dump_time > OutputOptions.output_inteveral_s:
@@ -564,14 +690,16 @@ def post(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         log.info(
             "Effective number of weighted samples if independent (sum w)^2/sum(w^2): "
             "%s", int(sum(tot_weights) ** 2 / sum(sum_w2s)))
-    products: PostResultDict = {"sample": value_or_list(out_collections),
-                                "stats": {'min_importance_weight': (min(min_weights) /
-                                                                    max(max_weights)),
-                                          'points_removed': sum(points_removed_s),
-                                          'tot_weight': sum(tot_weights),
-                                          'max_weight': max(max_output_weights),
-                                          'sum_w2': sum(sum_w2s),
-                                          'points': sum(points_s)},
-                                "logpost_weight_offset": difflogmax,
-                                "weights": value_or_list(weights)}
-    return PostTuple(info=out_combined, products=products)
+    products_dict: PostResultDict = {
+        "sample": value_or_list(out_collections),
+        "stats": {'min_importance_weight': (min(min_weights) / max(max_weights)),
+                  'points_removed': sum(points_removed_s),
+                  'tot_weight': sum(tot_weights),
+                  'max_weight': max(max_output_weights),
+                  'sum_w2': sum(sum_w2s),
+                  'points': sum(points_s)
+                  },
+        "logpost_weight_offset": difflogmax,
+        "weights": value_or_list(weights)
+    }
+    return out_combined, PostResult(products_dict)

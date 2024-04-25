@@ -1,120 +1,91 @@
-grid:
-#  yaml_dir:  # where to look for the INI files: default and of each dataset
-  # YAML file with "base" model (params + theory + sampler, +(maybe) common likelihoods)
-  defaults:
-#  importance_defaults: # defaults of importance runs?
-  groups:
+defaults:
+  theory:
     camb:
-      models:
-        - ""
-        - r
-        - omegak
-        - mnu
-        - mnu_nnu
-        - w
-        - yhe
-      # NB: datasets infos are added *after* models info,
-      # so the former overwrite the latter in case of conflict.
-      datasets:
-        - planck_lowl_plikHM_TTTEEE_lensing
-        - planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon
-        - planck_lowl_plikHM_TTTEEE_lensingk_BK14
-# TODO: post-processing (e.g. importance reweighting)
-#      post:
+      extra_args:
+        lens_potential_accuracy: 1
+  timing: True
+  # Presets for shorter input
+  # Any other field overwrites the presets
+  preset:
+    # Base model
+    primordial: SFSR
+    geometry: flat
+    hubble: sound_horizon_last_scattering
+    matter: omegab_h2, omegac_h2
+    neutrinos: one_heavy_planck
+    dark_energy: lambda
+    bbn: consistency
+    reionization: gauss_prior
+    # Sampler
+    sampler: MCMC
+    # Theory code
+    theory: camb
+importance_defaults: # defaults for importance runs
+minimize_defaults: # defaults for minimization runs
+getdist_options: # any non-default options to pass to getdist
+groups: # the list of groups sub-grids to run
+  main:
+    models:
+      - ""
+      - r
+      - omegak
+      - mnu
+      - mnu_nnu
+      - w
+      - yhe
+    # NB: datasets infos are added *after* models info,
+    # so the former overwrite the latter in case of conflict.
+    datasets:
+      - planck_lowl_NPIPE_TTTEEE_lensing
+      - planck_lowl_NPIPE_TT
+# post-processing (e.g. importance reweighting)
+#   importance_runs:
 #        - [...]
-      # Group-level skip combinations
-      skip:
-        # model: [dataset1, ...]
-  # Global skip combinations
-  skip:
-    # model: [dataset1, ...]
-  # Definitions of the models used
-  models:
-    "":
-    r:
-      preset:
-        primordial: SFSR_t
-    omegak:
-      preset:
-        geometry: omegak
-    mnu:
-      preset:
-        neutrinos: varying_mnu
-    mnu_nnu:
-      preset:
-        neutrinos: varying_mnu_Neff
-    w:
-      preset:
-        dark_energy: de_w
-    yhe:
-      preset:
-        bbn: YHe
-  # Definitions of datasets used
-  datasets:
-    planck_lowl_plikHM_TTTEEE_lensing:
-      likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
-    planck_lowl_plikHM_TTTEEE_lensing_BAO_Pantheon:
-      likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
-    planck_lowl_plikHM_TTTEEE_lensingk_BK14:
-      likelihood:
-        planck_2015_lowl:
-        planck_2015_plikHM_TTTEEE:
-        planck_2015_lensing:
-        bicep_keck_2014:
+    # Group-level skip combinations
+    skip:
+      # model: [dataset1, ...]
+# Global skip combinations
+skip:
+  # model: [name1, ...]
+# Definitions of the models used
+models:
+  "":
+  r:
+    preset:
+      primordial: SFSR_t
+  omegak:
+    preset:
+      geometry: omegak
+  mnu:
+    preset:
+      neutrinos: varying_mnu
+  mnu_nnu:
+    preset:
+      neutrinos: varying_mnu_Neff
+  w:
+    preset:
+      dark_energy: de_w
+  yhe:
+    preset:
+      bbn: YHe
+# Definitions of datasets used
+datasets:
+  planck_lowl_NPIPE_TTTEEE_lensing:
+    likelihood:
+      planck_2018_lowl.TT:
+      planck_2018_lowl.EE:
+      planck_NPIPE_highl_CamSpec.TTTEEE:
+      planck_2018_lensing.native:
+  planck_lowl_NPIPE_TT:
+    likelihood:
+      planck_2018_lowl.TT:
+      planck_2018_lowl.EE:
+      planck_NPIPE_highl_CamSpec.TT:
 
-# OLD
-##cov
-##    dir:  # where to look for covariance matrices
-#    # try to match each new run name to exisitng covmat (covariance matrix for efficient exploration)
-#    # e.g. try to map to get name without particular data combinations
-#    ##covWithoutNameOrder = ['lensing', 'BAO']
-#    # or try replacing various names (these are standard for the provided planck_covmats)
-#    ##covNameMappings = {'plikHM': 'plik', 'plikLite': 'plik'}
-#    # for mapping to nominal mission names try
-#    # covNameMappings = {'plikHM':'planck','TT':'', 'lowTEB':'lowLike'}
-
-# Below this line (upper level), defaults ########################
-
-# Presets for shorter input
-# Any other field overwrites the presets
-preset:
-  # Base model
-  primordial: SFSR
-  geometry: flat
-  hubble: sound_horizon_last_scattering
-  matter: omegab_h2, omegac_h2
-  neutrinos: one_heavy_planck
-  dark_energy: lambda
-  bbn: consistency
-  reionization: gauss_prior
-  # Sampler
-  sampler: MCMC
-  # Theory code
-  theory: camb
-
-# Extra precision for polarised CMB
-theory:
-  camb:
-    extra_args:
-      lens_potential_accuracy: 1
-
-# Bug in original Planck chains: wrong prior
-# (reproducing here for test purposes
-params:
-  galf_TE_A_143_217:
-    prior:
-      dist: norm
-      loc: 0.30
-      scale: 0.09
-    ref:
-      dist: norm
-      loc: 0.30
-      scale: 0.09
-
-timing: True
+cov_dir: null # where to look for covariance matrices  (for efficient exploration)
+cov_map:
+ # try to match each new run name to existing covmat
+  without: ['lensing', 'BAO']
+  rename:
+      NPIPE: plikHM
+      lowl: ['lowl', 'lowE']

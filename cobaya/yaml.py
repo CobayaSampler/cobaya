@@ -17,7 +17,6 @@ import yaml
 import numpy as np
 from yaml.resolver import BaseResolver
 from yaml.constructor import ConstructorError
-from collections import OrderedDict
 from typing import Mapping, Optional, Any
 
 # Local
@@ -60,6 +59,7 @@ ScientificLoader.add_implicit_resolver(
 
 class DefaultsLoader(ScientificLoader):
     current_folder: Optional[str] = None
+    yaml_root_name: Optional[str] = None
 
 
 def _construct_defaults(loader, node):
@@ -86,7 +86,42 @@ def _construct_defaults(loader, node):
     return loaded_defaults
 
 
+def no_duplicates_constructor(loader, node, deep=False):
+    # https://gist.github.com/pypt/94d747fe5180851196eb
+    """Check for duplicate keys."""
+    used = []
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in used:
+            raise InputSyntaxError(f"Duplicate key {key}")
+        used.append(key)
+    return loader.construct_mapping(node, deep)
+
+
 DefaultsLoader.add_constructor('!defaults', _construct_defaults)
+DefaultsLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+                               no_duplicates_constructor)
+
+path_matcher = re.compile(r'\$\{([^}^{]+)\}')
+
+
+def path_constructor(loader, node):
+    """Extract the matched value, expand env variable, and replace the match"""
+    value = node.value
+    match = path_matcher.match(value)
+    env_var = match.group()[2:-1]
+    env_val = os.environ.get(env_var)
+    if not env_val and env_var == 'YAML_ROOT':
+        if loader.yaml_root_name:
+            env_val = loader.yaml_root_name
+        else:
+            raise InputSyntaxError(
+                "You can only use the ${YAML_ROOT} placeholder when loading from a file.")
+
+    return (env_val or '') + value[match.end():]
+
+DefaultsLoader.add_implicit_resolver('!path', path_matcher, None)
+DefaultsLoader.add_constructor('!path', path_constructor)
 
 
 def yaml_load(text_stream, file_name=None) -> InfoDict:
@@ -96,6 +131,8 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
         # set current_folder to store the file name, to be used to locate relative
         # defaults files
         DefaultsLoader.current_folder = os.path.dirname(file_name) if file_name else None
+        DefaultsLoader.yaml_root_name = \
+            os.path.splitext(os.path.basename(file_name))[0] if file_name else None
         return yaml.load(text_stream, DefaultsLoader)
     # Redefining the general exception to give more user-friendly information
     except yaml.constructor.ConstructorError as e:
@@ -137,24 +174,33 @@ def yaml_load_file(file_name: Optional[str], yaml_text: Optional[str] = None) ->
     if yaml_text is None:
         assert file_name
         with open(file_name, "r", encoding="utf-8-sig") as file:
-            yaml_text = "".join(file.readlines())
+            yaml_text = file.read()
     return yaml_load(yaml_text, file_name=file_name)
 
 
 # Custom dumper ##########################################################################
 
 def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
+    """
+    Drop-in replacement for the yaml dumper with some tweaks:
+
+    - Order is preserved in dictionaries and other mappings
+    - Tuples are dumped as lists
+    - Numpy arrays (``numpy.ndarray``) are dumped as lists
+    - Numpy scalars are dumped as numbers, preserving type
+    """
+
     class CustomDumper(yaml.Dumper):
         pass
 
     # Make sure dicts preserve order when dumped
+    # (This is still needed even for CPython 3!)
     def _dict_representer(dumper, data):
         return dumper.represent_mapping(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, data.items())
 
     CustomDumper.add_representer(dict, _dict_representer)
     CustomDumper.add_representer(Mapping, _dict_representer)
-    CustomDumper.add_representer(OrderedDict, _dict_representer)
 
     # Dump tuples as yaml "sequences"
     def _tuple_representer(dumper, data):

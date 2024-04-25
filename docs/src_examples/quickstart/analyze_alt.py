@@ -1,8 +1,6 @@
 # Export the results to GetDist
-from getdist.mcsamples import loadMCSamples
-# Notice loadMCSamples requires a *full path*
-import os
+from cobaya import load_samples
+gd_sample = load_samples(info["output"], to_getdist=True)
 
-gd_sample = loadMCSamples(os.path.abspath(info["output"]))
 # Analyze and plot
 # [Exactly the same here...]

@@ -17,6 +17,7 @@ __pycache__
 docs/_*
 docs/.ipynb_checkpoints
 docs/src_examples/*/*.png
+docs/src_examples/advanced_and_models/chains/
 
 # Tests
 .pytest_cache

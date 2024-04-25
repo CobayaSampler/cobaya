@@ -6,10 +6,10 @@ path: null
 dataset_file: Pantheon/full_long.dataset
 # Overriding of .dataset parameters
 dataset_params:
-  # field: value
+# field: value
 # Aliases for automatic covariance matrix
-aliases: [Pantheon, Pantheon18]
-# Use absolute magnitude
+aliases: [ Pantheon, Pantheon18 ]
+# Use absolute magnitude
 use_abs_mag: False
 # Speed in evaluations/second
 speed: 100

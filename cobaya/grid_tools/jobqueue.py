@@ -7,7 +7,6 @@ import time
 import shutil
 import multiprocessing
 from typing import Any
-from distutils import spawn
 
 from cobaya.conventions import Extension
 from .conventions import script_folder, script_ext, jobid_ext
@@ -81,11 +80,11 @@ class JobSettings:
         grid_engine = 'PBS'
         for engine, options in grid_engine_defaults.items():
             if 'qsub' in options:
-                if spawn.find_executable(options["qsub"]) is not None:
+                if shutil.which(options["qsub"]) is not None:
                     grid_engine = engine
                     break
         else:
-            if spawn.find_executable("qstat") is not None:
+            if shutil.which("qstat") is not None:
                 try:
                     help_info = subprocess.check_output('qstat -help',
                                                         shell=True).decode().strip()
@@ -252,6 +251,7 @@ def deleteJobs(batchPath, jobIds=None, rootNames=None, jobNames=None, jobId_minm
         if isinstance(rootNames, str):
             rootNames = [rootNames]
         jobIds.update(index.rootNames.get(name) for name in rootNames)
+        jobIds.discard(None)
     if jobNames is not None:
         if isinstance(jobNames, str):
             jobNames = [jobNames]
@@ -389,11 +389,11 @@ def queue_job_details(batchPath=None, running=True, queued=True, warnNotBatch=Tr
     if not index:
         print('No existing job index found')
         return []
-    if spawn.find_executable("showq") is not None:
+    if shutil.which("showq") is not None:
         qstat = 'showq'
         running_txt = ' Running '
     else:
-        if spawn.find_executable("squeue") is not None:
+        if shutil.which("squeue") is not None:
             qstat = 'squeue'
         else:
             # e.g. Sun Grid Engine/OGS

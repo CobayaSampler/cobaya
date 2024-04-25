@@ -14,7 +14,7 @@ or other combination with TE and EE.
 Set use_range to string representation of L range to use, e.g. 50-100, 200-500, 1470-2500,
 or pass a dictionary of ranges for each spectrum.
 
-##TODO: calPlanck vs Aplanck
+It is used by the 2018 and more recent CamSpec Planck likelihoods.
 
 """
 
@@ -40,22 +40,27 @@ def range_to_ells(use_range):
                 ranges.append(range(mn, mx + 1))
             else:
                 ranges.append(int(ell_range))
+        # noinspection PyTypeChecker
         return np.concatenate(ranges)
     else:
         return use_range
 
 
 class Planck2018CamSpecPython(DataSetLikelihood):
-    install_options = {
-        "download_url": "https://github.com/CobayaSampler/planck_native_data/"
-                        "releases/download/v1/CamSpec2018.zip",
-        "data_path": "planck_2018_CamSpec_native"}
-    bibtex_file = 'planck2018.bibtex'
+    install_options = {"github_repository": "CobayaSampler/planck_native_data",
+                       "github_release": "v1", "asset": "CamSpec2018.zip",
+                       "directory": "planck_2018_CamSpec_native"}
+
     type = "CMB"
+
+    @classmethod
+    def get_bibtex(cls):
+        from cobaya.likelihoods.base_classes import Planck2018Clik
+        return Planck2018Clik.get_bibtex()
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
-        print('Loading: ', filename)
+        self.mpi_debug('Loading: %s', filename)
         dat = np.loadtxt(filename)
         assert int(dat[0, 0]) == 2
         dat = np.hstack(([0, 0], dat[:, 1]))
@@ -71,12 +76,11 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         if ini.hasKey('use_range'):
             used_ell = ini.params['use_range']
             if isinstance(used_ell, dict):
-                print('Using range %s' % used_ell)
-                for key, value in used_ell.items():
-                    used_ell[key] = range_to_ells(value)
+                self.mpi_info('Using range %s', used_ell)
+                used_ell = {key: range_to_ells(value) for key, value in used_ell.items()}
             else:
                 if silent:
-                    print('CamSpec using range: %s' % used_ell)
+                    self.mpi_info('CamSpec using range: %s', used_ell)
                 used_ell = range_to_ells(used_ell)
         else:
             used_ell = None
@@ -133,8 +137,8 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         if not silent:
             for name, mn, mx in zip(self.cl_names, lmin, lmax):
                 if name in self.use_cl:
-                    print(name, mn, mx)
-            print('Number of data points: %s' % self.cov.shape[0])
+                    self.mpi_info("L-range for %s: %s %s", name, mn, mx)
+            self.mpi_info('Number of data points: %s', self.cov.shape[0])
         self.lmax = lmax
         self.lmin = lmin
         max_l = np.max(self.lmax)
@@ -317,9 +321,9 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         dL = np.zeros(n_p)
         ix1 = 0
         ell_offsets = [LS - lmin for LS in self.ell_ranges[:4]]
-        contiguous = not np.any(np.count_nonzero(LS - np.arange(LS[0],
-                                                                LS[-1] + 1, dtype=int))
-                                for LS in self.ell_ranges[:4])
+        contiguous = not any(np.count_nonzero(LS - np.arange(LS[0],
+                                                             LS[-1] + 1, dtype=int))
+                             for LS in self.ell_ranges[:4])
         for i, (cal, LS, n) in enumerate(zip(cals[:4], ell_offsets, self.used_sizes[:4])):
             dL[LS] += d[ix1:ix1 + n] / cal
             ix = 0

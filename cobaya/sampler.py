@@ -45,32 +45,37 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 """
 # Global
 import os
-import numpy as np
-from typing import Optional, Sequence, Mapping, Union
 from itertools import chain
+from typing import Optional, Sequence, Mapping, Union, Dict, TYPE_CHECKING
+import numpy as np
 from numpy.random import SeedSequence, default_rng
 
 # Local
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.typing import InfoDict, SamplersDict, SamplerDict
-from cobaya.tools import deepcopy_where_possible, find_with_regexp
-from cobaya.tools import recursive_update, str_to_list, get_resolved_class
+from cobaya.typing import SamplersDict, SamplerDict
+from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update, \
+    str_to_list
 from cobaya.model import Model
 from cobaya.log import LoggedError, get_logger, is_debug
 from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.component import CobayaComponent
+from cobaya.component import CobayaComponent, get_component_class
 from cobaya.input import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy, Output
 from cobaya import mpi
 
+# Avoid importing GetDist if not necessary
+if TYPE_CHECKING:
+    from cobaya.collection import SampleCollection
+    from getdist import MCSamples
 
-def get_sampler_name_and_class(info_sampler: SamplersDict):
+
+def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):
     """
     Auxiliary function to retrieve the class of the required sampler.
     """
     check_sane_info_sampler(info_sampler)
     name = list(info_sampler)[0]
-    sampler_class = get_resolved_class(name, kind="sampler")
+    sampler_class = get_component_class(name, kind="sampler", logger=logger)
     assert issubclass(sampler_class, Sampler)
     return name, sampler_class
 
@@ -80,9 +85,10 @@ def check_sane_info_sampler(info_sampler: SamplersDict):
         raise LoggedError(__name__, "No sampler given!")
     try:
         list(info_sampler)[0]
-    except AttributeError:
+    except AttributeError as excpt:
         raise LoggedError(
-            __name__, "The sampler block must be a dictionary 'sampler: {options}'.")
+            __name__, "The sampler block must be a dictionary 'sampler: {options}'."
+        ) from excpt
     if len(info_sampler) > 1:
         raise LoggedError(__name__, "Only one sampler currently supported at a time.")
 
@@ -97,7 +103,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
     """
     logger_sampler = get_logger(__name__)
     if not info_old:
-        return
+        return info_new
     # TODO: restore this at some point: just append minimize info to the old one
     # There is old info, but the new one is Minimizer and the old one is not
     # if (len(info_old) == 1 and list(info_old) != ["minimize"] and
@@ -126,6 +132,7 @@ def check_sampler_info(info_old: Optional[SamplersDict],
                                 "with the new one. Delete the previous output manually, "
                                 "or automatically with either "
                                 "'-f', '--force', 'force: True'")
+    return info_new
 
 
 def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Output] = None,
@@ -148,9 +155,10 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
             "Input info updated with defaults (dumped to YAML):\n%s",
             yaml_dump(updated_info_sampler))
     # Get sampler class & check resume/force compatibility
-    sampler_name, sampler_class = get_sampler_name_and_class(updated_info_sampler)
-    check_sampler_info(
-        (output.reload_updated_info(use_cache=True) or {}).get("sampler"),
+    sampler_name, sampler_class = get_sampler_name_and_class(
+        updated_info_sampler, logger=logger_sampler)
+    updated_info_sampler = check_sampler_info(
+        (output.get_updated_info(use_cache=True) or {}).get("sampler"),
         updated_info_sampler, is_resuming=output.is_resuming())
     # Check if resumable run
     sampler_class.check_force_resume(output, info=updated_info_sampler[sampler_name])
@@ -188,7 +196,6 @@ class Sampler(CobayaComponent):
         The prior and likelihood are also accessible through the attributes with the same
         names.
         """
-        pass
 
     def run(self):
         """
@@ -201,14 +208,18 @@ class Sampler(CobayaComponent):
                [do one more step]
                [update the collection of samples]
         """
-        pass
 
-    def products(self) -> InfoDict:
+    def samples(self, **kwargs) -> Union["SampleCollection", "MCSamples"]:
         """
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
-        return {}
+
+    def products(self, **kwargs) -> Dict:
+        """
+        Returns the products expected in a scripted call of cobaya,
+        (e.g. a collection of samples or a list of them).
+        """
 
     @property
     def random_state(self) -> np.random.Generator:
@@ -295,7 +306,7 @@ class Sampler(CobayaComponent):
         for k, v in checkpoint_info["sampler"][self.get_name()].items():
             setattr(self, k, v)
         # check if convergence parameters changed, and if so converged=False
-        old_info = self.output.reload_updated_info(use_cache=True)
+        old_info = self.output.get_updated_info(use_cache=True)
         assert old_info
         if self.converge_info_changed(old_info["sampler"][self.get_name()],
                                       self._updated_info):
@@ -329,17 +340,6 @@ class Sampler(CobayaComponent):
         ss = mpi.scatter(child_seeds)
         self._entropy = ss.entropy  # for debugging store for reproducibility
         self._rng = default_rng(ss)
-
-    # MARKED FOR DEPRECATION IN v3.0
-    def __getitem__(self, k):
-        raise LoggedError(
-            self.log,
-            "NB: the variables returned by `cobaya.run` have changed: "
-            "they were `(updated_info, sampler_products)` and they are now "
-            "`(updated_info, sampler)`. You can access the sampler products (the old "
-            "return value) as `sampler.products()` and the `Model` used as "
-            "`sampler.model`.")
-    # END OF DEPRECATION BLOCK
 
     @classmethod
     def output_files_regexps(cls, output, info=None, minimal=False):
@@ -415,6 +415,7 @@ class CovmatSampler(Sampler):
     """
     Parent class for samplers that are initialised with a covariance matrix.
     """
+
     covmat_params: Sequence[str]
     # Amount by which to shrink covmat diagonals when set from priors or reference.
     fallback_covmat_scale: float = 4
@@ -453,8 +454,7 @@ class CovmatSampler(Sampler):
             for p in list(params_infos_covmat):
                 if p not in (auto_params or []):
                     params_infos_covmat.pop(p, None)
-            auto_covmat = self.model.get_auto_covmat(params_infos_covmat,
-                                                     random_state=self._rng)
+            auto_covmat = self.model.get_auto_covmat(params_infos_covmat)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
                 self.log.info("Covariance matrix selected automatically: %s", self.covmat)
@@ -473,11 +473,20 @@ class CovmatSampler(Sampler):
                 with open(self.covmat, "r", encoding="utf-8-sig") as file_covmat:
                     header = file_covmat.readline()
                 loaded_covmat = np.loadtxt(self.covmat)
-            except TypeError:
-                raise LoggedError(self.log, "The property 'covmat' must be a file name,"
-                                            "but it's '%s'.", str(self.covmat))
-            except IOError:
-                raise LoggedError(self.log, "Can't open covmat file '%s'.", self.covmat)
+                self.log.debug("Loaded a covariance matrix from '%r'", self.covmat)
+            except TypeError as texcpt:
+                raise LoggedError(
+                    self.log,
+                    "The property 'covmat' must be a file name,"
+                    "but it's '%s'.",
+                    str(self.covmat),
+                ) from texcpt
+            except IOError as ioexcpt:
+                raise LoggedError(
+                    self.log,
+                    "Can't open covmat file '%s'.",
+                    self.covmat,
+                ) from ioexcpt
             if header[0] != "#":
                 raise LoggedError(
                     self.log, "The first line of the covmat file '%s' "
@@ -505,19 +514,23 @@ class CovmatSampler(Sampler):
                 raise LoggedError(
                     self.log,
                     "Parameter(s) %r appear more than once in %s", duplicated, str_msg)
+            loaded_covmat = np.atleast_2d(loaded_covmat)
             if len(loaded_params) != loaded_covmat.shape[0]:
                 raise LoggedError(
                     self.log, "The number of parameters in %s and the "
                               "dimensions of the matrix do not agree: %d vs %r",
                     str_msg, len(loaded_params), loaded_covmat.shape)
-            if not (np.allclose(loaded_covmat.T, loaded_covmat) and
-                    np.all(np.linalg.eigvals(loaded_covmat) > 0)):
-                str_msg = "passed"
-                if isinstance(self.covmat, str):
-                    str_msg = "loaded from %r" % self.covmat
+            is_square_symmetric = (len(loaded_covmat.shape) == 2 and
+                                   loaded_covmat.shape[0] == loaded_covmat.shape[1] and
+                                   np.allclose(loaded_covmat.T, loaded_covmat))
+            # Not checking for positive-definiteness yet: may contain highly degenerate
+            # derived parameters that would spoil it now, but will later be dropped.
+            if not is_square_symmetric:
+                from_msg = (f"loaded from '{self.covmat}'" if isinstance(self.covmat, str)
+                            else "passed")
                 raise LoggedError(
-                    self.log, "The covariance matrix %s is not a positive-definite, "
-                              "symmetric square matrix.", str_msg)
+                    self.log,
+                    f"The covariance matrix {from_msg} is not a symmetric square matrix.")
             # Fill with parameters in the loaded covmat
             renames = {p: [p] + str_to_list(v.get("renames") or [])
                        for p, v in params_infos.items()}

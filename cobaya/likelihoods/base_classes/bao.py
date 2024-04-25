@@ -15,10 +15,16 @@ The datasets implemented at this moment are:
 - ``bao.sdss_dr12_consensus_bao``
 - ``bao.sdss_dr12_consensus_full_shape``
 - ``bao.sdss_dr12_consensus_final`` (combined data of the previous two)
-- ``bao.sdss_dr16_baoplus_lrg`` (combining data from BOSS DR12 and eBOSS DR16)
-- ``bao.sdss_dr16_baoplus_lyauto``
-- ``bao.sdss_dr16_baoplus_lyxqso``
-- ``bao.sdss_dr16_baoplus_qso``
+- ``bao.sdss_dr16_baoplus_lrg`` (combining data from BOSS DR12 and eBOSS DR16, BAO+RSD)
+- ``bao.sdss_dr16_baoplus_qso`` (DR16 BAO+RSD)
+- ``bao.sdss_dr16_baoplus_elg`` (DR16 ELG BAO+RSD)
+- ``bao.sdss_dr12_lrg_bao_dmdh`` (DR12 LRG BAO-only, independent of DR16 below)
+- ``bao.sdss_dr16_lrg_bao_dmdh`` (DR16 LRG BAO-only, independent of DR12 above)
+- ``bao.sdss_dr16_bao_elg`` (DR16 ELG BAO-only)
+- ``bao.sdss_dr16_qso_bao_dmdh`` (DR16 QSO BAO-only)
+- ``bao.sdss_dr16_baoplus_lyauto`` (DR16 LyA BAO-only)
+- ``bao.sdss_dr16_baoplus_lyxqso`` (DR16 LyA x QSO BAO-only)
+
 
 .. |br| raw:: html
 
@@ -61,7 +67,11 @@ To use any of these likelihoods, simply mention them in the likelihoods block, o
 using the :doc:`input generator <cosmo_basic_runs>`.
 
 These likelihoods have no nuisance parameters or particular settings that you may want
-to change (except for the installation path; see below)
+to change (except for the installation path; see below).
+
+Note that although called "bao", many of these data combinations also include redshift
+distortion data (RSD), encapsulated via a single "f sigma8" parameter (which is not
+accurate for some non-LCDM models).
 
 
 Defining your own BAO likelihood
@@ -146,7 +156,7 @@ class BAO(InstallableLikelihood):
     type = "BAO"
 
     install_options = {"github_repository": "CobayaSampler/bao_data",
-                       "github_release": "v2.0"}
+                       "github_release": "v2.5"}
 
     prob_dist_bounds: Optional[Sequence[float]]
     measurements_file: Optional[str] = None
@@ -163,7 +173,6 @@ class BAO(InstallableLikelihood):
     path: Optional[str]
 
     def initialize(self):
-        self.log.info("Initialising.")
         if not getattr(self, "path", None) and \
                 not getattr(self, packages_path_input, None):
             raise LoggedError(
@@ -195,6 +204,7 @@ class BAO(InstallableLikelihood):
                                      else self.data)
 
         if not self.grid_file:
+            self.use_grid_1d = False
             self.use_grid_2d = False
             self.use_grid_3d = False
             # Columns: z value [err] [type]
@@ -226,7 +236,7 @@ class BAO(InstallableLikelihood):
                 raise LoggedError(
                     self.log, "If 'prob_dist' given, 'prob_dist_bounds' needs to be "
                               "specified as [min, max].")
-            spline = UnivariateSpline(alpha, -chi2 / 2, s=0)
+            spline = UnivariateSpline(alpha, -chi2 / 2, s=0, ext=2)
             self.logpdf = lambda _x: (spline(_x)[0] if self.prob_dist_bounds[0]
                                                        <= _x <= self.prob_dist_bounds[1]
                                       else -np.inf)
@@ -238,10 +248,6 @@ class BAO(InstallableLikelihood):
                 raise LoggedError(
                     self.log, "Couldn't find grid file '%s' in folder '%s'. " % (
                         self.grid_file, data_file_path) + "Check your paths.")
-            if not self.observable_1 or not self.observable_2:
-                raise LoggedError(
-                    self.log, "If using grid data, 'observable_1' and 'observable_2'"
-                              "need to be specified.")
             if self.redshift is None:
                 raise LoggedError(
                     self.log, "If using grid data, 'redshift'"
@@ -250,9 +256,26 @@ class BAO(InstallableLikelihood):
             self.has_type = True  # Not sure what this is
             self.data = pd.DataFrame()
 
-            if self.grid_data.shape[1] == 3:
+            if self.grid_data.shape[1] == 2:
+                self.use_grid_1d = True
+                self.use_grid_2d = False
+                self.use_grid_3d = False
+                if not self.observable_1:
+                    raise LoggedError(
+                        self.log, "If using grid data, 'observable_1'"
+                                  "needs to be specified.")
+                self.data["observable"] = [self.observable_1]
+                x = self.grid_data[:, 0]
+                chi2 = np.log(self.grid_data[:, 1])
+                self.interpolator = UnivariateSpline(x, chi2, s=0, ext=2)
+            elif self.grid_data.shape[1] == 3:
+                self.use_grid_1d = False
                 self.use_grid_2d = True
                 self.use_grid_3d = False
+                if not (self.observable_1 and self.observable_2):
+                    raise LoggedError(
+                        self.log, "If using grid data, 'observable_1' and 'observable_2'"
+                                  "need to be specified.")
                 self.data["observable"] = [self.observable_1, self.observable_2]
 
                 x = np.unique(self.grid_data[:, 0])
@@ -266,12 +289,14 @@ class BAO(InstallableLikelihood):
                 # Make the interpolator (x refers to at, y refers to ap).
                 self.interpolator = RectBivariateSpline(x, y, chi2, kx=3, ky=3)
             elif self.grid_data.shape[1] == 4:
+                self.use_grid_1d = False
                 self.use_grid_2d = False
                 self.use_grid_3d = True
-                if not self.observable_3:
+                if not (self.observable_1 and self.observable_2 and self.observable_3):
                     raise LoggedError(
-                        self.log, "If using 3D grid data, 'observable_3'"
-                                  "needs to be specified.")
+                        self.log,
+                        "If using grid data, 'observable_1', 'observable_2' "
+                        "and 'observable_3' need to be specified.")
                 self.data["observable"] = [self.observable_1, self.observable_2,
                                            self.observable_3]
 
@@ -301,14 +326,14 @@ class BAO(InstallableLikelihood):
                     self.cov = np.loadtxt(os.path.join(data_file_path, self.cov_file))
                 elif self.invcov_file:
                     invcov = np.loadtxt(os.path.join(data_file_path, self.invcov_file))
-                    self.cov = np.linalg.inv(invcov)
+                    self.cov = np.linalg.inv(np.atleast_2d(invcov))
                 elif "error" in self.data.columns:
                     self.cov = np.diag(self.data["error"] ** 2)
                 else:
                     raise LoggedError(
                         self.log, "No errors provided, either as cov, invcov "
                                   "or as the 3rd column in the data file.")
-                self.invcov = np.linalg.inv(self.cov)
+                self.invcov = np.linalg.inv(np.atleast_2d(self.cov))
             except IOError:
                 raise LoggedError(
                     self.log, "Couldn't find (inv)cov file '%s' in folder '%s'. " % (
@@ -316,10 +341,14 @@ class BAO(InstallableLikelihood):
                         data_file_path) + "Check your paths.")
             self.logpdf = lambda _x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 _x - self.data["value"].values)
+            self.log.info("Initialized.")
 
     def get_requirements(self):
         # Requisites
-        if self.use_grid_2d:
+        if self.use_grid_1d:
+            zs = {self.observable_1: np.array([self.redshift])
+                  }
+        elif self.use_grid_2d:
             zs = {self.observable_1: np.array([self.redshift]),
                   self.observable_2: np.array([self.redshift])}
         elif self.use_grid_3d:
@@ -361,14 +390,22 @@ class BAO(InstallableLikelihood):
                                               if obs not in theory_reqs])
         if len(obs_used_not_implemented):
             raise LoggedError(
-                self.log, "This likelihood refers to observables '%s' that have not been"
-                          " implemented yet. Did you mean any of %s? "
+                self.log, "This likelihood refers to observables '%s' that "
+                          "have not been  implemented yet. Did you mean any of %s? "
                           "If you didn't, please, open an issue in github.",
                 obs_used_not_implemented, list(theory_reqs))
         requisites = {}
         if self.has_type:
-            for obs in self.data["observable"].unique():
-                requisites.update(theory_reqs[obs])
+            for observable in self.data["observable"].unique():
+                for req, req_values in theory_reqs[observable].items():
+                    if req not in requisites:
+                        requisites[req] = req_values
+                    else:
+                        if isinstance(req_values, dict):
+                            for k, v in req_values.items():
+                                if v is not None:
+                                    requisites[req][k] = np.unique(
+                                        np.concatenate((requisites[req][k], v)))
         return requisites
 
     def theory_fun(self, z, observable):
@@ -383,8 +420,8 @@ class BAO(InstallableLikelihood):
         elif observable == "rs_over_DV":
             return np.cbrt(
                 ((1 + z) * self.provider.get_angular_diameter_distance(z)) ** 2 *
-                Const.c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")) ** (
-                       -1) * self.rs()
+                Const.c_km_s * z / self.provider.get_Hubble(z, units="km/s/Mpc")
+            ) ** (-1) * self.rs()
         # Comoving angular diameter distance, over sound horizon radius
         elif observable == "DM_over_rs":
             return (1 + z) * self.provider.get_angular_diameter_distance(z) / self.rs()
@@ -409,17 +446,21 @@ class BAO(InstallableLikelihood):
         return self.provider.get_param("rdrag") * self.rs_rescale
 
     def logp(self, **params_values):
-        if self.use_grid_2d:
+        if self.use_grid_1d:
+            x = self.theory_fun(self.redshift, self.observable_1)
+            chi2 = float(self.interpolator(x)[0])
+            return chi2
+        elif self.use_grid_2d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
-            chi2 = float(self.interpolator(x, y)[0])
-            return chi2 / 2
+            chi2 = self.interpolator(x, y)[0][0]
+            return chi2
         elif self.use_grid_3d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             z = self.theory_fun(self.redshift, self.observable_3)
             chi2 = self.interpolator3D(np.array([x, y, z])[:, 0])
-            return chi2 / 2
+            return chi2
         else:
             theory = np.array([self.theory_fun(z, obs) for z, obs
                                in zip(self.data["z"], self.data["observable"])]).T[0]

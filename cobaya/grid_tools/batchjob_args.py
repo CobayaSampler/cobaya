@@ -5,7 +5,7 @@ from cobaya.grid_tools import batchjob
 
 
 class BatchArgs:
-    def __init__(self, prog=None, desc='', importance=True, noBatchPath=False,
+    def __init__(self, desc='', prog=None, importance=True, noBatchPath=False,
                  notExist=False, notall=False, converge=False,
                  plots=False, batchPathOptional=False):
         self.parser = argparse.ArgumentParser(prog=prog, description=desc)
@@ -25,6 +25,9 @@ class BatchArgs:
         self.doplots = plots
 
     def parseForBatch(self, vals=None):
+        if isinstance(vals, str):
+            vals = [vals]
+
         if self.importanceParameter:
             self.parser.add_argument('--noimportance', action='store_true',
                                      help='original chains only, no importance sampled')
@@ -68,7 +71,8 @@ class BatchArgs:
                                      help='only include chains where all N chains '
                                           'don\'t already exist on disk')
         if self.doplots:
-            self.parser.add_argument('--paramNameFile', default='clik_latex.paramnames',
+            self.parser.add_argument('--paramNameFile',
+                                     default=None,
                                      help=".paramnames file for custom labels for "
                                           "parameters")
             self.parser.add_argument('--paramList', default=None,
@@ -76,7 +80,8 @@ class BatchArgs:
                                           "to include (only)")
             self.parser.add_argument('--size_inch', type=float, default=None,
                                      help='output subplot size in inches')
-            self.parser.add_argument('--nx', default=None, help='number of plots per row')
+            self.parser.add_argument('--nx', default=None,
+                                     help='number of plots per row')
             self.parser.add_argument('--outputs', nargs='+', default=['pdf'],
                                      help='output file type (default: pdf)')
 
@@ -86,7 +91,7 @@ class BatchArgs:
             self.batch = batchjob.readobject(args.batchPath)
             if self.batch is None:
                 raise Exception('batchPath %s does not exist or is not '
-                                'initialized with makeGrid.py' % args.batchPath)
+                                'initialized with cobaya-grid-create' % args.batchPath)
             if self.doplots:
                 import getdist.plots as plots
                 from getdist import paramnames
@@ -106,14 +111,14 @@ class BatchArgs:
     def wantImportance(self, jobItem):
         return (self.args.importancetag is None or len(self.args.importancetag) == 0 or
                 jobItem.importanceTag in self.args.importancetag) and \
-               (self.args.importance is None or len(self.args.importance) == 0 or
-                len([True for x in self.args.importance if
-                     x in jobItem.data_set.importanceNames]))
+            (self.args.importance is None or len(self.args.importance) == 0 or
+             len([True for x in self.args.importance if
+                  x in jobItem.data_set.importanceNames]))
 
     def jobItemWanted(self, jobItem):
         return not jobItem.isImportanceJob and (
                 self.args.importance is None) or jobItem.isImportanceJob and \
-               self.wantImportance(jobItem)
+            self.wantImportance(jobItem)
 
     def nameMatches(self, jobItem):
         if self.args.name is None:

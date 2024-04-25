@@ -12,4 +12,4 @@ aliases: [lensing]
 # Speed in evaluations/second
 speed: 1100
 
-params: !defaults [../planck_2018_highl_plik/params_calib]
+params: !defaults [../base_classes/planck_calib]

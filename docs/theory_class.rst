@@ -4,8 +4,8 @@ CLASS (``classy``)
 .. automodule:: theories.classy.classy
    :noindex:
 
-``classy`` class
-----------------
+Documentation of the ``classy`` wrapper class
+---------------------------------------------
    
 .. autoclass:: theories.classy.classy
    :members:

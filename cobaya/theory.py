@@ -35,8 +35,8 @@ from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any, L
 # Local
 from cobaya.typing import TheoryDictIn, TheoriesDict, InfoDict, ParamValuesDict, \
     ParamsDict, empty_dict, unset_params
-from cobaya.component import CobayaComponent, ComponentCollection
-from cobaya.tools import get_resolved_class, str_to_list
+from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
+from cobaya.tools import str_to_list
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods
 
@@ -89,10 +89,12 @@ class Theory(CobayaComponent):
     def must_provide(self, **requirements) -> Union[None, InfoDict, Sequence[str],
                                                     Sequence[Tuple[str, InfoDict]]]:
         """
-        Function to be called specifying any output products that are needed and hence
-        should be calculated by this component depending..
+        Function called by Cobaya with the actual products that this component needs to
+        compute (i.e. the things this component can provide that are actually used by
+        other components). The function can return conditional requirements that this
+        component needs from other components in order to compute those things.
 
-        The ``requirements'' argument is a requirement name with any optional parameters.
+        The ``requirements`` argument is a requirement name with any optional parameters.
         This function may be called more than once with different requirements.
 
         :return: optional dictionary (or list of requirement name, option tuples) of
@@ -100,13 +102,6 @@ class Theory(CobayaComponent):
         """
         # reset states whenever requirements change
         self._states.clear()
-        # MARKED FOR DEPRECATION IN v3.0
-        # This code will only run if needs() is defined but not must_provide()
-        if hasattr(self, "needs"):
-            raise LoggedError(
-                self.log,
-                "The .needs() method has been deprecated in favour of .must_provide()")
-        # END OF DEPRECATION BLOCK
         return None
 
     def calculate(self, state, want_derived=True, **params_values_dict):
@@ -295,16 +290,6 @@ class Theory(CobayaComponent):
         # not usually used for Theory, can be used for aggregated chi2 in likelihoods
         return str_to_list(getattr(self, "type", []) or [])
 
-    # MARKED FOR DEPRECATION IN v3.1
-    def get_current_derived(self):
-        self.log.warning("'Theory.get_current_derived()' method will soon be deprecated "
-                         "in favour of 'Theory.current_derived' attribute. Please, "
-                         "rename your call.")
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        return self.current_derived
-
-    # END OF DEPRECATION BLOCK
-
     def get_provider(self):
         """
         Return object containing get_X, get_param, get_result methods to get computed
@@ -388,8 +373,9 @@ class TheoryCollection(ComponentCollection):
                             raise LoggedError(self.log,
                                               "Theory %s is not a Theory subclass", name)
                     else:
-                        theory_class = get_resolved_class(
-                            name, kind="theory", class_name=info.get("class"))
+                        theory_class = get_component_class(
+                            name, kind="theory", class_name=info.get("class"),
+                            logger=self.log)
                     self.add_instance(
                         name, theory_class(
                             info, packages_path=packages_path, timing=timing, name=name))

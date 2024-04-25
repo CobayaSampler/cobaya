@@ -1,22 +1,22 @@
 import subprocess
-from distutils import spawn
+import shutil
 from . import batchjob_args, jobqueue
 
 
-def delete_jobs():
-    Opts = batchjob_args.BatchArgs('Delete running or queued jobs', importance=True,
+def delete_jobs(args=None):
+    opts = batchjob_args.BatchArgs('Delete running or queued jobs', importance=True,
                                    batchPathOptional=True)
 
-    group = Opts.parser.add_mutually_exclusive_group()
+    group = opts.parser.add_mutually_exclusive_group()
     group.add_argument('--queued', action='store_true')
     group.add_argument('--running', action='store_true')
 
-    Opts.parser.add_argument('--delete_id_min', type=int)
-    Opts.parser.add_argument('--delete_id_range', nargs=2, type=int)
-    Opts.parser.add_argument('--delete_ids', nargs='+', type=int)
-    Opts.parser.add_argument('--confirm', action='store_true')
+    opts.parser.add_argument('--delete_id_min', type=int)
+    opts.parser.add_argument('--delete_id_range', nargs=2, type=int)
+    opts.parser.add_argument('--delete_ids', nargs='+', type=int)
+    opts.parser.add_argument('--confirm', action='store_true')
 
-    (batch, args) = Opts.parseForBatch()
+    (batch, args) = opts.parseForBatch(args)
 
     if batch:
         if args.delete_id_range is not None:
@@ -28,7 +28,7 @@ def delete_jobs():
         elif args.delete_ids is not None:
             jobqueue.deleteJobs(args.batchPath, args.delete_ids, confirm=args.confirm)
         else:
-            items = [jobItem for jobItem in Opts.filteredBatchItems()]
+            items = [jobItem for jobItem in opts.filteredBatchItems()]
             batchNames = set(
                 [jobItem.name for jobItem in items] + [jobItem.name + '_minimize' for
                                                        jobItem in items])
@@ -52,7 +52,7 @@ def delete_jobs():
                   'if no batch directory')
         for engine in jobqueue.grid_engine_defaults:
             qdel = jobqueue.engine_default(engine, 'qdel')
-            if spawn.find_executable(qdel) is not None:
+            if shutil.which(qdel) is not None:
                 for jobId in ids:
                     subprocess.check_output(qdel + ' ' + str(jobId), shell=True)
                 break
