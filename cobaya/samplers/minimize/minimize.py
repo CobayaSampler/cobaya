@@ -267,7 +267,7 @@ class Minimize(Minimizer, CovmatSampler):
             self.log.debug("Starting point: %r", initial_point)
             self._affine_transform_baseline = initial_point
             initial_point = self.affine_transform(initial_point)
-            np.testing.assert_allclose(initial_point, 0., atol=1e-7)
+            assert np.allclose(initial_point, 0.)
             bounds = np.array(
                 [self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
             try:
