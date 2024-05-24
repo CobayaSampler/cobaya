@@ -451,9 +451,10 @@ class CovmatSampler(Sampler):
         self.covmat = getattr(self, 'covmat', None)
         if isinstance(self.covmat, str) and self.covmat.lower() == "auto":
             params_infos_covmat = deepcopy_where_possible(params_infos)
-            for p in list(params_infos_covmat):
-                if p not in (auto_params or []):
-                    params_infos_covmat.pop(p, None)
+            if auto_params is not None:
+                for p in list(params_infos_covmat):
+                    if p not in auto_params:
+                        params_infos_covmat.pop(p, None)
             auto_covmat = self.model.get_auto_covmat(params_infos_covmat)
             if auto_covmat:
                 self.covmat = os.path.join(auto_covmat["folder"], auto_covmat["name"])
