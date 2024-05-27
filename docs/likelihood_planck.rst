@@ -26,12 +26,14 @@ The Planck 2018 baseline likelihoods defined here are:
 
 Other more recent Planck likelihoods are:
 
-- ``planck_NPIPE_highl_CamSpec.[TT|TE|EE|TTEE|TTTEEE]``: latest native python NPIPE (PR4) CamSpec high-:math:`\ell` likelihoods
+- ``planck_NPIPE_highl_CamSpec.[TT|TE|EE|TTEE|TTTEEE]``: latest native (bundled) python NPIPE (PR4) CamSpec high-:math:`\ell` likelihoods
+- ``planck_2020_lollipop.[lowlE|lowlB|lowlEB]``: latest python NPIPE (PR4) Lollipop low-:math:`\ell` likelihoods. pip install from `GitHub <https://github.com/planck-npipe/lollipop>`_
+- ``planck_2020_hillipop.[TT|TE|EE|TTTEEE]``: latest python NPIPE (PR4) Hillipop high-:math:`\ell` likelihoods. pip install from `GitHub <https://github.com/planck-npipe/hillipop>`_
 - ``planckpr4lensing.[PlanckPR4Lensing|PlanckPR4LensingMarged]``: NPIPE lensing; pip install from `GitHub <https://github.com/carronj/planck_PR4_lensing>`_
 - ``planck_2018_highl_CamSpec2021.[TT|TTTEEE]``: native Python versions of high-:math:`\ell` ``CamSpec`` likelihoods (from `arXiv 1910.00483 <https://arxiv.org/abs/1910.00483>`_).
 - ``planck_2018_lowl.EE_sroll2``: low-:math:`\ell` EE polarization from 2019 Sroll2 analysis (native python)
 
-The combination of planck_2018_lowl.TT, planck_2018_lowl.E,planck_NPIPE_highl_CamSpec.TTTEEE and pr4lensing can be run using the pure python without installing the 2018 clik likelihood package.
+The combination of planck_2018_lowl.TT, planck_2018_lowl.EE, planck_NPIPE_highl_CamSpec.TTTEEE, planckpr4lensing, planck_2020_hillipop and planck_2020_lollipop can be run using the pure python without installing the 2018 clik likelihood package.
 
 .. note::
 
