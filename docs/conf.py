@@ -385,6 +385,8 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+pdf_documents = [(master_doc, 'cobaya', 'Cobaya Documentation', author)]
+
 # Documents to append as an appendix to all manuals.
 #
 # texinfo_appendices = []
