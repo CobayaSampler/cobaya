@@ -83,6 +83,7 @@ def _construct_defaults(loader, node):
                                    "searched for in folder '%s'." % (dfile, folder))
         this_loaded_defaults = yaml_load_file(dfilename)
         loaded_defaults = recursive_update(loaded_defaults, this_loaded_defaults)
+    loader.current_folder = folder
     return loaded_defaults
 
 
