@@ -569,7 +569,7 @@ def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
                 ) from excpt
         kwargs["loc"] = minmaxvalues["min"]
         kwargs["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
-    if kwargs["scale"] < 0:
+    if kwargs.get("scale", 1) < 0:
         raise ValueError(
             "Invalid negative range or scale. "
             f"Prior definition was {definition}.")
