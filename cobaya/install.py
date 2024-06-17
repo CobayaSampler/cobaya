@@ -47,6 +47,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
     # similar to InstallableLikelihood install_options (could be refactored)
     component_root = component.split('.')[0]
     directory = package_install.get("directory")
+    min_version = package_install.get("min_version")
     if package_install == "pip":
         package_install = {"pip": None}
     elif not isinstance(package_install, Mapping):
@@ -65,7 +66,6 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
             return False
         cwd = os.path.join(full_code_path, directory)
         package = '.'
-
     elif url := package_install.get("download_url"):
         logger.info('Downloading code from %s', url)
         cwd = os.path.join(full_code_path, directory or component_root)
@@ -77,11 +77,11 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
                                       "found in %s for %s", cwd, component)
         cwd = os.path.dirname(paths[0])
         package = '.'
-
     elif "pip" not in package_install:
         raise LoggedError(logger, "Invalid package_install: must define pip, "
                                   "github_repository or download_url")
-
+    if min_version is not None:
+        package += f">={min_version}"
     logger.info('pip installing %s', package)
     return not pip_install(package, upgrade=True, logger=logger, cwd=cwd)
 
