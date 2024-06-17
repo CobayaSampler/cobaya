@@ -52,7 +52,9 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
     elif not isinstance(package_install, Mapping):
         raise LoggedError(logger, "Invalid package_install: must be 'pip' or a "
                                   "dictionary with download_url or github_repository")
-    package = package_install.get("pip") or component_root
+    package = package_install.get("pip")
+    if package is None:
+        package = component_root
     cwd = None
     if repo := package_install.get("github_repository"):
         logger.info('Downloading code from github (%s)', repo)
@@ -80,7 +82,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
         raise LoggedError(logger, "Invalid package_install: must define pip, "
                                   "github_repository or download_url")
 
-    logger.info('pip installing %s', component_root)
+    logger.info('pip installing %s', package)
     return not pip_install(package, upgrade=True, logger=logger, cwd=cwd)
 
 
@@ -186,6 +188,13 @@ def install(*infos, **kwargs):
                 logger.info(f"Class to be installed for this component: {class_name}")
             python_path = info.pop("python_path", None)
             package_install = info.get("package_install") or {}
+            # If a class_name AND pip install were specified, make sure the class name is
+            # used. Otherwise the pip package would be inferred from the alias.
+            if (
+                    package_install == "pip" or
+                    ("pip" in package_install and package_install["pip"] is None)
+            ):
+                package_install["pip"] = class_name
             min_version = package_install.get('min_version')
 
             def _imported_class():
