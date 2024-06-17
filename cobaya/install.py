@@ -80,7 +80,7 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
     elif "pip" not in package_install:
         raise LoggedError(logger, "Invalid package_install: must define pip, "
                                   "github_repository or download_url")
-    if min_version is not None:
+    if min_version is not None and package != ".":
         package += f">={min_version}"
     logger.info('pip installing %s', package)
     return not pip_install(package, upgrade=True, logger=logger, cwd=cwd)
