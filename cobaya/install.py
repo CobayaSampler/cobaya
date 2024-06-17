@@ -179,7 +179,21 @@ def install(*infos, **kwargs):
                 skipped = True
                 continue
             info = components_infos[component]
-            if isinstance(info, str) or "external" in info:
+            if not info:
+                # Try importing from "plugin package"
+                # For now, reference to cosmology package hard coded
+                # TODO: make it a kwarg/script-arg: --use-plugins cosmo, etc.
+                use_omnibus_packages = ["cobaya_cosmo"]
+                for opackage in use_omnibus_packages:
+                    try:
+                        get_info_dict = importlib.import_module(opackage).get_info_dict
+                    except AttributeError as excpt:
+                        raise AttibuteError(
+                            f"Plugin package {opackage} must allow to import a getter "
+                            f"method as 'from {opackage} import get_info_dict'."
+                        ) from excpt
+                    info = get_info_dict(component)
+            elif isinstance(info, str) or "external" in info:
                 logger.info(
                     f"Component '{name_w_kind}' is a custom function. Nothing to do.")
                 continue
