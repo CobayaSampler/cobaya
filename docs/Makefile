@@ -50,7 +50,6 @@ clean:
 
 .PHONY: html
 html:
-	python3 -c "from cobaya_cosmo.generate_cosmo_likelihood_list import generate_full_text; print(generate_full_text())" > _likelihood_list.rst
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
