@@ -61,6 +61,7 @@ Table of contents
    likelihood_bao
    likelihood_sn
    likelihood_external
+   _likelihood_list
 
 .. toctree::
    :caption: Running on clusters

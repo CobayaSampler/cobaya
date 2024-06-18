@@ -40,6 +40,7 @@ gui = ["pyside6", "matplotlib"]
 docs = [
     "sphinx", "sphinx_rtd_theme>=1.0", "sphinxcontrib-jquery",
     "sphinx-autodoc-typehints", "sphinxcontrib-programoutput",
+    "cobaya_cosmo",
 ]
 
 [tool.setuptools.dynamic]
