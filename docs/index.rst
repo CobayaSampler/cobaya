@@ -29,6 +29,7 @@ Table of contents
    sampler_mcmc
    sampler_polychord
    sampler_minimize
+   sampler_profile
    post
 
 .. toctree::
