@@ -578,8 +578,13 @@ class CMBlikes(DataSetLikelihood):
                     (np.trace(M) - self.nmaps - np.linalg.slogdet(M)[1]))
 
     def logp(self, **data_params):
-        cls = self.provider.get_Cl(ell_factor=True)
-        return self.log_likelihood(cls, **data_params)
+        Cls = self.provider.get_Cl(ell_factor=True)
+        for Cl_key, Cl_array in Cls.items():
+            if Cl_key != 'ell':
+                if np.any(np.isnan(Cl_array)):
+                    self.log.error("nans in Cls['%s']: returning logzero and carrying on." % Cl_key)
+                    return -np.inf
+        return self.log_likelihood(Cls, **data_params)
 
     # noinspection PyUnboundLocalVariable
     def log_likelihood(self, dls, **data_params):
