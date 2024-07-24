@@ -296,6 +296,24 @@ parameters, we insert the functions defining them under a ``derived`` property
         x:
           value: "lambda logx: np.exp(logx)"
 
+Priors on theory-derived parameters
+-----------------------------------
+
+The `prior` block can only be used to define priors on parameters that are sampled,
+directly or indirectly. If you have a parameter computed by a theory code that you want
+put an additional prior on, this cannot be done with the `prior` block as the derived
+parameter is not defined until the theory is called. Instead, you can treat the prior as
+an additional likelihood.
+
+For example, to add a Gaussian prior on a parameter `omegam` that is computed by a
+theory code (e.g. CAMB), you can use:
+
+.. code:: yaml
+
+   likelihood:
+      like_omm:
+        external: "lambda _self: stats.norm.logpdf(_self.provider.get_param('omegam'), loc=0.334, scale=0.018)"
+        requires: omegam
 
 Vector parameters
 -----------------
