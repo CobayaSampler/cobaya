@@ -49,7 +49,7 @@ jobs:
         - GCC_VERSION="ubuntu"
       python: "3.9"
     - if: branch !~ ^test.*
-      name: "Anaconda: jammy LTS Python 3.12"
+      name: "Anaconda: jammy LTS Python 3.11"
       dist: jammy
       addons:
         apt:
@@ -59,7 +59,7 @@ jobs:
         - GCC_VERSION="ubuntu"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
-      python: "3.12"
+      python: "3.11"
     - name: "Latest jammy Python 3.12"
       dist: jammy
       addons:
@@ -94,10 +94,10 @@ before_install:
     hash -r;
     conda config --set always_yes yes --set changeps1 no;
     conda info -a;
-    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib pandas cython PyYAML dill coverage flake8 pytest pytest-forked 
+    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest
     source activate test-environment;
     conda install -c conda-forge mpi4py openmpi iminuit;
-    pip install flaky pytest-forked pytest-cov;
+    pip install flake8 flaky pytest-forked pytest-cov;
     else
     python -m pip install --upgrade pip setuptools wheel;
     pip install mpi4py pytest-forked pytest-cov flaky matplotlib dill coverage flake8 iminuit;
