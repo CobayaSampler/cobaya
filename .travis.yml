@@ -94,7 +94,7 @@ before_install:
     hash -r;
     conda config --set always_yes yes --set changeps1 no;
     conda info -a;
-    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest
+    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest;
     source activate test-environment;
     conda install -c conda-forge mpi4py openmpi iminuit;
     pip install flake8 flaky pytest-forked pytest-cov;
