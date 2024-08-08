@@ -100,7 +100,8 @@ before_install:
     pip install flake8 flaky pytest-forked pytest-cov;
     else
     python -m pip install --upgrade pip setuptools wheel;
-    pip install mpi4py numpy==1.26.4 pytest-forked pytest-cov flaky matplotlib dill coverage flake8 iminuit;
+    # numpy < 2 needed for classy tests until it is updated
+    pip install mpi4py "numpy<2" pytest-forked pytest-cov flaky matplotlib dill coverage flake8 iminuit;
     fi
   - python --version
 
