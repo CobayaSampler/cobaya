@@ -2,8 +2,8 @@ info_txt = r"""
 likelihood:
   planck_2018_lowl.TT:
   planck_2018_lowl.EE:
-  planck_2018_highl_plik.TTTEEE:
-  planck_2018_lensing.clik:
+  planck_NPIPE_highl_CamSpec.TTTEEE: null
+  planck_2018_lensing.native: null
 theory:
   classy:
     extra_args: {N_ur: 2.0328, N_ncdm: 1}

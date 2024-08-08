@@ -1,3 +1,9 @@
+## 3.5.2
+
+- Updates for numpy 2 and other compatibility fixes
+- Fixes #357, #358, #360, #361, #362, #368
+- Added _fast_chi_squared method to base class InstallableLikelihood
+
 ## 3.5.1
 
 ### General

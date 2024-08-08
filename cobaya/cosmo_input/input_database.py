@@ -614,6 +614,10 @@ preset: InfoDict = dict([
         "desc": "Planck NPIPE with CAMB (all native Python)",
         "theory": "camb",
         "like_cmb": "planck_NPIPE"}),
+    ("planck_NPIPE_classy", {
+        "desc": "Planck NPIPE with CLASS (all native Python)",
+        "theory": "classy",
+        "like_cmb": "planck_NPIPE"}),
     ("planck_2018_camb", {
         "desc": "Planck 2018 with CAMB",
         "theory": "camb",

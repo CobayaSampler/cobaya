@@ -1,9 +1,11 @@
 from copy import deepcopy
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
+from cobaya.typing import empty_dict
 
 
-def _test_sn(packages_path, skip_not_installed, lik, theory='camb', lik_params={}):
+def _test_sn(packages_path, skip_not_installed, lik, theory='camb',
+             lik_params=empty_dict):
     info_likelihood = {lik: lik_params}
     info_theory = {theory: None}
     ref_chi2 = {"tolerance": 0.1, lik: chi2_sn[lik]}

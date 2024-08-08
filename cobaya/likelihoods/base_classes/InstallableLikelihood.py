@@ -48,7 +48,7 @@ class InstallableLikelihood(Likelihood):
 
     install_options: InfoDict = {}
 
-    # fast convenience function, to get chi-squared (exploiting symmetry) can call
+    # fast convenience function, to get chi-squared (exploiting symmetry); can call
     # self._fast_chi_squared(cov_inv, delta)
     _fast_chi_squared = ChiSquaredFunctionLoader()
 

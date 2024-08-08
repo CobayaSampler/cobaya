@@ -7,7 +7,6 @@
 """
 # Global
 import os
-from getdist import IniFile
 
 # Local
 from cobaya.log import LoggedError
@@ -55,6 +54,7 @@ class DataSetLikelihood(InstallableLikelihood):
         self.load_dataset_file(data_file, getattr(self, 'dataset_params', {}))
 
     def load_dataset_file(self, filename, dataset_params=None):
+        from getdist import IniFile
         if '.dataset' not in filename:
             filename += '.dataset'
         ini = IniFile(filename)

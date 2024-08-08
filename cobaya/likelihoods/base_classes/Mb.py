@@ -24,5 +24,5 @@ class Mb(Likelihood):
         return {}
 
     def logp(self, **params_values):
-        Mb_theory = params_values.get("Mb", None)
+        Mb_theory = params_values["Mb"]
         return self.minus_half_invvar * (Mb_theory - self.Mb_mean) ** 2
