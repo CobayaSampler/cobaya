@@ -398,7 +398,6 @@ Just give it a try and it should work fine, but, in case you need the details:
 
 # Global
 import numbers
-from types import MethodType
 from typing import Sequence, NamedTuple, Callable, Optional, Mapping, List, Any
 import numpy as np
 

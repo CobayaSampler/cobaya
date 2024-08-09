@@ -14,7 +14,6 @@ import warnings
 import inspect
 import re
 import numbers
-from types import MethodType
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
@@ -598,19 +597,16 @@ def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
         ) from tp_excpt
 
 
-def _fast_norm_logpdf(self):
+def _fast_norm_logpdf(norm_dist):
     """WARNING: logpdf(nan) = -inf"""
-    scale = self.kwds["scale"]
-    mlogscale = -np.log(scale)
-    loc = self.kwds["loc"]
-    method = self.dist._logpdf
+    scale = norm_dist.kwds["scale"]
+    m_log_scale = -np.log(scale) - np.log(2 * np.pi) / 2
+    loc = norm_dist.kwds["loc"]
 
-    def fast_logpdf(_self, x):
-        x_ = (x - loc) / scale
-        # noinspection PyProtectedMember
-        return method(x_) + mlogscale
+    def fast_logpdf(x):
+        return m_log_scale - ((x - loc) / scale) ** 2 / 2
 
-    return MethodType(fast_logpdf, self)
+    return fast_logpdf
 
 
 def _KL_norm(m1, S1, m2, S2):
