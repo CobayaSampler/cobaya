@@ -463,7 +463,7 @@ class Output(HasLogger, OutputReadOnly):
            - idem, populated with the components' defaults.
 
         If resuming a sample, checks first that old and new infos and versions are
-        consistent.
+        consistent unless allow_changes is True.
         """
         # trim known params of each likelihood: for internal use only
         self.check_lock()
@@ -471,7 +471,7 @@ class Output(HasLogger, OutputReadOnly):
         updated_info_trimmed["version"] = get_version()
         for like_info in updated_info_trimmed.get("likelihood", {}).values():
             (like_info or {}).pop("params", None)
-        if check_compatible:
+        if check_compatible or cache_old:
             # We will test the old info against the dumped+loaded new info.
             # This is because we can't actually check if python objects do change
             try:
@@ -481,21 +481,16 @@ class Output(HasLogger, OutputReadOnly):
                 # for example, when there's a dynamically generated class that cannot
                 # be found by the yaml loader (could use yaml loader that ignores them)
                 old_info = None
-            if old_info:
-                # use consistent yaml read-in types
-                # TODO: could probably just compare full infos here, with externals?
-                #  for the moment cautiously keeping old behaviour
-                old_info = yaml_load(yaml_dump(old_info))  # type: ignore
-                if old_info.get("test"):
-                    old_info = None
-            if old_info:
+            if check_compatible and old_info and not old_info.get("test"):
+                old_info = yaml_load(yaml_dump(old_info))
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
                 if not is_equal_info(old_info, new_info, strict=False,
                                      ignore_blocks=list(ignore_blocks) + [
                                          "output"]):
                     raise LoggedError(
                         self.log, "Old and new run information not compatible! "
-                                  "Resuming not possible!")
+                                  "Resuming not possible!\n"
+                                  "Use --allow-changes to proceed anyway.")
                 # Deal with version comparison separately:
                 # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
@@ -540,11 +535,8 @@ class Output(HasLogger, OutputReadOnly):
         for f, info in [(self.file_input, input_info),
                         (self.file_updated, updated_info_trimmed)]:
             if info:
-                for k in ignore_blocks:
+                for k in tuple(ignore_blocks) + ("debug", "force", "resume"):
                     info.pop(k, None)
-                info.pop("debug", None)
-                info.pop("force", None)
-                info.pop("resume", None)
                 # make sure the dumped output prefix does only contain the file prefix,
                 # not the folder, since it's already been placed inside it
                 info["output"] = self.updated_prefix()

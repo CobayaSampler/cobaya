@@ -90,7 +90,7 @@ From a Python interpreter
 
 You can use **cobaya** interactively within a Python interpreter or a Jupyter notebook. This will allow you to create input and process products *programatically*, making it easier to streamline a complicated analyses.
 
-The actual input information of **cobaya** are Python *dictionaries* (a ``yaml`` file is just a representation of a dictionary). We can easily define the same information above as a dictionary:
+The actual input information of **cobaya**  is provided as Python *dictionaries* (a ``yaml`` file is just a representation of a dictionary). We can easily define the same information above as a dictionary:
 
 .. literalinclude:: ./src_examples/quickstart/create_info.py
    :language: python

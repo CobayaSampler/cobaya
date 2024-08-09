@@ -96,6 +96,9 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
     # note that continuing from files leads to text-file precision at read in, so a mix of
     # precision in the output SampleCollection returned from run
     run(info, resume=True, override={'sampler': {'mcmc': {'Rminus1_stop': 0.2}}})
+    run(info, resume=True, override={'sampler': {'mcmc': {'Rminus1_stop': 0.15}},
+                                     'theory': {'camb': {'stop_at_error': False}}},
+        allow_changes=True)
     updated_info, sampler_init = run(
         info['output'] + '.updated' + Extension.dill, resume=True,
         override={'sampler': {'mcmc': {'Rminus1_stop': 0.05}}}
@@ -111,7 +114,8 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
                            'skip': 0.2, 'thin': 4
                            }
 
-    output_info, post_results = run(updated_info, override={'post': info_post}, force=True)
+    output_info, post_results = run(updated_info, override={'post': info_post},
+                                    force=True)
     samp2 = post_results.samples(to_getdist=True)
     samp_test = samp.copy()
     samp_test.weighted_thin(4)
@@ -170,7 +174,7 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
     samp_thin = sampler_init.samples(skip_samples=0.2, to_getdist=True)
     samp_thin.weighted_thin(4)
     assert samp_thin.numrows == samp_revert.numrows + \
-        post_products_revert["stats"]["points_removed"]
+           post_products_revert["stats"]["points_removed"]
     if not post_products_revert["stats"]["points_removed"]:
         assert np.isclose(samp_revert.mean("sigma8"), samp_thin.mean("sigma8"))
     else:

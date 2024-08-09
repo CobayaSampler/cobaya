@@ -34,6 +34,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
         minimize: Optional[bool] = None,
         no_mpi: bool = False, test: Optional[bool] = None,
         override: Optional[InputDict] = None,
+        allow_changes: bool = False
         ) -> Tuple[InputDict, Union[Sampler, PostResult]]:
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
@@ -51,6 +52,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     :param test: only test initialization rather than actually running
     :param override: option dictionary to merge into the input one, overriding settings
        (but with lower precedence than the explicit keyword arguments)
+    :param allow_changes: if true, allow input option changes when resuming or minimizing
     :return: (updated_info, sampler) tuple of options dictionary and Sampler instance,
               or (updated_info, post_results) if using "post" post-processing
     """
@@ -103,6 +105,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             # 3. If output requested, check compatibility if existing one, and dump.
             # 3.1 First: model only
             out.check_and_dump_info(info, updated_info, cache_old=True,
+                                    check_compatible=not allow_changes,
                                     ignore_blocks=["sampler"])
             # 3.2 Then sampler -- 1st get the first sampler mentioned in the updated.yaml
             if not (info_sampler := updated_info.get("sampler")):
@@ -176,6 +179,10 @@ def run_script(args=None):
     parser.add_argument("-M", "--minimize",
                         help=("Replaces the sampler in the input and runs a minimization "
                               "process (incompatible with post-processing)."),
+                        **trueNone_kwargs)
+    parser.add_argument("--allow-changes",
+                        help="Allow changing input parameters when resuming "
+                             "or minimizing, skipping consistency checks",
                         **trueNone_kwargs)
     parser.add_argument("--version", action="version", version=get_version())
     parser.add_argument("--no-mpi",
