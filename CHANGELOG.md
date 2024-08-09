@@ -1,6 +1,6 @@
 ## 3.5.3
 
-- added --allow-changes option to cobaya-run to allow changes in the input file
+- added --allow-changes option to cobaya-run to allow changes in the input file when resuming or minimizing
 - Updates for deprecation warnings
 - Minor optimization refactor and doc update
 
