@@ -1,3 +1,8 @@
+## 3.5.3
+
+- Updates for deprecation warnings
+- Minor optimization refactor and doc update
+
 ## 3.5.2
 
 - Updates for numpy 2 and other compatibility fixes
