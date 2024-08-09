@@ -454,8 +454,11 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
                 import tarfile
                 if extension == "tgz":
                     extension = "gz"
+                kwargs = {}
+                if sys.version_info >= (12, 0):
+                    kwargs['filter'] = 'data'
                 with tarfile.open(filename_tmp_path, "r:" + extension) as tar:
-                    tar.extractall(path)
+                    tar.extractall(path, **kwargs)
             logger.debug('Decompressed: %s', filename)
             return True
         except Exception as excpt:
