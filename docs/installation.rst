@@ -141,7 +141,7 @@ Problems with file locks
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 By default Cobaya uses  `Portalocker <https://pypi.org/project/portalocker/>`_ to lock output chain files to check that MPI is being used correctly, that only one process is accessing each file, and to clean up files from aborted runs.
-If Portalocker is uninstalled it will still work, but files may need to be cleaned up manually. You can also set an environment variable to turn off file locking if it causes problems (e.g. on NERSC home).
+If Portalocker is not installed it will still work, but files may need to be cleaned up manually. You can also set an environment variable to turn off file locking if it causes problems (e.g. on NERSC home).
 
 .. code:: bash
 
