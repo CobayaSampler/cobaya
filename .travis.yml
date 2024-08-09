@@ -29,15 +29,16 @@ jobs:
   include:
     - if: branch !~ ^test.*
       dist: focal
-      name: "Minimum requisites for dependencies: gcc-7, Python 3.9"
+      name: "Minimum requisites for dependencies: gcc-7, Python 3.8"
       addons:
         apt:
           packages:
             - gcc-7
+            - g++-7
             - gfortran-7
       env:
         - GCC_VERSION="7"
-      python: "3.9"
+      python: "3.8"
     - if: branch !~ ^test.*
       name: "Typical scenario: latest Ubuntu LTS"
       dist: jammy
