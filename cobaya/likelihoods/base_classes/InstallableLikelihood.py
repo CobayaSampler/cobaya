@@ -32,7 +32,6 @@ class ChiSquaredFunctionLoader:
         # delay testing active camb until run time
         try:
             from camb.mathutils import chi_squared as fast_chi_squared
-            print('here')
         except ImportError:
             def fast_chi_squared(covinv, x):
                 return covinv.dot(x).dot(x)

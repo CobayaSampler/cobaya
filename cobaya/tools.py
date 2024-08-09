@@ -597,13 +597,16 @@ def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
         ) from tp_excpt
 
 
-def _fast_norm_logpdf(self, x):
+def _fast_norm_logpdf(norm_dist):
     """WARNING: logpdf(nan) = -inf"""
-    if not hasattr(self, "_cobaya_mlogscale"):
-        self._cobaya_mlogscale = -np.log(self.kwds["scale"])
-    x_ = (np.array(x) - self.kwds["loc"]) / self.kwds["scale"]
-    # noinspection PyProtectedMember
-    return self.dist._logpdf(x_) + self._cobaya_mlogscale
+    scale = norm_dist.kwds["scale"]
+    m_log_scale = -np.log(scale) - np.log(2 * np.pi) / 2
+    loc = norm_dist.kwds["loc"]
+
+    def fast_logpdf(x):
+        return m_log_scale - ((x - loc) / scale) ** 2 / 2
+
+    return fast_logpdf
 
 
 def _KL_norm(m1, S1, m2, S2):
