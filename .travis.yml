@@ -34,6 +34,7 @@ jobs:
         apt:
           packages:
             - gcc-7
+            - g++-7
             - gfortran-7
       env:
         - GCC_VERSION="7"
