@@ -81,3 +81,4 @@ def test_run_file(tmpdir):
     default_info = get_default_info(likname, "likelihood")
     updated_info = yaml_load_file(root + '.updated.yaml')
     assert updated_info["prior"] == default_info["prior"]
+    run_script([input_file, '--resume', '--allow-changes', '--debug'])

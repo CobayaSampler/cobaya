@@ -83,6 +83,7 @@ def _construct_defaults(loader, node):
                                    "searched for in folder '%s'." % (dfile, folder))
         this_loaded_defaults = yaml_load_file(dfilename)
         loaded_defaults = recursive_update(loaded_defaults, this_loaded_defaults)
+    loader.current_folder = folder
     return loaded_defaults
 
 
@@ -222,7 +223,7 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
     CustomDumper.add_representer(np.int64, _numpy_int_representer)
 
     def _numpy_float_representer(dumper, data):
-        return dumper.represent_float(data)
+        return dumper.represent_float(float(data))
 
     CustomDumper.add_representer(np.float64, _numpy_float_representer)
 

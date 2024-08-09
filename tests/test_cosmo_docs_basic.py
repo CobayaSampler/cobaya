@@ -13,7 +13,7 @@ from .test_docs_example_quickstart import docs_folder
 
 path = os.path.join(docs_folder, "src_examples", "cosmo_basic")
 file_pre = "basic_"
-preset_pre = "planck_2018_"
+preset_pre = "planck_NPIPE_"
 
 
 def test_cosmo_docs_basic():

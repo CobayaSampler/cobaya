@@ -156,7 +156,7 @@ class BAO(InstallableLikelihood):
     type = "BAO"
 
     install_options = {"github_repository": "CobayaSampler/bao_data",
-                       "github_release": "v2.3"}
+                       "github_release": "v2.5"}
 
     prob_dist_bounds: Optional[Sequence[float]]
     measurements_file: Optional[str] = None

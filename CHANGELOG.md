@@ -1,3 +1,25 @@
+## 3.5.3
+
+- added --allow-changes option to cobaya-run to allow changes in the input file when resuming or minimizing
+- Updates for deprecation warnings
+- Minor optimization refactor and doc update
+
+## 3.5.2
+
+- Updates for numpy 2 and other compatibility fixes
+- Fixes #357, #358, #360, #361, #362, #368
+- Added _fast_chi_squared method to base class InstallableLikelihood
+
+## 3.5.1
+
+### General
+
+- Use of vector parameters now documented (PR #191; inspired by @lukashergt, thanks!)
+
+### Cosmology
+
+- Added DESI 1yr BAO data and SN from Pantheon Plus, DESY5 and Union3 (thanks DESI team, @adematti, @rubind, @WillMatt4 and @rodri981)
+
 ## 3.5 – 2024-02-16
 
 ### General
@@ -11,7 +33,7 @@
 
 ### Minimization
 - Support for iminuit minimizer and getting best-fits for all mpi runs (#332, thanks @ggalloni)
-- Support for minimzation with an importance-sampled input yaml config
+- Support for minimization with an importance-sampled input yaml config
 
 ## 3.4.1 – 2023-10-12
 
@@ -140,15 +162,6 @@
 
 - Documented uses of `Model` class in general contexts (previously only cosmo)
 - `Model` methods to compute log-probabilities and derived parameters now have an `as_dict` keyword (default `False`), for more informative return value.
-- Added `--minimize` flag to `cobaya-run` for quick minimization (replaces sampler, uses previous output).
-- Add `COBAYA_USE_FILE_LOCKING` environment variable to allow disabling of file locks. Warning not to use `--test` with MPI.
-- Installation of external packages is now version-aware for some packages; added `--upgrade` option to `cobaya-install`, off by default to preserve possible user changes.
-- Introduced `cobaya.component.ComponentNotFoundError` to handle cases in which internal or external components cannot be found.
-- In Linux terminals, added `COBAYA_COLOR` environment variable to get colourful output, useful e.g. for debugging, but *not* recommended for output to a file (e.g. running in a cluster).
-
-### PolyChord
-
-- Updated to v1.20.1: adds `nfail` to control failed initialisation, `synchronous` to choose sync/async parallelisation, variable number of live points, and the possibility to use an internal maximiser. Merges #232 (thanks @williamjameshandley).
 
 ### Cosmological likelihoods and theory codes
 

@@ -342,7 +342,7 @@ class Model(HasLogger):
             return_derived: bool = True, return_output_params: bool = False,
             as_dict: bool = False, make_finite: bool = False, cached: bool = True
     ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
-               Tuple[Dict[str, float], Dict[str, float]]]:
+    Tuple[Dict[str, float], Dict[str, float]]]:
         """
         Takes a dict of input parameters, computes the likelihood pipeline, and returns
         the log-likelihoods and derived parameters.
@@ -424,7 +424,7 @@ class Model(HasLogger):
                  as_dict: bool = False, make_finite: bool = False,
                  return_derived: bool = True, cached: bool = True
                  ) -> Union[np.ndarray, Dict[str, float], Tuple[np.ndarray, np.ndarray],
-                            Tuple[Dict[str, float], Dict[str, float]]]:
+    Tuple[Dict[str, float], Dict[str, float]]]:
         """
         Takes an array or dictionary of sampled parameter values.
         If the argument is an array, parameters must have the same order as in the input.
@@ -592,7 +592,7 @@ class Model(HasLogger):
     def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
                         logposterior_as_dict: bool = False, random_state=None,
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
-                                   Tuple[np.ndarray, dict]]:
+    Tuple[np.ndarray, dict]]:
         """
         Finds a point with finite posterior, sampled from the reference pdf.
 
@@ -733,8 +733,8 @@ class Model(HasLogger):
         manual_theory = Theory(name='_manual')
         if manual_requirements:
             self._manual_requirements = (
-                getattr(self, "_manual_requirements", []) +
-                _tidy_requirements(manual_requirements)
+                    getattr(self, "_manual_requirements", []) +
+                    _tidy_requirements(manual_requirements)
             )
             requirements[manual_theory] = deepcopy(self._manual_requirements)
 
@@ -970,15 +970,15 @@ class Model(HasLogger):
                                     "but not provided.", p, component.get_name()
                                 ) from excpt
                 # 2. Is there a params prefix?
-                elif getattr(component, prefix, None) is not None:
+                elif (_prefix := getattr(component, prefix, None)) is not None:
                     for p in assign:
-                        if p.startswith(getattr(component, prefix)):
+                        if p.startswith(_prefix):
                             assign[p] += [component]
                 # 3. Does it have a general (mixed) list of params? (set from default)
                 # 4. or otherwise required
-                elif getattr(component, "params", None) or required_params:
-                    if getattr(component, "params", None):
-                        for p, options in getattr(component, "params", {}).items():
+                elif (_params := getattr(component, "params", {})) or required_params:
+                    if _params:
+                        for p, options in _params.items():
                             if not isinstance(options, Mapping) and not derived_param or \
                                     isinstance(options, Mapping) and \
                                     options.get('derived', False) is derived_param:
@@ -1172,8 +1172,8 @@ class Model(HasLogger):
             blocks_split = (lambda L: [list(chain(*L[:i_last_slow + 1])),
                                        list(chain(*L[i_last_slow + 1:]))])(blocks_sorted)
             footprints_split = (
-                [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
-                [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
+                    [np.array(footprints_sorted[:i_last_slow + 1]).sum(axis=0)] +
+                    [np.array(footprints_sorted[i_last_slow + 1:]).sum(axis=0)])
             footprints_split = np.clip(np.array(footprints_split), 0, 1)  # type: ignore
             # Recalculate oversampling factor with 2 blocks
             _, _, oversample_factors = sort_parameter_blocks(
@@ -1191,8 +1191,8 @@ class Model(HasLogger):
             # NB: the int() below forces the copy of the factors.
             #     Otherwise the yaml_representer prints references to a single object.
             oversample_factors = (
-                [int(oversample_factors[0])] * (1 + i_last_slow) +
-                [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
+                    [int(oversample_factors[0])] * (1 + i_last_slow) +
+                    [int(oversample_factors[1])] * (len(blocks) - (1 + i_last_slow)))
             self.mpi_debug("Doing slow/fast split. The oversampling factors for "
                            "the fast blocks should be interpreted as a global one "
                            "for all of them")

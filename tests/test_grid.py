@@ -1,5 +1,6 @@
 import os
 from cobaya.yaml import yaml_load_file
+from cobaya import grid_tools
 from cobaya.grid_tools import grid_create, grid_run, grid_converge, grid_tables, \
     grid_param_compare, grid_getdist, grid_list, grid_copy, grid_extract, grid_cleanup
 from .common import stdout_check
@@ -83,7 +84,8 @@ def test_cosmo_grid(tmpdir):
 
     with stdout_check(test_name):
         grid_run([f, '--dryrun', '--job-template',
-                  'cobaya/grid_tools/script_templates/job_script_UGE'])
+                  os.path.normpath(os.path.join(os.path.dirname(grid_tools.__file__),
+                                                'script_templates/job_script_UGE'))])
 
     with stdout_check(test_name):
         grid_list(f)

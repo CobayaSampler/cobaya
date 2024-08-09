@@ -282,7 +282,7 @@ parameters, we insert the functions defining them under a ``derived`` property
           prior: [...]
           drop: True
         x:
-          value: "lambda logx: np.exp(x)"
+          value: "lambda logx: np.exp(logx)"
 
    Now, if you want to fix the value of ``logx`` without changing the structure of the
    input, do
@@ -294,7 +294,62 @@ parameters, we insert the functions defining them under a ``derived`` property
           value: [fixed_value]
           drop: True
         x:
-          value: "lambda logx: np.exp(x)"
+          value: "lambda logx: np.exp(logx)"
+
+Priors on theory-derived parameters
+-----------------------------------
+
+The `prior` block can only be used to define priors on parameters that are sampled,
+directly or indirectly. If you have a parameter computed by a theory code that you want
+put an additional prior on, this cannot be done with the `prior` block as the derived
+parameter is not defined until the theory is called. Instead, you can treat the prior as
+an additional likelihood.
+
+For example, to add a Gaussian prior on a parameter `omegam` that is computed by a
+theory code (e.g. CAMB), you can use:
+
+.. code:: yaml
+
+   likelihood:
+      like_omm:
+        external: "lambda _self: stats.norm.logpdf(_self.provider.get_param('omegam'), loc=0.334, scale=0.018)"
+        requires: omegam
+
+Vector parameters
+-----------------
+
+If your theory/likelihood takes an array of parameters as an argument, you can define the
+individual components' priors separately, and then combine them into an array of any shape
+using a  dynamically defined parameter.
+
+Notice that the individual components must have
+``drop: True`` in order not to be passed down the pipeline, and the dynamically-defined
+vector must carry ``derived: False``, since only numbers, not arrays, can be saved as
+derived parameters.
+
+You can see an example below, defining a Gaussian likelihood on the sum of two parameters,
+which are taken as components of a single array-like argument:
+
+
+.. code:: Python
+
+   from scipy import stats
+
+
+   def gauss_band(x_vector):
+       return stats.norm.logpdf(
+           x_vector[0] + x_vector[1], loc=1, scale=0.02)
+
+   # NB: don't forget the 'drop: True' in the individual parameters
+   #     and 'derived: False' in the vector parameters
+
+   info = {
+       "likelihood": {"band": gauss_band},
+       "params": {
+           "x": {"prior": {"min": 0, "max": 2}, "proposal": 0.1, "drop": True},
+           "y": {"prior": {"min": 0, "max": 2}, "proposal": 0.1, "drop": True},
+           "x_vector": {"value": lambda x, y: [x, y], "derived": False}},
+       "sampler": {"mcmc": None}}
 
 
 .. _prior_inheritance:
@@ -343,7 +398,6 @@ Just give it a try and it should work fine, but, in case you need the details:
 
 # Global
 import numbers
-from types import MethodType
 from typing import Sequence, NamedTuple, Callable, Optional, Mapping, List, Any
 import numpy as np
 
@@ -354,9 +408,6 @@ from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
 from cobaya.tools import _fast_norm_logpdf, getfullargspec
 from cobaya.log import LoggedError, HasLogger
 from cobaya.parameterization import Parameterization
-
-# Fast logpdf for uniforms and norms (do not understand nan masks!)
-fast_logpdfs = {"norm": _fast_norm_logpdf}
 
 
 class ExternalPrior(NamedTuple):
@@ -392,9 +443,6 @@ class Prior(HasLogger):
                     self.log,
                     f"Error when creating prior for parameter '{p}': {str(excpt)}"
                 ) from excpt
-            fast_logpdf = fast_logpdfs.get(self.pdf[-1].dist.name)
-            if fast_logpdf:
-                self.pdf[-1].logpdf = MethodType(fast_logpdf, self.pdf[-1])
             self._bounds[i] = [-np.inf, np.inf]
             try:
                 self._bounds[i] = self.pdf[-1].interval(1)
@@ -411,7 +459,9 @@ class Prior(HasLogger):
         self._non_uniform_indices = np.array(
             [i for i in range(len(self.pdf)) if i not in self._uniform_indices],
             dtype=int)
-        self._non_uniform_logpdf = [self.pdf[i].logpdf for i in self._non_uniform_indices]
+        self._non_uniform_logpdf = [
+            _fast_norm_logpdf(self.pdf[i]) if self.pdf[i].dist.name == 'norm'
+            else self.pdf[i].logpdf for i in self._non_uniform_indices]
         self._upper_limits = self._bounds[:, 1].copy()
         self._lower_limits = self._bounds[:, 0].copy()
         self._uniform_logp = -np.sum(np.log(self._upper_limits[self._uniform_indices] -

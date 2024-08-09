@@ -272,7 +272,8 @@ class CAMB(BoltzmannBase):
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " If you are using CAMB unmodified, upgrade with"
-                             "`cobaya-install camb --upgrade`. If you are using a modified CAMB, "
+                             "`cobaya-install camb --upgrade`. "
+                             "If you are using a modified CAMB, "
                              "set the option `ignore_obsolete: True` for CAMB.")
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
@@ -396,17 +397,19 @@ class CAMB(BoltzmannBase):
 
         for k, v in self._must_provide.items():
             # Products and other computations
-            if k == "Cl":
+            if k == "Cl" or k == "lensed_scal_Cl":
                 self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
+                camb_result_key = "total" if k == "Cl" else "lensed_scalar"
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_cmb_power_spectra,
                     kwargs={
                         "spectra": list(set(
                             (self.collectors[k].kwargs.get("spectra", [])
                              if k in self.collectors else []) +
-                            ["total"] + (["lens_potential"] if needs_lensing else []))),
+                            [camb_result_key] + (
+                                ["lens_potential"] if needs_lensing else []))),
                         "raw_cl": False})
                 if "pp" in cls and self.extra_args.get(
                         "lens_potential_accuracy") is None:
@@ -699,15 +702,21 @@ class CAMB(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True):
-        which_key = "Cl" if lensed else "unlensed_Cl"
-        which_result = "total" if lensed else "unlensed_total"
-        which_error = "lensed" if lensed else "unlensed"
+    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True,
+                scalar_only=False):
+        if scalar_only:
+            assert lensed, "Only Implemented for lensed"
+            which_key = "lensed_scal_Cl"
+            which_result = "lensed_scalar"
+        else:
+            which_key = "Cl" if lensed else "unlensed_Cl"
+            which_result = "total" if lensed else "unlensed_total"
         try:
             cl_camb = self.current_state[which_key][which_result].copy()
         except:
             raise LoggedError(self.log, "No %s Cl's were computed. Are you sure that you "
-                                        "have requested them?", which_error)
+                                        "have requested them?",
+                              "lensed" if lensed else "unlensed")
         units_factor = self._cmb_unit_factor(
             units, self.current_state['derived_extra']['TCMB'])
         ls = np.arange(cl_camb.shape[0], dtype=np.int64)
@@ -743,8 +752,12 @@ class CAMB(BoltzmannBase):
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
 
+    def get_lensed_scal_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=True,
+                            scalar_only=True)
+
     def _get_z_dependent(self, quantity, z, _pool=None):
-        # Partially reimplemented because of sigma8_z, etc, use different pool
+        # Partially reimplemented because of sigma8_z, etc., use different pool
         pool = None
         if quantity in ["sigma8_z", "fsigma8"]:
             pool = self.z_pool_for_perturbations
@@ -847,11 +860,11 @@ class CAMB(BoltzmannBase):
                             "Some of the attributes to be set manually were not "
                             "recognized: %s=%s", attr, value)
                 # Sources
-                if getattr(self, "sources", None):
+                if source_dict := getattr(self, "sources", None):
                     self.log.debug("Setting sources: %r", self.sources)
                     sources = self.camb.sources
                     source_windows = []
-                    for source, window in self.sources.items():
+                    for source, window in source_dict.items():
                         function = window.pop("function", None)
                         if function == "spline":
                             source_windows.append(sources.SplinedSourceWindow(**window))
@@ -918,7 +931,7 @@ class CAMB(BoltzmannBase):
     def get_import_path(path):
         """
         Returns the ``camb`` module import path if there is a compiled version of CAMB in
-        the given folder. Otherwise raises ``FileNotFoundError``.
+        the given folder. Otherwise, raises ``FileNotFoundError``.
         """
         lib_fname = "cambdll.dll" if platform.system() == "Windows" else "camblib.so"
         if not os.path.isfile(os.path.realpath(os.path.join(path, "camb", lib_fname))):

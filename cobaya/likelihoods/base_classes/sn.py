@@ -119,7 +119,7 @@ class SN(DataSetLikelihood):
     type = "SN"
 
     install_options = {"github_repository": "CobayaSampler/sn_data",
-                       "github_release": "v1.3"}
+                       "github_release": "v1.6"}
 
     def init_params(self, ini):
 
@@ -303,7 +303,7 @@ class SN(DataSetLikelihood):
         if self.alphabeta_covmat:
             if self.use_abs_mag:
                 self.log.warning("You seem to be using JLA with the absolute magnitude "
-                                 "module. JLA uses a different callibration, the Mb "
+                                 "module. JLA uses a different calibration, the Mb "
                                  "module only works with Pantheon SNe!")
                 estimated_scriptm = Mb + 25
             else:
@@ -388,3 +388,7 @@ class SN(DataSetLikelihood):
                                             params_values[self.beta_name], Mb)
             else:
                 return self.alpha_beta_logp(lumdists, Mb=Mb)
+
+    @classmethod
+    def get_file_base_name(cls) -> str:
+        return cls.__dict__.get('file_base_name') or cls.__name__.lower()

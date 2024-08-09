@@ -494,6 +494,11 @@ for name, m in like_cmb.items():
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 
 like_bao = {none: {},
+            'BAO_desi_2024': {
+                'desc': 'Combined BAO from DESI 2024',
+                'theory': theory,
+                'likelihood': {'bao.desi_2024_bao_all': None}
+            },
             'BAO_planck_2018': {
                 'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF '
                         '(Planck 2018 papers)',
@@ -534,6 +539,18 @@ for key, value in like_des.items():
         value['sampler'] = cmb_sampler_recommended
 
 like_sn: InfoDict = {none: {},
+                     "PantheonPlus": {
+                         "desc": "Supernovae data from the Pantheon+ sample",
+                         "theory": theory,
+                         "likelihood": {"sn.pantheonplus": None}},
+                     "Union3": {
+                         "desc": "Supernovae data from Union3",
+                         "theory": theory,
+                         "likelihood": {"sn.union3": None}},
+                     "DESY5": {
+                         "desc": "Supernovae data from the DES Y5 sample",
+                         "theory": theory,
+                         "likelihood": {"sn.desy5": None}},
                      "Pantheon": {
                          "desc": "Supernovae data from the Pantheon sample",
                          "theory": theory,
@@ -596,6 +613,10 @@ preset: InfoDict = dict([
     ("planck_NPIPE_camb", {
         "desc": "Planck NPIPE with CAMB (all native Python)",
         "theory": "camb",
+        "like_cmb": "planck_NPIPE"}),
+    ("planck_NPIPE_classy", {
+        "desc": "Planck NPIPE with CLASS (all native Python)",
+        "theory": "classy",
         "like_cmb": "planck_NPIPE"}),
     ("planck_2018_camb", {
         "desc": "Planck 2018 with CAMB",

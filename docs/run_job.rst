@@ -16,7 +16,7 @@ However, it is usually more convenient to set an environment variable on each/an
  export COBAYA_job_template=/path/to/my_cluster_job_script_template
 
 
-The job sript templates are also used by :doc:`grids <grids>`, which can be used to manage running a batch of jobs at once.
+The job script templates are also used by :doc:`grids <grids>`, which can be used to manage running a batch of jobs at once.
 
 Job script templates
 ======================

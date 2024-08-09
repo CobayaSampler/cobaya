@@ -66,7 +66,7 @@ def _get_targets_cobaya(collections_in):
     collections_in[0].reweight(importance_weights, with_batch=collections_in[1:])
     # Merge before computing statistics
     for c in collections_in[1:]:
-        collections_in[0]._append(c)
+        collections_in[0]._append(c)  # noqa
     target_mean = collections_in[0].mean()
     target_cov = collections_in[0].cov()
     return target_mean, target_cov

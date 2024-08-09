@@ -25,7 +25,7 @@ def test_cosmo_docs_likelihood_camb(packages_path, skip_not_installed):
         lines = open(os.path.join(docs_src_folder, "1_fiducial_Cl.py")).readlines()
         for i, line in enumerate(lines):
             if line.startswith("packages_path"):
-                lines[i] = "packages_path = '%s'" % packages_path.strip("\'\"")
+                lines[i] = "packages_path = r'%s'" % packages_path.strip("\'\"")
         globals_example = {}
         install_test_wrapper(skip_not_installed, exec, "\n".join(lines), globals_example)
         exec(open(os.path.join(docs_src_folder, "2_function.py")).read(), globals_example)

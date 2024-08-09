@@ -375,7 +375,7 @@ class TheoryCollection(ComponentCollection):
                     else:
                         theory_class = get_component_class(
                             name, kind="theory", class_name=info.get("class"),
-                            logger=self.log)
+                            logger=self.log, component_path=info.get("python_path"))
                     self.add_instance(
                         name, theory_class(
                             info, packages_path=packages_path, timing=timing, name=name))

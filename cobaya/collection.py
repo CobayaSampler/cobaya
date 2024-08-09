@@ -458,8 +458,18 @@ class SampleCollection(BaseCollection):
                 self._cache[pos, self._icol[name]] = -2 * value
             self._cache[pos, self._icol[OutPar.chi2]] = -2 * logposterior.loglike
         if len(logposterior.derived):
-            for name, value in zip(self.derived_params, logposterior.derived):
-                self._cache[pos, self._icol[name]] = value
+            try:
+                for name, value in zip(self.derived_params, logposterior.derived):
+                    self._cache[pos, self._icol[name]] = value
+            except ValueError:
+                raise LoggedError(
+                    self.log, "Was expecting float for derived parameter %r, but "
+                              "got %r (type %r) instead. If you have defined this "
+                              "parameter manually (e.g. with a 'lambda') either make "
+                              "sure that it returns a number (or nan), or set "
+                              "'derived: False' for this parameter, so that its value"
+                              " is not stored in the sample.",
+                    name, value, type(value).__class__)
 
     def _cache_dump(self):
         """
@@ -655,10 +665,13 @@ class SampleCollection(BaseCollection):
         """
         Enlarges the DataFrame by `n` rows.
         """
-        self._data = pd.concat([
-            self._data, pd.DataFrame(
-                np.nan, columns=self._data.columns,
-                index=np.arange(len(self._data), len(self._data) + n))])
+        new = pd.DataFrame(
+            np.nan, columns=self._data.columns, dtype=np.float64,
+            index=np.arange(len(self._data), len(self._data) + n))
+        if self._data.empty:
+            self._data = new
+        else:
+            self._data = pd.concat([self._data, new])
 
     def _append(self, collection):
         """
@@ -848,7 +861,7 @@ class SampleCollection(BaseCollection):
         return np.atleast_2d(np.cov(  # type: ignore
             self[list(self.sampled_params) +
                  (list(self.derived_params) if derived else [])][first:last].to_numpy(
-                     dtype=np.float64).T,
+                dtype=np.float64).T,
             ddof=0,  # does simple mean w/o bias factor; weights are used as probabilities
             **{weight_type_kwarg: weights_cov}))
 
@@ -1264,7 +1277,7 @@ class OnePoint(SampleCollection):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         try:
             return self.data.values[0,
-                                    [self.data.columns.get_loc(c) for c in columns]]
+            [self.data.columns.get_loc(c) for c in columns]]
         except KeyError as excpt:
             raise ValueError("Some of the indices are not valid columns.") from excpt
 

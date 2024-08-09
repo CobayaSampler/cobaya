@@ -8,8 +8,11 @@ theory:
 likelihood:
   planck_2018_lowl.TT: null
   planck_2018_lowl.EE: null
-  planck_2018_highl_plik.TTTEEE: null
-  planck_2018_lensing.clik: null
+  planck_NPIPE_highl_CamSpec.TTTEEE: null
+  planckpr4lensing:
+    package_install:
+      github_repository: carronj/planck_PR4_lensing
+      min_version: 1.0.2
 params:
   logA:
     prior:

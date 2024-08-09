@@ -47,12 +47,15 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
     # similar to InstallableLikelihood install_options (could be refactored)
     component_root = component.split('.')[0]
     directory = package_install.get("directory")
+    min_version = package_install.get("min_version")
     if package_install == "pip":
         package_install = {"pip": None}
     elif not isinstance(package_install, Mapping):
         raise LoggedError(logger, "Invalid package_install: must be 'pip' or a "
                                   "dictionary with download_url or github_repository")
-    package = package_install.get("pip") or component_root
+    package = package_install.get("pip")
+    if package is None:
+        package = component_root
     cwd = None
     if repo := package_install.get("github_repository"):
         logger.info('Downloading code from github (%s)', repo)
@@ -63,7 +66,6 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
             return False
         cwd = os.path.join(full_code_path, directory)
         package = '.'
-
     elif url := package_install.get("download_url"):
         logger.info('Downloading code from %s', url)
         cwd = os.path.join(full_code_path, directory or component_root)
@@ -75,12 +77,12 @@ def do_package_install(component: str, package_install: Union[InfoDict, str],
                                       "found in %s for %s", cwd, component)
         cwd = os.path.dirname(paths[0])
         package = '.'
-
     elif "pip" not in package_install:
         raise LoggedError(logger, "Invalid package_install: must define pip, "
                                   "github_repository or download_url")
-
-    logger.info('pip installing %s', component_root)
+    if min_version is not None and package != ".":
+        package += f">={min_version}"
+    logger.info('pip installing %s', package)
     return not pip_install(package, upgrade=True, logger=logger, cwd=cwd)
 
 
@@ -186,6 +188,13 @@ def install(*infos, **kwargs):
                 logger.info(f"Class to be installed for this component: {class_name}")
             python_path = info.pop("python_path", None)
             package_install = info.get("package_install") or {}
+            # If a class_name AND pip install were specified, make sure the class name is
+            # used. Otherwise the pip package would be inferred from the alias.
+            if (
+                    package_install == "pip" or
+                    ("pip" in package_install and package_install["pip"] is None)
+            ):
+                package_install["pip"] = class_name
             min_version = package_install.get('min_version')
 
             def _imported_class():
@@ -275,11 +284,11 @@ def install(*infos, **kwargs):
                     continue
             elif is_old_version_msg:
                 logger.info(f"Version check failed: {is_old_version_msg}")
-                obsolete_components += [name_w_kind]
                 if kwargs.get("test"):
                     continue
                 if not kwargs.get("upgrade") and not kwargs.get("force"):
                     logger.info("Skipping because '--upgrade' not requested.")
+                    obsolete_components += [name_w_kind]
                     continue
             else:
                 logger.info("Check found no existing installation")
@@ -396,7 +405,7 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
        file (e.g. when running on a cluster).
     :param logger: logger to use for reporting information; a new logger is created if not
        specified.
-    :return: ``True`` if the download (and decompression, if requested) was successfull,
+    :return: ``True`` if the download (and decompression, if requested) was successful,
        and ``False`` otherwise.
     """
     logger = logger or get_logger("install")
@@ -445,8 +454,11 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
                 import tarfile
                 if extension == "tgz":
                     extension = "gz"
+                kwargs = {}
+                if sys.version_info >= (12, 0):
+                    kwargs['filter'] = 'data'
                 with tarfile.open(filename_tmp_path, "r:" + extension) as tar:
-                    tar.extractall(path)
+                    tar.extractall(path, **kwargs)
             logger.debug('Decompressed: %s', filename)
             return True
         except Exception as excpt:
@@ -471,7 +483,7 @@ def download_github_release(base_directory, repo_name, release_name=None, *, ass
        file (e.g. when running on a cluster).
     :param logger: logger to use for reporting information; a new logger is created if not
        specified.
-    :return: ``True`` if the download was successfull, and ``False`` otherwise.
+    :return: ``True`` if the download was successful, and ``False`` otherwise.
     """
     logger = logger or get_logger("install")
     if "/" in repo_name:
