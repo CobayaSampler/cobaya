@@ -7,27 +7,15 @@
 """
 # Global
 import os
-from getdist import IniFile
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.install import NotInstalledError
+from cobaya.component import ComponentNotInstalledError
 from cobaya.typing import InfoDict
 from cobaya.conventions import packages_path_input
 from .InstallableLikelihood import InstallableLikelihood
-
-
-class _fast_chi_square:
-    def __get__(self, instance, owner):
-        # delay testing active camb until run time
-        try:
-            from camb.mathutils import chi_squared as fast_chi_squared
-        except ImportError:
-            def fast_chi_squared(covinv, x):
-                return covinv.dot(x).dot(x)
-
-        instance.fast_chi_squared = fast_chi_squared
-        return fast_chi_squared
+# import _fast_chi_square for backwards compatibility
+from .InstallableLikelihood import ChiSquaredFunctionLoader as _fast_chi_square  # noqa
 
 
 class DataSetLikelihood(InstallableLikelihood):
@@ -35,8 +23,6 @@ class DataSetLikelihood(InstallableLikelihood):
     .ini file (as CosmoMC)"""
 
     _default_dataset_params: InfoDict = {}
-
-    _fast_chi_squared = _fast_chi_square()
 
     # variables defined in yaml or input dictionary
     dataset_file: str
@@ -60,7 +46,7 @@ class DataSetLikelihood(InstallableLikelihood):
 
             data_file = os.path.normpath(os.path.join(self.path, self.dataset_file))
         if not os.path.exists(data_file):
-            raise NotInstalledError(
+            raise ComponentNotInstalledError(
                 self.log, "The data file '%s' could not be found at '%s'. "
                           "Either you have not installed this likelihood, "
                           "or have given the wrong packages installation path.",
@@ -68,6 +54,7 @@ class DataSetLikelihood(InstallableLikelihood):
         self.load_dataset_file(data_file, getattr(self, 'dataset_params', {}))
 
     def load_dataset_file(self, filename, dataset_params=None):
+        from getdist import IniFile
         if '.dataset' not in filename:
             filename += '.dataset'
         ini = IniFile(filename)

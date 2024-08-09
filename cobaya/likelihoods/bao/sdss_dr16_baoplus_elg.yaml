@@ -1,0 +1,15 @@
+# eBOSS Lyman alpha auto results, Alam et al. 2020
+# https://arxiv.org/pdf/2007.08991.pdf
+
+path: null
+grid_file: bao_data/sdss_DR16_ELG_FSBAO_DMDHfs8gridlikelihood.txt
+# The measurements used
+observable_1: DM_over_rs
+observable_2: DH_over_rs
+observable_3: f_sigma8
+# Redshift
+redshift: 0.85
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000

@@ -18,7 +18,8 @@ max_runs = 3
 
 
 @flaky(max_runs=max_runs, min_passes=1)
-def test_mcmc(tmpdir, packages_path=None):
+@pytest.mark.parametrize("temperature", (1, 2))
+def test_mcmc(tmpdir, temperature, do_plots, packages_path=None):
     dimension = 3
     # Random initial proposal
     # cov = mpi.share(
@@ -31,9 +32,15 @@ def test_mcmc(tmpdir, packages_path=None):
         # Bad guess for covmat, so big burn in and max_tries
         "max_tries": 3000, "burn_in": 100 * dimension,
         # Proposal, relearn quickly as poor guess
-        "covmat": cov, "learn_proposal_Rminus1_max": 30}}
+        "covmat": cov, "learn_proposal_Rminus1_max": 30,
+        # Sampling temperature, 1 and >1 to be tested
+        "temperature": temperature
+    }}
 
     def check_gaussian(sampler_instance):
+        if not len(sampler_instance.collection) or \
+           not len(sampler_instance.collection[int(sampler_instance.n() / 2):]):
+            return
         proposer = KL_norm(
             S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
             S2=sampler_instance.proposer.get_covariance())
@@ -49,7 +56,8 @@ def test_mcmc(tmpdir, packages_path=None):
             # Callback to check KL divergence -- disabled in the automatic test
             "callback_function": check_gaussian, "callback_every": 100})
     body_of_sampler_test(info_sampler, dimension=dimension, fixed=True,
-                         tmpdir=tmpdir, random_state=np.random.default_rng(1))
+                         tmpdir=tmpdir, do_plots=do_plots,
+                         random_state=np.random.default_rng(1))
 
 
 yaml_drag = r"""
@@ -95,18 +103,19 @@ class GaussLike2(Likelihood):
 
 @flaky(max_runs=max_runs, min_passes=1)
 @mpi.sync_errors
-def test_mcmc_drag_results():
+@pytest.mark.parametrize("temperature", (1, 2))
+def test_mcmc_drag_results(temperature):
     info: InputDict = yaml_load(yaml_drag)
     info['likelihood'] = {'g1': {'external': GaussLike}, 'g2': {'external': GaussLike2}}
+    info["sampler"]["mcmc"]["temperature"] = temperature
     updated_info, sampler = run(info)
-    products = sampler.products()
-    from getdist.mcsamples import MCSamplesFromCobaya
-    products["sample"] = mpi.allgather(products["sample"])
-    gdample = MCSamplesFromCobaya(updated_info, products["sample"], ignore_rows=0.2)
-    assert abs(gdample.mean('a') - 0.2) < 0.03
-    assert abs(gdample.mean('b')) < 0.03
-    assert abs(gdample.std('a') - 0.293) < 0.03
-    assert abs(gdample.std('b') - 0.4) < 0.03
+    gdsample = sampler.samples(combined=True, skip_samples=0.2, to_getdist=True)
+    if temperature != 1:
+        gdsample.cool(temperature)
+    assert abs(gdsample.mean('a') - 0.2) < 0.03
+    assert abs(gdsample.mean('b')) < 0.03
+    assert abs(gdsample.std('a') - 0.293) < 0.03
+    assert abs(gdsample.std('b') - 0.4) < 0.03
 
 
 yaml = r"""

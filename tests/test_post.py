@@ -1,11 +1,11 @@
 import os
 from copy import deepcopy
+from itertools import chain
 from scipy.stats import multivariate_normal
-from getdist.mcsamples import loadMCSamples, MCSamplesFromCobaya
 import numpy as np
 import pytest
 
-from cobaya.run import run
+from cobaya import run, load_samples
 from cobaya.post import post, OutputOptions
 from cobaya.typing import ParamsDict, InputDict
 from cobaya.conventions import separator_files
@@ -47,11 +47,32 @@ info_params: ParamsDict = dict([
     ("b", {"prior": _range, "ref": ref_pdf, "proposal": sigma}),
     ("a_plus_b", {"derived": lambda a, b: a + b})])
 
-info_sampler = {"mcmc": {"Rminus1_stop": 0.5, "Rminus1_cl_stop": 0.5, "seed": 1}}
+info_sampler = {"mcmc": {"Rminus1_stop": 0.25, "Rminus1_cl_stop": 0.5, "seed": 1}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
 
 
-def _get_targets(mcsamples_in):
+def _get_targets_cobaya(collections_in):
+    # Notice that we do the importance reweighting, but do not change the logposterior
+    # in the collection (not used for mean or cov anyway).
+    loglikes = []
+    for c in collections_in:
+        a, b = c["a"].to_numpy(dtype=np.float64), c["b"].to_numpy(dtype=np.float64)
+        loglikes.append(
+            [target_pdf_prior(ai, bi) - sampled_pdf(ai, bi) for ai, bi in zip(a, b)]
+        )
+    # Subtract max over ALL collections: relative weights between collection would appear
+    max_loglikes = max(list(chain(*loglikes)))
+    importance_weights = [np.exp(np.array(like) - max_loglikes) for like in loglikes]
+    collections_in[0].reweight(importance_weights, with_batch=collections_in[1:])
+    # Merge before computing statistics
+    for c in collections_in[1:]:
+        collections_in[0]._append(c)
+    target_mean = collections_in[0].mean()
+    target_cov = collections_in[0].cov()
+    return target_mean, target_cov
+
+
+def _get_targets_getdist(mcsamples_in):
     loglikes = []
     for a, b in zip(mcsamples_in['a'], mcsamples_in['b']):
         loglikes.append(-target_pdf_prior(a, b) + sampled_pdf(a, b))
@@ -62,37 +83,57 @@ def _get_targets(mcsamples_in):
 
 
 @mpi.sync_errors
-def test_post_prior(tmpdir):
+@pytest.mark.parametrize("temperature", (1, 2))
+def test_post_prior(tmpdir, temperature):
+    """
+    Swaps prior "gaussian" for "target".
+
+    It also tests loading vs passing samples to post, and different MCMC temperatures.
+    """
     # Generate original chain
     info: InputDict = {
         "output": os.path.join(tmpdir, "gaussian"), "force": True,
-        "params": info_params, "sampler": info_sampler,
+        "params": info_params, "sampler": deepcopy(info_sampler),
         "likelihood": {"one": None}, "prior": {"gaussian": sampled_pdf}}
     info_post: InputDict = {
         "output": info["output"], "force": True,
         "post": {"suffix": "foo", 'skip': 0.1,
                  "remove": {"prior": {"gaussian": None}},
                  "add": {"prior": {"target": target_pdf_prior}}}}
+    if list(info["sampler"].keys())[0] == "mcmc":
+        if info["sampler"]["mcmc"] is None:
+            info["sampler"]["mcmc"] = {}
+        info["sampler"]["mcmc"]["temperature"] = temperature
     _, sampler = run(info)
     if mpi.is_main_process():
-        mcsamples_in = loadMCSamples(info["output"], settings={'ignore_rows': 0.1})
-        target_mean, target_cov = mpi.share(_get_targets(mcsamples_in))
+        collections_in = load_samples(info["output"], skip=0.1)
+        target_mean_cobaya, target_cov_cobaya = mpi.share(
+            _get_targets_cobaya(collections_in))
+        mcsamples_in = load_samples(info["output"], skip=0.1, to_getdist=True)
+        mcsamples_in.cool(temperature)
+        target_mean_getdist, target_cov_getdist = mpi.share(
+            _get_targets_getdist(mcsamples_in))
     else:
-        target_mean, target_cov = mpi.share()
-
-    for mem in [False, True]:
-        post(info_post, sample=sampler.products()["sample"] if mem else None)
+        target_mean_cobaya, target_cov_cobaya = mpi.share()
+        target_mean_getdist, target_cov_getdist = mpi.share()
+    for pass_chains in [False, True]:
+        _, post_products = post(
+            info_post, sample=sampler.samples() if pass_chains else None)
         # Load with GetDist and compare
         if mpi.is_main_process():
-            mcsamples = loadMCSamples(
-                info_post["output"] + _post_ + info_post["post"]["suffix"])
+            mcsamples = load_samples(
+                info_post["output"] + _post_ + info_post["post"]["suffix"],
+                to_getdist=True,
+            )
             new_mean = mcsamples.mean(["a", "b"])
             new_cov = mcsamples.getCovMat().matrix
             mpi.share((new_mean, new_cov))
         else:
             new_mean, new_cov = mpi.share()
-        assert np.allclose(new_mean, target_mean)
-        assert np.allclose(new_cov, target_cov)
+        assert np.allclose(new_mean, target_mean_cobaya)
+        assert np.allclose(new_cov, target_cov_cobaya)
+        assert np.allclose(new_mean, target_mean_getdist)
+        assert np.allclose(new_cov, target_cov_getdist)
 
 
 def test_post_likelihood():
@@ -110,7 +151,7 @@ def test_post_likelihood():
         info_params_local["dummy"] = 0
         dummy_loglike_add = 0.1
         dummy_loglike_remove = 0.01
-        info = {
+        info: InputDict = {
             "output": None, "force": True,
             "params": info_params_local, "sampler": info_sampler,
             "likelihood": {
@@ -119,10 +160,8 @@ def test_post_likelihood():
                 "dummy_remove": {"external": lambda dummy: dummy_loglike_add,
                                  "type": "BB"}}}
         info_out, sampler = run(info)
-        samples_in = mpi.gather(sampler.products()["sample"])
-        if mpi.is_main_process():
-            mcsamples_in = MCSamplesFromCobaya(info_out, samples_in)
-        else:
+        mcsamples_in = sampler.samples(to_getdist=True)
+        if not mpi.is_main_process():
             mcsamples_in = None
 
         info_out.update({
@@ -136,32 +175,30 @@ def test_post_likelihood():
                          "dummy_add": {
                              "external": lambda dummy: dummy_loglike_remove,
                              "type": "BB"}}}}})
-        info_post_out, products_post = post(info_out, sampler.products()["sample"])
-        samples = mpi.gather(products_post["sample"])
+        info_post_out, products_post = post(info_out, sampler.samples())
+        mcsamples_post = products_post.samples(to_getdist=True)
 
         # Load with GetDist and compare
         if mcsamples_in:
-            target_mean, target_cov = mpi.share(_get_targets(mcsamples_in))
-
-            mcsamples = MCSamplesFromCobaya(info_post_out, samples, name_tag="sample")
-            new_mean = mcsamples.mean(["a", "b"])
-            new_cov = mcsamples.getCovMat().matrix
+            target_mean, target_cov = mpi.share(_get_targets_getdist(mcsamples_in))
+            new_mean = mcsamples_post.mean(["a", "b"])
+            new_cov = mcsamples_post.getCovMat().matrix
             mpi.share((new_mean, new_cov))
         else:
             target_mean, target_cov = mpi.share()
             new_mean, new_cov = mpi.share()
         assert np.allclose(new_mean, target_mean)
         assert np.allclose(new_cov, target_cov)
-        assert allclose(products_post["sample"]["chi2__A"],
-                        products_post["sample"]["chi2__target"])
-        assert allclose(products_post["sample"]["chi2__BB"],
-                        products_post["sample"]["chi2__dummy"] +
-                        products_post["sample"]["chi2__dummy_add"])
+        assert allclose(products_post.samples(combined=True)["chi2__A"],
+                        products_post.samples(combined=True)["chi2__target"])
+        assert allclose(products_post.samples(combined=True)["chi2__BB"],
+                        products_post.samples(combined=True)["chi2__dummy"] +
+                        products_post.samples(combined=True)["chi2__dummy_add"])
     finally:
         OutputOptions.output_inteveral_s = orig_interval
 
 
-def test_post_params():
+def test_post_params(tmpdir):
     # Tests:
     # - added simple dynamical derived parameter "a+b"
     # - added dynamical derived parameter that depends on *new* chi2__target
@@ -169,9 +206,9 @@ def test_post_params():
     # Generate original chain
     info = {
         "params": info_params, "sampler": info_sampler_dummy,
-        "likelihood": {"gaussian": sampled_pdf}}
+        "likelihood": {"gaussian": sampled_pdf},
+        "output": os.path.join(tmpdir, "post_params")}
     updated_info_gaussian, sampler_gaussian = run(info)
-    products_gaussian = sampler_gaussian.products()
     info_post = {
         "post": {"suffix": "foo",
                  "remove": {"params": {"a_plus_b": None}},
@@ -185,11 +222,24 @@ def test_post_params():
                              "derived": "lambda chi2__target: chi2__target"},
                          "cprime": None}}}}
     info_post.update(updated_info_gaussian)
-    products = post(info_post, products_gaussian["sample"]).products
+    _, products = post(info_post, sampler_gaussian.products()["sample"])
     # Compare parameters
-    assert allclose(products["sample"]["a"] - products["sample"]["b"],
-                    products["sample"]["a_minus_b"])
-    assert np.allclose(products["sample"]["cprime"].to_numpy(dtype=np.float64),
+    assert allclose(products.samples(combined=True)["a"] -
+                    products.samples(combined=True)["b"],
+                    products.samples(combined=True)["a_minus_b"])
+    assert np.allclose(
+        products.samples(combined=True)["cprime"].to_numpy(dtype=np.float64),
+        info_post["post"]["add"]["params"]["c"]
+    )
+    assert allclose(products.samples(combined=True)["my_chi2__target"],
+                    products.samples(combined=True)["chi2__target"])
+    # Same, but with loaded samples
+    loaded_samples = load_samples(
+        info_post["output"] + ".post." + info_post["post"]["suffix"], combined=True)
+    assert allclose(products.samples(combined=True)["a"] -
+                    products.samples(combined=True)["b"],
+                    loaded_samples["a_minus_b"])
+    assert np.allclose(loaded_samples["cprime"].to_numpy(dtype=np.float64),
                        info_post["post"]["add"]["params"]["c"])
-    assert allclose(products["sample"]["my_chi2__target"],
-                    products["sample"]["chi2__target"])
+    assert allclose(loaded_samples["my_chi2__target"],
+                    products.samples(combined=True)["chi2__target"])

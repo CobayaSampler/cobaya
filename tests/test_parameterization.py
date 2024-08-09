@@ -7,7 +7,6 @@ parameter names) gaussian likelihood.
 import pytest
 from scipy.stats import multivariate_normal
 import numpy as np
-from typing import Sequence, Union
 # Local
 from cobaya.yaml import yaml_load
 from cobaya.run import run
@@ -89,8 +88,7 @@ def test_parameterization():
     updated_info, sampler = run(info)
     products = sampler.products()
     sample = products["sample"]
-    from getdist.mcsamples import MCSamplesFromCobaya
-    gdsample = MCSamplesFromCobaya(updated_info, products["sample"])
+    gdsample = products["sample"].to_getdist()
     for i, point in sample:
         a = info["params"]["a"]
         b = get_external_function(info["params"]["b"])(a, point["bprime"])

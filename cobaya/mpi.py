@@ -173,7 +173,7 @@ def allgather(data) -> list:
 
 def zip_gather(list_of_data, root=0) -> Iterable[tuple]:
     """
-    Takes a list of items and returns a iterable of lists of items from each process
+    Takes a list of items and returns an iterable of lists of items from each process
     e.g. for root node
     [(a_1, a_2),(b_1,b_2),...] = zip_gather([a,b,...])
     """
@@ -368,7 +368,7 @@ class ProcessState:
                 log.info('SET %s %s %s', self.name, self.tag, value)
             self.states[self._rank] = value
             for i_rank in self._others:
-                _mpi_comm.Isend(self.states[self._rank],
+                _mpi_comm.Isend(self.states[self._rank:self._rank + 1],
                                 dest=i_rank, tag=self.tag).Test()
             return True
         else:
@@ -415,10 +415,10 @@ class ProcessState:
 
     def all_ready(self) -> bool:
         """
-        Test is all processes in READY state (and if they are reset to NONE).
+        Test if all processes in READY state (and if they are reset to NONE).
         """
         self.sync(check_error=True)
-        all_ready = all(self.states == State.READY)
+        all_ready = np.all(self.states == State.READY)
         if all_ready:
             self.states[:] = State.NONE
         return all_ready
@@ -449,7 +449,7 @@ class ProcessState:
             self.set(State.END)
             self.wait_all_ended()
         set_current_process_state(self.last_process_state)
-        if not exc_type and any(self.states == State.ERROR):
+        if not exc_type and State.ERROR in self.states:
             self.fire_error()
 
 

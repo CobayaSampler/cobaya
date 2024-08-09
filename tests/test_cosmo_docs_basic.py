@@ -13,7 +13,7 @@ from .test_docs_example_quickstart import docs_folder
 
 path = os.path.join(docs_folder, "src_examples", "cosmo_basic")
 file_pre = "basic_"
-preset_pre = "planck_2018_"
+preset_pre = "planck_NPIPE_"
 
 
 def test_cosmo_docs_basic():
@@ -23,7 +23,7 @@ def test_cosmo_docs_basic():
         info_yaml_new = yaml_dump(sort_cosmetic(info_new))
         file_path = os.path.join(path, file_pre + theo + ".yaml")
         with open(file_path) as docs_file:
-            info_yaml_docs = "".join(docs_file.readlines())
+            info_yaml_docs = docs_file.read()
         info_docs = yaml_load(info_yaml_docs)
         if not is_equal_info(info_new, info_docs, strict=True, print_not_log=True):
             with open(file_path, "w") as docs_file:

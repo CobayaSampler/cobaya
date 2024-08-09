@@ -3,7 +3,7 @@ Development notes
 
 This document gathers some notes about the development flow, release checklist, and general design decisions and their motivation. If you intend to heavily modify Cobaya, we recommend you to read it first.
 
-..note::
+.. note::
 
   This document may not always be up to date
 

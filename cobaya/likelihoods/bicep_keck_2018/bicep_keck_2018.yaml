@@ -1,0 +1,145 @@
+# BICEP/Keck October 2021 Data Products
+# BICEP/Keck XIII: Constraints on Primordial Gravitational Waves using Planck, WMAP, and BICEP/Keck Observations through the 2018 Observing Season
+# http://bicepkeck.org/
+#
+# File: BK18lf.ini
+# Date: 2021-10-03
+#
+# BICEP/Keck likelihood, including external data from Planck and WMAP.
+#
+# Default settings for data selection and foreground nuisance parameters from 
+# the baseline analysis described in BICEP/Keck XIII.
+#
+#   * Includes BICEP2+KECK+BICEP3 95, 150, and 220 GHz maps
+#   * Additional maps are: Planck 30, 44, 143, 217, and 353 GHz; 
+#                          WMAP 23 GHz (K-band) and 33 GHz (Ka-band), 
+#                          apodized to BICEP3 map size
+#   * Maps apodized to BICEP3 map size are denoted with letter 'e', 
+#     otherwise they are apodized to BICEP2/Keck map size instead.
+#   * By default uses B-modes only.
+#   * Uses all nine ell bins.
+#   * Gaussian priors on beta_dust and beta_sync.
+#   * Dust blackbody temperature fixed to 19.6 K because this parameter
+#     is degenerate with A_dust for our frequency range.
+#   * Dust and sync decorrelation turned off by default.
+#   * EE/BB ratio for dust and sync fixed to 2 (not relevant for analysis
+#     with B modes only)
+#   * Band center errors turned off by default.
+
+# Path to the BK18_cosmomc folder under the official data distribution
+path: null
+dataset_file: BK18_cosmomc/data/BK18lf_dust/BK18lf_dust.dataset
+dataset_params:
+  maps_use: [BK18_K95_B, BK18_150_B, BK18_220_B, BK18_B95e_B, W023e_B, P030e_B, W033e_B, P044e_B, P143e_B, P217e_B, P353e_B]
+  use_min: 1
+  use_max: 9
+map_separator: x
+# Actually computed l_max (takes into account the lensing window function)
+l_max: 2700
+# Aliases for automatic covariance matrix
+aliases: [BK15]
+# Speed in evaluations/second
+speed: 90
+# Functional form of ell scaling for foreground decorrelation model.
+lform_dust_decorr: lin
+lform_sync_decorr: lin
+
+params:
+  # dust power at ell=80, nu=353 GHz [uK^2]
+  BBdust:
+    prior:
+      min: 0
+      max: 15
+    ref:
+      dist: norm
+      loc: 3
+      scale: 0.1
+    proposal: 0.1
+    latex: A_{B,\mathrm{dust}}
+  # sync power at ell=80, nu=23 GHz [uK^2]
+  BBsync:
+    prior:
+      min: 0.0
+      max: 50.0
+    ref:
+      dist: norm
+      loc: 1.0
+      scale: 1.0
+    proposal: 1.0
+    latex: A_{B,\mathrm{sync}}
+  # dust spatial power spectrum power law index
+  BBalphadust:
+    prior:
+      min: -1.0
+      max: 0.0
+    ref:
+      dist: norm
+      loc: -0.42
+      scale: 0.01
+    proposal: 0.01
+    latex: \alpha_{B,\mathrm{dust}}
+  # sync spatial power spectrum power law index
+  BBalphasync:
+    prior:
+      min: -1.0
+      max: 0.0
+    ref:
+      dist: norm
+      loc: -0.6
+      scale: 0.01
+    proposal: 0.01
+    latex: \alpha_{B,\mathrm{sync}}
+  # dust SED power law index
+  # relax beta_d prior - use flat prior on range [0.80, 2.40]
+  BBbetadust:
+    prior:
+      min: 0.80
+      max: 2.40
+    ref:
+      dist: norm
+      loc: 1.59
+      scale: 0.02
+    proposal: 0.02
+    latex: \beta_{B,\mathrm{dust}}
+  # sync SED power law index
+  BBbetasync:
+    prior:
+      dist: norm
+      loc: -3.1
+      scale: 0.3
+    ref:
+      dist: norm
+      loc: -3.1
+      scale: 0.02
+    proposal: 0.02
+    latex: \beta_{B,\mathrm{sync}}
+  # correlation between dust and sync
+  # NOTE: For BK15 analysis, we are allowing this parameter to range
+  #       from -1 to 1 (allowed range was 0 to 1 for BK14).
+  BBdustsynccorr:
+    prior:
+      min: -1.0
+      max: 1.0
+    ref:
+      dist: norm
+      loc: 0.2
+      scale: 0.01
+    proposal: 0.01
+    latex: \epsilon_{\mathrm{dust,sync}}
+  # EE/BB ratios -- fixed / only used if E-modes are turned on
+  EEtoBB_dust: 2
+  #   latex: 2EE_{\mathrm{dust}}/BB_{\mathrm{dust}}
+  EEtoBB_sync: 2
+  #   latex: 2EE_{\mathrm{sync}}/BB_{\mathrm{sync}}
+  # dust blackbody temperature [K] -- fixed / very insensitive to this
+  BBTdust: 19.6
+  #   latex: T_{\mathrm{dust}}
+  # dust correlation ratio between 217 and 353 GHz, ell=80
+  delta_dust: 1.0
+  # sync correlation ratio between 23 and 33 GHz, ell=80
+  delta_sync: 1.0
+  # Band center errors, fixed to zero
+  gamma_corr: 0.0
+  gamma_95: 0.0
+  gamma_150: 0.0
+  gamma_220: 0.0

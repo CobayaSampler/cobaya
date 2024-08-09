@@ -20,7 +20,7 @@ test_info_common: InputDict = {
 
 
 def test_prior_inherit_nonegiven():
-    updated_info = run(test_info_common).info
+    updated_info, _ = run(test_info_common)
     likname = list(test_info_common["likelihood"])[0]
     default_info = get_default_info(likname, "likelihood")
     assert updated_info["prior"] == default_info["prior"]
@@ -42,7 +42,7 @@ def test_prior_inherit_samegiven():
     default_info = get_default_info(likname, "likelihood")
     name, prior = deepcopy(default_info["prior"]).popitem()
     test_info["prior"] = {name: prior}
-    updated_info = run(test_info).info
+    updated_info, _ = run(test_info)
     assert updated_info["prior"] == default_info["prior"]
 
 
@@ -67,7 +67,7 @@ def test_inherit_label_and_bounds():
     test_info["params"] = deepcopy(default_info_params)
     test_info["params"]["b1"].pop("min")
     test_info["params"]["b1"].pop("max")
-    updated_info = run(test_info).info
+    updated_info, _ = run(test_info)
     assert updated_info["params"]["b1"]["min"] == default_info_params["b1"]["min"]
     assert updated_info["params"]["b1"]["max"] == default_info_params["b1"]["max"]
 

@@ -9,7 +9,7 @@
 
 # Global
 from copy import deepcopy
-from cobaya.typing import InfoDict, InputDict
+from cobaya.typing import InfoDict
 
 none = "(None)"
 error_msg = "error_msg"
@@ -174,14 +174,11 @@ hubble = {
                         'extra_args': {'theta_H0_range': [H0_min, H0_max]}},
                    'classy': {
                        'params': {
-                           'theta_s_1e2': {'prior': {'min': 0.5, 'max': 10},
+                           'theta_s_100': {'prior': {'min': 0.5, 'max': 10},
                                            'ref': {'dist': 'norm', 'loc': 1.0416,
                                                    'scale': 0.0004},
                                            'proposal': 0.0002,
-                                           'latex': '100\\theta_\\mathrm{s}',
-                                           'drop': True}, '100*theta_s': {
-                               'value': 'lambda theta_s_1e2: theta_s_1e2',
-                               'derived': False},
+                                           'latex': '100\\theta_\\mathrm{s}'},
                            'H0': {'latex': 'H_0'}}}}},
     'sound_horizon_lensonly': {
         'desc': 'Angular size of the sound horizon (h>0.4; approximate, if using CAMB)',
@@ -203,7 +200,7 @@ hubble = {
 }
 
 # Matter sector (minus light species)
-N_eff_std = 3.046
+N_eff_std = 3.044
 nu_mass_fac = 94.0708
 matter: InfoDict = {
     'omegab_h2, omegac_h2': {
@@ -260,19 +257,19 @@ for m in matter.values():
 # Neutrinos and other extra matter
 neutrinos: InfoDict = {
     'one_heavy_planck':
-        {'desc': 'Two massless nu and one with m=0.06. Neff=3.046',
+        {'desc': 'Two massless nu and one with m=0.06. Neff=3.044',
          'theory': {
              'camb': {
-                 'extra_args': {'num_massive_neutrinos': 1, 'nnu': 3.046},
+                 'extra_args': {'num_massive_neutrinos': 1, 'nnu': 3.044},
                  'params': {'mnu': 0.06}},
              'classy': {
                  'extra_args': {'N_ncdm': 1, 'N_ur': 2.0328},
                  'params': {'m_ncdm': {'value': 0.06, 'renames': 'mnu'}}}}},
     'varying_mnu':
-        {'desc': "Varying total mass of 3 degenerate nu's, with N_eff=3.046",
+        {'desc': "Varying total mass of 3 degenerate nu's, with N_eff=3.044",
          'theory': {
              'camb': {
-                 'extra_args': {'num_massive_neutrinos': 3, 'nnu': 3.046},
+                 'extra_args': {'num_massive_neutrinos': 3, 'nnu': 3.044},
                  'params': {'mnu': {'prior': {'min': 0, 'max': 5},
                                     'ref': {'dist': 'norm', 'loc': 0.02, 'scale': 0.1},
                                     'proposal': 0.03,
@@ -294,7 +291,7 @@ neutrinos: InfoDict = {
                      'mnu': 0.06,
                      'nnu': {
                          'prior': {'min': 0.05, 'max': 10},
-                         'ref': {'dist': 'norm', 'loc': 3.046, 'scale': 0.05},
+                         'ref': {'dist': 'norm', 'loc': 3.044, 'scale': 0.05},
                          'proposal': 0.05,
                          'latex': 'N_\\mathrm{eff}'}}},
              'classy':
@@ -319,7 +316,7 @@ neutrinos: InfoDict = {
                              'latex': '\\sum m_\\nu'},
                      'nnu': {
                          'prior': {'min': 0.05, 'max': 10},
-                         'ref': {'dist': 'norm', 'loc': 3.046, 'scale': 0.05},
+                         'ref': {'dist': 'norm', 'loc': 3.044, 'scale': 0.05},
                          'proposal': 0.05,
                          'latex': 'N_\\mathrm{eff}'}}}}}}
 # Dark Energy
@@ -398,11 +395,18 @@ reionization = {
         'params': {}}}
 
 # EXPERIMENTS ############################################################################
-base_precision: InfoDict = {"camb": {"halofit_version": "mead"},
-                            "classy": {"non linear": "hmcode", "hmcode_min_k_max": 20}}
+base_precision: InfoDict = {"camb": None,
+                            "classy": {"non linear": "hmcode", "nonlinear_min_k_max": 20}}
 cmb_precision = deepcopy(base_precision)
-cmb_precision["camb"].update({"bbn_predictor": "PArthENoPE_880.2_standard.dat",
-                              "lens_potential_accuracy": 1})
+cmb_precision["camb"] = {"lens_potential_accuracy": 1}
+
+planck_lss_precision = deepcopy(base_precision)
+planck_lss_precision["camb"] = {"halofit_version": "mead",
+                                "bbn_predictor": "PArthENoPE_880.2_standard.dat"}
+
+planck_precision = deepcopy(planck_lss_precision)
+planck_precision["camb"]["lens_potential_accuracy"] = 1
+
 default_mcmc_options = {"proposal_scale": 1.9,
                         "Rminus1_stop": 0.01, "Rminus1_cl_stop": 0.2}
 cmb_sampler_recommended: InfoDict = {"mcmc": dict(drag=True, oversample_power=0.4,
@@ -411,31 +415,43 @@ cmb_sampler_mcmc: InfoDict = {"mcmc": dict(drag=False, **default_mcmc_options)}
 
 like_cmb: InfoDict = {
     none: {},
+    "planck_NPIPE": {
+        "desc": "Planck NPIPE (native; polarized NPIPE CMB + lensing)",
+        "sampler": cmb_sampler_recommended,
+        "theory": {theo: {"extra_args": cmb_precision[theo]}
+                   for theo in ["camb", "classy"]},
+        "likelihood": {
+            "planck_2018_lowl.TT": None,
+            "planck_2018_lowl.EE": None,
+            "planck_NPIPE_highl_CamSpec.TTTEEE": None,
+            "planckpr4lensing":
+                {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
+                                     'min_version': '1.0.2'}}}},
     "planck_2018": {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
         "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
             "planck_2018_lowl.TT": None,
             "planck_2018_lowl.EE": None,
             "planck_2018_highl_plik.TTTEEE": None,
             "planck_2018_lensing.clik": None}},
-    "planck_2018_bk15": {
-        "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2015",
+    "planck_2018_bk18": {
+        "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2018",
         "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {
             "planck_2018_lowl.TT": None,
             "planck_2018_lowl.EE": None,
             "planck_2018_highl_plik.TTTEEE": None,
             "planck_2018_lensing.clik": None,
-            "bicep_keck_2015": None}},
+            "bicep_keck_2018": None}},
     "planck_2018_CMBmarged_lensing": {
         "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
+        "theory": {theo: {"extra_args": planck_precision[theo]}
                    for theo in ["camb", "classy"]},
         "likelihood": {"planck_2018_lensing.CMBMarged": None}}}
 
@@ -478,11 +494,28 @@ for name, m in like_cmb.items():
 #    "thetarseq":   {"latex": r"100\theta_\mathrm{s,eq}"},
 
 like_bao = {none: {},
+            'BAO_desi_2024': {
+                'desc': 'Combined BAO from DESI 2024',
+                'theory': theory,
+                'likelihood': {'bao.desi_2024_bao_all': None}
+            },
             'BAO_planck_2018': {
-                'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF',
+                'desc': 'Baryon acoustic oscillation data from DR12, MGS and 6DF '
+                        '(Planck 2018 papers)',
                 'theory': theory,
                 'likelihood': {'bao.sixdf_2011_bao': None, 'bao.sdss_dr7_mgs': None,
-                               'bao.sdss_dr12_consensus_bao': None}}}
+                               'bao.sdss_dr12_consensus_bao': None}},
+            'BAO_planck_latest': {
+                'desc': 'Baryon acoustic oscillation data from BOSS DR12, eBOSS DR16, '
+                        'MGS and 6DF',
+                'theory': theory,
+                'likelihood': {'bao.sixdf_2011_bao': None, 'bao.sdss_dr7_mgs': None,
+                               'bao.sdss_dr16_baoplus_lrg': None,
+                               'bao.sdss_dr16_baoplus_elg': None,
+                               'bao.sdss_dr16_baoplus_qso': None,
+                               'bao.sdss_dr16_baoplus_lyauto': None,
+                               'bao.sdss_dr16_baoplus_lyxqso': None,
+                               }}}
 
 like_des: InfoDict = \
     {none: {},
@@ -506,6 +539,18 @@ for key, value in like_des.items():
         value['sampler'] = cmb_sampler_recommended
 
 like_sn: InfoDict = {none: {},
+                     "PantheonPlus": {
+                         "desc": "Supernovae data from the Pantheon+ sample",
+                         "theory": theory,
+                         "likelihood": {"sn.pantheonplus": None}},
+                     "Union3": {
+                         "desc": "Supernovae data from Union3",
+                         "theory": theory,
+                         "likelihood": {"sn.union3": None}},
+                     "DESY5": {
+                         "desc": "Supernovae data from the DES Y5 sample",
+                         "theory": theory,
+                         "likelihood": {"sn.desy5": None}},
                      "Pantheon": {
                          "desc": "Supernovae data from the Pantheon sample",
                          "theory": theory,
@@ -565,6 +610,14 @@ default_sampler = {"sampler": "MCMC dragging"}
 preset: InfoDict = dict([
     (none, {"desc": "(No preset chosen)"}),
     # Pure CMB #######################################################
+    ("planck_NPIPE_camb", {
+        "desc": "Planck NPIPE with CAMB (all native Python)",
+        "theory": "camb",
+        "like_cmb": "planck_NPIPE"}),
+    ("planck_NPIPE_classy", {
+        "desc": "Planck NPIPE with CLASS (all native Python)",
+        "theory": "classy",
+        "like_cmb": "planck_NPIPE"}),
     ("planck_2018_camb", {
         "desc": "Planck 2018 with CAMB",
         "theory": "camb",
@@ -574,15 +627,15 @@ preset: InfoDict = dict([
         "theory": "classy",
         "like_cmb": "planck_2018"}),
     ("planck_2018_bicep_camb", {
-        "desc": "Planck 2018 + BK15 (with tensor modes) with CAMB",
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CAMB",
         "theory": "camb",
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2018_bk15"}),
+        "like_cmb": "planck_2018_bk18"}),
     ("planck_2018_bicep_classy", {
-        "desc": "Planck 2018 + BK15 (with tensor modes) with CLASS",
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CLASS",
         "theory": "classy",
         "primordial": "SFSR_t",
-        "like_cmb": "planck_2018_bk15"}),
+        "like_cmb": "planck_2018_bk18"}),
     # CMB+BAO ######################################################
     ("planck_2018_BAO_camb", {
         "desc": "Planck 2018 + BAO with CAMB",
@@ -594,32 +647,43 @@ preset: InfoDict = dict([
         "theory": "classy",
         "like_cmb": "planck_2018",
         "like_bao": "BAO_planck_2018"}),
+    ("planck_BAO_latest_camb", {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest"}),
+    ("planck_BAO_latest_classy", {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest"}),
+
     # CMB+BAO+SN ###################################################
     ("planck_2018_BAO_SN_camb", {
         "desc": "Planck 2018 + BAO + SN with CAMB",
         "theory": "camb",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_sn": "Pantheon"}),
     ("planck_2018_BAO_SN_classy", {
         "desc": "Planck 2018 + BAO + SN with CLASS",
         "theory": "classy",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_sn": "Pantheon"}),
     # CMB+DES+BAO+SN ###################################################
     ("planck_2018_DES_BAO_SN_camb", {
         "desc": "Planck 2018 + DESjoint + BAO + SN with CAMB",
         "theory": "camb",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}),
     ("planck_2018_DES_BAO_SN_classy", {
         "desc": "Planck 2018 + DESjoint + BAO + SN with CLASS",
         "theory": "classy",
         "like_cmb": "planck_2018",
-        "like_bao": "BAO_planck_2018",
+        "like_bao": "BAO_planck_latest",
         "like_des": "des_y1_joint",
         "like_sn": "Pantheon"}),
 ])
@@ -679,23 +743,22 @@ for name, pre in preset.items():
         pre.update(default_sampler)
 
 # BASIC INSTALLATION #####################################################################
-install_basic: InputDict = {
+install_basic: InfoDict = {
     "theory": theory,
-    "likelihood": {
-        "planck_2018_lowl.TT": None,
+    "likelihood": dict(like_cmb["planck_NPIPE"]["likelihood"], **{
+        # 2018 lensing ensured covmat database also installed
         "planck_2018_lensing.native": None,
-        "bicep_keck_2015": None,
         "sn.pantheon": None,
         "bao.sdss_dr12_consensus_final": None,
-        "des_y1.joint": None}}
+        "des_y1.joint": None})}
 
 install_tests = deepcopy(install_basic)
 install_tests["likelihood"].update({"planck_2015_lowl": None,
                                     "planck_2018_highl_plik.TT_unbinned": None,
                                     "planck_2018_highl_plik.TT_lite_native": None,
                                     "planck_2018_highl_CamSpec.TT": None,
-                                    "planck_2018_highl_CamSpec.TT_native": None,
                                     "planck_2018_highl_CamSpec2021.TT": None,
+                                    "bicep_keck_2018": None
                                     })
 
 # CONTENTS FOR COMBO-BOXED IN A GUI ######################################################

@@ -26,7 +26,8 @@ omit =
     cobaya/likelihoods/planck*CamSpec*
     cobaya/likelihoods/planck*unbinned*
     cobaya/likelihoods/base_classes/planck_2018_CamSpec*
-    cobaya/grid_tools/*
     cobaya/cosmo_input/*
     cobaya/containers.py
+    cobaya/grid_tools/*jobs*
+    cobaya/grid_tools/*MPI*
     tests/*

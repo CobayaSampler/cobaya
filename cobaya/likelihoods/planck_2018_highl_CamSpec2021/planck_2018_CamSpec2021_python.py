@@ -4,10 +4,9 @@ from cobaya.likelihoods.base_classes.planck_2018_CamSpec_python import \
 
 
 class Planck2018CamSpec2021Python(Planck2018CamSpecPython):
-    install_options = {
-        "download_url": "https://github.com/CobayaSampler/planck_native_data/"
-                        "releases/download/v1/CamSpec2021.zip",
-        "data_path": "planck_2018_CamSpec2021"}
+    install_options = {"github_repository": "CobayaSampler/planck_native_data",
+                       "github_release": "v1", "asset": "CamSpec2021.zip",
+                       "directory": "planck_2018_CamSpec2021"}
 
     bibtex_file = 'CamSpec2021.bibtex'
 

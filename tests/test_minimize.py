@@ -1,10 +1,12 @@
 # Minimization of a random Gaussian likelihood using the minimize sampler.
 
+import os
+import warnings
 import numpy as np
 import pytest
-import os
 
 from cobaya import mpi, run, InputDict, Likelihood
+from cobaya.component import ComponentNotInstalledError
 from cobaya.samplers.minimize import valid_methods
 
 pytestmark = pytest.mark.mpi
@@ -27,25 +29,57 @@ class NoisyCovLike(Likelihood):
 
 
 @mpi.sync_errors
-def test_minimize_gaussian(tmpdir):
+def test_minimize_gaussian(tmpdir, skip_not_installed):
     maxloglik = 0
     for method in reversed(valid_methods):
         NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
         info: InputDict = {'likelihood': {'like': NoisyCovLike},
                            "sampler": {"minimize": {"ignore_prior": True,
                                                     "method": method}}}
-        products = run(info).sampler.products()
+        try:
+            products = run(info)[1].products()
+        except ComponentNotInstalledError:
+            if skip_not_installed:
+                warnings.warn(
+                    f"Could not test minimization method '{method}': not installed."
+                )
+                continue
+            raise
         error = abs(maxloglik - -products["minimum"]["minuslogpost"])
         assert error < 0.01
-
         info['output'] = os.path.join(tmpdir, 'testmin')
-        products = run(info, force=True).sampler.products()
+        products = run(info, force=True)[1].products()
         if mpi.is_main_process():
             from getdist.types import BestFit
             res = BestFit(info['output'] + '.bestfit').getParamDict()
             assert np.isclose(res["loglike"], products["minimum"]["minuslogpost"])
             for p, v in list(res.items())[:-2]:
                 assert np.isclose(products["minimum"][p], v)
+            assert isinstance(products["full_set_of_mins"], dict)
+
+
+@mpi.sync_errors
+def test_minimize_single_point(tmpdir, skip_not_installed):
+    if mpi.get_mpi_size() > 1:
+        return
+    for method in reversed(valid_methods):
+        NoisyCovLike.noise = 0.005 if method == 'bobyqa' else 0
+        info: InputDict = {'likelihood': {'like': NoisyCovLike},
+                           "sampler": {"minimize": {"ignore_prior": True,
+                                                    "method": method,
+                                                    "best_of": 1}},
+                           'output': os.path.join(tmpdir, 'testmin')}
+        try:
+            products = run(info, force=True)[1].products()
+        except ComponentNotInstalledError:
+            if skip_not_installed:
+                warnings.warn(
+                    f"Could not test minimization method '{method}': not installed."
+                )
+                continue
+            raise
+        if mpi.is_main_process():
+            assert products["full_set_of_mins"] is None
 
 
 @mpi.sync_errors
@@ -55,6 +89,7 @@ def test_run_minimize(tmpdir):
                        "sampler": {"mcmc": {"Rminus1_stop": 0.5, 'Rminus1_cl_stop': 0.4,
                                             'seed': 2}},
                        "output": os.path.join(tmpdir, 'testchain')}
+    # No need to use skip_not_installed: uses default method, which should be requisite
     run(info, force=True)
     min_info: InputDict = dict(info, sampler={'minimize': None})
     output_info, sampler = run(min_info, force=True)

@@ -1,5 +1,6 @@
 import sys
 import os
+from io import StringIO
 from contextlib import contextmanager
 
 
@@ -19,9 +20,24 @@ def process_packages_path(packages_path) -> str:
 
 @contextmanager
 def stdout_redirector(stream):
+    stream.seek(0)
     old_stdout = sys.stdout
     sys.stdout = stream
     try:
         yield
     finally:
         sys.stdout = old_stdout
+
+
+@contextmanager
+def stdout_check(*strs, match=True):
+    stream = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = stream
+    try:
+        yield
+    finally:
+        sys.stdout = old_stdout
+    output = stream.getvalue()
+    for s in strs:
+        assert match == (s in output), "Output should contain '%s'" % s

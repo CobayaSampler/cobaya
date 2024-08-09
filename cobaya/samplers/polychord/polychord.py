@@ -8,24 +8,34 @@
 # Global
 import os
 import sys
-import numpy as np
 import logging
 import inspect
 from itertools import chain
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Union, Dict, TYPE_CHECKING
 from tempfile import gettempdir
 import re
+import warnings
+import numpy as np
 
 # Local
-from cobaya.tools import read_dnumber, get_external_function, \
-    find_with_regexp, NumberWithUnits, load_module, VersionCheckError
+from cobaya.tools import read_dnumber, get_external_function, find_with_regexp, \
+    NumberWithUnits, get_compiled_import_path
 from cobaya.sampler import Sampler
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, NotInstalledError
+from cobaya.log import get_logger, NoLogging, LoggedError
+from cobaya.install import download_github_release
+from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import derived_par_name_separator, packages_path_arg, Extension
+from cobaya.conventions import derived_par_name_separator, Extension
+
+# Avoid importing GetDist if not necessary
+if TYPE_CHECKING:
+    from getdist import MCSamples
+
+
+# Suppresses warnings about first defining attrs outside __init__
+# pylint: disable=attribute-defined-outside-init
 
 
 class polychord(Sampler):
@@ -33,9 +43,10 @@ class polychord(Sampler):
     PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
     tailored for high-dimensional parameter spaces with a speed hierarchy.
     """
+
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
-    _pc_repo_version = "1.18.2"
+    _pc_repo_version = "1.20.1"
     _base_dir_suffix = "polychord_raw"
     _clusters_dir = "clusters"
     _at_resume_prefer_old = Sampler._at_resume_prefer_old + ["blocking"]
@@ -52,27 +63,33 @@ class polychord(Sampler):
     oversample_power: float
     nlive: NumberWithUnits
     path: str
+    logzero: float
+    max_ndead: int
 
     def initialize(self):
         """Imports the PolyChord sampler and prepares its arguments."""
-        # Allow global import if no direct path specification
-        allow_global = not self.path
-        if not self.path and self.packages_path:
-            self.path = self.get_path(self.packages_path)
-        self.pc: Any = self.is_installed(path=self.path, allow_global=allow_global,
-                                         check=False)
-        if not self.pc:
-            raise NotInstalledError(
-                self.log, "Could not find PolyChord. Check error message above. "
-                          "To install it, run 'cobaya-install polychord --%s "
-                          "[packages_path]'", packages_path_arg)
+        install_path = self.get_path(self.packages_path) if self.packages_path else None
+        try:
+            self.pc = load_external_module(
+                "pypolychord", path=self.path, install_path=install_path,
+                min_version=self._pc_repo_version,
+                get_import_path=get_compiled_import_path, logger=self.log,
+                not_installed_level="debug")
+        except ComponentNotInstalledError as excpt:
+            raise ComponentNotInstalledError(
+                self.log, (f"Could not find PolyChord: {excpt}. "
+                           "To install it, run `cobaya-install polychord`")) from excpt
+        with NoLogging(logging.CRITICAL):
+            settings = load_external_module(
+                "pypolychord.settings", path=self.path, install_path=install_path,
+                get_import_path=get_compiled_import_path, logger=self.log)
         # Prepare arguments and settings
         self.n_sampled = len(self.model.parameterization.sampled_params())
         self.n_derived = len(self.model.parameterization.derived_params())
         self.n_priors = len(self.model.prior)
         self.n_likes = len(self.model.likelihood)
         self.nDims = self.model.prior.d()
-        self.nDerived = (self.n_derived + self.n_priors + self.n_likes)
+        self.nDerived = self.n_derived + self.n_priors + self.n_likes
         if self.logzero is None:
             self.logzero = np.nan_to_num(-np.inf)
         if self.max_ndead == np.inf:
@@ -82,7 +99,7 @@ class polychord(Sampler):
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
                     getattr(self, p), "d", scale=self.nDims, dtype=int).value)
-        self._quants_nlive_units = ["nprior"]
+        self._quants_nlive_units = ["nprior", "nfail"]
         for p in self._quants_nlive_units:
             if getattr(self, p) is not None:
                 setattr(self, p, NumberWithUnits(
@@ -136,17 +153,15 @@ class polychord(Sampler):
             int(o * read_dnumber(self.num_repeats, dim_block))
             for o, dim_block in zip(oversampling_factors, self.grade_dims)]
         # Assign settings
-        pc_args = ["nlive", "num_repeats", "nprior", "do_clustering",
-                   "precision_criterion", "max_ndead", "boost_posterior", "feedback",
-                   "logzero", "posteriors", "equals", "compression_factor",
-                   "cluster_posteriors", "write_resume", "read_resume", "write_stats",
-                   "write_live", "write_dead", "base_dir", "grade_frac", "grade_dims",
-                   "feedback", "read_resume", "base_dir", "file_root", "grade_frac",
-                   "grade_dims"]
+        pc_args = ["nlive", "num_repeats", "nprior", "nfail", "do_clustering",
+                   "feedback", "precision_criterion", "logzero",
+                   "max_ndead", "boost_posterior", "posteriors", "equals",
+                   "cluster_posteriors", "write_resume", "read_resume",
+                   "write_stats", "write_live", "write_dead", "write_prior",
+                   "maximise", "compression_factor", "synchronous", "base_dir",
+                   "file_root", "grade_dims", "grade_frac", "nlives"]
         # As stated above, num_repeats is ignored, so let's not pass it
         pc_args.pop(pc_args.index("num_repeats"))
-        settings: Any = load_module('pypolychord.settings', path=self._poly_build_path,
-                                    min_version=None)
         self.pc_settings = settings.PolyChordSettings(
             self.nDims, self.nDerived, seed=(self.seed if self.seed is not None else -1),
             **{p: getattr(self, p) for p in pc_args if getattr(self, p) is not None})
@@ -178,12 +193,18 @@ class polychord(Sampler):
         # Done!
         if is_main_process():
             self.log.debug("Calling PolyChord with arguments:")
-            for p, v in inspect.getmembers(self.pc_settings, lambda a: not (callable(a))):
+            for p, v in inspect.getmembers(self.pc_settings, lambda a: not callable(a)):
                 if not p.startswith("_"):
                     self.log.debug("  %s: %s", p, v)
-        self.mpi_info("Initialized!")
+        self.logZ, self.logZstd = np.nan, np.nan
+        self._frac_unphysical = np.nan
+        self.collection = None
+        self.clusters = None
 
     def dumper(self, live_points, dead_points, logweights, logZ, logZstd):
+        """
+        Preprocess output for the callback function and calls it, if present.
+        """
         if self.callback_function is None:
             return
         # Store live and dead points and evidence computed so far
@@ -215,18 +236,19 @@ class polychord(Sampler):
         if self.callback_function is not None:
             try:
                 self.callback_function_callable(self)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
     def run(self):
         """
-        Prepares the posterior function and calls ``PolyChord``'s ``run`` function.
+        Prepares the prior and likelihood functions, calls ``PolyChord``'s ``run``, and
+        processes its output.
         """
-
         # Prepare the posterior
         # Don't forget to multiply by the volume of the physical hypercube,
         # since PolyChord divides by it
+
         def logpost(params_values):
             result = self.model.logposterior(params_values)
             loglikes = result.loglikes
@@ -252,7 +274,7 @@ class polychord(Sampler):
 
     def dump_paramnames(self, prefix):
         labels = self.model.parameterization.labels()
-        with open(prefix + ".paramnames", "w") as f_paramnames:
+        with open(prefix + ".paramnames", "w", encoding="utf-8-sig") as f_paramnames:
             for p in self.model.parameterization.sampled_params():
                 f_paramnames.write("%s\t%s\n" % (p, labels.get(p, "")))
             for p in self.model.parameterization.derived_params():
@@ -260,17 +282,20 @@ class polychord(Sampler):
             for p in self.model.prior:
                 f_paramnames.write("%s*\t%s\n" % (
                     "logprior" + derived_par_name_separator + p,
-                    r"\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
+                    r"\log\pi_\mathrm{" + p.replace("_", r"\ ") + r"}"))
             for p in self.model.likelihood:
                 f_paramnames.write("%s*\t%s\n" % (
                     "loglike" + derived_par_name_separator + p,
                     r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}"))
 
     def save_sample(self, fname, name):
-        sample = np.atleast_2d(np.loadtxt(fname))
+        with warnings.catch_warnings():  # in case of empty file
+            warnings.simplefilter("ignore")
+            sample = np.atleast_2d(np.loadtxt(fname))
         if not sample.size:
             return None
-        collection = SampleCollection(self.model, self.output, name=str(name))
+        collection = SampleCollection(
+            self.model, self.output, name=str(name), sample_type="nested")
         for row in sample:
             collection.add(
                 row[2:2 + self.n_sampled],
@@ -286,7 +311,7 @@ class polychord(Sampler):
         """
         Correction for the fraction of the prior that is unphysical -- see issue #77
         """
-        if not hasattr(self, "_frac_unphysical"):
+        if np.isnan(self._frac_unphysical):
             with open(self.raw_prefix + ".prior_info", "r", encoding="utf-8-sig") as pf:
                 lines = list(pf.readlines())
             get_value_str = lambda line: line[line.find("=") + 1:]
@@ -299,7 +324,7 @@ class polychord(Sampler):
             self.log.debug(
                 "Correcting for unphysical region fraction: %g", self._frac_unphysical)
             self.logZ += np.log(self._frac_unphysical)
-            if hasattr(self, "clusters"):
+            if self.clusters is not None:
                 for cluster in self.clusters.values():
                     cluster["logZ"] += np.log(self._frac_unphysical)
 
@@ -308,89 +333,206 @@ class polychord(Sampler):
         Loads the sample of live points from ``PolyChord``'s raw output and writes it
         (if ``txt`` output requested).
         """
-        if is_main_process():
-            self.log.info("Loading PolyChord's results: samples and evidences.")
-            self.dump_paramnames(self.raw_prefix)
-            self.collection = self.save_sample(self.raw_prefix + ".txt", "1")
-            # Load clusters, and save if output
-            if self.pc_settings.do_clustering:
-                self.clusters = {}
-                clusters_raw_regexp = re.compile(
-                    re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
-                cluster_raw_files = sorted(find_with_regexp(
-                    clusters_raw_regexp, os.path.join(
-                        self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
-                for f in cluster_raw_files:
-                    i = int(f[f.rfind("_") + 1:-len(".txt")])
-                    if self.output:
-                        old_folder = self.output.folder
-                        self.output.folder = self.clusters_folder
-                    sample = self.save_sample(f, str(i))
-                    if self.output:
-                        # noinspection PyUnboundLocalVariable
-                        self.output.folder = old_folder
-                    self.clusters[i] = {"sample": sample}
-            # Prepare the evidence(s) and write to file
-            pre = "log(Z"
-            active = "(Still active)"
-            with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
-                lines = [line for line in statsfile.readlines() if line.startswith(pre)]
-            for line in lines:
-                logZ, logZstd = [float(n.replace(active, "")) for n in
-                                 line.split("=")[-1].split("+/-")]
-                component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
-                if not component:
-                    self.logZ, self.logZstd = logZ, logZstd
-                elif self.pc_settings.do_clustering:
-                    i = int(component)
-                    self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
+        if not is_main_process():
+            return
+        self.log.info("Loading PolyChord's results: samples and evidences.")
+        self.dump_paramnames(self.raw_prefix)
+        self.collection = self.save_sample(self.raw_prefix + ".txt", "1")
+        # Load clusters, and save if output
+        if self.pc_settings.do_clustering:
+            self.clusters = {}
+            clusters_raw_regexp = re.compile(
+                re.escape(self.pc_settings.file_root + "_") + r"\d+\.txt")
+            cluster_raw_files = sorted(find_with_regexp(
+                clusters_raw_regexp, os.path.join(
+                    self.pc_settings.base_dir, self._clusters_dir), walk_tree=True))
+            for f in cluster_raw_files:
+                i = int(f[f.rfind("_") + 1:-len(".txt")])
+                if self.output:
+                    old_folder = self.output.folder
+                    self.output.folder = self.clusters_folder
+                sample = self.save_sample(f, str(i))
+                if self.output:
+                    # noinspection PyUnboundLocalVariable
+                    self.output.folder = old_folder
+                self.clusters[i] = {"sample": sample}
+        # Prepare the evidence(s) and write to file
+        pre = "log(Z"
+        active = "(Still active)"
+        with open(self.raw_prefix + ".stats", "r", encoding="utf-8-sig") as statsfile:
+            lines = [line for line in statsfile.readlines() if line.startswith(pre)]
+        for line in lines:
+            logZ, logZstd = [float(n.replace(active, "")) for n in
+                             line.split("=")[-1].split("+/-")]
+            component = line.split("=")[0].lstrip(pre + "_").rstrip(") ")
+            if not component:
+                self.logZ, self.logZstd = logZ, logZstd
+            elif self.pc_settings.do_clustering:
+                i = int(component)
+                self.clusters[i]["logZ"], self.clusters[i]["logZstd"] = logZ, logZstd
+        with warnings.catch_warnings():  # evidence too large (overflow)
+            warnings.simplefilter("ignore")
             self.log.debug(
-                "RAW log(Z) = %g +/- %g ; RAW Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
+                "RAW log(Z) = %g +/- %g ; "
+                "RAW Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
-            self._correct_unphysical_fraction()
-            if self.output:
-                out_evidences = dict(logZ=self.logZ, logZstd=self.logZstd)
-                if getattr(self, "clusters", None):
-                    out_evidences["clusters"] = {}
-                    for i in sorted(list(self.clusters)):
-                        out_evidences["clusters"][i] = dict(
-                            logZ=self.clusters[i]["logZ"],
-                            logZstd=self.clusters[i]["logZstd"])
-                fname = os.path.join(self.output.folder,
-                                     self.output.prefix + Extension.evidence)
-                yaml_dump_file(fname, out_evidences, comment="log-evidence",
-                               error_if_exists=False)
-        # TODO: try to broadcast the collections
-        # if get_mpi():
-        #     bcast_from_0 = lambda attrname: setattr(self,
-        #         attrname, get_mpi_comm().bcast(getattr(self, attrname, None), root=0))
-        #     map(bcast_from_0, ["collection", "logZ", "logZstd", "clusters"])
-        if is_main_process():
-            self.log.info("Finished! Raw PolyChord output stored in '%s', "
-                          "with prefix '%s'",
-                          self.pc_settings.base_dir, self.pc_settings.file_root)
+        self._correct_unphysical_fraction()
+        if self.output:
+            out_evidences = {"logZ": self.logZ, "logZstd": self.logZstd}
+            if self.clusters is not None:
+                out_evidences["clusters"] = {}
+                for i in sorted(list(self.clusters)):
+                    out_evidences["clusters"][i] = {
+                        "logZ": self.clusters[i]["logZ"],
+                        "logZstd": self.clusters[i]["logZstd"],
+                    }
+            fname = os.path.join(self.output.folder,
+                                 self.output.prefix + Extension.evidence)
+            yaml_dump_file(fname, out_evidences, comment="log-evidence",
+                           error_if_exists=False)
+        self.log.info("Finished! Raw PolyChord output stored in '%s', "
+                      "with prefix '%s'",
+                      self.pc_settings.base_dir, self.pc_settings.file_root)
+        with warnings.catch_warnings():  # evidence too large (overflow)
+            warnings.simplefilter("ignore")
             self.log.info(
                 "log(Z) = %g +/- %g ; Z in [%.8g, %.8g] (68%% C.L. log-gaussian)",
                 self.logZ, self.logZstd,
                 *[np.exp(self.logZ + n * self.logZstd) for n in [-1, 1]])
 
-    def products(self):
+    def samples(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> Union[SampleCollection, "MCSamples"]:
         """
-        Auxiliary function to define what should be returned in a scripted call.
+        Returns the sample of the posterior built out of dead points.
 
-        Returns:
-           The sample ``SampleCollection`` containing the sequentially
-           discarded live points.
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` returns the same, single posterior for all processes. Otherwise,
+            it is only returned for the root process (this behaviour is kept for
+            compatibility with the equivalent function for MCMC).
+        skip_samples: int or float, default: 0
+            No effect (skipping initial samples from a sorted nested sampling sample would
+            bias it). Raises a warning if greater than 0.
+        to_getdist: bool, default: False
+            If ``True``, returns a single :class:`getdist.MCSamples` instance, containing
+            all samples, for all MPI processes (``combined`` is ignored).
+
+        Returns
+        -------
+        SampleCollection, getdist.MCSamples
+           The posterior sample.
         """
+        if skip_samples:
+            self.mpi_warning(
+                "Initial samples should not be skipped in nested sampling. "
+                "Ignoring 'skip_samples' keyword."
+            )
+        collection = self.collection
+        if not combined and not to_getdist:
+            return collection  # None for MPI ranks > 0
+        # In all remaining cases, we return the same for all ranks
+        if to_getdist:
+            if is_main_process():
+                collection = collection.to_getdist()
+        return share_mpi(collection)
+
+    def samples_clusters(
+            self,
+            to_getdist: bool = False,
+    ) -> Union[None, Dict[int, Union[SampleCollection, "MCSamples", None]]]:
+        """
+        Returns the samples corresponding to all clusters, if doing clustering, or
+        ``None`` otherwise.
+
+        Parameters
+        ----------
+        to_getdist: bool, default: False
+            If ``True``, returns the cluster samples as :class:`getdist.MCSamples`.
+
+        Returns
+        -------
+        None, Dict[int, Union[SampleCollection, MCSamples, None]]
+           The cluster posterior samples.
+        """
+        if not self.pc_settings.do_clustering:
+            return None
+        if not is_main_process():
+            return None
+        clusters: Dict[int, Union[SampleCollection, "MCSamples", None]] = {}
+        for i, c in self.clusters.items():
+            if to_getdist:
+                try:
+                    clusters[i] = c["sample"].to_getdist()
+                except (ValueError, AttributeError):
+                    self.log.warning(
+                        "Cluster #%d could not be converted to a GetDist sample. "
+                        "Storing 'None'.", i)
+                    clusters[i] = None
+            else:
+                clusters[i] = c["sample"]
+        return clusters
+
+    def products(
+            self,
+            combined: bool = False,
+            skip_samples: float = 0,
+            to_getdist: bool = False,
+    ) -> Dict:
+        """
+        Returns the products of the sampling process.
+
+        Parameters
+        ----------
+        combined: bool, default: False
+            If ``True`` returns the same, single posterior for all processes. Otherwise,
+            it is only returned for the root process (this behaviour is kept for
+            compatibility with the equivalent function for MCMC).
+        skip_samples: int or float, default: 0
+            No effect (skipping initial samples from a sorted nested sampling sample would
+            bias it). Raises a warning if greater than 0.
+        to_getdist: bool, default: False
+            If ``True``, returns :class:`getdist.MCSamples` instances for the full
+            posterior sample and the clusters, for all MPI processes (``combined`` is
+            ignored).
+
+        Returns
+        -------
+        dict, None
+            A dictionary containing the :class:`cobaya.collection.SampleCollection` of
+            accepted steps under ``"sample"``, the log-evidence and its uncertainty
+            under ``logZ`` and ``logZstd`` respectively, and the same for the individual
+            clusters, if present, under the ``clusters`` key.
+
+        Notes
+        -----
+        If either ``combined`` or ``to_getdist`` are ``True``, the same products dict is
+        returned for all processes. Otherwise, ``None`` is returned for processes of rank
+        larger than 0.
+        """
+        products = {}
         if is_main_process():
             products = {
-                "sample": self.collection, "logZ": self.logZ, "logZstd": self.logZstd}
+                "logZ": self.logZ,
+                "logZstd": self.logZstd,
+                "sample": self.samples(
+                    combined=combined, skip_samples=skip_samples, to_getdist=to_getdist),
+            }
             if self.pc_settings.do_clustering:
-                products.update({"clusters": self.clusters})
-            return products
-        else:
-            return {}
+                products["clusters"] = {i: {} for i in self.clusters}
+                for i, s in self.samples_clusters(to_getdist=to_getdist).items():
+                    products["clusters"][i]["logZ"] = self.clusters[i]["logZ"]
+                    products["clusters"][i]["logZstd"] = self.clusters[i]["logZstd"]
+                    products["clusters"][i]["sample"] = s
+        do_bcast = combined or to_getdist
+        if do_bcast:
+            return share_mpi(products)
+        return products
 
     @classmethod
     def get_base_dir(cls, output):
@@ -432,85 +574,27 @@ class polychord(Sampler):
                          cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:]))
 
     @classmethod
-    def get_import_path(cls, path):
-        log = get_logger(cls.__name__)
-        poly_build_path = os.path.join(path, "build")
-        if not os.path.isdir(poly_build_path):
-            log.error("Either PolyChord is not in the given folder, "
-                      "'%s', or you have not compiled it.", path)
-            return None
-        py_version = "%d.%d" % (sys.version_info.major, sys.version_info.minor)
-        try:
-            post = next(d for d in os.listdir(poly_build_path)
-                        if (d.startswith("lib.") and py_version in d))
-        except StopIteration:
-            log.error("The PolyChord installation at '%s' has not been compiled for the "
-                      "current Python version.", path)
-            return None
-        return os.path.join(poly_build_path, post)
-
-    @classmethod
     def is_compatible(cls):
-        import platform
+        import platform  # pylint: disable=import-outside-toplevel
         if platform.system() == "Windows":
             return False
         return True
 
     @classmethod
-    def is_installed(cls, **kwargs):
-        log = get_logger(cls.__name__)
+    def is_installed(cls, reload=False, **kwargs):
         if not kwargs.get("code", True):
             return True
-        check = kwargs.get("check", True)
-        func = log.info if check else log.error
-        path: Optional[str] = kwargs["path"]
-        if path is not None and path.lower() == "global":
-            path = None
-        if path and not kwargs.get("allow_global"):
-            if is_main_process():
-                log.info("Importing *local* PolyChord from '%s'.", path)
-            if not os.path.exists(path):
-                if is_main_process():
-                    func("The given folder does not exist: '%s'", path)
-                return False
-            poly_build_path = cls.get_import_path(path)
-            if not poly_build_path:
-                return False
-        elif not path:
-            if is_main_process():
-                log.info("Importing *global* PolyChord.")
-            poly_build_path = None
-        else:
-            if is_main_process():
-                log.info(
-                    "Importing *auto-installed* PolyChord (but defaulting to *global*).")
-            poly_build_path = cls.get_import_path(path)
-        cls._poly_build_path = poly_build_path
         try:
-            # TODO: add min_version when polychord module version available
-            return load_module(
-                'pypolychord', path=poly_build_path, min_version=None)
-        except ModuleNotFoundError:
-            if path is not None and path.lower() != "global":
-                log.error("Couldn't find the PolyChord python interface at '%s'. "
-                          "Are you sure it has been installed there?", path)
-            elif not check:
-                log.error("Could not import global PolyChord installation. "
-                          "Specify a Cobaya or PolyChord installation path, "
-                          "or install the PolyChord Python interface globally with "
-                          "'cd /path/to/polychord/ ; python setup.py install'")
-            return False
-        except ImportError as e:
-            log.error("Couldn't load the PolyChord python interface in %s:\n"
-                      "%s", poly_build_path or "global", e)
-            return False
-        except VersionCheckError as e:
-            log.error(str(e))
+            return bool(load_external_module(
+                "pypolychord", path=kwargs["path"],
+                get_import_path=get_compiled_import_path,
+                min_version=cls._pc_repo_version, reload=reload,
+                logger=get_logger(cls.__name__), not_installed_level="debug"))
+        except ComponentNotInstalledError:
             return False
 
     @classmethod
-    def install(cls, path=None, force=False, code=False, data=False,
-                no_progress_bars=False):
+    def install(cls, path=None, code=False, no_progress_bars=False, **_kwargs):
         if not code:
             return True
         log = get_logger(__name__)
@@ -523,22 +607,17 @@ class polychord(Sampler):
             log.error("Could not download PolyChord.")
             return False
         log.info("Compiling (Py)PolyChord...")
-        from subprocess import Popen, PIPE
+        from subprocess import Popen, PIPE  # pylint: disable=import-outside-toplevel
         # Needs to re-define os' PWD,
         # because MakeFile calls it and is not affected by the cwd of Popen
         cwd = os.path.join(path, "code",
                            cls._pc_repo_name[cls._pc_repo_name.find("/") + 1:])
         my_env = os.environ.copy()
         my_env.update({"PWD": cwd})
-        process_make = Popen(["make", "pypolychord", "MPI=1"], cwd=cwd, env=my_env,
-                             stdout=PIPE, stderr=PIPE)
-        out, err = process_make.communicate()
-        if process_make.returncode:
-            log.info(out.decode("utf-8"))
-            log.info(err.decode("utf-8"))
-            log.error("Compilation failed!")
-            return False
-        my_env.update({"CC": "mpicc", "CXX": "mpicxx"})
+        if "CC" not in my_env:
+            my_env["CC"] = "mpicc"
+        if "CXX" not in my_env:
+            my_env["CXX"] = "mpicxx"
         process_make = Popen([sys.executable, "setup.py", "build"],
                              cwd=cwd, env=my_env, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()

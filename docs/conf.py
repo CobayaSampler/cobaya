@@ -18,8 +18,12 @@
 
 import os
 import sys
+import ast
+import yaml
 
-sys.path.insert(-1, os.path.abspath('../cobaya'))
+project = "cobaya"
+
+sys.path.insert(-1, os.path.abspath(f'../{project}'))
 
 # -- General configuration ------------------------------------------------
 
@@ -39,10 +43,10 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.graphviz',
-    'sphinxcontrib.programoutput'
+    'sphinxcontrib.programoutput',
+    'sphinx_rtd_theme',
+    'sphinxcontrib.jquery'
 ]
-
-inheritance_graph_attrs = dict(rankdir="LR", size='""')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates', 'theme_customisation']
@@ -61,26 +65,38 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-from cobaya import __name__, __author__, __version__, __year__
 
-project = __name__
-copyright = __year__ + " " + __author__
-author = __author__
+fields = {"__year__": None, "__author__": None, "__version__": None}
+
+with open(f"../{project}/__init__.py") as f:
+    tree = ast.parse(f.read())
+
+for node in ast.walk(tree):
+    if isinstance(node, ast.Assign) and node.targets[0].id in fields:
+        fields[node.targets[0].id] = ast.literal_eval(node.value)
+
+copyright = fields["__year__"] + " " + fields["__author__"]
+author = fields["__author__"]
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = __version__
+version = fields["__version__"]
 # The full version, including alpha/beta/rc tags.
 release = version
 
 from cobaya.tools import get_available_internal_classes
-from sphinx.ext import inheritance_diagram
 from cobaya.likelihood import Likelihood
 from cobaya.theory import Theory
 from cobaya.sampler import Sampler
+
+# Config of the inheritance diagram
+
+from sphinx.ext import inheritance_diagram
+
+inheritance_graph_attrs = dict(rankdir="LR", size='""')
 
 # change inheritance diagram to pull all internal component classes
 bases = (Likelihood, Theory, Sampler)
@@ -114,7 +130,7 @@ inheritance_diagram.InheritanceGraph.class_name = class_name
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = "Python"
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -308,8 +324,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'cobaya.tex', u'name\\_me Documentation',
-     u'Jesus Torrado, Antony Lewis, etc', 'manual'),
+    (master_doc, 'cobaya.tex', 'Cobaya Documentation',
+     'Jesus Torrado, Antony Lewis, etc', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -350,7 +366,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'cobaya', u'cobaya Documentation',
+    (master_doc, 'cobaya', 'cobaya Documentation',
      [author], 1)
 ]
 
@@ -358,17 +374,18 @@ man_pages = [
 #
 # man_show_urls = False
 
-
 # -- Options for Texinfo output -------------------------------------------
 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'cobaya', u'cobaya Documentation',
-     author, 'cobaya', 'One line description of project.',
+    (master_doc, 'cobaya', 'cobaya Documentation',
+     author, 'cobaya', 'A code for Bayesian analysis.',
      'Miscellaneous'),
 ]
+
+pdf_documents = [(master_doc, 'cobaya', 'Cobaya Documentation', author)]
 
 # Documents to append as an appendix to all manuals.
 #

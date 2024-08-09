@@ -17,7 +17,7 @@ from typing import Mapping, Sequence, Dict, Set, List, Tuple, Any, Callable, Uni
 from cobaya.typing import ParamsDict, ParamDict, ParamInput, \
     ExpandedParamsDict, ParamValuesDict, partags
 from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
-    getfullargspec, deepcopy_where_possible, invert_dict, str_to_list
+    getfullargspec, deepcopy_where_possible, invert_dict, str_to_list, get_scipy_1d_pdf
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -44,7 +44,7 @@ def is_derived_param(info_param: ParamInput) -> bool:
 
 def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict:
     """
-    Expands the info of a parameter, from the user friendly, shorter format
+    Expands the info of a parameter, from the user-friendly, shorter format
     to a more unambiguous one.
     """
     info_param = deepcopy_where_possible(info_param)
@@ -72,6 +72,7 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict
     value = info_param.get("value")
     if isinstance(value, str) or callable(value):
         info_param["derived"] = info_param.get("derived", True)
+    # noinspection PyTypeChecker
     return info_param
 
 
@@ -222,7 +223,7 @@ class Parameterization(HasLogger):
         labels_inv_repeated = invert_dict(self.labels())
         labels_inv_repeated = {k: v for k, v in labels_inv_repeated.items() if len(v) > 1}
         if labels_inv_repeated:
-            self.log.warning(
+            self.mpi_warning(
                 "There are repeated parameter labels: %r", labels_inv_repeated)
 
     def dropped_param_set(self) -> Set[str]:
@@ -249,6 +250,10 @@ class Parameterization(HasLogger):
 
     def derived_params(self) -> ParamValuesDict:
         return self._derived.copy()
+
+    def derived_params_info(self) -> ExpandedParamsDict:
+        return {p: deepcopy_where_possible(info) for p, info
+                in self._infos.items() if p in self._derived}
 
     def sampled_input_dependence(self) -> Dict[str, List[str]]:
         return deepcopy(self._sampled_input_dependence)
@@ -296,12 +301,9 @@ class Parameterization(HasLogger):
         if self._wrapped_derived_funcs:
             for p, (func, args, to_set) in self._wrapped_derived_funcs.items():
                 for arg in to_set:
-                    val = self._input.get(arg)
-                    if val is None:
-                        val = output_params_values.get(arg)
-                        if val is None:
+                    if (val := self._input.get(arg)) is None:
+                        if (val := output_params_values.get(arg)) is None:
                             val = self._derived.get(arg)
-
                     args[arg] = val
                 self._derived[p] = self._call_param_func(p, func, args)
         return self._derived
@@ -325,8 +327,9 @@ class Parameterization(HasLogger):
         else:
             if len(sampled_params) != len(self._sampled):
                 raise LoggedError(self.log, "Wrong number of sampled parameters passed: "
-                                  "%d given vs %d expected", len(sampled_params),
-                                  len(self.sampled_params))
+                                            "%d given vs %d expected",
+                                  len(sampled_params),
+                                  len(self._sampled))
             return sampled_params
 
     def check_sampled_dict(self, **sampled_params) -> ParamValuesDict:
@@ -349,12 +352,12 @@ class Parameterization(HasLogger):
             if self.allow_renames:
                 msg = ("The following expected sampled parameters " +
                        ("(or their aliases) " if self.allow_renames else "") +
-                       "where not found : %r",
+                       "were not found : %r",
                        ({p: self._sampled_renames[p] for p in not_found}
                         if self.allow_renames else not_found))
             else:
                 msg = ("The following expected sampled parameters "
-                       "where not found : %r",
+                       "were not found : %r",
                        {p: self._sampled_renames[p] for p in not_found})
             raise LoggedError(self.log, *msg)
         # Ignore fixed input parameters if they have the correct value
@@ -481,3 +484,47 @@ class Parameterization(HasLogger):
                                   "Maybe there is a circular dependency between derived "
                                   "parameters?", list(inputs))
         return wrapped_funcs
+
+
+def get_literal_param_range(param_info, confidence_for_unbounded=1):
+    """
+    Extracts parameter bounds from a parameter input dict, if present.
+    """
+    get_bounds_from_dict = lambda i: [i.get("min", -np.inf), i.get("max", np.inf)]
+    # Sampled
+    if is_sampled_param(param_info):
+        pdf_dist = get_scipy_1d_pdf(param_info.get("prior", {}))  # may raise ValueError
+        lims = pdf_dist.interval(confidence_for_unbounded)
+    # Derived
+    elif is_derived_param(param_info):
+        lims = get_bounds_from_dict(param_info or {})
+    # Fixed
+    else:
+        value = expand_info_param(param_info).get("value", None)
+        try:
+            value = float(value)
+        except (ValueError, TypeError):
+            # e.g. lambda function values
+            lims = get_bounds_from_dict(param_info or {})
+        else:
+            lims = (value, value)
+    return lims[0] if lims[0] != -np.inf else None, lims[1] if lims[1] != np.inf else None
+
+
+def get_literal_param_ranges(params_info, confidence_for_unbounded=1):
+    """
+        Extracts parameters bounds from a parameter input dict, or a
+        :class:`~parameterization.Parameterization` instance.
+
+        Notes
+        -----
+        Only use this if you know what you are doing. In general, you should get parameter
+        bounds from a :class:`~model.Model` instance as :func:`model.Model.prior.bounds`.
+    """
+    if isinstance(params_info, Parameterization):
+        # noinspection PyProtectedMember
+        params_info = params_info._infos  # pylint: disable=protected-access
+    return {
+        p: get_literal_param_range(info, confidence_for_unbounded)
+        for p, info in params_info.items()
+    }

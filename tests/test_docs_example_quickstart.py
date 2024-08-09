@@ -10,7 +10,7 @@ import pytest
 
 from cobaya.yaml import yaml_load_file
 from cobaya.input import is_equal_info
-from cobaya.tools import KL_norm
+from cobaya.tools import KL_norm, working_directory
 from .common_sampler import KL_tolerance
 from .common import stdout_redirector
 from cobaya import mpi
@@ -26,9 +26,7 @@ docs_img_folder = os.path.join(docs_folder, "img")
 @mpi.sync_errors
 def test_example():
     # temporarily change working directory to be able to run the files "as is"
-    cwd = os.getcwd()
-    try:
-        os.chdir(docs_src_folder)
+    with working_directory(docs_src_folder):
         info_yaml = yaml_load_file("gaussian.yaml")
         info_yaml.pop("output")
         globals_example = {}
@@ -44,6 +42,8 @@ def test_example():
         globals_example["info"]["sampler"]["mcmc"] = (
                 globals_example["info"]["sampler"]["mcmc"] or {})
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
+        # Run the minimizer -- output doesn't matter. Just checking that it does not fail
+        exec(open(os.path.join(docs_src_folder, "run_min.py")).read(), globals_example)
         # Analyze and plot -- capture print output
         stream = StringIO()
         with stdout_redirector(stream):
@@ -56,6 +56,3 @@ def test_example():
             m1=mean, S1=covmat, m2=globals_example["mean"], S2=globals_example["covmat"])
                 <= KL_tolerance), (
             "Sampling appears not to have worked too well. Run again?")
-    finally:
-        # Back to the working directory of the tests, just in case
-        os.chdir(cwd)

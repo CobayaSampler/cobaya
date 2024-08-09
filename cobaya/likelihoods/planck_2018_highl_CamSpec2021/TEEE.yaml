@@ -7,6 +7,6 @@ aliases: [CamSpec2021HM_TEEE]
 # Speed in evaluations/second
 speed: 60
 
-params: !defaults [params_calib_CamSpec_2021, params_TE_CamSpec, params_EE_CamSpec]
+params: !defaults [../base_classes/planck_calib, params_TE_CamSpec, params_EE_CamSpec]
 
 #prior: !defaults [prior_SZ_CamSpec]

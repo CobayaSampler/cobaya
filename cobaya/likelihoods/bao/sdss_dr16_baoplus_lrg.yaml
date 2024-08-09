@@ -1,0 +1,11 @@
+# eBOSS LRG results, combining measurements from eBOSS DR16 and
+# BOSS DR12 as described in, Alam et al. 2020
+# https://arxiv.org/pdf/2007.08991.pdf
+
+path: null
+measurements_file: bao_data/sdss_DR16_BAOplus_LRG_FSBAO_DMDHfs8.dat
+cov_file: bao_data/sdss_DR16_BAOplus_LRG_FSBAO_DMDHfs8_covtot.txt
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000

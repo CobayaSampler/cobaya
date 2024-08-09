@@ -1,0 +1,10 @@
+path: null
+dataset_file: CamSpec_NPIPE/CamSpec_NPIPE_12_6_cl.dataset
+dataset_params:
+  use_cl: EE
+# Aliases for automatic covariance matrix
+aliases: [CamSpec_NPIPE_EE]
+speed: 160
+params: !defaults [../base_classes/planck_calib, params_EE_CamSpec, params_fixedcalTE]
+
+#prior: !defaults [prior_SZ_CamSpec]

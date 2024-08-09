@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Sample job template for Univa Grid Engine cluster (e.g. Apollo in Sussex)
+# Python script replaces placeholders inside CURLY BRACKETS with values given
+# in the python script
+
+# --- Job and queue info -------------------------------------------------------
+#$ -N {JOBNAME}
+#$ -q {QUEUE}
+#$ -jc {JOBCLASS}
+#$ -cwd
+#$ -V
+# --- Resource allocation with optimal MPI+OpenMP interaction ------------------
+#$ -pe openmpi {NUMSLOTS}
+###$ -binding pe striding:{CHAINSPERNODE}:{OMP}
+#$ -R y
+#$ -l h_vmem=3G
+#$ -l m_mem_free=3G
+
+export OMP_NUM_THREADS={OMP}
+
+module load Python
+module load gompic
+
+
+
+cd {ROOTDIR}
+
+echo Running on host `hostname`
+echo Time is `date`
+echo Directory is `pwd`
+echo Job ID is $JOB_ID
+echo Hostfile `cat $PE_HOSTFILE`
+
+# Run command
+
+{COMMAND}
+
+
+## Set things to be used by the python script,
+## which extracts text from here with ##XX: ...##
+
+## Command to use for each run in the batch
+##RUN: mpirun -n {NUMMPI} {PROGRAM} {INI} > {JOBSCRIPTDIR}/{INIBASE}.log 2>&1##
+
+## Commands to submit and delete
+##DEFAULT_qsub: qsub##
+##DEFAULT_qdel: qdel##
+
+
+## These defaults specific to Sussex apollo
+##DEFAULT_queue: parallel.q##
+##DEFAULT_jobclass: test.long##

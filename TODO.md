@@ -1,7 +1,5 @@
 # Incomplete implementations/bigger jobs
 
-## Grids/rest of cosmomc scripts
-## Lots of batchjob stuff (hasConvergeBetterThan,wantCheckpointContinue etc) now broken
 ## containers
 
 # cosmetic/consistency/speed
@@ -16,7 +14,6 @@
 ## update like/theory dict types to allow for instances (remove log.warning if all OK)
 ## skip measure_and_set_speeds if only one component
 ## maybe re-dump model info with measured speeds (need to allow saving of speeds from helper theories like camb.transfers)
-## Support PySide6 https://doc.qt.io/qtforpython/porting_from2.html
 ## Add other sample job scripts; add auto-configure database based on cluster names
 
 # Enhancements/Refactorings
@@ -28,7 +25,6 @@
 ## If non-linear lensing on, model the non-linear correction via limber for faster semi-slow parameters
 ## minimize:
 + unbounded parameters with flat prior (this would make it safe to rotate the unbounded ones in minimize) [JT: not very much in favour, since that would break a bunch of other stuff. Maybe let's explore an alternative solution? e.g. auto-extend uniform priors.]
-+ add MINUIT
 ## mcmc:
 * finish removing .checkpoint in favour of updated.yaml and .progress
 * For learning checks, X should perhaps ideally also depend slightly on the speed of the cycles, e.g. if either check becomes slow compared to a fast cycle.

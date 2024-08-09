@@ -9,6 +9,10 @@ stop_at_error: False
 # Other precision parameters to be passed to CLASS
 # e.g. precision parameters or non-numerical parameters
 extra_args:
+# If using a custom version based on an outdated CLASS, set to True.
+# Use at your own risk: may produce unexpected behaviour/errors.
+# (Ideally, update the CLASS version on which your modification is based.)
+ignore_obsolete: False
 # Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
 use_renames: False
 # Dictionary of (Planck+CAMB)->CLASS names

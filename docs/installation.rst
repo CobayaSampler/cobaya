@@ -4,11 +4,11 @@ Installing cobaya
 Pre-requisites
 --------------
 
-The only pre-requisites are **Python** (version ≥ 3.6) and the Python package manager **pip** (version ≥ 20.0).
+The only pre-requisites are **Python** (version ≥ 3.8) and the Python package manager **pip** (version ≥ 20.0).
 
 .. warning::
 
-   Python 2 is no longer supported. Please use Python 3.
+   Python 2 and Python 3.6/3.7 are no longer supported. Please use Python 3.8+.
 
    In some systems, the Python 3 command may be ``python3`` instead of ``python``. In this documentation, the shell command ``python`` always means Python 3.
 
@@ -71,7 +71,7 @@ To install **cobaya** or upgrade it to the latest release, simply type in a term
 
 .. code:: bash
 
-   $ python -m pip install cobaya--upgrade
+   $ python -m pip install cobaya --upgrade
 
 To go on installing **cosmological requisites**, see :doc:`installation_cosmo`.
 
@@ -136,6 +136,17 @@ Simply do, from anywhere
 
 Installation troubleshooting
 ----------------------------
+
+Problems with file locks
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default Cobaya uses  `Portalocker <https://pypi.org/project/portalocker/>`_ to lock output chain files to check that MPI is being used correctly, that only one process is accessing each file, and to clean up files from aborted runs.
+If Portalocker is uninstalled it will still work, but files may need to be cleaned up manually. You can also set an environment variable to turn off file locking if it causes problems (e.g. on NERSC home).
+
+.. code:: bash
+
+     export COBAYA_USE_FILE_LOCKING=false
+
 
 .. note::
 

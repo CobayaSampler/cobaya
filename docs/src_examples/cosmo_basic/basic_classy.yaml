@@ -2,14 +2,17 @@ theory:
   classy:
     extra_args:
       non linear: hmcode
-      hmcode_min_k_max: 20
+      nonlinear_min_k_max: 20
       N_ncdm: 1
       N_ur: 2.0328
 likelihood:
   planck_2018_lowl.TT: null
   planck_2018_lowl.EE: null
-  planck_2018_highl_plik.TTTEEE: null
-  planck_2018_lensing.clik: null
+  planck_NPIPE_highl_CamSpec.TTTEEE: null
+  planckpr4lensing:
+    package_install:
+      github_repository: carronj/planck_PR4_lensing
+      min_version: 1.0.2
 params:
   logA:
     prior:
@@ -35,7 +38,7 @@ params:
       scale: 0.004
     proposal: 0.002
     latex: n_\mathrm{s}
-  theta_s_1e2:
+  theta_s_100:
     prior:
       min: 0.5
       max: 10
@@ -45,10 +48,6 @@ params:
       scale: 0.0004
     proposal: 0.0002
     latex: 100\theta_\mathrm{s}
-    drop: true
-  100*theta_s:
-    value: 'lambda theta_s_1e2: theta_s_1e2'
-    derived: false
   H0:
     latex: H_0
   omega_b:
