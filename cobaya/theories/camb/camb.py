@@ -396,17 +396,18 @@ class CAMB(BoltzmannBase):
 
         for k, v in self._must_provide.items():
             # Products and other computations
-            if k == "Cl":
+            if k == "Cl" or k == "lensed_scal_Cl":
                 self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
+                cambresultkey = "total" if k == "Cl" else "lensed_scalar"
                 self.collectors[k] = Collector(
                     method=CAMBdata.get_cmb_power_spectra,
                     kwargs={
                         "spectra": list(set(
                             (self.collectors[k].kwargs.get("spectra", [])
                              if k in self.collectors else []) +
-                            ["total"] + (["lens_potential"] if needs_lensing else []))),
+                            [cambresultkey] + (["lens_potential"] if needs_lensing else []))),
                         "raw_cl": False})
                 if "pp" in cls and self.extra_args.get(
                         "lens_potential_accuracy") is None:
@@ -699,9 +700,15 @@ class CAMB(BoltzmannBase):
                                             " in the CAMB interface", p)
         return derived
 
-    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True):
-        which_key = "Cl" if lensed else "unlensed_Cl"
-        which_result = "total" if lensed else "unlensed_total"
+    def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True,
+                scalar=False):
+        if scalar:
+            assert lensed, "Only Implemented for lensed"
+            which_key = "lensed_scal_Cl"
+            which_result = "lensed_scalar"
+        else:
+            which_key = "Cl" if lensed else "unlensed_Cl"
+            which_result = "total" if lensed else "unlensed_total"
         which_error = "lensed" if lensed else "unlensed"
         try:
             cl_camb = self.current_state[which_key][which_result].copy()
@@ -742,6 +749,10 @@ class CAMB(BoltzmannBase):
 
     def get_unlensed_Cl(self, ell_factor=False, units="FIRASmuK2"):
         return self._get_Cl(ell_factor=ell_factor, units=units, lensed=False)
+
+    def get_lensed_scal_Cl(self, ell_factor=False, units="FIRASmuK2"):
+        return self._get_Cl(ell_factor=ell_factor, units=units, lensed=True,
+                            scalar=True)
 
     def _get_z_dependent(self, quantity, z, _pool=None):
         # Partially reimplemented because of sigma8_z, etc, use different pool
