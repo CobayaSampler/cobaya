@@ -69,7 +69,7 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-      python: "3.13-dev"
+      python: "3.12"
 
 
 before_install:
