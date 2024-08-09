@@ -703,7 +703,7 @@ class CAMB(BoltzmannBase):
     def _get_Cl(self, ell_factor=False, units="FIRASmuK2", lensed=True,
                 scalar=False):
         if scalar:
-            assert(lensed == True), "Only Implemented for lensed"
+            assert lensed, "Only Implemented for lensed"
             which_key = "lensed_scal_Cl"
             which_result = "lensed_scalar"
         else:
