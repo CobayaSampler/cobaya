@@ -189,7 +189,7 @@ def run_script(args=None):
                         **trueNone_kwargs)
     parser.add_argument("-P", "--profile",
                         help=("Replaces the sampler in the input and runs a profiling "
-                              "process (incompatible with post-processing)."),
+                              "process (incompatible with post-processing).")),
     parser.add_argument("--allow-changes",
                         help="Allow changing input parameters when resuming "
                              "or minimizing, skipping consistency checks",
