@@ -313,8 +313,8 @@ class BoltzmannBase(Theory):
     @abstract
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
         r"""
-        Returns a dictionary of lensed total CMB power spectra and the lensing potential ``pp``
-        power spectrum.
+        Returns a dictionary of lensed total CMB power spectra and the
+        lensing potential ``pp`` power spectrum.
 
         Set the units with the keyword ``units=number|'muK2'|'K2'|'FIRASmuK2'|'FIRASK2'``.
         The default is ``FIRASmuK2``, which returns CMB :math:`C_\ell`'s in
@@ -326,7 +326,7 @@ class BoltzmannBase(Theory):
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)` (or by :math:`[\ell(\ell+1)]^2/(2\pi)` in the case of
         the lensing potential ``pp`` spectrum, and :math:`[\ell(\ell+1)]^{3/2}/(2\pi)` for
-        the the cross spectra ``tp`` and ``ep``).
+        the cross spectra ``tp`` and ``ep``).
         """
 
     @abstract
@@ -341,7 +341,7 @@ class BoltzmannBase(Theory):
         """
 
     @abstract
-    def get_lensed_scal_Cl(self,  ell_factor=False, units="FIRASmuK2"):
+    def get_lensed_scal_Cl(self, ell_factor=False, units="FIRASmuK2"):
         r"""
         Returns a dictionary of lensed scalar CMB power spectra and the lensing
         potential ``pp`` power spectrum.
@@ -351,7 +351,6 @@ class BoltzmannBase(Theory):
         If ``ell_factor=True`` (default: ``False``), multiplies the spectra by
         :math:`\ell(\ell+1)/(2\pi)`.
         """
-
 
     def get_Hubble(self, z, units="km/s/Mpc"):
         r"""
