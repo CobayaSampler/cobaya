@@ -12,7 +12,7 @@ from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
     get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
 from cobaya.conventions import kinds, cobaya_package, reserved_attributes
-from cobaya.yaml import yaml_load_file, yaml_dump
+from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
 from cobaya.mpi import is_main_process
 
 
@@ -271,12 +271,16 @@ class HasDefaults:
         yaml_text = cls.get_associated_file_content('.yaml')
         options = cls.get_class_options(input_options=input_options)
         if options and yaml_text:
-            log = get_logger(cls.get_qualified_class_name())
-            raise LoggedError(log,
-                              "%s: any class can either have .yaml or class variables "
-                              "but not both (type declarations without values are fine "
-                              "also with yaml file). You have class attributes: %s",
-                              cls.get_qualified_class_name(), list(options))
+            yaml_options = yaml_load(yaml_text)
+            if both := set(yaml_options).intersection(options):
+                raise LoggedError(get_logger(cls.get_qualified_class_name()),
+                                  "%s: class has .yaml and class variables/options "
+                                  "that define the same keys: %s \n"
+                                  "(type declarations without values are fine "
+                                  "with yaml file as well).",
+                                  cls.get_qualified_class_name(), list(both))
+            options |= yaml_options
+            yaml_text = None
         if return_yaml and not yaml_expand_defaults:
             return yaml_text or ""
         this_defaults = yaml_load_file(cls.get_yaml_file(), yaml_text) \
