@@ -185,8 +185,7 @@ class Parameterization(HasLogger):
         # never on output/derived unless constant
         known_input = set(self._input)
         all_input_arguments = set(chain(*self._input_args.values()))
-        bad_input_dependencies = all_input_arguments - known_input
-        if bad_input_dependencies:
+        if bad_input_dependencies := all_input_arguments - known_input:
             raise LoggedError(
                 self.log,
                 "Input parameters defined as functions can only depend on other "
@@ -318,7 +317,7 @@ class Parameterization(HasLogger):
 
         If a dictionary is passed, it checks that it contains all the sampled parameters,
         and just them. This function is aware of known renamings. Returns dict of
-        parameters (model's naming, not remanes) and their values.
+        parameters (model's naming, not renames) and their values.
         """
         if sampled_params is None:  # only works if there are no sampled params
             sampled_params = []
