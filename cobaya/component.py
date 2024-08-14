@@ -167,8 +167,7 @@ class HasDefaults:
         from this class, it will return the result from an inherited class if that
         provides bibtex.
         """
-        filename = cls.__dict__.get('bibtex_file')
-        if filename:
+        if filename := cls.__dict__.get('bibtex_file'):
             bib = cls.get_text_file_content(filename)
         else:
             bib = cls.get_associated_file_content('.bibtex')
@@ -298,6 +297,17 @@ class HasDefaults:
         else:
             return defaults
 
+    # noinspection PyUnusedLocal
+    @classmethod
+    def get_modified_defaults(cls, defaults, input_options=empty_dict):
+        """
+        After defaults dictionary is loaded, you can dynamically modify them here
+        as needed,e.g. to add or remove defaults['params']. Use this when you don't
+        want the inheritance-recursive nature of get_defaults() or don't only
+        want to affect class attributes (like get_class_options() does0.
+        """
+        return defaults
+
     @classmethod
     def get_annotations(cls) -> InfoDict:
         d = {}
@@ -329,6 +339,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         if standalone:
             # TODO: would probably be more natural if defaults were always read here
             default_info = self.get_defaults(input_options=info)
+            default_info = self.get_modified_defaults(default_info, input_options=info)
             default_info.update(info)
             info = default_info
 
@@ -459,8 +470,7 @@ class ComponentCollection(dict, HasLogger):
         self[name] = component
 
     def dump_timing(self):
-        timers = [component for component in self.values() if component.timer]
-        if timers:
+        if timers := [component for component in self.values() if component.timer]:
             sep = "\n   "
             self.log.info(
                 "Average computation time:" + sep + sep.join(

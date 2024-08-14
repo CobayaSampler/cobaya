@@ -378,7 +378,8 @@ class TheoryCollection(ComponentCollection):
                             logger=self.log, component_path=info.get("python_path"))
                     self.add_instance(
                         name, theory_class(
-                            info, packages_path=packages_path, timing=timing, name=name))
+                            info, packages_path=packages_path, timing=timing, name=name,
+                            standalone=False))
 
     def __getattribute__(self, name):
         if not name.startswith('_'):
