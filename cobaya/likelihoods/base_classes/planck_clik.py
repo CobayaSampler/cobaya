@@ -286,7 +286,8 @@ def get_clik_import_path(path, min_version=min_version_clik):
             else:
                 installed_version = "16.0"
     else:
-        installed_version = version.parse(clik_src_path.rstrip(os.sep).split("-")[-1])
+        installed_version = clik_src_path.rstrip(os.sep).split("-")[-1]
+    installed_version = version.parse(installed_version)
     if installed_version < version.parse(min_version):
         raise VersionCheckError(
             f"Installed version of the Planck likelihood code 'clik' ({installed_version})"
