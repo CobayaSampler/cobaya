@@ -177,8 +177,8 @@ class Theory(CobayaComponent):
 
         :return: iterable of parameter names
         """
-        params = getattr(self, "params", None)
-        if params:
+
+        if params := getattr(self, "params", None):
             return [k for k, v in params.items() if
                     hasattr(v, 'get') and v.get('derived') is True]
         else:
