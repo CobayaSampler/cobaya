@@ -1,3 +1,11 @@
+## 3.5.4
+
+- Allow classes to have both yaml and class attributes as long as no duplicate keys
+- Added get_modified_defaults() class method to cobaya components to dynamically set/modify defaults
+
+### Cosmology
+- Option to return lensed scalar Cl's from CAMB (without tensors) (thanks @kimmywu})
+
 ## 3.5.3
 
 - added --allow-changes option to cobaya-run to allow changes in the input file when resuming or minimizing

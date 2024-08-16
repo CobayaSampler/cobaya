@@ -15,7 +15,7 @@ if sys.version_info < (3, 8):
 
 
 __author__ = "Jesus Torrado and Antony Lewis"
-__version__ = "3.5.3"
+__version__ = "3.5.4"
 __obsolete__ = False
 __year__ = "2024"
 __url__ = "https://cobaya.readthedocs.io"
