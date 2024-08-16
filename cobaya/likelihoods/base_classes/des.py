@@ -134,21 +134,26 @@ try:
 except ImportError:
     numba = None
 else:
+    import logging
+    import warnings
+    logging.getLogger('numba').setLevel(logging.ERROR)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
 
-    @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
-    def _get_lensing_dots(wq_b, chis, n_chi, dchis):
-        for i, chi in enumerate(chis):
-            wq_b[i] = np.dot(n_chi[i:], (1 - chi / chis[i:]) * dchis[i:])
+        @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
+        def _get_lensing_dots(wq_b, chis, n_chi, dchis):
+            for i, chi in enumerate(chis):
+                wq_b[i] = np.dot(n_chi[i:], (1 - chi / chis[i:]) * dchis[i:])
 
 
-    @numba.njit("void(float64[:,::1],float64[:,::1],float64[::1],float64)")
-    def _limber_PK_terms(powers, ks, dchifac, kmax):
-        for ix in range(powers.shape[0]):
-            for i in range(powers.shape[1]):
-                if 1e-4 <= ks[ix, i] < kmax:
-                    powers[ix, i] *= dchifac[i]
-                else:
-                    powers[ix, i] = 0
+        @numba.njit("void(float64[:,::1],float64[:,::1],float64[::1],float64)")
+        def _limber_PK_terms(powers, ks, dchifac, kmax):
+            for ix in range(powers.shape[0]):
+                for i in range(powers.shape[1]):
+                    if 1e-4 <= ks[ix, i] < kmax:
+                        powers[ix, i] *= dchifac[i]
+                    else:
+                        powers[ix, i] = 0
 
 
 class DES(DataSetLikelihood):

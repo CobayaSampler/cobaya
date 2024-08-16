@@ -21,7 +21,7 @@ Development flow for contributors
 1. Fork and clone the repo from github.
 2. From its folder, install in editable mode: ``pip install -e .``
 3. Modify stuff.
-4. Test with pytest (first "pip install pytest pytest-forked pytest-cov flaky dill")
+4. Test with pytest (first "pip install pytest pytest-xdist pytest-cov flaky dill")
 5. Make a pull requests and check (about about 15 minutes) if the tests have passed.
 6. Iterate until tests pass, then wait for or request feedback/merge
 

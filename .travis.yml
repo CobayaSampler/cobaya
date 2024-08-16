@@ -98,10 +98,10 @@ before_install:
     conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest;
     source activate test-environment;
     conda install -c conda-forge mpi4py openmpi iminuit;
-    pip install flake8 flaky pytest-forked pytest-cov;
+    pip install flake8 flaky pytest-xdist pytest-cov;
     else
     python -m pip install --upgrade pip setuptools wheel;
-    pip install mpi4py "numpy<2" pytest-forked pytest-cov flaky matplotlib dill coverage flake8 iminuit;
+    pip install mpi4py "numpy<2" pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit;
     fi
   - python --version
 
@@ -112,9 +112,9 @@ script:
   # General tests:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug
-  - coverage run --parallel-mode -m pytest tests/ -k "not cosmo" --skip-not-installed --no-flaky-report
+  - coverage run --parallel-mode -m pytest tests/ -n auto -k "not cosmo" --skip-not-installed --no-flaky-report
   # numba can speed things, but makes for some messy logs
-  # - pip install numba
+  - pip install numba
   # Cosmology tests:
   - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then
@@ -125,7 +125,7 @@ script:
   # mpi tests
   - mpiexec -np 2 --mca orte_base_help_aggregate 0 --mca btl ^openib --oversubscribe coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report ;
   - mkdir covers; mv .coverage.* covers; ls -ltra covers
-  - pytest tests/ --cov -vv -s -k "cosmo" --forked --skip-not-installed --no-flaky-report
+  - pytest tests/ --cov -vv -s -k "cosmo" -n 1 --skip-not-installed --no-flaky-report
   - mv .coverage .coverage.pytest; mv covers/.cov* .
   # Test external cosmological likelihoods
   - pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
