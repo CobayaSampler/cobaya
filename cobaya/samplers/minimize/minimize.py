@@ -316,8 +316,6 @@ class Minimize(Minimizer, CovmatSampler):
                     result = iminuit.minimize(**self.kwargs, method="migrad")
                     if not (success := result.success):
                         self.log.error(result.message)
-                    # if mpi.get_mpi_size() > 1:
-                    #     result.pop("minuit")  # problem with pickle/mpi?
                 else:
                     self.kwargs = {
                         "fun": minuslogp_transf,
