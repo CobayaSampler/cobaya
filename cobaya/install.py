@@ -425,7 +425,7 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
             if not no_progress_bars:
                 bar = tqdm.tqdm(total=size, unit='iB', unit_scale=True, unit_divisor=1024)
             with open(filename_tmp_path, 'wb') as f:
-                for data in req.iter_content(chunk_size=1024):
+                for data in req.iter_content(chunk_size=32768):
                     chunk_size = f.write(data)
                     if not no_progress_bars:
                         bar.update(chunk_size)

@@ -49,8 +49,7 @@ jobs:
       env:
         - GCC_VERSION="ubuntu"
       python: "3.10"
-    - if: branch !~ ^test.*
-      name: "Anaconda: jammy LTS Python 3.11"
+    - name: "Anaconda: jammy LTS Python 3.12"
       dist: jammy
       addons:
         apt:
@@ -60,8 +59,9 @@ jobs:
         - GCC_VERSION="ubuntu"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
-      python: "3.11"
-    - name: "Latest jammy Python 3.12"
+      language: minimal
+    - if: branch !~ ^test.*
+      name: "Latest jammy Python 3.12"
       dist: jammy
       addons:
         apt:
@@ -89,19 +89,20 @@ before_install:
   - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
   # Python requisites
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     bash miniconda.sh -b -p $HOME/miniconda;
     export PATH="$HOME/miniconda/bin:$PATH";
     hash -r;
     conda config --set always_yes yes --set changeps1 no;
     conda info -a;
-    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest;
+    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest pandas;
     source activate test-environment;
     conda install -c conda-forge mpi4py openmpi iminuit;
+    pip install -r requirements.txt;
     pip install flake8 flaky pytest-xdist pytest-cov;
     else
     python -m pip install --upgrade pip setuptools wheel;
-    pip install mpi4py "numpy<2" pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit;
+    pip install mpi4py "numpy<2" pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit numba;
     fi
   - python --version
 
@@ -113,8 +114,6 @@ script:
   - export COBAYA_PACKAGES_PATH="../packages"
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -n auto -k "not cosmo" --skip-not-installed --no-flaky-report
-  # numba can speed things, but makes for some messy logs
-  - pip install numba
   # Cosmology tests:
   - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
   - if [ -n "${CAMB_BRANCH}" ]; then

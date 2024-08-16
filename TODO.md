@@ -5,7 +5,7 @@
 # cosmetic/consistency/speed
 
 ## min/max bounds enforced on derived parameters (more generally, "bounds" as well as priors)
-## make portalocker/numba/dill a requirement?
+## make numba a requirement?
 ## version attribute should be in all components not just theory (samplers can have versions) [done for samplers; missing: likelihoods]
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## dump log info along with each chain file if saving to file (currently in stdout)
