@@ -40,6 +40,10 @@ jobs:
     - if: branch !~ ^test.*
       name: "Typical scenario: latest Ubuntu LTS"
       dist: jammy
+      addons:
+        apt:
+          packages:
+            - gfortran
       install:
         - pip install -r requirements.txt camb
       env:
@@ -62,8 +66,7 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-        - COBAYA_INSTALL_SKIP=planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned
-#        - COBAYA_INSTALL_SKIP="$COBAYA_INSTALL_SKIP,classy"
+        - COBAYA_INSTALL_SKIP="$COBAYA_INSTALL_SKIP,classy"
       python: "3.12"
 
 
@@ -78,7 +81,7 @@ before_install:
     fi
   - which gfortran >/dev/null 2>&1 && gfortran --version || echo "gfortran not installed"
   # Install rest of system requisites
-  - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
+  # - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
   # Python requisites
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
     wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -92,6 +95,7 @@ before_install:
     conda install -c conda-forge mpi4py openmpi iminuit;
     pip install -r requirements.txt flake8 flaky pytest-xdist pytest-cov camb;
     else
+    sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev;
     python -m pip install --upgrade pip setuptools wheel;
     pip install mpi4py pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit numba;
     fi
