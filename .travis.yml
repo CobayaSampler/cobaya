@@ -49,7 +49,7 @@ jobs:
       env:
         - GCC_VERSION="ubuntu"
       python: "3.10"
-    - name: "Anaconda: jammy LTS Python 3.12"
+    - name: "Anaconda: jammy LTS Python"
       dist: jammy
       addons:
         apt:
@@ -81,9 +81,6 @@ before_install:
     ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++;
     export PATH=$PWD/gcc-symlinks:$PATH;
     fi
-  - if [[ "$GCC_VERSION" == "11" ]]; then
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.5;
-    fi
   - gfortran --version
   # Install rest of system requisites
   - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
@@ -95,11 +92,10 @@ before_install:
     hash -r;
     conda config --set always_yes yes --set changeps1 no;
     conda info -a;
-    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest pandas;
+    conda create -q -n test-environment -c $ANACONDA_CHANNEL scipy matplotlib cython PyYAML dill coverage pytest pandas;
     source activate test-environment;
     conda install -c conda-forge mpi4py openmpi iminuit;
-    pip install -r requirements.txt;
-    pip install flake8 flaky pytest-xdist pytest-cov;
+    pip install -r requirements.txt flake8 flaky pytest-xdist pytest-cov camb;
     else
     python -m pip install --upgrade pip setuptools wheel;
     pip install mpi4py "numpy<2" pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit numba;
@@ -115,7 +111,7 @@ script:
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -n auto -k "not cosmo" --skip-not-installed --no-flaky-report
   # Cosmology tests:
-  - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
+  - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug --skip-global
   - if [ -n "${CAMB_BRANCH}" ]; then
     rm -rf $COBAYA_PACKAGES_PATH/code/CAMB ;
     git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
