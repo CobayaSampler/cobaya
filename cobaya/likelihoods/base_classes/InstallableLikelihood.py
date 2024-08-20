@@ -24,20 +24,21 @@ class ChiSquaredFunctionLoader:
     def __init__(self, method_name='_fast_chi_squared'):
         """
         On first use will replace method_name with direct reference to chi2 function
-        :param method_name: name of the property that _fast_chi_square() is assigned to
+        :param method_name: name of the property that chi_squared() is assigned to
         """
         self._method_name = method_name
 
     def __get__(self, instance, owner):
         # delay testing active camb until run time
-        try:
-            from camb.mathutils import chi_squared as fast_chi_squared
-        except ImportError:
-            def fast_chi_squared(covinv, x):
-                return covinv.dot(x).dot(x)
-
-        setattr(instance, self._method_name, fast_chi_squared)
-        return fast_chi_squared
+        from cobaya.functions import numba, chi_squared
+        camb_chi_squared = None
+        if numba is None:
+            try:
+                from camb.mathutils import chi_squared as camb_chi_squared
+            except ImportError:
+                pass
+        setattr(instance, self._method_name, camb_chi_squared or chi_squared)
+        return chi_squared
 
 
 class InstallableLikelihood(Likelihood):

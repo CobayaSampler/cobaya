@@ -533,7 +533,7 @@ def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     """
     if hasattr(packages, "split"):
         packages = [packages]
-    cmd = [sys.executable, '-m', 'pip', 'install']
+    cmd = [sys.executable, '-m', 'pip', 'install', '-q']
     if upgrade:
         cmd += ['--upgrade']
     cmd += list(options)

@@ -777,7 +777,7 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
 
 def load_external_module(module_name=None, path=None, install_path=None, min_version=None,
                          get_import_path=None, reload=False, logger=None,
-                         not_installed_level=None):
+                         not_installed_level=None, default_global=False):
     """
     Tries to load an external module at initialisation, dealing with explicit paths
     and Cobaya's installation path.
@@ -807,12 +807,14 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
     found. If this exception will be handled at a higher level, you may pass
     `not_installed_level='debug'` to prevent printing non-important messages at
     error-level logging.
+
+    If default_global=True, always attempts to load from the global path if not
+    installed at path (e.g. pip install).
     """
     if not logger:
         logger = get_logger(__name__)
     load_kwargs = {"name": module_name, "path": path, "get_import_path": get_import_path,
                    "min_version": min_version, "reload": reload, "logger": logger}
-    default_global = False
     if isinstance(path, str):
         if path.lower() == "global":
             msg_tried = "global import (`path='global'` given)"

@@ -56,6 +56,7 @@ from typing import List, Tuple
 from cobaya.likelihoods.base_classes import DataSetLikelihood
 from cobaya.log import LoggedError
 from cobaya.conventions import Const
+from cobaya.functions import numba
 
 # DES data types
 def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
@@ -129,16 +130,12 @@ def get_def_cuts():  # pragma: no cover
     return ranges
 
 
-try:
-    import numba
-except ImportError:
-    numba = None
-else:
-    import logging
+if numba:
     import warnings
-    logging.getLogger('numba').setLevel(logging.ERROR)
+
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
+
 
         @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
         def _get_lensing_dots(wq_b, chis, n_chi, dchis):

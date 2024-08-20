@@ -8,7 +8,7 @@ env:
   global:
     - COBAYA_INSTALL_SKIP=polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
 
-if: (type = pull_request) OR (branch = master) OR (branch =~ ^test.*) OR (tag IS present)
+if: (type = pull_request) OR (branch = master) OR (branch =~ ^test.*) OR (branch =~ ^alltest.*) OR (tag IS present)
 
 #Large CamSpec folders tend to hang, so exclude non-base likelihoods from cache
 cache:
@@ -21,8 +21,6 @@ cache:
     - /home/travis/build/CosmoPars/packages/data/sn_data
     - /home/travis/build/CosmoPars/packages/data/des_data
     - /home/travis/build/CosmoPars/packages/data/planck_2018_pliklite_native
-    - /home/travis/build/CosmoPars/packages/data/planck_2018_lowE_native
-    - /home/travis/build/CosmoPars/packages/data/planck_2018_lowT_native
 
 # (Pre)Installation
 jobs:
@@ -46,19 +44,18 @@ jobs:
         apt:
           packages:
             - gfortran
+      install:
+        - pip install -r requirements.txt camb
       env:
         - GCC_VERSION="ubuntu"
       python: "3.10"
-    - name: "Anaconda: jammy LTS Python 3.12"
+    - name: "Anaconda: jammy LTS Python (fast; pip CAMB)"
       dist: jammy
-      addons:
-        apt:
-          packages:
-            - gfortran
       env:
         - GCC_VERSION="ubuntu"
         - PYDIST="ANACONDA"
         - ANACONDA_CHANNEL="defaults"
+        - COBAYA_INSTALL_SKIP="$COBAYA_INSTALL_SKIP,classy"
       language: minimal
     - if: branch !~ ^test.*
       name: "Latest jammy Python 3.12"
@@ -69,6 +66,7 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
+        - COBAYA_INSTALL_SKIP="$COBAYA_INSTALL_SKIP,classy"
       python: "3.12"
 
 
@@ -81,12 +79,9 @@ before_install:
     ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++;
     export PATH=$PWD/gcc-symlinks:$PATH;
     fi
-  - if [[ "$GCC_VERSION" == "11" ]]; then
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libgfortran.so.5;
-    fi
-  - gfortran --version
+  - which gfortran >/dev/null 2>&1 && gfortran --version || echo "gfortran not installed"
   # Install rest of system requisites
-  - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
+  # - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
   # Python requisites
   - if [[ "$PYDIST" == "ANACONDA" ]]; then
     wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -95,14 +90,14 @@ before_install:
     hash -r;
     conda config --set always_yes yes --set changeps1 no;
     conda info -a;
-    conda create -q -n test-environment -c $ANACONDA_CHANNEL python=$TRAVIS_PYTHON_VERSION scipy matplotlib cython PyYAML dill coverage pytest pandas;
+    conda create -q -n test-environment -c $ANACONDA_CHANNEL scipy matplotlib cython PyYAML dill coverage pytest pandas;
     source activate test-environment;
     conda install -c conda-forge mpi4py openmpi iminuit;
-    pip install -r requirements.txt;
-    pip install flake8 flaky pytest-xdist pytest-cov;
+    pip install -r requirements.txt flake8 flaky pytest-xdist pytest-cov camb;
     else
     python -m pip install --upgrade pip setuptools wheel;
-    pip install mpi4py "numpy<2" pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit numba;
+    pip install openmpi mpi4py -i https://pypi.anaconda.org/mpi4py/simple;
+    pip install pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit numba;
     fi
   - python --version
 
@@ -115,7 +110,7 @@ script:
   - coverage run --parallel-mode -m cobaya.install polychord --debug
   - coverage run --parallel-mode -m pytest tests/ -n auto -k "not cosmo" --skip-not-installed --no-flaky-report
   # Cosmology tests:
-  - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug
+  - coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug --skip-global
   - if [ -n "${CAMB_BRANCH}" ]; then
     rm -rf $COBAYA_PACKAGES_PATH/code/CAMB ;
     git clone --recursive --depth 1 -b $CAMB_BRANCH https://github.com/cmbant/CAMB $COBAYA_PACKAGES_PATH/code/CAMB ;
@@ -127,7 +122,7 @@ script:
   - pytest tests/ --cov -vv -s -k "cosmo" -n 1 --skip-not-installed --no-flaky-report
   - mv .coverage .coverage.pytest; mv covers/.cov* .
   # Test external cosmological likelihoods
-  - pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
+  #- pip install -e $COBAYA_PACKAGES_PATH/code/CAMB --quiet
   #- git clone --depth=1 https://github.com/CobayaSampler/planck_lensing_external
   #- pip install ./planck_lensing_external --quiet
   #- coverage run --parallel-mode -m unittest plancklensing.tests.test_likes

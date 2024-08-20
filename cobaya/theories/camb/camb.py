@@ -263,7 +263,8 @@ class CAMB(BoltzmannBase):
     def initialize(self):
         """Importing CAMB from the correct path, if given."""
         try:
-            install_path = (lambda p: self.get_path(p) if p else None)(self.packages_path)
+            install_path = self.get_path(self.packages_path) \
+                if self.packages_path else None
             min_version = None if self.ignore_obsolete else self._min_camb_version
             self.camb = load_external_module(
                 "camb", path=self.path, install_path=install_path,
@@ -1017,8 +1018,7 @@ class CambTransfers(HelperTheory):
 
     def must_provide(self, **requirements):
         super().must_provide(**requirements)
-        opts = requirements.get('CAMB_transfers')
-        if opts:
+        if opts := requirements.get('CAMB_transfers'):
             self.non_linear_sources = opts['non_linear']
             self.needs_perts = opts['needs_perts']
         self.cobaya_camb.check_no_repeated_input_extra()
