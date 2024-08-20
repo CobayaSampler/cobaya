@@ -21,8 +21,6 @@ cache:
     - /home/travis/build/CosmoPars/packages/data/sn_data
     - /home/travis/build/CosmoPars/packages/data/des_data
     - /home/travis/build/CosmoPars/packages/data/planck_2018_pliklite_native
-    - /home/travis/build/CosmoPars/packages/data/planck_2018_lowE_native
-    - /home/travis/build/CosmoPars/packages/data/planck_2018_lowT_native
 
 # (Pre)Installation
 jobs:
@@ -42,14 +40,12 @@ jobs:
     - if: branch !~ ^test.*
       name: "Typical scenario: latest Ubuntu LTS"
       dist: jammy
-      addons:
-        apt:
-          packages:
-            - gfortran
+      install:
+        - pip install -r requirements.txt camb
       env:
         - GCC_VERSION="ubuntu"
       python: "3.10"
-    - name: "Anaconda: jammy LTS Python (pip CAMB)"
+    - name: "Anaconda: jammy LTS Python (fast; pip CAMB)"
       dist: jammy
       env:
         - GCC_VERSION="ubuntu"
@@ -66,7 +62,8 @@ jobs:
             - gfortran
       env:
         - GCC_VERSION="ubuntu"
-        - COBAYA_INSTALL_SKIP="$COBAYA_INSTALL_SKIP,classy"
+        - COBAYA_INSTALL_SKIP=planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned
+#        - COBAYA_INSTALL_SKIP="$COBAYA_INSTALL_SKIP,classy"
       python: "3.12"
 
 
@@ -79,7 +76,7 @@ before_install:
     ln -s /usr/bin/g++-$GCC_VERSION gcc-symlinks/g++;
     export PATH=$PWD/gcc-symlinks:$PATH;
     fi
-  - gfortran --version
+  - which gfortran >/dev/null 2>&1 && gfortran --version || echo "gfortran not installed"
   # Install rest of system requisites
   - sudo apt install openmpi-bin openmpi-common libopenmpi-dev libopenblas-dev liblapack-dev
   # Python requisites
