@@ -31,13 +31,13 @@ class ChiSquaredFunctionLoader:
     def __get__(self, instance, owner):
         # delay testing active camb until run time
         from cobaya.functions import numba, chi_squared
+        camb_chi_squared = None
         if numba is None:
             try:
-                from camb.mathutils import chi_squared
+                from camb.mathutils import chi_squared as camb_chi_squared
             except ImportError:
                 pass
-
-        setattr(instance, self._method_name, chi_squared)
+        setattr(instance, self._method_name, camb_chi_squared or chi_squared)
         return chi_squared
 
 
