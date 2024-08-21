@@ -5,7 +5,7 @@ name: Cobaya Tests
 on: [ push, pull_request ]
 
 env:
-  COBAYA_INSTALL_SKIP: polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck,classy
+  COBAYA_INSTALL_SKIP_BASE: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
   COBAYA_PACKAGES_PATH: ../packages
 
 jobs:
@@ -19,30 +19,32 @@ jobs:
           - name: "Anaconda Python (flake8, no numba)"
             os: ubuntu-latest
             pydist: "ANACONDA"
+            cobaya_skip: classy,polychord
           - name: "Latest Python 3.x (with polychord)"
             os: ubuntu-latest
             python-version: 3.x
             mpi: openmpi
-            env:
-              COBAYA_INSTALL_SKIP: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck,classy
-            if: !startsWith(github.ref_name, 'test')
+            cobaya_skip: classy,polychord
           - name: "OS X Python 3.8 (with classy)"
             os: macos-latest
             python-version: 3.8
             mpi: openmpi
-            env:
-              COBAYA_INSTALL_SKIP: polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
-            if: !startsWith(github.ref_name, 'test')
+            cobaya_skip: polychord
           - name: "Windows Python 3.12"
             os: windows-latest
             python-version: 3.12
             mpi: intelmpi
-            if: !startsWith(github.ref_name, 'test')
+            cobaya_skip: classy,polychord
     steps:
+      - name: Set COBAYA_INSTALL_SKIP
+        shell: bash
+        run: echo "COBAYA_INSTALL_SKIP=$COBAYA_INSTALL_SKIP_BASE,${{ matrix.cobaya_skip }}" >> $GITHUB_ENV
+
       - run: ln -s $(which gfortran-14) /usr/local/bin/gfortran
         if: matrix.os == 'macos-latest'
 
-      - run: gfortran --version
+      - run: |
+           gfortran --version
 
       - uses: actions/checkout@v4
         with:
@@ -124,7 +126,7 @@ jobs:
 
 
   deploy:
-    needs: build
+    needs: tests
     runs-on: ubuntu-latest
     if: github.repository_owner == 'CobayaSampler' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:
