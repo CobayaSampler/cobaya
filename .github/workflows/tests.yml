@@ -11,7 +11,7 @@ env:
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
-    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != 'CobayaSampler/cobaya')
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.event.pull_request == null)
     strategy:
       fail-fast: false
       matrix:
@@ -87,15 +87,12 @@ jobs:
           pip install mpi4py -i https://pypi.anaconda.org/mpi4py/simple
 
       #    - name: Cache dependencies
-      #      uses: actions/cache@v2
+      #      uses: actions/cache@v4
       #      with:
       #        path: |
-      #          ${{ github.workspace }}/packages/data/planck_supp_data_and_covmats
-      #          ${{ github.workspace }}/packages/data/bao_data
-      #          ${{ github.workspace }}/packages/data/sn_data
-      #          ${{ github.workspace }}/packages/data/des_data
-      #          ${{ github.workspace }}/packages/data/planck_2018_pliklite_native
-      #        key: ${{ runner.os }}-build-${{ matrix.python-version }}}
+      #          ${{ env.COBAYA_PACKAGES_PATH }}/data/
+      #        key: ${{ env.COBAYA_INSTALL_SKIP }}
+      #       enableCrossOsArchive: true
 
 
       - name: Run cobaya install and tests
