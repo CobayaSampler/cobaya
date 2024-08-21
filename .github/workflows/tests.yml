@@ -2,125 +2,125 @@ name: Cobaya Tests
 
 # for the moment only runs on "action* branches". Coverage/pypi not yet set up.
 
-on:
-  push:
-    branches:
-      - 'action*'
-    tags:
-      - '*'
-  pull_request:
-    branches:
-      - '*'
+on: [ push, pull_request ]
 
 env:
   COBAYA_INSTALL_SKIP: polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck,classy
   COBAYA_PACKAGES_PATH: ../packages
 
 jobs:
-  build:
+  tests:
     runs-on: ${{ matrix.os }}
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != 'CobayaSampler/cobaya')
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: "Anaconda Python (fast; pip CAMB)"
+          - name: "Anaconda Python (flake8, no numba)"
             os: ubuntu-latest
             pydist: "ANACONDA"
-          - name: "Latest Python 3.x"
+          - name: "Latest Python 3.x (with polychord)"
             os: ubuntu-latest
             python-version: 3.x
             mpi: openmpi
             env:
               COBAYA_INSTALL_SKIP: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck,classy
-          - name: "OS X Python 3.8 with classy"
+            if: !startsWith(github.ref_name, 'test')
+          - name: "OS X Python 3.8 (with classy)"
             os: macos-latest
             python-version: 3.8
             mpi: openmpi
             env:
               COBAYA_INSTALL_SKIP: polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
+            if: !startsWith(github.ref_name, 'test')
           - name: "Windows Python 3.12"
             os: windows-latest
             python-version: 3.12
             mpi: intelmpi
+            if: !startsWith(github.ref_name, 'test')
     steps:
-    - run: ln -s $(which gfortran-14) /usr/local/bin/gfortran
-      if: matrix.os == 'macos-latest'
+      - run: ln -s $(which gfortran-14) /usr/local/bin/gfortran
+        if: matrix.os == 'macos-latest'
 
-    - run: gfortran --version
+      - run: gfortran --version
 
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python ${{ matrix.python-version }}
-      if: matrix.pydist != 'ANACONDA'
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        if: matrix.pydist != 'ANACONDA'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Set up Miniconda
-      if: matrix.pydist == 'ANACONDA'
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        auto-activate-base: false
-        activate-environment: tests-environment
-        environment-file: tests-environment.yml
+      - name: Set up Miniconda
+        if: matrix.pydist == 'ANACONDA'
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-activate-base: false
+          activate-environment: tests-environment
+          environment-file: tests-environment.yml
 
-    - name: flake8 Lint
-      if: matrix.pydist == 'ANACONDA'
-      uses: py-actions/flake8@v2
-      with:
-          args: --select=E713,E704,E703,E714,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
-          path: cobaya
-          max-line-length: "90"
+      - name: flake8 Lint
+        if: matrix.pydist == 'ANACONDA'
+        shell: bash -el {0}
+        run: |
+          flake8 cobaya --max-line-length 90 --select=E713,E704,E703,E714,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
 
-    - name: Install mpi
-      if: matrix.pydist != 'ANACONDA'
-      uses: mpi4py/setup-mpi@v1
-      with:
-        mpi: ${{ matrix.mpi }}
+      - name: Install dependencies (pip)
+        if: matrix.pydist != 'ANACONDA'
+        run: |
+          pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit numba camb
 
-#    - name: Cache dependencies
-#      uses: actions/cache@v2
-#      with:
-#        path: |
-#          ${{ github.workspace }}/packages/data/planck_supp_data_and_covmats
-#          ${{ github.workspace }}/packages/data/bao_data
-#          ${{ github.workspace }}/packages/data/sn_data
-#          ${{ github.workspace }}/packages/data/des_data
-#          ${{ github.workspace }}/packages/data/planck_2018_pliklite_native
-#        key: ${{ runner.os }}-build-${{ matrix.python-version }}}
+      - name: Install mpi
+        if: matrix.pydist != 'ANACONDA' && matrix.os != 'windows-latest'
+        uses: mpi4py/setup-mpi@v1
+        with:
+          mpi: ${{ matrix.mpi }}
 
-    - name: Install dependencies (pip)
-      if: matrix.pydist != 'ANACONDA'
-      run: |
-        pip install mpi4py -i https://pypi.anaconda.org/mpi4py/simple
-        pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib dill coverage iminuit numba camb
+      - name: Install mpi4py
+        if: matrix.pydist != 'ANACONDA' && matrix.os != 'windows-latest'
+        run: |
+          pip install mpi4py -i https://pypi.anaconda.org/mpi4py/simple
 
-    - name: Run cobaya install and tests
-      shell: bash -el {0}
-      run: |
-        coverage run --parallel-mode -m cobaya.install polychord --debug
-        coverage run --parallel-mode -m pytest tests/ -n auto -k "not cosmo" --skip-not-installed --no-flaky-report
-        coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug --skip-global
-        pytest tests/ --cov -vv -s -k "cosmo" -n 2 --skip-not-installed --no-flaky-report
+      #    - name: Cache dependencies
+      #      uses: actions/cache@v2
+      #      with:
+      #        path: |
+      #          ${{ github.workspace }}/packages/data/planck_supp_data_and_covmats
+      #          ${{ github.workspace }}/packages/data/bao_data
+      #          ${{ github.workspace }}/packages/data/sn_data
+      #          ${{ github.workspace }}/packages/data/des_data
+      #          ${{ github.workspace }}/packages/data/planck_2018_pliklite_native
+      #        key: ${{ runner.os }}-build-${{ matrix.python-version }}}
 
-    - name: Run MPI tests
-      shell: bash -el {0}
-      run: |
-        mpiexec -np 2 coverage run --parallel-mode -m pytest -x -m mpi tests/ --no-flaky-report
 
-    - name: Run external likelihood tests
-      shell: bash -el {0}
-      run: |
-        git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
-        pip install ./example_external_likelihood --quiet
-        coverage run --parallel-mode -m unittest test_package.tests.test
+      - name: Run cobaya install and tests
+        shell: bash -el {0}
+        run: |
+          coverage run --parallel-mode -m cobaya.install polychord --debug
+          coverage run --parallel-mode -m pytest tests/ -n auto -k "not cosmo" --skip-not-installed --no-flaky-report
+          coverage run --parallel-mode -m cobaya.install cosmo-tests --no-progress-bars --debug --skip-global
+          pytest tests/ --cov -vv -s -k "cosmo" -n 2 --skip-not-installed --no-flaky-report
 
-#    - name: Upload coverage to Codecov
-#      uses: codecov/codecov-action@v4
-#      with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run MPI tests
+        if: matrix.os != 'windows-latest'
+        shell: bash -el {0}
+        run: |
+          mpiexec -np 2 --oversubscribe coverage run --parallel-mode -m pytest -m mpi tests/ --no-flaky-report
+
+      - name: Run external likelihood tests
+        shell: bash -el {0}
+        run: |
+          git clone --depth=1 https://github.com/CobayaSampler/example_external_likelihood
+          pip install ./example_external_likelihood --quiet
+          coverage run --parallel-mode -m unittest test_package.tests.test
+
+  #    - name: Upload coverage to Codecov
+  #      uses: codecov/codecov-action@v4
+  #      with:
+  #          token: ${{ secrets.CODECOV_TOKEN }}
 
 
   deploy:
@@ -131,18 +131,18 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
 
-    - name: Install dependencies
-      run: |
-        python -m pip install -U pip
-        python -m pip install -U build twine
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -U build twine
 
-    - name: Build package
-      run: python -m build --sdist
+      - name: Build package
+        run: python -m build --sdist
 
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1

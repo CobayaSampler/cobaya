@@ -9,7 +9,7 @@ from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
 from cobaya.typing import InputDict, SamplersDict
 from cobaya.tools import KL_norm
 from cobaya.run import run
-from .common import process_packages_path, is_travis
+from .common import process_packages_path, is_ci_test
 from .conftest import install_test_wrapper
 from cobaya import mpi
 
@@ -96,7 +96,7 @@ def body_of_sampler_test(info_sampler: SamplersDict, dimension=1, n_modes=1, tmp
                 collection["sample"].to_getdist(label="cluster %d" % (i + 1))
                 for i, collection in products["clusters"].items()]
         # Plots!
-        if do_plots and not is_travis():
+        if do_plots and not is_ci_test():
             try:
                 import getdist.plots as gdplots
                 from getdist.gaussian_mixtures import MixtureND
