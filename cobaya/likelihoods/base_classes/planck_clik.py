@@ -235,7 +235,7 @@ class PlanckClik(Likelihood):
 common_path = "planck"
 
 # To see full clik build output even if installs OK (e.g. to check warnings)
-_clik_verbose = any((s in os.getenv('TRAVIS_COMMIT_MESSAGE', ''))
+_clik_verbose = any((s in os.getenv('COMMIT_MESSAGE', ''))
                     for s in ["clik", "planck"])
 # Don't try again to install clik if it failed for a previous likelihood
 _clik_install_failed = False
