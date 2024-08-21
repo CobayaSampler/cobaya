@@ -1,4 +1,4 @@
-name: CI
+name: Cobaya Tests
 
 # for the moment only runs on "action* branches". Coverage/pypi not yet set up.
 
@@ -23,17 +23,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "Anaconda: jammy LTS Python (fast; pip CAMB)"
+          - name: "Anaconda Python (fast; pip CAMB)"
             os: ubuntu-latest
             pydist: "ANACONDA"
-          - name: "Latest Python 3.12"
+          - name: "Latest Python 3.x"
             os: ubuntu-latest
-            python-version: 3.12
+            python-version: 3.x
             mpi: openmpi
-          - name: "OS X Python 3.8"
+            env:
+              COBAYA_INSTALL_SKIP: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck,classy
+          - name: "OS X Python 3.8 with classy"
             os: macos-latest
             python-version: 3.8
             mpi: openmpi
+            env:
+              COBAYA_INSTALL_SKIP: polychord,planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
           - name: "Windows Python 3.12"
             os: windows-latest
             python-version: 3.12
@@ -62,6 +66,14 @@ jobs:
         activate-environment: tests-environment
         environment-file: tests-environment.yml
 
+    - name: flake8 Lint
+      if: matrix.pydist == 'ANACONDA'
+      uses: py-actions/flake8@v2
+      with:
+          args: --select=E713,E704,E703,E714,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
+          path: cobaya
+          max-line-length: "90"
+
     - name: Install mpi
       if: matrix.pydist != 'ANACONDA'
       uses: mpi4py/setup-mpi@v1
@@ -83,12 +95,7 @@ jobs:
       if: matrix.pydist != 'ANACONDA'
       run: |
         pip install mpi4py -i https://pypi.anaconda.org/mpi4py/simple
-        pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib dill coverage flake8 iminuit numba camb
-
-    - name: Run flake8
-      shell: bash -el {0}
-      run: |
-        flake8 cobaya --select=E713,E704,E703,E714,E741,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
+        pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib dill coverage iminuit numba camb
 
     - name: Run cobaya install and tests
       shell: bash -el {0}
@@ -111,6 +118,31 @@ jobs:
         coverage run --parallel-mode -m unittest test_package.tests.test
 
 #    - name: Upload coverage to Codecov
-#      uses: codecov/codecov-action@v1
+#      uses: codecov/codecov-action@v4
+#      with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
 
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'CobayaSampler' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+
+    - name: Install dependencies
+      run: |
+        python -m pip install -U pip
+        python -m pip install -U build twine
+
+    - name: Build package
+      run: python -m build --sdist
+
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@release/v1
