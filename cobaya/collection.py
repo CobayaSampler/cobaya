@@ -96,7 +96,7 @@ def compute_temperature(logpost, logprior, loglike, check=True, extra_tolerance=
     """
     Returns the temperature of a sample.
 
-    If ``check=True`` and the log-probabilites passed are arrays, checks consistency
+    If ``check=True`` and the log-probabilities passed are arrays, checks consistency
     of the sample temperature, and raises ``AssertionError`` if inconsistent.
     """
     temp = (logprior + loglike) / logpost
@@ -286,8 +286,7 @@ class SampleCollection(BaseCollection):
             self.reset()
         # If loaded, check sample weights, consistent logp sums,
         # and temperature (ignores the given one)
-        samples_loaded = len(self) > 0
-        if samples_loaded:
+        if len(self) > 0:
             try:
                 try:
                     self.temperature = self._check_logps(extra_tolerance=False)
@@ -497,10 +496,11 @@ class SampleCollection(BaseCollection):
             temperature = compute_temperature(
                 -self["minuslogpost"], -self["minuslogprior"], -self["chi2"] * 0.5,
                 check=True, extra_tolerance=extra_tolerance)
-        except AssertionError as excpt:
+        except AssertionError:
             raise LoggedError(
-                self.log, "The sample seems to have an inconsistent temperature.") \
-                from excpt
+                self.log, "The sample seems to have an inconsistent temperature.  "
+                          "This could be due to input file truncation on the last line "
+                          "due to crash/being killed before complete.")
         if not temperature_only:
             tols = {
                 "rtol": 1e-4 * (10 if extra_tolerance else 1),
@@ -1181,6 +1181,7 @@ class SampleCollection(BaseCollection):
         with open(self.file_name, "a", encoding="utf-8") as out:
             np.savetxt(out, self.data[n_min:n_max].to_numpy(dtype=np.float64),
                        fmt=self._numpy_fmts)
+            os.fsync(out.fileno())
 
     def _delete__txt(self):
         try:
