@@ -462,7 +462,7 @@ def truncate_to_end_line(file_name):
         # Find the last complete line
         inp.seek(0, 2)  # Go to the end of the file
         pos = inp.tell() - 1
-        while pos > 0 and inp.read(1) != "\n":
+        while pos > 0 and inp.read(1) != b"\n":
             pos -= 1
             inp.seek(pos, 0)
         if pos > 0:
