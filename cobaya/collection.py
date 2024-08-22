@@ -496,11 +496,11 @@ class SampleCollection(BaseCollection):
             temperature = compute_temperature(
                 -self["minuslogpost"], -self["minuslogprior"], -self["chi2"] * 0.5,
                 check=True, extra_tolerance=extra_tolerance)
-        except AssertionError:
+        except AssertionError as excpt:
             raise LoggedError(
                 self.log, "The sample seems to have an inconsistent temperature.  "
                           "This could be due to input file truncation on the last line "
-                          "due to crash/being killed before complete.")
+                          "due to crash/being killed before complete.") from excpt
         if not temperature_only:
             tols = {
                 "rtol": 1e-4 * (10 if extra_tolerance else 1),
