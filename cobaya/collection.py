@@ -1181,7 +1181,6 @@ class SampleCollection(BaseCollection):
         with open(self.file_name, "a", encoding="utf-8") as out:
             np.savetxt(out, self.data[n_min:n_max].to_numpy(dtype=np.float64),
                        fmt=self._numpy_fmts)
-            os.fsync(out.fileno())
 
     def _delete__txt(self):
         try:
