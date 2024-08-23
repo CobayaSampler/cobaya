@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import scipy
 
 try:
     import numba
@@ -12,9 +13,6 @@ except (ImportError, SystemError):
     from scipy.stats import special_ortho_group
 
     random_SO_N = special_ortho_group.rvs
-
-    _fast_chi_squared = None
-    _sym_chi_squared = None
 
 else:
     import warnings
@@ -65,25 +63,29 @@ else:
             H[:, :] = (D * H.T).T
 
 
-        @numba.njit(parallel=True)
-        def _fast_chi_squared(c_inv, delta):
-            """
-            Calculate chi-squared from inverse matrix and delta vector,
-            using symmetry. Note parallel is slower for small sizes.
-
-            """
-            n = delta.shape[0]
-            chi2 = 0.0
-
-            for j in numba.prange(n):
-                z_temp = np.dot(c_inv[j, j + 1:], delta[j + 1:])
-                chi2 += (2 * z_temp + c_inv[j, j] * delta[j]) * delta[j]
-
-            return chi2
-
-
 def chi_squared(c_inv, delta):
-    if len(delta) < 1500 or not _fast_chi_squared:
+    """
+    Compute chi squared, i.e. delta.T @ c_inv @ delta
+
+    :param c_inv: symmetric positive definite inverse covariance matrix
+    :param delta: 1D array
+    :return: delta.T @ c_inv @ delta
+    """
+    if len(delta) < 1500:
         return c_inv.dot(delta).dot(delta)
     else:
-        return _fast_chi_squared(c_inv, delta)
+        # use symmetry
+        return scipy.linalg.blas.dsymv(alpha=1.0,
+                                       a=c_inv if np.isfortran(c_inv) else c_inv.T,
+                                       x=delta, lower=0).dot(delta)
+
+
+def inverse_cholesky(cov):
+    """
+    Get inverse of Cholesky decomposition
+
+    :param cov: symmetric positive definite matrix
+    :return: L^{-1} where cov = L L^T
+    """
+    cholesky = np.linalg.cholesky(cov)
+    return scipy.linalg.lapack.dtrtri(cholesky, lower=True)[0]

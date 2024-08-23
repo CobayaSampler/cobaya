@@ -14,8 +14,6 @@ from cobaya.component import ComponentNotInstalledError
 from cobaya.typing import InfoDict
 from cobaya.conventions import packages_path_input
 from .InstallableLikelihood import InstallableLikelihood
-# import _fast_chi_square for backwards compatibility
-from .InstallableLikelihood import ChiSquaredFunctionLoader as _fast_chi_square  # noqa
 
 
 class DataSetLikelihood(InstallableLikelihood):

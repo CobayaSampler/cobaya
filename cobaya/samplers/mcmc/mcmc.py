@@ -24,6 +24,7 @@ from cobaya.typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
+from cobaya.functions import inverse_cholesky
 from cobaya.yaml import yaml_dump_file
 from cobaya.model import LogPosterior
 from cobaya import mpi
@@ -724,7 +725,7 @@ class MCMC(CovmatSampler):
             converged_means = False
             # Cholesky of (normalized) mean of covs and eigvals of Linv*cov_of_means*L
             try:
-                L = np.linalg.cholesky(norm_mean_of_covs)
+                Linv = inverse_cholesky(norm_mean_of_covs)
             except np.linalg.LinAlgError:
                 self.log.warning(
                     "Negative covariance eigenvectors. "
@@ -732,7 +733,6 @@ class MCMC(CovmatSampler):
                     "contain enough information at this point. "
                     "Skipping learning a new covmat for now.")
             else:
-                Linv = np.linalg.inv(L)
                 try:
                     eigvals = np.linalg.eigvalsh(Linv.dot(corr_of_means).dot(Linv.T))
                     success_means = True
