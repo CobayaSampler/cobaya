@@ -16,6 +16,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
 from cobaya.typing import InputDict, Union, Sequence
+from cobaya.functions import inverse_cholesky
 
 derived_suffix = "_derived"
 
@@ -111,7 +112,7 @@ class GaussianMixture(Likelihood):
             self.weights = 1 / len(self.gaussians)
 
         # Prepare the transformation(s) for the derived parameters
-        self.inv_choleskyL = [np.linalg.inv(np.linalg.cholesky(cov)) for cov in self.covs]
+        self.inv_choleskyL = [inverse_cholesky(cov) for cov in self.covs]
 
     def logp(self, **params_values):
         """
