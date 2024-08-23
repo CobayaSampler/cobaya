@@ -20,7 +20,7 @@ from itertools import chain
 import numpy as np
 
 from cobaya.log import LoggedError, HasLogger
-from cobaya.tools import choleskyL
+from cobaya.tools import choleskyL_corr
 from cobaya.functions import random_SO_N
 
 
@@ -217,7 +217,7 @@ class BlockedProposer(HasLogger):
                                         "symmetric square matrix.")
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
-        sigmas_diag, L = choleskyL(propose_matrix_j_sorted, return_scale_free=True)
+        sigmas_diag, L = choleskyL_corr(propose_matrix_j_sorted)
         # Store the basis as transformation matrices
         self.transform = []
         for j_start, bp in zip(self.j_start, self.proposer):

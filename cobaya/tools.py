@@ -610,14 +610,14 @@ def _fast_norm_logpdf(norm_dist):
 
 
 def _KL_norm(m1, S1, m2, S2):
-    """Performs the Guassian KL computation, without input testing."""
+    """Performs the Gaussian KL computation, without input testing."""
     dim = S1.shape[0]
     S2inv = np.linalg.inv(S2)
     return 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
-                  dim + np.log(np.linalg.det(S2) / np.linalg.det(S1)))
+                  dim + np.linalg.slogdet(S2)[1] - np.linalg.slogdet(S1)[1])
 
 
-def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([]), symmetric=False):
+def KL_norm(m1=None, S1=(), m2=None, S2=(), symmetric=False):
     """Kullback-Leibler divergence between 2 gaussians."""
     S1, S2 = [np.atleast_2d(S) for S in [S1, S2]]
     assert S1.shape[0], "Must give at least S1"
@@ -634,37 +634,34 @@ def KL_norm(m1=None, S1=np.array([]), m2=None, S2=np.array([]), symmetric=False)
     return _KL_norm(m1, S1, m2, S2)
 
 
-def choleskyL(M, return_scale_free=False):
+def choleskyL_corr(M):
     r"""
     Gets the Cholesky lower triangular matrix :math:`L` (defined as :math:`M=LL^T`)
-    of a given matrix ``M``.
+    for the matrix ``M``, in the form :math:`L = S L^\prime` where S is diagonal.
 
     Can be used to create an affine transformation that decorrelates a sample
-    :math:`x=\{x_i\}` as :math:`y=Lx`, where :math:`L` is extracted from the
-    covariance of the sample.
+    :math:`x=\{x_i\}` with covariance M, as :math:`x=Ly`,
+    where :math:`L` is extracted from M and y has identity covariance.
 
-    If ``return_scale_free=True`` (default: ``False``), returns a tuple of
-    a matrix :math:`S` containing the square roots of the diagonal of the input matrix
-    (the standard deviations, if a covariance is given), and the scale-free
-    :math:`L^\prime=S^{-1}L`.
+    Returns a tuple of a matrix :math:`S` containing the square roots of the diagonal
+    of the input matrix (the standard deviations, if a covariance is given),
+    and the scale-free :math:`L^\prime=S^{-1}L`.
+    (could just use Cholesky directly for proposal)
     """
     std_diag, corr = cov_to_std_and_corr(M)
-    Lprime = np.linalg.cholesky(corr)
-    if return_scale_free:
-        return std_diag, Lprime
-    else:
-        return np.linalg.inv(std_diag).dot(Lprime)
+    return np.diag(std_diag), np.linalg.cholesky(corr)
 
 
 def cov_to_std_and_corr(cov):
     """
-    Gets the standard deviations (as a diagonal matrix)
+    Gets the standard deviations (as a 1D array
     and the correlation matrix of a covariance matrix.
     """
-    std_diag = np.diag(np.sqrt(np.diag(cov)))
-    invstd_diag = np.linalg.inv(std_diag)
-    corr = invstd_diag.dot(cov).dot(invstd_diag)
-    return std_diag, corr
+    std = np.sqrt(np.diag(cov))
+    inv_std = 1 / std
+    corr = inv_std[:, np.newaxis] * cov * inv_std[np.newaxis, :]
+    np.fill_diagonal(corr, 1.0)
+    return std, corr
 
 
 def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
