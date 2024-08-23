@@ -457,6 +457,19 @@ def read_dnumber(n: Any, dim: int):
     return NumberWithUnits(n, "d", dtype=int, scale=dim).value
 
 
+def truncate_to_end_line(file_name):
+    with open(file_name, "r+b") as inp:
+        # Find the last complete line
+        inp.seek(0, 2)  # Go to the end of the file
+        pos = inp.tell() - 1
+        while pos > 0 and inp.read(1) != b"\n":
+            pos -= 1
+            inp.seek(pos, 0)
+        if pos > 0:
+            inp.seek(pos + 1, 0)
+            inp.truncate()
+
+
 def load_DataFrame(file_name, skip=0, root_file_name=None):
     """
     Loads a `pandas.DataFrame` from a text file
@@ -493,7 +506,17 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
             inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
             skiprows=skip, index_col=False)
 
-        return data
+    if not data.empty:
+        # Check if the last row contains any NaNs
+        if data.iloc[-1].isna().any():
+            log.warning("Last row of %s is incomplete or contains NaNs", file_name)
+            # If the second-to-last row exists and doesn't contain NaNs,
+            # delete the last row assuming this was due to crash on write
+            if len(data) > 1 and not data.iloc[-2].isna().any():
+                data = data.iloc[:-1]
+                log.info(f"Saving {file_name} deleting last (in)complete line")
+                truncate_to_end_line(file_name)
+    return data
 
 
 def prepare_comment(comment):
