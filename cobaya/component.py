@@ -444,9 +444,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         :return: bool
         """
         va, vb = version.parse(version_a), version.parse(version_b)
-        if va >= vb if equal else va > vb:
-            return True
-        return False
+        return va >= vb if equal else va > vb
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self.timer and self.timer.n:
@@ -482,6 +480,7 @@ class ComponentCollection(dict, HasLogger):
     def get_versions(self, add_version_field=False) -> InfoDict:
         """
         Get version dictionary
+
         :return: dictionary of versions for all components
         """
 
@@ -494,6 +493,7 @@ class ComponentCollection(dict, HasLogger):
     def get_speeds(self, ignore_sub=False) -> InfoDict:
         """
         Get speeds dictionary
+
         :return: dictionary of versions for all components
         """
         from cobaya.theory import HelperTheory
@@ -695,8 +695,7 @@ def module_class_for_name(m, name):
     for cls in classes_in_module(m, subclass_of=CobayaComponent):
         if cls.__name__.lower() in valid_names:
             if result is not None:
-                raise ValueError('More than one class with same lowercase name %s',
-                                 name)
+                raise ValueError(f'More than one class with same lowercase name {name}')
             result = cls
     return result
 
