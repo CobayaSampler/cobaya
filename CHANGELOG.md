@@ -1,6 +1,6 @@
 ## 3.5.x
 
-- Detect and fix incomplete last lines when resuming or minimizing from existing runs (#378)
+- Detect and fix incomplete last lines when resuming or minimizing from existing runs (#306, #378)
 - Added functions module and refactored some numerical functions into it
 
 ## 3.5.4
