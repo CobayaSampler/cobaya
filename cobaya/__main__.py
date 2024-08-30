@@ -13,7 +13,7 @@ def run_command():
     prefix = "cobaya-"
     console_scripts = (
         metadata.entry_points().select(group="console_scripts")
-        if sys.version_info > (3, 9)
+        if sys.version_info >= (3, 10)
         else metadata.entry_points()["console_scripts"]
     )
     for script in console_scripts:
