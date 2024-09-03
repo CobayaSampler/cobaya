@@ -412,7 +412,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         return True
 
-    def validate_info(self, k: str, value: Any, annotations: dict):
+    def validate_info(self, name: str, value: Any, annotations: dict):
         """
         Does any validation on parameter k read from an input dictionary or yaml file,
         before setting the corresponding class attribute.
@@ -423,10 +423,44 @@ class CobayaComponent(HasLogger, HasDefaults):
         :param annotations: resolved inherited dictionary of attributes for this class
         """
 
-        # by default just test booleans, e.g. for typos of "false" which evaluate true
-        if annotations.get(k) is bool and value and isinstance(value, str):
-            raise AttributeError("Class '%s' parameter '%s' should be True "
-                                 "or False, got '%s'" % (self, k, value))
+        if name in annotations:
+            expected_type = annotations[name]
+            if expected_type is float:
+                expected_type = Union[int, float]
+            if not self._validate_type(expected_type, value):
+                msg = f"Attribute '{name}' must be of type \
+                        {expected_type}, not {type(value)}"
+                raise TypeError(msg)
+
+    def _validate_type(self, expected_type, value):
+        if hasattr(expected_type, "__origin__"):
+            origin = expected_type.__origin__
+            args = expected_type.__args__
+
+            if origin is Union:
+                return any(self._validate_type(t, value) for t in args)
+            elif origin is Optional:
+                return value is None or self._validate_type(args[0], value)
+            elif origin is list:
+                return all(self._validate_type(args[0], item) for item in value)
+            elif origin is dict:
+                return all(
+                    self._validate_type(args[0], k) and self._validate_type(args[1], v)
+                    for k, v in value.items()
+                )
+            elif origin is tuple:
+                return len(args) == len(value) and all(
+                    self._validate_type(t, v) for t, v in zip(args, value)
+                )
+            else:
+                return isinstance(value, origin)
+        else:
+            return isinstance(value, expected_type)
+
+    def validate_attributes(self, attributes: dict):
+        annotations = self.get_annotations()
+        for name, value in attributes.items():
+            self.validate_info(name, value, annotations)
 
     @classmethod
     def get_kind(cls):
