@@ -5,7 +5,7 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
-from typing import ForwardRef, Optional, Sequence, Union, List, Set
+from typing import ForwardRef, Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
