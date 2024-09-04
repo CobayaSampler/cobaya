@@ -56,11 +56,11 @@ class MCMC(CovmatSampler):
 
     # instance variables from yaml
     burn_in: NumberWithUnits
-    learn_every: NumberWithUnits
-    output_every: NumberWithUnits
+    learn_every: Union[NumberWithUnits, str]
+    output_every: Union[NumberWithUnits, str]
     callback_every: NumberWithUnits
     temperature: float
-    max_tries: NumberWithUnits
+    max_tries: Union[NumberWithUnits, str]
     max_samples: int
     drag: bool
     callback_function: Optional[Callable]

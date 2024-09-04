@@ -589,7 +589,7 @@ class Model(HasLogger):
         return self.logposterior(params_values, make_finite=make_finite,
                                  return_derived=False, cached=cached).logpost
 
-    def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
+    def get_valid_point(self, max_tries: Union[int, str], ignore_fixed_ref: bool = False,
                         logposterior_as_dict: bool = False, random_state=None,
                         ) -> Union[Tuple[np.ndarray, LogPosterior],
     Tuple[np.ndarray, dict]]:
