@@ -55,13 +55,13 @@ class polychord(Sampler):
 
     # variables from yaml
     do_clustering: bool
-    num_repeats: int
+    num_repeats: Union[int, str]
     confidence_for_unbounded: float
     callback_function: Callable
     blocking: Any
     measure_speeds: bool
     oversample_power: float
-    nlive: NumberWithUnits
+    nlive: Union[str, NumberWithUnits]
     path: str
     logzero: float
     max_ndead: int
