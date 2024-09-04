@@ -61,7 +61,7 @@ class polychord(Sampler):
     blocking: Any
     measure_speeds: bool
     oversample_power: float
-    nlive: NumberWithUnits
+    nlive: Union[str, NumberWithUnits]
     path: str
     logzero: float
     max_ndead: int
