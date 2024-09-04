@@ -5,12 +5,12 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
-from typing import Optional, Union, List, Set
+from typing import ForwardRef, Optional, Sequence, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
-    get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
+    get_internal_class_component_name, deepcopy_where_possible, NumberWithUnits, VersionCheckError
 from cobaya.conventions import kinds, cobaya_package, reserved_attributes
 from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
 from cobaya.mpi import is_main_process
@@ -425,36 +425,55 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         if name in annotations:
             expected_type = annotations[name]
-            if expected_type is float:
-                expected_type = Union[int, float]
             if not self._validate_type(expected_type, value):
                 msg = f"Attribute '{name}' must be of type \
-                        {expected_type}, not {type(value)}"
+                        {expected_type}, not {type(value)}(value={value})"
                 raise TypeError(msg)
 
-    def _validate_type(self, expected_type, value):
-        if hasattr(expected_type, "__origin__"):
-            origin = expected_type.__origin__
+    def _validate_composite_type(self, expected_type, value):
+        origin = expected_type.__origin__
+        try: # for Callable and Sequence types, which have no __args__
             args = expected_type.__args__
+        except AttributeError:
+            pass
 
-            if origin is Union:
-                return any(self._validate_type(t, value) for t in args)
-            elif origin is Optional:
-                return value is None or self._validate_type(args[0], value)
-            elif origin is list:
-                return all(self._validate_type(args[0], item) for item in value)
-            elif origin is dict:
-                return all(
-                    self._validate_type(args[0], k) and self._validate_type(args[1], v)
-                    for k, v in value.items()
-                )
-            elif origin is tuple:
-                return len(args) == len(value) and all(
-                    self._validate_type(t, v) for t, v in zip(args, value)
-                )
-            else:
-                return isinstance(value, origin)
+        if origin is Union:
+            return any(self._validate_type(t, value) for t in args)
+        elif origin is Optional:
+            return value is None or self._validate_type(args[0], value)
+        elif origin is list:
+            return all(self._validate_type(args[0], item) for item in value)
+        elif origin is dict:
+            return all(
+                self._validate_type(args[0], k) and self._validate_type(args[1], v)
+                for k, v in value.items()
+            )
+        elif origin is tuple:
+            return len(args) == len(value) and all(
+                self._validate_type(t, v) for t, v in zip(args, value)
+            )
         else:
+            return isinstance(value, origin)
+
+    def _validate_type(self, expected_type, value):
+        if value is None or expected_type is Any: # Any is always valid
+            return True
+
+        if hasattr(expected_type, "__origin__"):
+            return self._validate_composite_type(expected_type, value)
+        else:
+            # Exceptions for types that are not exactly the same
+            if isinstance(expected_type, ForwardRef): # for custom types as ParamDict
+                if "Dict" in expected_type.__forward_arg__:
+                    expected_type = dict
+            if expected_type is NumberWithUnits:
+                return isinstance(value, (int, float))
+            elif expected_type is int: # for numpy integers
+                if value == float('inf'): # for infinite values parsed as floats
+                    return isinstance(value, float)
+                return isinstance(value, int) or "numpy.int" in str(type(value))
+            elif expected_type is float: # for ints that can be floats
+                return isinstance(value, (int, float))
             return isinstance(value, expected_type)
 
     def validate_attributes(self, attributes: dict):
