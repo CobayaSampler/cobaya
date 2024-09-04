@@ -8,7 +8,7 @@ from importlib import import_module, resources
 from typing import ForwardRef, Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
-from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
+from cobaya.typing import Any, InfoDict, InfoDictIn, ParamDict, empty_dict
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
     get_internal_class_component_name, deepcopy_where_possible, NumberWithUnits, VersionCheckError
 from cobaya.conventions import kinds, cobaya_package, reserved_attributes
@@ -466,6 +466,8 @@ class CobayaComponent(HasLogger, HasDefaults):
             if isinstance(expected_type, ForwardRef): # for custom types as ParamDict
                 if "Dict" in expected_type.__forward_arg__:
                     expected_type = dict
+            elif expected_type is ParamDict:
+                return isinstance(value, dict)
             if expected_type is NumberWithUnits:
                 return isinstance(value, (int, float))
             elif expected_type is int: # for numpy integers
