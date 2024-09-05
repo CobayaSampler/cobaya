@@ -331,6 +331,8 @@ class CobayaComponent(HasLogger, HasDefaults):
     _at_resume_prefer_new: List[str] = ["version"]
     _at_resume_prefer_old: List[str] = []
 
+    enforce_types: bool = False
+
     def __init__(self, info: InfoDictIn = empty_dict,
                  name: Optional[str] = None,
                  timing: Optional[bool] = None,
@@ -349,7 +351,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         # set attributes from the info (from yaml file or directly input dictionary)
         annotations = self.get_annotations()
         for k, value in info.items():
-            self.validate_info(k, value, annotations)
+            self.validate_bool(k, value, annotations)
             try:
                 setattr(self, k, value)
             except AttributeError:
@@ -365,6 +367,9 @@ class CobayaComponent(HasLogger, HasDefaults):
                                             "initialize after input and output parameters"
                                             " are set (%s, %s)", self, e)
             raise
+
+        if self.enforce_types:
+            self.validate_attributes()
 
     def set_timing_on(self, on):
         self.timer = Timer() if on else None
@@ -412,7 +417,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         return True
 
-    def validate_info(self, name: str, value: Any, annotations: dict):
+    def validate_bool(self, name: str, value: Any, annotations: dict):
         """
         Does any validation on parameter k read from an input dictionary or yaml file,
         before setting the corresponding class attribute.
@@ -423,11 +428,15 @@ class CobayaComponent(HasLogger, HasDefaults):
         :param annotations: resolved inherited dictionary of attributes for this class
         """
 
+        if annotations.get(name) is bool and value and isinstance(value, str):
+            raise AttributeError("Class '%s' parameter '%s' should be True "
+                                 "or False, got '%s'" % (self, name, value))
+
+    def validate_info(self, name: str, value: Any, annotations: dict):
         if name in annotations:
             expected_type = annotations[name]
             if not self._validate_type(expected_type, value):
-                msg = f"Attribute '{name}' must be of type \
-                        {expected_type}, not {type(value)}(value={value})"
+                msg = f"Attribute '{name}' must be of type {expected_type}, not {type(value)}(value={value})"
                 raise TypeError(msg)
 
     def _validate_composite_type(self, expected_type, value):
@@ -466,7 +475,7 @@ class CobayaComponent(HasLogger, HasDefaults):
             if isinstance(expected_type, ForwardRef): # for custom types as ParamDict
                 if "Dict" in expected_type.__forward_arg__:
                     expected_type = dict
-            elif expected_type is ParamDict:
+            elif expected_type is ParamDict or "ParamDict" == str(expected_type):
                 return isinstance(value, dict)
             if expected_type is NumberWithUnits:
                 return isinstance(value, (int, float))
@@ -478,10 +487,10 @@ class CobayaComponent(HasLogger, HasDefaults):
                 return isinstance(value, (int, float))
             return isinstance(value, expected_type)
 
-    def validate_attributes(self, attributes: dict):
+    def validate_attributes(self):
         annotations = self.get_annotations()
-        for name, value in attributes.items():
-            self.validate_info(name, value, annotations)
+        for name in annotations.keys():
+            self.validate_info(name, getattr(self, name, None), annotations)
 
     @classmethod
     def get_kind(cls):
