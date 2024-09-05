@@ -5,7 +5,7 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
-from typing import ForwardRef, Optional, Union, List, Set
+from typing import ClassVar, ForwardRef, Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Any, InfoDict, InfoDictIn, ParamDict, empty_dict
@@ -461,6 +461,8 @@ class CobayaComponent(HasLogger, HasDefaults):
             return len(args) == len(value) and all(
                 self._validate_type(t, v) for t, v in zip(args, value)
             )
+        elif origin is ClassVar:
+            return self._validate_type(args[0], value)
         else:
             return isinstance(value, origin)
 
