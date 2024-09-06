@@ -278,7 +278,7 @@ class HasDefaults:
                                   "(type declarations without values are fine "
                                   "with yaml file as well).",
                                   cls.get_qualified_class_name(), list(both))
-            options |= yaml_options
+            options.update(yaml_options)
             yaml_text = None
         if return_yaml and not yaml_expand_defaults:
             return yaml_text or ""
