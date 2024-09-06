@@ -444,9 +444,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         :return: bool
         """
         va, vb = version.parse(version_a), version.parse(version_b)
-        if va >= vb if equal else va > vb:
-            return True
-        return False
+        return va >= vb if equal else va > vb
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self.timer and self.timer.n:
@@ -482,6 +480,7 @@ class ComponentCollection(dict, HasLogger):
     def get_versions(self, add_version_field=False) -> InfoDict:
         """
         Get version dictionary
+
         :return: dictionary of versions for all components
         """
 
@@ -494,6 +493,7 @@ class ComponentCollection(dict, HasLogger):
     def get_speeds(self, ignore_sub=False) -> InfoDict:
         """
         Get speeds dictionary
+
         :return: dictionary of versions for all components
         """
         from cobaya.theory import HelperTheory
@@ -695,8 +695,7 @@ def module_class_for_name(m, name):
     for cls in classes_in_module(m, subclass_of=CobayaComponent):
         if cls.__name__.lower() in valid_names:
             if result is not None:
-                raise ValueError('More than one class with same lowercase name %s',
-                                 name)
+                raise ValueError(f'More than one class with same lowercase name {name}')
             result = cls
     return result
 
@@ -777,7 +776,7 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
 
 def load_external_module(module_name=None, path=None, install_path=None, min_version=None,
                          get_import_path=None, reload=False, logger=None,
-                         not_installed_level=None):
+                         not_installed_level=None, default_global=False):
     """
     Tries to load an external module at initialisation, dealing with explicit paths
     and Cobaya's installation path.
@@ -807,12 +806,14 @@ def load_external_module(module_name=None, path=None, install_path=None, min_ver
     found. If this exception will be handled at a higher level, you may pass
     `not_installed_level='debug'` to prevent printing non-important messages at
     error-level logging.
+
+    If default_global=True, always attempts to load from the global path if not
+    installed at path (e.g. pip install).
     """
     if not logger:
         logger = get_logger(__name__)
     load_kwargs = {"name": module_name, "path": path, "get_import_path": get_import_path,
                    "min_version": min_version, "reload": reload, "logger": logger}
-    default_global = False
     if isinstance(path, str):
         if path.lower() == "global":
             msg_tried = "global import (`path='global'` given)"

@@ -16,13 +16,12 @@ radial function mixed with an exponential, which is quite robust to wrong width 
 See https://arxiv.org/abs/1304.4473
 """
 
-import logging
 from itertools import chain
-
 import numpy as np
 
 from cobaya.log import LoggedError, HasLogger
-from cobaya.tools import choleskyL
+from cobaya.tools import choleskyL_corr
+from cobaya.functions import random_SO_N
 
 
 class IndexCycler:
@@ -53,63 +52,6 @@ class CyclicIndexRandomizer(IndexCycler):
         if self.loop_index == 0 and self.n > 2:
             self.indices = self.random_state.permutation(self.sorted_indices)
         return self.indices[self.loop_index]
-
-
-try:
-    import numba
-except (ImportError, SystemError):
-    # SystemError caused usually by incompatible numpy version
-    from scipy.stats import special_ortho_group
-
-    random_SO_N = special_ortho_group.rvs
-    numba = None
-else:
-    import warnings
-
-
-    def random_SO_N(dim, random_state):
-        """
-        Draw random samples from SO(N).
-        Equivalent to scipy function but about 10x faster
-        Parameters
-        ----------
-        dim : integer
-            Dimension of rotation space (N).
-        random_state: generator
-        Returns
-        -------
-        rvs : Random size N-dimensional matrices, dimension (dim, dim)
-
-        """
-        dim = np.int64(dim)
-        H = np.eye(dim)
-        xx = random_state.standard_normal(size=(dim + 2) * (dim - 1) // 2)
-        _rvs(dim, xx, H)
-        return H
-
-
-    logging.getLogger('numba').setLevel(logging.ERROR)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-
-
-        @numba.njit("void(int64,float64[::1],float64[:,::1])")
-        def _rvs(dim, xx, H):
-            D = np.empty((dim,))
-            ix = 0
-            for n in range(dim - 1):
-                x = xx[ix:ix + dim - n]
-                ix += dim - n
-                norm2 = np.dot(x, x)
-                x0 = x[0].item()
-                D[n] = np.sign(x[0]) if x[0] != 0 else 1
-                x[0] += D[n] * np.sqrt(norm2)
-                x /= np.sqrt((norm2 - x0 ** 2 + x[0] ** 2) / 2.)
-                # Householder transformation
-                tmp = np.dot(H[:, n:], x)
-                H[:, n:] -= np.outer(tmp, x)
-            D[-1] = (-1) ** (dim - 1) * D[:-1].prod()
-            H[:, :] = (D * H.T).T
 
 
 class RandDirectionProposer(IndexCycler):
@@ -275,7 +217,7 @@ class BlockedProposer(HasLogger):
                                         "symmetric square matrix.")
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
-        sigmas_diag, L = choleskyL(propose_matrix_j_sorted, return_scale_free=True)
+        sigmas_diag, L = choleskyL_corr(propose_matrix_j_sorted)
         # Store the basis as transformation matrices
         self.transform = []
         for j_start, bp in zip(self.j_start, self.proposer):

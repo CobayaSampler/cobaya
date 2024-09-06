@@ -236,7 +236,7 @@ def _test_overhead_timing(dim=15):
     from cProfile import Profile
     from io import StringIO
     # noinspection PyUnresolvedReferences
-    from cobaya.samplers.mcmc import proposal  # one-time numba compile out of profiling
+    from cobaya.functions import random_SO_N  # one-time numba compile out of profiling
 
     like_test = _make_gaussian_like(dim)
     info: InputDict = {'likelihood': {'like': like_test}, 'debug': False,

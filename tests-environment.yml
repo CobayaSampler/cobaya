@@ -1,0 +1,24 @@
+name: tests-environment
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - scipy
+  - matplotlib
+  - cython
+  - pyyaml
+  - dill
+  - coverage
+  - pytest
+  - pandas
+  - iminuit
+  - mpi4py
+  - openmpi
+  - pip
+  - pip:
+    - flake8
+    - flaky
+    - pytest-xdist
+    - pytest-cov
+    - camb
+    - -r requirements.txt

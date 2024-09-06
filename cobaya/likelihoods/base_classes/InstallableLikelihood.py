@@ -17,27 +17,7 @@ from cobaya.log import get_logger
 from cobaya.install import _version_filename
 from cobaya.component import ComponentNotInstalledError
 from cobaya.tools import VersionCheckError, resolve_packages_path
-
-
-class ChiSquaredFunctionLoader:
-
-    def __init__(self, method_name='_fast_chi_squared'):
-        """
-        On first use will replace method_name with direct reference to chi2 function
-        :param method_name: name of the property that _fast_chi_square() is assigned to
-        """
-        self._method_name = method_name
-
-    def __get__(self, instance, owner):
-        # delay testing active camb until run time
-        try:
-            from camb.mathutils import chi_squared as fast_chi_squared
-        except ImportError:
-            def fast_chi_squared(covinv, x):
-                return covinv.dot(x).dot(x)
-
-        setattr(instance, self._method_name, fast_chi_squared)
-        return fast_chi_squared
+from cobaya.functions import chi_squared
 
 
 class InstallableLikelihood(Likelihood):
@@ -49,7 +29,7 @@ class InstallableLikelihood(Likelihood):
 
     # fast convenience function, to get chi-squared (exploiting symmetry); can call
     # self._fast_chi_squared(cov_inv, delta)
-    _fast_chi_squared = ChiSquaredFunctionLoader()
+    _fast_chi_squared = staticmethod(chi_squared)
 
     def __init__(self, *args, **kwargs):
         # Ensure check for install and version errors

@@ -1,3 +1,8 @@
+## 3.5.x
+
+- Detect and fix incomplete last lines when resuming or minimizing from existing runs (#306, #378)
+- Added functions module and refactored some numerical functions into it
+
 ## 3.5.4
 
 - Allow classes to have both yaml and class attributes as long as no duplicate keys

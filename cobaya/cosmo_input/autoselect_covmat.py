@@ -205,7 +205,7 @@ def get_best_covmat_ext(covmat_dirs, params_info, likelihoods_info,
     best_p_l = get_best_score(best_p, score_likes)
     if is_debug(log):
         log.debug("Subset based on params + likes:\n - " +
-                  "\n - ".join([b["name"] for b in best_p_l]))
+                  "\n - ".join([b["name"] for b in best_p_l.values()]))
 
     if key_tuple:
         def score_left_params(_key, _covmat):

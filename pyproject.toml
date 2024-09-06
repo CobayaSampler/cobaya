@@ -36,7 +36,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-forked", "flaky", "mpi4py", "iminuit"]
+test = ["pytest", "pytest-xdist", "flaky", "mpi4py", "iminuit"]
+speed = ["numba", "mpi4py"]
 gui = ["pyside6", "matplotlib"]
 docs = [
     "sphinx", "sphinx_rtd_theme>=1.0", "sphinxcontrib-jquery",
