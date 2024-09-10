@@ -1,6 +1,6 @@
 """General test for types of components."""
 
-from typing import Any, ClassVar, Dict, List, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 import numpy as np
 import pytest
 
@@ -13,16 +13,17 @@ from cobaya.run import run
 
 class GenericLike(Likelihood):
     any: Any
-    none: int = None
-    test_numpy_int: int = np.int64(1)
-
-    params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
-    paramdict_params: ParamDict = {"c": [0.0, 1.0]}
+    classvar: ClassVar[int] = 1
     forwardref_params: "ParamDict" = {"d": [0.0, 1.0]}
-    tuple_params: Tuple[float, float] = (0.0, 1.0)
+    infinity: int = float("inf")
     mean: NumberWithUnits = 1
     noise: float = 0
-    infinity: int = float("inf")
+    none: int = None
+    numpy_int: int = np.int64(1)
+    optional: Optional[int] = None
+    paramdict_params: ParamDict = {"c": [0.0, 1.0]}
+    params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
+    tuple_params: Tuple[float, float] = (0.0, 1.0)
 
     enforce_types = True
 
@@ -45,33 +46,34 @@ def test_sampler_types():
 
 class GenericComponent(CobayaComponent):
     any: Any
-    none: int = None
-    numpy_int: int = np.int64(1)
-
-    params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
-    paramdict_params: ParamDict = {"c": [0.0, 1.0]}
+    classvar: ClassVar[int] = 1
     forwardref_params: "ParamDict" = {"d": [0.0, 1.0]}
-    tuple_params: Tuple[float, float] = (0.0, 1.0)
+    infinity: int = float("inf")
     mean: NumberWithUnits = 1
     noise: float = 0
-    infinity: int = float("inf")
-    classvar: ClassVar[int] = 1
+    none: int = None
+    numpy_int: int = np.int64(1)
+    optional: Optional[int] = None
+    paramdict_params: ParamDict = {"c": [0.0, 1.0]}
+    params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
+    tuple_params: Tuple[float, float] = (0.0, 1.0)
 
     enforce_types = True
 
     def __init__(
         self,
         any,
-        none,
-        numpy_int,
-        params,
-        paramdict_params,
+        classvar,
         forwardref_params,
-        tuple_params,
+        infinity,
         mean,
         noise,
-        infinity,
-        classvar,
+        none,
+        numpy_int,
+        optional,
+        paramdict_params,
+        params,
+        tuple_params,
     ):
         if self.enforce_types:
             super().validate_attributes()
@@ -80,35 +82,37 @@ class GenericComponent(CobayaComponent):
 def test_component_types():
     correct_kwargs = {
         "any": 1,
-        "none": None,
-        "numpy_int": 1,
-        "params": {"a": [0.0, 1.0], "b": [0, 1]},
-        "paramdict_params": {"c": [0.0, 1.0]},
+        "classvar": 1,
         "forwardref_params": {"d": [0.0, 1.0]},
-        "tuple_params": (0.0, 1.0),
+        "infinity": float("inf"),
         "mean": 1,
         "noise": 0,
-        "infinity": float("inf"),
-        "classvar": 1,
+        "none": None,
+        "numpy_int": 1,
+        "optional": 3,
+        "paramdict_params": {"c": [0.0, 1.0]},
+        "params": {"a": [0.0, 1.0], "b": [0, 1]},
+        "tuple_params": (0.0, 1.0),
     }
     _ = GenericComponent(**correct_kwargs)
 
     wrong_cases = [
         {"any": "not_an_int"},
+        {"classvar": "not_an_int"},
+        {"forwardref_params": "not_a_paramdict"},
+        {"infinity": "not_an_int"},
+        {"mean": "not_a_numberwithunits"},
+        {"noise": "not_a_float"},
         {"none": "not_a_none"},
         {"numpy_int": "not_an_int"},
+        {"paramdict_params": "not_a_paramdict"},
         {"params": "not_a_dict"},
         {"params": {1: [0.0, 1.0]}},
         {"params": {"a": "not_a_list"}},
         {"params": {"a": [0.0, "not_a_float"]}},
-        {"paramdict_params": "not_a_paramdict"},
-        {"forwardref_params": "not_a_paramdict"},
+        {"optional": "not_an_int"},
         {"tuple_params": "not_a_tuple"},
         {"tuple_params": (0.0, "not_a_float")},
-        {"mean": "not_a_numberwithunits"},
-        {"noise": "not_a_float"},
-        {"infinity": "not_an_int"},
-        {"classvar": "not_an_int"},
     ]
     for case in wrong_cases:
         with pytest.raises(TypeError):
