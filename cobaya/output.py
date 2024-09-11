@@ -376,7 +376,8 @@ class Output(HasLogger, OutputReadOnly):
         self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
                       self.folder, self.prefix)
         self._resuming = False
-        if os.path.isfile(self.file_updated):
+        self._has_old_updated_info = os.path.isfile(self.file_updated)
+        if self._has_old_updated_info:
             self.log.info(
                 "Found existing info files with the requested output prefix: '%s'",
                 prefix)
@@ -388,6 +389,11 @@ class Output(HasLogger, OutputReadOnly):
                 # Only in this case we can be sure that we are actually resuming
                 self._resuming = True
                 self.log.info("Let's try to resume/load.")
+            else:
+                self.log.debug(
+                    "There was old updated info, but no resume or force requested. "
+                    "Behavior will be handled by sampler."
+                )
 
     @mpi.root_only
     def create_folder(self, folder):
