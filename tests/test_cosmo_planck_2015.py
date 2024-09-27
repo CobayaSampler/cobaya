@@ -4,7 +4,7 @@ from copy import deepcopy
 from .common_cosmo import body_of_test
 from cobaya.cosmo_input import planck_precision
 
-# Generating plots in Travis
+# Generating plots in tests
 import matplotlib
 
 matplotlib.use('agg')

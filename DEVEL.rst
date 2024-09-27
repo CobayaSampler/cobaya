@@ -10,7 +10,7 @@ This document gathers some notes about the development flow, release checklist, 
 ``git`` development model
 -------------------------
 
-* Non-breaking travis-passing latest changes and fixes are in master
+* Non-breaking test-passing latest changes and fixes are in master
 * Development that may break tests is done in temp branches or forks and merged to master once OK
 * Breaking changes developed in separate branches, and merged when releases updated
 * Releases are branched out, and only critical bug fixes are pushed onto them.
@@ -45,7 +45,7 @@ can check most formatting and static errors on the command line using::
 Release checklist
 -----------------
 
-+ Make sure all tests pass in Travis (or the package won't be pushed to PyPI).
++ Make sure all tests pass on GitHub Actions (or the package won't be pushed to PyPI).
 + Make sure everything relevant has been added to the Changelog.
 + Delete old deprecation notices (>=2 versions before)
 + Bump version number in ``__init__.py`` and ``CHANGELOG.md`` (also date)

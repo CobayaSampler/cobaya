@@ -291,9 +291,9 @@
 - Added new fast but more realistic running, resuming and post tests with and without mpi
 - Fixed some randomized test inputs for more reliable running
 - drag: True running test
-- Coverage reporting added to Travis
+- Coverage reporting added
 - More useful traceback and console log when error raised running pytest
-- added COBAYA_DEBUG env variable that can be set to force debug output (e.g. set in travis for failed build rerun)
+- added COBAYA_DEBUG env variable that can be set to force debug output (e.g. set in tests for failed build rerun)
 
 ## 3.0.4 – 2021-03-10
 

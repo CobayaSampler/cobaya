@@ -4,8 +4,8 @@ from io import StringIO
 from contextlib import contextmanager
 
 
-def is_travis():
-    return os.environ.get('TRAVIS') == 'true'
+def is_ci_test():
+    return os.environ.get('GITHUB_ACTIONS') == 'true'
 
 
 def process_packages_path(packages_path) -> str:
