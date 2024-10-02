@@ -25,7 +25,7 @@ class GenericLike(Likelihood):
     params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
     tuple_params: Tuple[float, float] = (0.0, 1.0)
 
-    enforce_types = True
+    _enforce_types = True
 
     def logp(self, **params_values):
         return 1
@@ -34,7 +34,7 @@ class GenericLike(Likelihood):
 def test_sampler_types():
     original_info: InputDict = {
         "likelihood": {"like": GenericLike},
-        "sampler": {"mcmc": {"max_samples": 1, "enforce_types": True}},
+        "sampler": {"mcmc": {"max_samples": 1}},
     }
     _ = run(original_info)
 
@@ -57,7 +57,7 @@ class GenericComponent(CobayaComponent):
     params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
     tuple_params: Tuple[float, float] = (0.0, 1.0)
 
-    enforce_types = True
+    _enforce_types = True
 
     def __init__(
         self,
@@ -73,7 +73,7 @@ class GenericComponent(CobayaComponent):
         params,
         tuple_params,
     ):
-        if self.enforce_types:
+        if self._enforce_types:
             super().validate_attributes()
 
 

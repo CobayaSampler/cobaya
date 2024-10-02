@@ -332,7 +332,7 @@ class CobayaComponent(HasLogger, HasDefaults):
     _at_resume_prefer_new: List[str] = ["version"]
     _at_resume_prefer_old: List[str] = []
 
-    enforce_types: bool = False
+    _enforce_types: bool = False
 
     def __init__(self, info: InfoDictIn = empty_dict,
                  name: Optional[str] = None,
@@ -369,7 +369,7 @@ class CobayaComponent(HasLogger, HasDefaults):
                                             " are set (%s, %s)", self, e)
             raise
 
-        if self.enforce_types:
+        if self._enforce_types:
             self.validate_attributes()
 
     def set_timing_on(self, on):
