@@ -475,9 +475,6 @@ class CobayaComponent(HasLogger, HasDefaults):
             return self._validate_composite_type(expected_type, value)
         else:
             # Exceptions for some types
-            # if isinstance(expected_type, ForwardRef): # for custom types as ParamDict
-            #     if "Dict" in expected_type.__forward_arg__:
-            #         expected_type = dict
             if expected_type is ParamDict:
                 return isinstance(value, dict)
             elif expected_type is int:
