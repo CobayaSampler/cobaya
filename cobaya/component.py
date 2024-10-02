@@ -5,6 +5,7 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
+from numbers import Integral, Real
 from typing import ClassVar, ForwardRef, Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
@@ -479,14 +480,14 @@ class CobayaComponent(HasLogger, HasDefaults):
             #         expected_type = dict
             if expected_type is ParamDict:
                 return isinstance(value, dict)
-            if expected_type is NumberWithUnits:
-                return isinstance(value, (int, float))
-            elif expected_type is int: # for numpy integers
+            elif expected_type is int:
                 if value == float('inf'): # for infinite values parsed as floats
                     return isinstance(value, float)
-                return isinstance(value, int) or "numpy.int" in str(type(value))
-            elif expected_type is float: # for ints that can be floats
-                return isinstance(value, (int, float))
+                return isinstance(value, Integral)
+            elif expected_type is float:
+                return isinstance(value, Real)
+            elif expected_type is NumberWithUnits:
+                return isinstance(value, Real)
             return isinstance(value, expected_type)
 
     def validate_attributes(self):
