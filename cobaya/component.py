@@ -5,12 +5,13 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
-from typing import Optional, Union, List, Set
+from numbers import Integral, Real
+from typing import ClassVar, ForwardRef, Optional, Union, List, Set
 
 from cobaya.log import HasLogger, LoggedError, get_logger
-from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
+from cobaya.typing import Any, InfoDict, InfoDictIn, ParamDict, empty_dict
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
-    get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
+    get_internal_class_component_name, deepcopy_where_possible, NumberWithUnits, VersionCheckError
 from cobaya.conventions import kinds, cobaya_package, reserved_attributes
 from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
 from cobaya.mpi import is_main_process
@@ -278,7 +279,7 @@ class HasDefaults:
                                   "(type declarations without values are fine "
                                   "with yaml file as well).",
                                   cls.get_qualified_class_name(), list(both))
-            options |= yaml_options
+            options.update(yaml_options)
             yaml_text = None
         if return_yaml and not yaml_expand_defaults:
             return yaml_text or ""
@@ -331,6 +332,8 @@ class CobayaComponent(HasLogger, HasDefaults):
     _at_resume_prefer_new: List[str] = ["version"]
     _at_resume_prefer_old: List[str] = []
 
+    _enforce_types: bool = False
+
     def __init__(self, info: InfoDictIn = empty_dict,
                  name: Optional[str] = None,
                  timing: Optional[bool] = None,
@@ -349,7 +352,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         # set attributes from the info (from yaml file or directly input dictionary)
         annotations = self.get_annotations()
         for k, value in info.items():
-            self.validate_info(k, value, annotations)
+            self.validate_bool(k, value, annotations)
             try:
                 setattr(self, k, value)
             except AttributeError:
@@ -365,6 +368,9 @@ class CobayaComponent(HasLogger, HasDefaults):
                                             "initialize after input and output parameters"
                                             " are set (%s, %s)", self, e)
             raise
+
+        if self._enforce_types:
+            self.validate_attributes()
 
     def set_timing_on(self, on):
         self.timer = Timer() if on else None
@@ -412,7 +418,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         return True
 
-    def validate_info(self, k: str, value: Any, annotations: dict):
+    def validate_bool(self, name: str, value: Any, annotations: dict):
         """
         Does any validation on parameter k read from an input dictionary or yaml file,
         before setting the corresponding class attribute.
@@ -423,10 +429,68 @@ class CobayaComponent(HasLogger, HasDefaults):
         :param annotations: resolved inherited dictionary of attributes for this class
         """
 
-        # by default just test booleans, e.g. for typos of "false" which evaluate true
-        if annotations.get(k) is bool and value and isinstance(value, str):
+        if annotations.get(name) is bool and value and isinstance(value, str):
             raise AttributeError("Class '%s' parameter '%s' should be True "
-                                 "or False, got '%s'" % (self, k, value))
+                                 "or False, got '%s'" % (self, name, value))
+
+    def validate_info(self, name: str, value: Any, annotations: dict):
+        if name in annotations:
+            expected_type = annotations[name]
+            if not self._validate_type(expected_type, value):
+                msg = f"Attribute '{name}' must be of type {expected_type}, not {type(value)}(value={value})"
+                raise TypeError(msg)
+
+    def _validate_composite_type(self, expected_type, value):
+        origin = expected_type.__origin__
+        try: # for Callable and Sequence types, which have no __args__
+            args = expected_type.__args__
+        except AttributeError:
+            pass
+
+        if origin is Union:
+            return any(self._validate_type(t, value) for t in args)
+        elif origin is Optional:
+            return value is None or self._validate_type(args[0], value)
+        elif origin is list:
+            return all(self._validate_type(args[0], item) for item in value)
+        elif origin is dict:
+            return all(
+                self._validate_type(args[0], k) and self._validate_type(args[1], v)
+                for k, v in value.items()
+            )
+        elif origin is tuple:
+            return len(args) == len(value) and all(
+                self._validate_type(t, v) for t, v in zip(args, value)
+            )
+        elif origin is ClassVar:
+            return self._validate_type(args[0], value)
+        else:
+            return isinstance(value, origin)
+
+    def _validate_type(self, expected_type, value):
+        if value is None or expected_type is Any: # Any is always valid
+            return True
+
+        if hasattr(expected_type, "__origin__"):
+            return self._validate_composite_type(expected_type, value)
+        else:
+            # Exceptions for some types
+            if expected_type is ParamDict:
+                return isinstance(value, dict)
+            elif expected_type is int:
+                if value == float('inf'): # for infinite values parsed as floats
+                    return isinstance(value, float)
+                return isinstance(value, Integral)
+            elif expected_type is float:
+                return isinstance(value, Real)
+            elif expected_type is NumberWithUnits:
+                return isinstance(value, Real) or isinstance(value, str)
+            return isinstance(value, expected_type)
+
+    def validate_attributes(self):
+        annotations = self.get_annotations()
+        for name in annotations.keys():
+            self.validate_info(name, getattr(self, name, None), annotations)
 
     @classmethod
     def get_kind(cls):
