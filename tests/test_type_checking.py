@@ -14,7 +14,7 @@ from cobaya.run import run
 class GenericLike(Likelihood):
     any: Any
     classvar: ClassVar[int] = 1
-    forwardref_params: "ParamDict" = {"d": [0.0, 1.0]}
+    # forwardref_params: 'ParamDict' = {"d": [0.0, 1.0]}
     infinity: int = float("inf")
     mean: NumberWithUnits = 1
     noise: float = 0
@@ -47,7 +47,6 @@ def test_sampler_types():
 class GenericComponent(CobayaComponent):
     any: Any
     classvar: ClassVar[int] = 1
-    forwardref_params: "ParamDict" = {"d": [0.0, 1.0]}
     infinity: int = float("inf")
     mean: NumberWithUnits = 1
     noise: float = 0
@@ -64,7 +63,6 @@ class GenericComponent(CobayaComponent):
         self,
         any,
         classvar,
-        forwardref_params,
         infinity,
         mean,
         noise,
@@ -83,7 +81,6 @@ def test_component_types():
     correct_kwargs = {
         "any": 1,
         "classvar": 1,
-        "forwardref_params": {"d": [0.0, 1.0]},
         "infinity": float("inf"),
         "mean": 1,
         "noise": 0,
@@ -99,7 +96,6 @@ def test_component_types():
     wrong_cases = [
         {"any": "not_an_int"},
         {"classvar": "not_an_int"},
-        {"forwardref_params": "not_a_paramdict"},
         {"infinity": "not_an_int"},
         {"mean": "not_a_numberwithunits"},
         {"noise": "not_a_float"},

@@ -26,18 +26,6 @@ LikesDict = Dict[str, Union[None, LikeDict, Type, Callable]]
 SamplersDict = Dict[str, Optional[SamplerDict]]
 PriorsDict = Dict[str, Union[str, Callable]]
 
-# parameters in a params list can be specified on input by
-# 1. a ParamDict dictionary
-# 2. constant value
-# 3. a string giving lambda function of other parameters
-# 4. None - must be a computed output parameter
-# 5. Sequence specifying uniform prior range [min, max] and optionally
-#    'ref' mean and standard deviation for starting positions, and optionally
-#    proposal width. Allowed lengths, 2, 4, 5
-ParamInput = Union['ParamDict', None, str, float, Sequence[float]]
-ParamsDict = Dict[str, ParamInput]
-ExpandedParamsDict = Dict[str, 'ParamDict']
-
 partags = {"prior", "ref", "proposal", "value", "drop",
            "derived", "latex", "renames", "min", "max"}
 
@@ -69,6 +57,19 @@ class ParamDict(TypedDict, total=False):
     drop: bool  # true if parameter should not be available for assignment to theories
     min: float  # hard bounds (does not affect prior)
     max: float
+
+
+# parameters in a params list can be specified on input by
+# 1. a ParamDict dictionary
+# 2. constant value
+# 3. a string giving lambda function of other parameters
+# 4. None - must be a computed output parameter
+# 5. Sequence specifying uniform prior range [min, max] and optionally
+#    'ref' mean and standard deviation for starting positions, and optionally
+#    proposal width. Allowed lengths, 2, 4, 5
+ParamInput = Union[ParamDict, None, str, float, Sequence[float]]
+ParamsDict = Dict[str, ParamInput]
+ExpandedParamsDict = Dict[str, ParamDict]
 
 
 class ModelDict(TypedDict, total=False):

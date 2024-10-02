@@ -37,7 +37,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
             name = name.replace('chi2_', 'chi2__')
         if name.startswith('minuslogprior') or name == 'chi2':
             continue
-        param_dict: 'ParamDict' = {'latex': par.label}
+        param_dict: ParamDict = {'latex': par.label}
         d[name] = param_dict
         if par.renames:
             param_dict['renames'] = par.renames
