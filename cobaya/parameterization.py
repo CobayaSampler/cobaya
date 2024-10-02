@@ -42,7 +42,7 @@ def is_derived_param(info_param: ParamInput) -> bool:
     return expand_info_param(info_param).get("derived", False) is not False
 
 
-def expand_info_param(info_param: ParamInput, default_derived=True) -> 'ParamDict':
+def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict:
     """
     Expands the info of a parameter, from the user-friendly, shorter format
     to a more unambiguous one.
@@ -76,7 +76,7 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> 'ParamDic
     return info_param
 
 
-def reduce_info_param(info_param: 'ParamDict') -> ParamInput:
+def reduce_info_param(info_param: ParamDict) -> ParamInput:
     """
     Compresses the info of a parameter, suppressing default values.
     This is the opposite of :func:`~input.expand_info_param`.

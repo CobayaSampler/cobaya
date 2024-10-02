@@ -242,7 +242,7 @@ class BinnedPk(Theory):
     k_min_bin: float = np.log10(0.001)
     k_max_bin: float = np.log10(0.35)
     scale: float = 1e-9
-    bin_par: 'ParamDict' = {'prior': {'min': 0, 'max': 100}}
+    bin_par: ParamDict = {'prior': {'min': 0, 'max': 100}}
 
     def initialize(self):
         self.ks = np.logspace(self.k_min_bin, self.k_max_bin, self.nbins)
