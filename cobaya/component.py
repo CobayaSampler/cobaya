@@ -473,11 +473,11 @@ class CobayaComponent(HasLogger, HasDefaults):
         if hasattr(expected_type, "__origin__"):
             return self._validate_composite_type(expected_type, value)
         else:
-            # Exceptions for types that are not exactly the same
-            if isinstance(expected_type, ForwardRef): # for custom types as ParamDict
-                if "Dict" in expected_type.__forward_arg__:
-                    expected_type = dict
-            elif expected_type is ParamDict or "ParamDict" == str(expected_type):
+            # Exceptions for some types
+            # if isinstance(expected_type, ForwardRef): # for custom types as ParamDict
+            #     if "Dict" in expected_type.__forward_arg__:
+            #         expected_type = dict
+            if expected_type is ParamDict:
                 return isinstance(value, dict)
             if expected_type is NumberWithUnits:
                 return isinstance(value, (int, float))
