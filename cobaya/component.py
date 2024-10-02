@@ -487,7 +487,7 @@ class CobayaComponent(HasLogger, HasDefaults):
             elif expected_type is float:
                 return isinstance(value, Real)
             elif expected_type is NumberWithUnits:
-                return isinstance(value, Real)
+                return isinstance(value, Real) or isinstance(value, str)
             return isinstance(value, expected_type)
 
     def validate_attributes(self):
