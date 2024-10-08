@@ -425,7 +425,7 @@ like_cmb: InfoDict = {
             "planck_2020_lollipop.lowlE":
                 {'package_install': {'pip': 'planck-npipe/lollipop',
                                      'min_version': '4.1.1'}},
-            "planck_2020_hillipop.TTTEEE": 
+            "planck_2020_hillipop.TTTEEE":
                 {'package_install': {'pip': 'planck-npipe/hillipop',
                                      'min_version': '4.2.2'}},
             "planckpr4lensing":
