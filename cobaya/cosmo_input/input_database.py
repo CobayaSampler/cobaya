@@ -626,14 +626,6 @@ default_sampler = {"sampler": "MCMC dragging"}
 preset: InfoDict = dict([
     (none, {"desc": "(No preset chosen)"}),
     # Pure CMB #######################################################
-    ("planck_NPIPE_Hillipop_camb", {
-        "desc": "Planck NPIPE Hillipop+Lollipop with CAMB (all native Python)",
-        "theory": "camb",
-        "like_cmb": "planck_NPIPE_Hillipop"}),
-    ("planck_NPIPE_Hillipop_classy", {
-        "desc": "Planck NPIPE Hillipop+Lollipop with CLASS (all native Python)",
-        "theory": "classy",
-        "like_cmb": "planck_NPIPE_Hillipop"}),
     ("planck_NPIPE_CamSpec_camb", {
         "desc": "Planck NPIPE CamSpec with CAMB (all native Python)",
         "theory": "camb",
@@ -642,6 +634,14 @@ preset: InfoDict = dict([
         "desc": "Planck NPIPE CamSpec with CLASS (all native Python)",
         "theory": "classy",
         "like_cmb": "planck_NPIPE_CamSpec"}),
+    ("planck_NPIPE_Hillipop_camb", {
+        "desc": "Planck NPIPE Hillipop+Lollipop with CAMB (all native Python)",
+        "theory": "camb",
+        "like_cmb": "planck_NPIPE_Hillipop"}),
+    ("planck_NPIPE_Hillipop_classy", {
+        "desc": "Planck NPIPE Hillipop+Lollipop with CLASS (all native Python)",
+        "theory": "classy",
+        "like_cmb": "planck_NPIPE_Hillipop"}),
     ("planck_2018_camb", {
         "desc": "Planck 2018 with CAMB",
         "theory": "camb",
