@@ -415,6 +415,18 @@ cmb_sampler_mcmc: InfoDict = {"mcmc": dict(drag=False, **default_mcmc_options)}
 
 like_cmb: InfoDict = {
     none: {},
+    "planck_NPIPE_CamSpec": {
+        "desc": "Planck NPIPE CamSpec (native; polarized NPIPE CMB + lensing)",
+        "sampler": cmb_sampler_recommended,
+        "theory": {theo: {"extra_args": cmb_precision[theo]}
+                   for theo in ["camb", "classy"]},
+        "likelihood": {
+            "planck_2018_lowl.TT": None,
+            "planck_2018_lowl.EE": None,
+            "planck_NPIPE_highl_CamSpec.TTTEEE": None,
+            "planckpr4lensing":
+                {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
+                                     'min_version': '1.0.2'}}}},
     "planck_NPIPE_Hillipop": {
         "desc": "Planck NPIPE Hillipop+Lollipop (polarized NPIPE CMB + lensing)",
         "sampler": cmb_sampler_recommended,
@@ -428,18 +440,6 @@ like_cmb: InfoDict = {
             "planck_2020_hillipop.TTTEEE":
                 {'package_install': {'pip': 'planck-npipe/hillipop',
                                      'min_version': '4.2.2'}},
-            "planckpr4lensing":
-                {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
-                                     'min_version': '1.0.2'}}}},
-    "planck_NPIPE_CamSpec": {
-        "desc": "Planck NPIPE CamSpec (native; polarized NPIPE CMB + lensing)",
-        "sampler": cmb_sampler_recommended,
-        "theory": {theo: {"extra_args": cmb_precision[theo]}
-                   for theo in ["camb", "classy"]},
-        "likelihood": {
-            "planck_2018_lowl.TT": None,
-            "planck_2018_lowl.EE": None,
-            "planck_NPIPE_highl_CamSpec.TTTEEE": None,
             "planckpr4lensing":
                 {'package_install': {'github_repository': 'carronj/planck_PR4_lensing',
                                      'min_version': '1.0.2'}}}},
