@@ -31,6 +31,10 @@ sampler:
 
 
 def test_bib(tmpdir):
+
+    with stdout_check('rosenberg22'):
+        bib_script(['planck_NPIPE_highl_CamSpec.TTTEEE'])
+
     with stdout_check('Neal:2005'):
         bib_script(['des_y1.shear', 'camb', 'mcmc'])
 

@@ -53,7 +53,7 @@ class LogPosterior:
 
     A consistency check will be performed if initialized simultaneously with
     log-posterior, log-priors and log-likelihoods, so, for faster initialisation,
-    you may prefer to pass log-priors and log-likelhoods only, and only pass all three
+    you may prefer to pass log-priors and log-likelihoods only, and only pass all three
     (so that the test is performed) only when e.g. loading from an old sample.
 
     If ``finite=True`` (default: False), it will try to represent infinities as the
@@ -591,8 +591,8 @@ class Model(HasLogger):
 
     def get_valid_point(self, max_tries: int, ignore_fixed_ref: bool = False,
                         logposterior_as_dict: bool = False, random_state=None,
-                        ) -> Union[Tuple[np.ndarray, LogPosterior],
-    Tuple[np.ndarray, dict]]:
+                        ) \
+            -> Union[Tuple[np.ndarray, LogPosterior], Tuple[np.ndarray, dict]]:
         """
         Finds a point with finite posterior, sampled from the reference pdf.
 
@@ -1087,8 +1087,7 @@ class Model(HasLogger):
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_likelihood if component in self.likelihood.values() else
                        info_theory)
-                inf = inf.get(component.get_name())
-                if inf:
+                if inf := inf.get(component.get_name()):
                     inf.pop("params", None)
                     inf[option] = component.get_attr_list_with_helpers(option)
         if self.is_debug_and_mpi_root():
