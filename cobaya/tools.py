@@ -993,7 +993,7 @@ def load_config_file():
     from cobaya.yaml import yaml_load_file
     try:
         return yaml_load_file(
-            os.path.join(get_config_path(), packages_path_config_file))
+            os.path.join(get_config_path(), packages_path_config_file)) or {}
     except:
         return {}
 
