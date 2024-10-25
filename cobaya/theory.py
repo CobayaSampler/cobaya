@@ -231,7 +231,7 @@ class Theory(CobayaComponent):
             params_values_dict.update(
                 zip(self._input_params_extra,
                     self.provider.get_param(self._input_params_extra)))
-        self.log.debug("Got parameters %r", params_values_dict)
+        self.param_dict_debug("Got parameters %r", params_values_dict)
         state = None
         if cached:
             for _state in self._states:

@@ -531,7 +531,7 @@ class classy(BoltzmannBase):
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}
         args.update(self.extra_args)
         # Generate and save
-        self.log.debug("Setting parameters: %r", args)
+        self.param_dict_debug("Setting parameters: %r", args)
         self.classy.set(**args)
 
     def calculate(self, state, want_derived=True, **params_values_dict):

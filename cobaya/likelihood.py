@@ -126,7 +126,7 @@ class Likelihood(Theory, LikelihoodInterface):
         derived: Optional[ParamValuesDict] = {} if want_derived else None
         state["logp"] = -np.inf  # in case of exception
         state["logp"] = self.logp(_derived=derived, **params_values_dict)
-        self.log.debug("Computed log-likelihood = %r", state["logp"])
+        self.log.debug("Computed log-likelihood = %s", state["logp"])
         if derived is not None:
             state["derived"] = derived.copy()
 

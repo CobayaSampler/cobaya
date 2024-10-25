@@ -645,7 +645,7 @@ class Prior(HasLogger):
                                           if len(self._non_uniform_indices) else 0)
         else:
             logps = -np.inf
-        self.log.debug("Got logpriors (internal) = %r", logps)
+        self.log.debug("Got logpriors (internal) = %s", logps)
         return logps
 
     def logps_external(self, input_params) -> List[float]:

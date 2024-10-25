@@ -368,7 +368,7 @@ class Model(HasLogger):
         outpar_dict: ParamValuesDict = {}
         compute_success = True
         self.provider.set_current_input_params(input_params)
-        self.log.debug("Got input parameters: %r", input_params)
+        self.param_dict_debug("Got input parameters: %r", input_params)
         loglikes = np.zeros(len(self.likelihood))
         need_derived = self.requires_derived or return_derived or return_output_params
         for (component, like_index), param_dep in zip(self._component_order.items(),
@@ -391,7 +391,7 @@ class Model(HasLogger):
                     raise LoggedError(
                         self.log,
                         "Likelihood %s has not returned a valid log-likelihood, "
-                        "but %r instead.", component,
+                        "but %s instead.", component,
                         component.current_logp) from type_excpt
         if make_finite:
             loglikes = np.nan_to_num(loglikes)
@@ -413,7 +413,7 @@ class Model(HasLogger):
                                      else list(outpar_dict.values()))
                 else:  # explicitly derived, instead of output params
                     derived_dict = self.parameterization.to_derived(outpar_dict)
-                    self.log.debug("Computed derived parameters: %s", derived_dict)
+                    self.param_dict_debug("Computed derived parameters: %s", derived_dict)
                     return_params = (derived_dict if as_dict
                                      else list(derived_dict.values()))
             return return_likes, return_params
@@ -537,12 +537,12 @@ class Model(HasLogger):
                 self.log.debug(
                     "Posterior to be computed for parameters %s",
                     dict(zip(self.parameterization.sampled_params(),
-                             params_values_array)))
+                             params_values_array.astype(float))))
             if not np.all(np.isfinite(params_values_array)):
                 raise LoggedError(
                     self.log, "Got non-finite parameter values: %r",
                     dict(zip(self.parameterization.sampled_params(),
-                             params_values_array)))
+                             params_values_array.astype(float))))
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
         logpriors_1d = self.prior.logps_internal(params_values_array)
