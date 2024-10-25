@@ -175,8 +175,8 @@ class MCMC(CovmatSampler):
         # If resuming but no existing chains, assume failed run and ignore blocking
         # if speeds measurement requested
         if (
-            self.output.is_resuming() and not existing_chains_any_process and
-            self.measure_speeds
+                self.output.is_resuming() and not existing_chains_any_process and
+                self.measure_speeds
         ):
             self.blocking = None
         if self.measure_speeds and self.blocking:
@@ -746,8 +746,8 @@ class MCMC(CovmatSampler):
                     condition_number = Rminus1 / min(np.abs(eigvals))
                     self.log.debug(" - Condition number = %g", condition_number)
                     self.log.debug(" - Eigenvalues = %r", eigvals)
-                    accpt_multi_str = \
-                        " = sum(%r)" % list(Ns) if more_than_one_process() else ""
+                    accpt_multi_str = " = sum(%r)" % Ns.astype(int).tolist() \
+                        if more_than_one_process() else ""
                     self.log.info(
                         " - Convergence of means: R-1 = %f after %d accepted steps%s",
                         Rminus1, sum(Ns), accpt_multi_str)
