@@ -13,6 +13,7 @@ import logging
 import platform
 import traceback
 import functools
+import numpy as np
 from random import shuffle, choice
 
 # Local
@@ -305,4 +306,5 @@ class HasLogger:
     def param_dict_debug(self, msg, dic: dict):
         """Removes numpy2 np.float64 for consistent output"""
         if self.log.getEffectiveLevel() <= logging.DEBUG:
-            self.log.debug(msg, {k: float(v) for k, v in dic.items()})
+            self.log.debug(msg, {k: float(v) if isinstance(v, np.number) else v
+                                 for k, v in dic.items()})
