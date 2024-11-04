@@ -170,39 +170,18 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
 
         if origin is Union:
             errors = []
-            structural_errors = []
-
             for t in args:
                 try:
                     return validate_type(t, value, path)
                 except TypeError as e:
                     error_msg = str(e)
-                    if ' any Union type' in error_msg:
+                    if ' any Union type' in error_msg or 'for TypedDict ' in error_msg:
                         raise
                     error_path = error_msg.split(' ')[0].strip("'")
+                    errors.append((error_path, error_msg))
 
-                    # If error is about the current path, it's a structural error
-                    if error_path == path:
-                        # Skip uninformative "must be of type NoneType" errors
-                        if "must be of type NoneType" not in error_msg:
-                            structural_errors.append(error_msg)
-                        else:
-                            errors.append((error_path, error_msg))
-                    else:
-                        errors.append((error_path, error_msg))
-
-            # If we have structural errors, show those first
-            if structural_errors:
-                if len(structural_errors) == 1:
-                    raise TypeError(structural_errors[0])
-                raise TypeError(
-                    f"{curr_path} failed to match any Union type:\n" +
-                    "\n".join(f"- {e}" for e in set(structural_errors))
-                )
-
-            # Otherwise, show the deepest validation errors
             longest_path = max((p for p, _ in errors), key=len)
-            path_errors = list(set(e for p, e in errors if p == longest_path))
+            path_errors = set(e for p, e in errors if p == longest_path)
             raise TypeError(
                 f"{longest_path} failed to match any Union type:\n" +
                 "\n".join(f"- {e}" for e in path_errors)
