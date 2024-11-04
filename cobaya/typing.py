@@ -165,8 +165,9 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
             validate_type(type_hints[key], val, f"{path}.{key}" if path else str(key))
         return True
 
-    if origin := typing.get_origin(expected_type):
-        args = typing.get_args(expected_type)
+    if (origin := typing.get_origin(expected_type)) and (
+            args := typing.get_args(expected_type)):
+        # complex types like Dict[str, float] etc.
 
         if origin is Union:
             errors = []
@@ -209,7 +210,7 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
         if origin is typing.ClassVar:
             return validate_type(args[0], value, path)
 
-        if origin in (dict, Mapping):
+        if issubclass(origin, Mapping):
             if not isinstance(value, Mapping):
                 raise TypeError(f"{curr_path} must be a mapping, "
                                 f"got {type(value).__name__}")

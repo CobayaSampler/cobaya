@@ -1,6 +1,6 @@
 """General test for types of components."""
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Mapping
 import numpy as np
 import pytest
 
@@ -57,6 +57,7 @@ class GenericComponent(CobayaComponent):
     tuple_params: Tuple[float, float] = (0.0, 1.0)
     array: Sequence[float]
     array2: Sequence[float]
+    map: Mapping[float, str]
 
     _enforce_types = True
 
@@ -75,7 +76,8 @@ def test_component_types():
         "params": {"a": [0.0, 1.0], "b": [0, 1]},
         "tuple_params": (0.0, 1.0),
         "array": np.arange(2, dtype=np.float64),
-        "array2": [1, 2]
+        "array2": [1, 2],
+        "map": {1.0: "a", 2.0: "b"}
     }
     GenericComponent(correct_kwargs)
 
@@ -95,6 +97,7 @@ def test_component_types():
         {"tuple_params": "not_a_tuple"},
         {"tuple_params": (0.0, "not_a_float")},
         {"array": 2},
+        {"map": {"a": 2.0}}
     ]
     for case in wrong_cases:
         with pytest.raises(TypeError):
