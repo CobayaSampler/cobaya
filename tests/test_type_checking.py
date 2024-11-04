@@ -1,14 +1,13 @@
 """General test for types of components."""
 
 from typing import Any, ClassVar, Dict, List, Optional, Tuple
-from collections.abc import Sequence
 import numpy as np
 import pytest
 
 from cobaya.component import CobayaComponent
 from cobaya.likelihood import Likelihood
 from cobaya.tools import NumberWithUnits
-from cobaya.typing import InputDict, ParamDict
+from cobaya.typing import InputDict, ParamDict, Sequence
 from cobaya.run import run
 
 

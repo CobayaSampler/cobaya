@@ -1,5 +1,5 @@
-from collections.abc import Mapping, Callable, Sequence, Iterable
-from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal
+from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal, Mapping, \
+    Callable, Sequence, Iterable
 from types import MappingProxyType
 import typing
 import numbers
