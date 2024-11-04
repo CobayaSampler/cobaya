@@ -61,6 +61,7 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     # as early as possible, e.g. to check if resuming possible or `force` needed.
     if no_mpi or test:
         mpi.set_mpi_disabled()
+    mpi.sync_processes()
     with mpi.ProcessState("run"):
         flags = {packages_path_input: packages_path, "debug": debug,
                  "stop_at_error": stop_at_error, "resume": resume, "force": force,
