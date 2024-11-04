@@ -100,6 +100,7 @@ class InputDict(ModelDict, total=False):
     force: bool
     debug: Union[bool, int, str]
     resume: bool
+    minimize: bool
     stop_at_error: bool
     test: bool
     timing: bool
@@ -175,8 +176,8 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
                     return validate_type(t, value, path)
                 except TypeError as e:
                     error_msg = str(e)
-                    if ' any Union type' in error_msg or 'for TypedDict ' in error_msg:
-                        raise
+                    #                    if ' any Union type' in error_msg or 'for TypedDict ' in error_msg:
+                    #                        raise
                     error_path = error_msg.split(' ')[0].strip("'")
                     errors.append((error_path, error_msg))
 
