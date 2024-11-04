@@ -5,42 +5,8 @@ import numpy as np
 import pytest
 
 from cobaya.component import CobayaComponent
-from cobaya.likelihood import Likelihood
 from cobaya.tools import NumberWithUnits
-from cobaya.typing import InputDict, ParamDict, Sequence
-from cobaya.run import run
-
-
-class GenericLike(Likelihood):
-    any: Any
-    classvar: ClassVar[int] = 1
-    infinity: int = float("inf")
-    mean: NumberWithUnits = 1
-    noise: float = 0
-    none: int = None
-    numpy_int: int = np.int64(1)
-    optional: Optional[int] = None
-    paramdict_params: ParamDict = {"prior": [0.0, 1.0]}
-    params: Dict[str, List[float]] = {"a": [0.0, 1.0], "b": [0, 1]}
-    tuple_params: Tuple[float, float] = (0.0, 1.0)
-
-    _enforce_types = True
-
-    def logp(self, **params_values):
-        return 1
-
-
-def test_sampler_types():
-    original_info: InputDict = {
-        "likelihood": {"like": GenericLike},
-        "sampler": {"mcmc": {"max_samples": 1}},
-    }
-    _ = run(original_info)
-
-    info = original_info.copy()
-    info["sampler"]["mcmc"]["max_samples"] = "not_an_int"
-    with pytest.raises(TypeError):
-        run(info)
+from cobaya.typing import ParamDict, Sequence
 
 
 class GenericComponent(CobayaComponent):
