@@ -26,7 +26,7 @@ SamplerDictIn = InfoDictIn
 ParamValuesDict = Dict[str, float]
 # Do not yet explicitly support passing instances here
 TheoriesDict = Dict[str, Union[None, TheoryDict, Type]]
-LikesDict = Dict[str, Union[None, LikeDict, Type, Callable]]
+LikesDict = Dict[str, Union[None, str, LikeDict, Type, Callable]]
 SamplersDict = Dict[str, Optional[SamplerDict]]
 PriorsDict = Dict[str, Union[str, Callable]]
 
@@ -213,7 +213,7 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
 
         if isinstance(value, Mapping) != issubclass(origin, Mapping):
             raise TypeError(
-                f"{curr_path} must be {args[0]}, got {type(value).__name__}"
+                f"{curr_path} must be {origin.__name__}, got {type(value).__name__}"
             )
 
         if issubclass(origin, Mapping):
