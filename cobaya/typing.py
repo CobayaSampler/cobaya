@@ -1,6 +1,7 @@
 from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal, Mapping, \
     Callable, Sequence, Iterable
 from types import MappingProxyType
+import contextlib
 import typing
 import numbers
 import numpy as np
@@ -110,6 +111,21 @@ class InputDict(ModelDict, total=False):
 
 
 enforce_type_checking = None
+
+
+@contextlib.contextmanager
+def type_checking(value: bool):
+    """
+    Context manager to temporarily set typing.enforce_type_checking to a specific value.
+    Restores the original value when exiting the context.
+    """
+    global enforce_type_checking
+    original_value = enforce_type_checking
+    enforce_type_checking = value
+    try:
+        yield
+    finally:
+        enforce_type_checking = original_value
 
 
 def validate_type(expected_type: type, value: Any, path: str = ''):
