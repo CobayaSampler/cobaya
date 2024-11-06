@@ -13,6 +13,7 @@ import logging
 import platform
 import traceback
 import functools
+import numpy as np
 from random import shuffle, choice
 
 # Local
@@ -230,6 +231,7 @@ def logger_setup(debug=None):
                    "%(message)s")
             self._style._fmt = fmt
             return super().format(record)
+
     # Configure stdout handler
     handle_stdout = logging.StreamHandler(sys.stdout)
     handle_stdout.setLevel(level)
@@ -300,3 +302,9 @@ class HasLogger:
     @mpi.root_only
     def mpi_debug(self, msg, *args, **kwargs):
         self.log.debug(msg, *args, **kwargs)
+
+    def param_dict_debug(self, msg, dic: dict):
+        """Removes numpy2 np.float64 for consistent output"""
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            self.log.debug(msg, {k: float(v) if isinstance(v, np.number) else v
+                                 for k, v in dic.items()})
