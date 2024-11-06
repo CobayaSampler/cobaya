@@ -24,6 +24,8 @@ class GenericComponent(CobayaComponent):
     array: Sequence[float]
     array2: Sequence[float]
     map: Mapping[float, str]
+    deferred: 'ParamDict'
+    unset = 1
 
     _enforce_types = True
 
@@ -43,7 +45,8 @@ def test_component_types():
         "tuple_params": (0.0, 1.0),
         "array": np.arange(2, dtype=np.float64),
         "array2": [1, 2],
-        "map": {1.0: "a", 2.0: "b"}
+        "map": {1.0: "a", 2.0: "b"},
+        "deferred": {'value': lambda x: x},
     }
     GenericComponent(correct_kwargs)
 
@@ -68,3 +71,7 @@ def test_component_types():
     for case in wrong_cases:
         with pytest.raises(TypeError):
             GenericComponent({**correct_kwargs, **case})
+
+
+class NextComponent(CobayaComponent):
+    pass

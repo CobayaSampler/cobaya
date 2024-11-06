@@ -5,7 +5,7 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
-from typing import Optional, Union, List, Set
+from typing import Optional, Union, List, Set, get_type_hints
 
 from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
@@ -422,7 +422,7 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         Does any validation on parameter k read from an input dictionary or yaml file,
         before setting the corresponding class attribute.
-        You could enforce consistency with annotations here, but does not by default.
+        This check is always done, even if _enforce_types is not set.
 
         :param name: name of parameter
         :param value: value
@@ -434,10 +434,18 @@ class CobayaComponent(HasLogger, HasDefaults):
                                  "or False, got '%s'" % (self, name, value))
 
     def validate_attributes(self, annotations: dict):
+        """
+        If _enforce_types or cobaya.typing.enforce_type_checking is set, this
+        checks all class attributes against the annotation types
+
+        :param annotations: resolved inherited dictionary of attributes for this class
+        :raises: TypeError if any attribute does not match the annotation type
+        """
         check = cobaya.typing.enforce_type_checking
-        if check or (self._enforce_types and check is not False):
-            for name, annotation in annotations.items():
-                validate_type(annotation, getattr(self, name, None),
+        if check or self._enforce_types and check is not False:
+            hints = get_type_hints(self.__class__)  # resolve any deferred attributes
+            for name in annotations:
+                validate_type(hints[name], getattr(self, name, None),
                               self.get_name() + ':' + name)
 
     @classmethod
