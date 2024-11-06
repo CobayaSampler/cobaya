@@ -152,7 +152,7 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
 
     if expected_type is float:
         if not (isinstance(value, numbers.Real) or
-                (isinstance(value, np.ndarray) and value.shape == ())):
+                (isinstance(value, np.ndarray) and value.ndim == 0)):
             raise TypeError(f"{curr_path} must be a float, got {type(value).__name__}")
         return
 
@@ -218,7 +218,7 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
 
         if issubclass(origin, Iterable):
             if isinstance(value, np.ndarray):
-                if not value.shape:
+                if value.ndim == 0:
                     raise TypeError(f"{curr_path} numpy array zero rank")
                 if len(args) == 1 and not np.issubdtype(value.dtype, args[0]):
                     raise TypeError(
