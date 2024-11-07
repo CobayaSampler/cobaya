@@ -26,6 +26,7 @@ class GenericComponent(CobayaComponent):
     map: Mapping[float, str]
     deferred: 'ParamDict'
     unset = 1
+    install_options: ClassVar
 
     _enforce_types = True
 
@@ -47,6 +48,7 @@ def test_component_types():
         "array2": [1, 2],
         "map": {1.0: "a", 2.0: "b"},
         "deferred": {'value': lambda x: x},
+        "install_options": {}
     }
     GenericComponent(correct_kwargs)
 

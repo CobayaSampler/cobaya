@@ -201,7 +201,7 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
                 "\n".join(f"- {e}" for e in path_errors)
             )
 
-        if origin is typing.ClassVar:
+        if not isinstance(origin, type):
             return validate_type(args[0], value, path)
 
         if isinstance(value, Mapping) != issubclass(origin, Mapping):
@@ -245,18 +245,19 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
                     validate_type(t, v, f"{path}[{i}]" if path else f"[{i}]")
             return
 
-    if not (isinstance(value, expected_type) or
-            expected_type is Sequence and isinstance(value, np.ndarray)):
+    if not isinstance(expected_type, type) or isinstance(value, expected_type) \
+            or expected_type is Sequence and isinstance(value, np.ndarray):
+        return
 
-        type_name = getattr(expected_type, "__name__", repr(expected_type))
+    type_name = getattr(expected_type, "__name__", repr(expected_type))
 
-        # special case for Cobaya's NumberWithUnits, if not instance yet
-        if type_name == 'NumberWithUnits':
-            if not isinstance(value, (numbers.Real, str)):
-                raise TypeError(
-                    f"{curr_path} must be a number or string for NumberWithUnits,"
-                    f" got {type(value).__name__}")
-            return
+    # special case for Cobaya's NumberWithUnits, if not instance yet
+    if type_name == 'NumberWithUnits':
+        if not isinstance(value, (numbers.Real, str)):
+            raise TypeError(
+                f"{curr_path} must be a number or string for NumberWithUnits,"
+                f" got {type(value).__name__}")
+        return
 
-        raise TypeError(f"{curr_path} must be of type {type_name}, "
-                        f"got {type(value).__name__}")
+    raise TypeError(f"{curr_path} must be of type {type_name}, "
+                    f"got {type(value).__name__}")
