@@ -55,8 +55,10 @@ class Planck2018CamSpecPython(DataSetLikelihood):
 
     @classmethod
     def get_bibtex(cls):
-        from cobaya.likelihoods.base_classes import Planck2018Clik
-        return Planck2018Clik.get_bibtex()
+        if not (res := super().get_bibtex()):
+            from cobaya.likelihoods.base_classes import Planck2018Clik
+            return Planck2018Clik.get_bibtex()
+        return res
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units

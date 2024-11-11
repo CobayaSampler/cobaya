@@ -10,6 +10,7 @@ from cobaya.log import NoLogging, LoggedError
 from cobaya.tools import KL_norm
 from cobaya.yaml import yaml_load
 from .common_sampler import body_of_sampler_test, body_of_test_speeds
+from cobaya.typing import type_checking
 
 pytestmark = pytest.mark.mpi
 
@@ -39,7 +40,7 @@ def test_mcmc(tmpdir, temperature, do_plots, packages_path=None):
 
     def check_gaussian(sampler_instance):
         if not len(sampler_instance.collection) or \
-           not len(sampler_instance.collection[int(sampler_instance.n() / 2):]):
+                not len(sampler_instance.collection[int(sampler_instance.n() / 2):]):
             return
         proposer = KL_norm(
             S1=sampler_instance.model.likelihood["gaussian_mixture"].covs[0],
@@ -162,7 +163,7 @@ def test_mcmc_sync():
     logger.info('Test error synchronization')
     if mpi.rank() == 0:
         info['sampler']['mcmc'] = {'max_samples': 'bad_val'}
-        with NoLogging(logging.ERROR), pytest.raises(TypeError):
+        with NoLogging(logging.ERROR), pytest.raises(TypeError), type_checking(False):
             run(info)
     else:
         with pytest.raises(mpi.OtherProcessError):

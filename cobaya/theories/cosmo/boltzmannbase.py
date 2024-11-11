@@ -255,8 +255,7 @@ class BoltzmannBase(Theory):
 
         Should be called at initialisation, and at the end of every call to must_provide()
         """
-        common = set(self.input_params).intersection(self.extra_args)
-        if common:
+        if common := set(self.input_params).intersection(self.extra_args):
             raise LoggedError(
                 self.log, "The following parameters appear both as input parameters and "
                           "as extra arguments: %s. Please, remove one of the definitions "

@@ -306,7 +306,6 @@ def get_external_function(string_or_function, name=None):
     if isinstance(string_or_function, str):
         try:
             scope = globals()
-            import scipy.stats as stats  # provide default scope for eval
             scope['stats'] = stats
             scope['np'] = np
             string_or_function = replace_optimizations(string_or_function)
@@ -993,7 +992,7 @@ def load_config_file():
     from cobaya.yaml import yaml_load_file
     try:
         return yaml_load_file(
-            os.path.join(get_config_path(), packages_path_config_file))
+            os.path.join(get_config_path(), packages_path_config_file)) or {}
     except:
         return {}
 

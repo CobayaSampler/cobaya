@@ -29,6 +29,7 @@ from cobaya.yaml import yaml_load_file, yaml_load
 from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
 from cobaya import mpi
+import cobaya.typing
 
 # Logger
 logger = get_logger(__name__)
@@ -141,6 +142,8 @@ def load_info_overrides(*infos_or_yaml_or_files, **flags) -> InputDict:
     for flag, value in flags.items():
         if value is not None:
             info[flag] = value
+    if cobaya.typing.enforce_type_checking:
+        cobaya.typing.validate_type(InputDict, info)
     return info
 
 

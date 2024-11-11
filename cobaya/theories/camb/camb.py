@@ -888,7 +888,7 @@ class CAMB(BoltzmannBase):
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
-        except (self.camb.baseconfig.CAMBValueError, self.camb.baseconfig.CAMBError):
+        except (self.camb.baseconfig.CAMBValueError, self.camb.baseconfig.CAMBError) as e:
             if self.stop_at_error:
                 self.log.error(
                     "Error setting parameters (see traceback below)! "
@@ -896,6 +896,8 @@ class CAMB(BoltzmannBase):
                     "To ignore this kind of error, make 'stop_at_error: False'.",
                     dict(state["params"]), dict(self.extra_args))
                 raise
+            else:
+                self.log.debug("Error setting parameters: %s", e)
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
                 self.log,

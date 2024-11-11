@@ -175,8 +175,8 @@ class MCMC(CovmatSampler):
         # If resuming but no existing chains, assume failed run and ignore blocking
         # if speeds measurement requested
         if (
-            self.output.is_resuming() and not existing_chains_any_process and
-            self.measure_speeds
+                self.output.is_resuming() and not existing_chains_any_process and
+                self.measure_speeds
         ):
             self.blocking = None
         if self.measure_speeds and self.blocking:
@@ -255,7 +255,7 @@ class MCMC(CovmatSampler):
         """Number of parameters which are considered fast, in binary fast/slow splits."""
         return len(self.fast_params)
 
-    def get_acceptance_rate(self, first=0, last=None):
+    def get_acceptance_rate(self, first=0, last=None) -> np.floating:
         """
         Computes the current acceptance rate, optionally only for ``[first:last]``
         subchain.
@@ -698,12 +698,12 @@ class MCMC(CovmatSampler):
             acceptance_rate = (np.average(acceptance_rates, weights=Ns)
                                if acceptance_rates is not None else acceptance_rate)
             if self.oversample_thin > 1:
-                weights_multi_str = (" = 1/avg(%r)" % list(acceptance_rates)
+                weights_multi_str = (" = 1/avg(%r)" % acceptance_rates.tolist()
                                      if acceptance_rates is not None else "")
                 self.log.info(" - Average thinned weight: %.3f%s", 1 / acceptance_rate,
                               weights_multi_str)
             else:
-                accpt_multi_str = (" = avg(%r)" % list(acceptance_rates)
+                accpt_multi_str = (" = avg(%r)" % acceptance_rates.tolist()
                                    if acceptance_rates is not None else "")
                 self.log.info(" - Acceptance rate: %.3f%s", acceptance_rate,
                               accpt_multi_str)
@@ -746,8 +746,8 @@ class MCMC(CovmatSampler):
                     condition_number = Rminus1 / min(np.abs(eigvals))
                     self.log.debug(" - Condition number = %g", condition_number)
                     self.log.debug(" - Eigenvalues = %r", eigvals)
-                    accpt_multi_str = \
-                        " = sum(%r)" % list(Ns) if more_than_one_process() else ""
+                    accpt_multi_str = " = sum(%r)" % Ns.astype(int).tolist() \
+                        if more_than_one_process() else ""
                     self.log.info(
                         " - Convergence of means: R-1 = %f after %d accepted steps%s",
                         Rminus1, sum(Ns), accpt_multi_str)
