@@ -255,7 +255,7 @@ class MCMC(CovmatSampler):
         """Number of parameters which are considered fast, in binary fast/slow splits."""
         return len(self.fast_params)
 
-    def get_acceptance_rate(self, first=0, last=None):
+    def get_acceptance_rate(self, first=0, last=None) -> np.floating:
         """
         Computes the current acceptance rate, optionally only for ``[first:last]``
         subchain.
@@ -698,12 +698,12 @@ class MCMC(CovmatSampler):
             acceptance_rate = (np.average(acceptance_rates, weights=Ns)
                                if acceptance_rates is not None else acceptance_rate)
             if self.oversample_thin > 1:
-                weights_multi_str = (" = 1/avg(%r)" % list(acceptance_rates)
+                weights_multi_str = (" = 1/avg(%r)" % acceptance_rates.tolist()
                                      if acceptance_rates is not None else "")
                 self.log.info(" - Average thinned weight: %.3f%s", 1 / acceptance_rate,
                               weights_multi_str)
             else:
-                accpt_multi_str = (" = avg(%r)" % list(acceptance_rates)
+                accpt_multi_str = (" = avg(%r)" % acceptance_rates.tolist()
                                    if acceptance_rates is not None else "")
                 self.log.info(" - Acceptance rate: %.3f%s", acceptance_rate,
                               accpt_multi_str)

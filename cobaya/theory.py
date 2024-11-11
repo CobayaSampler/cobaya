@@ -67,7 +67,7 @@ class Theory(CobayaComponent):
                          standalone=standalone)
 
         # set to Provider instance before calculations
-        self.provider: Any = None
+        self.provider: Optional['Provider'] = None
         # Generate cache states, to avoid recomputing.
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
@@ -415,7 +415,7 @@ class Provider:
         self.requirement_providers = requirement_providers
         self.params = {}
 
-    def set_current_input_params(self, params):
+    def set_current_input_params(self, params: ParamValuesDict):
         self.params = params
 
     def get_param(self, param: Union[str, Iterable[str]]) -> Union[float, List[float]]:

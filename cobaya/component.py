@@ -5,15 +5,16 @@ import inspect
 from inspect import cleandoc
 from packaging import version
 from importlib import import_module, resources
-from typing import Optional, Union, List, Set
+from typing import Optional, Union, List, Set, get_type_hints
 
 from cobaya.log import HasLogger, LoggedError, get_logger
-from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict
+from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
     get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
 from cobaya.conventions import kinds, cobaya_package, reserved_attributes
 from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
 from cobaya.mpi import is_main_process
+import cobaya
 
 
 class Timer:
@@ -278,7 +279,7 @@ class HasDefaults:
                                   "(type declarations without values are fine "
                                   "with yaml file as well).",
                                   cls.get_qualified_class_name(), list(both))
-            options |= yaml_options
+            options.update(yaml_options)
             yaml_text = None
         if return_yaml and not yaml_expand_defaults:
             return yaml_text or ""
@@ -315,6 +316,7 @@ class HasDefaults:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
                 d.update(base.get_annotations())
 
+            # from Python 10 should use just cls.__annotations__
             d.update({k: v for k, v in cls.__dict__.get("__annotations__", {}).items()
                       if not k.startswith('_')})
         return d
@@ -330,6 +332,8 @@ class CobayaComponent(HasLogger, HasDefaults):
     # When defining it for subclasses, redefine append adding this list to new entries.
     _at_resume_prefer_new: List[str] = ["version"]
     _at_resume_prefer_old: List[str] = []
+
+    _enforce_types: bool = False
 
     def __init__(self, info: InfoDictIn = empty_dict,
                  name: Optional[str] = None,
@@ -355,6 +359,8 @@ class CobayaComponent(HasLogger, HasDefaults):
             except AttributeError:
                 raise AttributeError("Cannot set {} attribute for {}!".format(k, self))
         self.set_logger(name=self._name)
+        self.validate_attributes(annotations)
+
         self.set_timing_on(timing)
         try:
             if initialize:
@@ -412,21 +418,35 @@ class CobayaComponent(HasLogger, HasDefaults):
         """
         return True
 
-    def validate_info(self, k: str, value: Any, annotations: dict):
+    def validate_info(self, name: str, value: Any, annotations: dict):
         """
         Does any validation on parameter k read from an input dictionary or yaml file,
         before setting the corresponding class attribute.
-        You could enforce consistency with annotations here, but does not by default.
+        This check is always done, even if _enforce_types is not set.
 
-        :param k: name of parameter
+        :param name: name of parameter
         :param value: value
         :param annotations: resolved inherited dictionary of attributes for this class
         """
 
-        # by default just test booleans, e.g. for typos of "false" which evaluate true
-        if annotations.get(k) is bool and value and isinstance(value, str):
+        if annotations.get(name) is bool and value and isinstance(value, str):
             raise AttributeError("Class '%s' parameter '%s' should be True "
-                                 "or False, got '%s'" % (self, k, value))
+                                 "or False, got '%s'" % (self, name, value))
+
+    def validate_attributes(self, annotations: dict):
+        """
+        If _enforce_types or cobaya.typing.enforce_type_checking is set, this
+        checks all class attributes against the annotation types
+
+        :param annotations: resolved inherited dictionary of attributes for this class
+        :raises: TypeError if any attribute does not match the annotation type
+        """
+        check = cobaya.typing.enforce_type_checking
+        if check or self._enforce_types and check is not False:
+            hints = get_type_hints(self.__class__)  # resolve any deferred attributes
+            for name in annotations:
+                validate_type(hints[name], getattr(self, name, None),
+                              self.get_name() + ':' + name)
 
     @classmethod
     def get_kind(cls):
