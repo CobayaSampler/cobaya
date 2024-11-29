@@ -94,7 +94,7 @@ class FileLock:
                               "File %s is locked by another process, you are running "
                               "with MPI disabled but may have more than one process. "
                               "Make sure that you have mpi4py installed and working."
-                              "Note that --test should not be used with MPI.")
+                              "Note that --test should not be used with MPI.", self.lock_file)
         if mpi.get_mpi():
             import mpi4py  # pylint: disable=import-outside-toplevel
         else:
