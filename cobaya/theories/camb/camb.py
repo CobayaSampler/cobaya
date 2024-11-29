@@ -881,10 +881,10 @@ class CAMB(BoltzmannBase):
                 self._base_params = params
             args.update(self._reduced_extra_args)
             return self.camb.set_params(self._base_params.copy(), **args)
-        except self.camb.baseconfig.CAMBParamRangeError:
+        except self.camb.baseconfig.CAMBParamRangeError as e:
             if self.stop_at_error:
-                raise LoggedError(self.log, "Out of bound parameters: %r",
-                                  params_values_dict)
+                raise LoggedError(self.log, "%sOut of bound parameters: %r",
+                                  e, params_values_dict)
             else:
                 self.log.debug("Out of bounds parameters. "
                                "Assigning 0 likelihood and going on.")
