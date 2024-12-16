@@ -703,8 +703,9 @@ class MCMC(CovmatSampler):
                 self.log.info(" - Average thinned weight: %.3f%s", 1 / acceptance_rate,
                               weights_multi_str)
             else:
-                accpt_multi_str = (" = avg(%r)" % acceptance_rates.tolist()
-                                   if acceptance_rates is not None else "")
+                accpt_multi_str = (
+                    " = avg([%s])" % ", ".join("%.4f" % x for x in acceptance_rates)
+                    if acceptance_rates is not None else "")
                 self.log.info(" - Acceptance rate: %.3f%s", acceptance_rate,
                               accpt_multi_str)
             self.progress.at[self.i_learn, "acceptance_rate"] = acceptance_rate
@@ -813,8 +814,8 @@ class MCMC(CovmatSampler):
                     self.log.debug(" - normalized std's of bounds = %r", Rminus1_cl)
                     Rminus1_cl = np.max(Rminus1_cl)
                     self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
-                    accpt_multi_str = \
-                        " = sum(%r)" % list(Ns) if more_than_one_process() else ""
+                    accpt_multi_str = " = sum(%r)" % Ns.astype(int).tolist() \
+                        if more_than_one_process() else ""
                     self.log.info(
                         " - Convergence of bounds: R-1 = %f after %d accepted steps%s",
                         Rminus1_cl,

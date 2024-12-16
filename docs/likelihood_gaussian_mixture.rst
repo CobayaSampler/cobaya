@@ -42,6 +42,18 @@ A delay (in seconds) in the likelihood evaluation can be specified with the keyw
 
    This module also provides functions to generate random means and covariances – see automatic documentation below.
 
+.. note::
+   If you want to use a Gaussian likelihood with particular input names, you can specify them explicitly, e.g.::
+
+       likelihood:
+          gaussian_mixture:
+            means: [[1.04103e-2, 0.02223, 0.1192]]
+            covs: [[6.8552146e-16, 1.4486860e-12, -1.4105674e-11],
+                   [1.4486860e-12, 2.1344167e-08, -1.1534501e-07],
+                   [-1.4105674e-11, -1.1534501e-07, 1.6977630e-06]]
+            input_params: ['thetastar', 'ombh2', 'omch2']
+            output_params: []
+
 The default option values for this likelihood are
 
 .. literalinclude:: ../cobaya/likelihoods/gaussian_mixture/gaussian_mixture.yaml
