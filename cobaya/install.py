@@ -28,13 +28,13 @@ from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.tools import create_banner, warn_deprecation, \
     write_packages_path_in_config_file, get_config_path, VersionCheckError, \
     resolve_packages_path, similar_internal_class_names, find_with_regexp
-from cobaya.input import get_used_components
+from cobaya.cobaya_input import get_used_components
 from cobaya.conventions import code_path, data_path, packages_path_arg, \
     packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
     packages_path_config_file, packages_path_input
 from cobaya.mpi import set_mpi_disabled
-from cobaya.typing import InputDict, InfoDict
-from cobaya.yaml import yaml_load_file
+from cobaya.cobaya_typing import InputDict, InfoDict
+from cobaya.cobaya_yaml import yaml_load_file
 
 _banner_symbol = "="
 _banner_length = 80
@@ -641,7 +641,7 @@ def install_script(args=None):
             from cobaya.cosmo_input import install_tests
             infos += [install_tests]
         elif os.path.splitext(f)[1].lower() in Extension.yamls:
-            from cobaya.input import load_input
+            from cobaya.cobaya_input import load_input
             infos += [load_input(f)]
         else:  # a single component name, no kind specified
             infos += [f]

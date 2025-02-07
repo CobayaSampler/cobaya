@@ -20,12 +20,12 @@ from cobaya.mpi import get_mpi_size, share_mpi, more_than_one_process, is_main_p
 from cobaya.collection import SampleCollection, OneSamplePoint, apply_temperature_cov, \
     remove_temperature_cov, remove_temperature
 from cobaya.conventions import OutPar, Extension, line_width, get_version
-from cobaya.typing import empty_dict
+from cobaya.cobaya_typing import empty_dict
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
 from cobaya.functions import inverse_cholesky
-from cobaya.yaml import yaml_dump_file
+from cobaya.cobaya_yaml import yaml_dump_file
 from cobaya.model import LogPosterior
 from cobaya import mpi
 

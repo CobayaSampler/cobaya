@@ -26,7 +26,7 @@ from cobaya.collection import SampleCollection
 from cobaya.log import get_logger, NoLogging, LoggedError
 from cobaya.install import download_github_release
 from cobaya.component import ComponentNotInstalledError, load_external_module
-from cobaya.yaml import yaml_dump_file
+from cobaya.cobaya_yaml import yaml_dump_file
 from cobaya.conventions import derived_par_name_separator, Extension
 
 # Avoid importing GetDist if not necessary

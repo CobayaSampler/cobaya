@@ -16,7 +16,7 @@ import re
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
-from cobaya.input import get_default_info
+from cobaya.cobaya_input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.tools import (are_different_params_lists, create_banner,

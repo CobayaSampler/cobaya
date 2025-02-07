@@ -6,11 +6,11 @@ import pytest
 import os
 
 # Local
-from cobaya.typing import InputDict
+from cobaya.cobaya_typing import InputDict
 from cobaya.run import run, run_script
 from cobaya.log import LoggedError
-from cobaya.input import get_default_info
-from cobaya.yaml import yaml_dump_file, yaml_load_file
+from cobaya.cobaya_input import get_default_info
+from cobaya.cobaya_yaml import yaml_dump_file, yaml_load_file
 
 # Aux definitions and functions
 

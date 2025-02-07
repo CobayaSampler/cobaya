@@ -226,7 +226,7 @@ from cobaya.install import download_github_release, check_gcc_version
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, \
     check_module_version, str_to_list, Pool1D, Pool2D, PoolND, VersionCheckError
 from cobaya.theory import HelperTheory
-from cobaya.typing import InfoDict, empty_dict
+from cobaya.cobaya_typing import InfoDict, empty_dict
 
 
 # Result collector

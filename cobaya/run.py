@@ -13,13 +13,13 @@ import os
 # Local
 from cobaya.conventions import packages_path_arg, packages_path_arg_posix, get_version, \
     packages_path_input
-from cobaya.typing import InputDict, LiteralFalse
+from cobaya.cobaya_typing import InputDict, LiteralFalse
 from cobaya.output import get_output
 from cobaya.model import Model
 from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampler
 from cobaya.log import logger_setup, is_debug, get_logger, LoggedError
-from cobaya.yaml import yaml_dump
-from cobaya.input import update_info, load_info_overrides
+from cobaya.cobaya_yaml import yaml_dump
+from cobaya.cobaya_input import update_info, load_info_overrides
 from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
 from cobaya.post import post, PostResult
 from cobaya import mpi

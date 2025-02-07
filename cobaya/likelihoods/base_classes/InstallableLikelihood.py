@@ -12,7 +12,7 @@ from packaging import version
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.typing import InfoDict
+from cobaya.cobaya_typing import InfoDict
 from cobaya.log import get_logger
 from cobaya.install import _version_filename
 from cobaya.component import ComponentNotInstalledError

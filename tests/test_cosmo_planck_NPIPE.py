@@ -1,7 +1,7 @@
 import numpy as np
 
 from cobaya.model import get_model
-from cobaya.yaml import yaml_load
+from cobaya.cobaya_yaml import yaml_load
 
 from .common import process_packages_path
 from .conftest import install_test_wrapper

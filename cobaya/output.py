@@ -14,12 +14,12 @@ import shutil
 from typing import Optional, Any
 from packaging import version
 # Local
-from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
+from cobaya.cobaya_yaml import yaml_dump, yaml_load, yaml_load_file, \
     OutputError, InputImportError
 from cobaya.conventions import resume_default, Extension, kinds, get_version
-from cobaya.typing import InputDict
+from cobaya.cobaya_typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
-from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
+from cobaya.cobaya_input import is_equal_info, load_info_dump, split_prefix, get_info_path
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic, \
     has_non_yaml_reproducible
 from cobaya.component import get_component_class

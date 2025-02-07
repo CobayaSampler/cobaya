@@ -5,8 +5,8 @@ Testing and automatic generation of basic cosmological examples in the docs.
 import os
 import sys
 
-from cobaya.yaml import yaml_dump, yaml_load
-from cobaya.input import is_equal_info
+from cobaya.cobaya_yaml import yaml_dump, yaml_load
+from cobaya.cobaya_input import is_equal_info
 from cobaya.cosmo_input import create_input
 from cobaya.tools import sort_cosmetic
 from .test_docs_example_quickstart import docs_folder

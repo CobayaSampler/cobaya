@@ -3,7 +3,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.theory import Theory
 from cobaya.run import run
 from cobaya.model import get_model
-from cobaya.typing import InputDict, PostDict
+from cobaya.cobaya_typing import InputDict, PostDict
 from cobaya.log import LoggedError
 from cobaya.post import post
 from cobaya.output import load_samples

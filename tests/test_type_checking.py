@@ -6,7 +6,7 @@ import pytest
 
 from cobaya.component import CobayaComponent
 from cobaya.tools import NumberWithUnits
-from cobaya.typing import ParamDict, Sequence
+from cobaya.cobaya_typing import ParamDict, Sequence
 
 
 class GenericComponent(CobayaComponent):
