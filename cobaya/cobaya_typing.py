@@ -23,6 +23,8 @@ LikeDictIn = InfoDictIn
 TheoryDictIn = InfoDictIn
 SamplerDictIn = InfoDictIn
 
+from math import *
+
 ParamValuesDict = Dict[str, float]
 # Do not yet explicitly support passing instances here
 TheoriesDict = Dict[str, Union[None, TheoryDict, Type]]

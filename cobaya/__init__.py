@@ -8,7 +8,6 @@ from cobaya.log import LoggedError
 from cobaya.post import post
 from cobaya.output import load_samples
 
-
 if sys.version_info < (3, 8):
     print('Cobaya requires Python 3.8+, please upgrade.')
     sys.exit(1)
