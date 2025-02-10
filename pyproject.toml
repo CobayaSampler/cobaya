@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-xdist", "flaky", "mpi4py", "iminuit", "flake8", "pre-commit", "ruff"]
+test = ["pytest", "pytest-xdist", "flaky", "mpi4py", "iminuit", "flake8", "pre-commit"]
 speed = ["numba", "mpi4py"]
 gui = ["pyside6", "matplotlib"]
 docs = [
@@ -75,10 +75,6 @@ cobaya-prepare-data = "cobaya.containers:prepare_data_script"
 
 [tool.setuptools.packages.find]
 exclude = ["docs", "tests"]
-
-[tool.ruff]
-include = "cobaya"
-line-length = 90
 
 [project.urls]
 Homepage = "https://cobaya.readthedocs.io"
