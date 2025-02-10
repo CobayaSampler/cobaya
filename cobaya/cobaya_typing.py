@@ -1,5 +1,4 @@
-from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal, Mapping, \
-    Callable, Sequence, Iterable
+from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal, Mapping, Callable, Sequence, Iterable
 from types import MappingProxyType
 import contextlib
 import typing
