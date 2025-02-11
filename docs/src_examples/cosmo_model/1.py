@@ -45,7 +45,7 @@ params:
     latex: \tau_\mathrm{reio}
 """
 
-from cobaya.yaml import yaml_load
+from cobaya.yaml_helpers import yaml_load
 
 info = yaml_load(info_txt)
 
