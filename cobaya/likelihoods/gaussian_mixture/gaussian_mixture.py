@@ -15,7 +15,7 @@ from scipy.special import logsumexp
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import share_mpi, is_main_process
-from cobaya.cobaya_typing import InputDict, Union, Sequence
+from cobaya.typing_conventions import InputDict, Union, Sequence
 from cobaya.functions import inverse_cholesky
 
 derived_suffix = "_derived"

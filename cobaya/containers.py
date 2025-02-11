@@ -18,8 +18,8 @@ from requests import head
 
 # Local
 from cobaya.log import logger_setup, LoggedError, get_logger
-from cobaya.cobaya_input import get_used_components, load_input
-from cobaya.cobaya_yaml import yaml_dump
+from cobaya.input_processing import get_used_components, load_input
+from cobaya.yaml_helpers import yaml_dump
 from cobaya.install import install
 from cobaya.conventions import products_path, packages_path_env, packages_path_arg, \
     code_path, data_path, packages_path_input

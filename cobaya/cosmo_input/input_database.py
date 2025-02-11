@@ -9,7 +9,7 @@
 
 # Global
 from copy import deepcopy
-from cobaya.cobaya_typing import InfoDict
+from cobaya.typing_conventions import InfoDict
 
 none = "(None)"
 error_msg = "error_msg"

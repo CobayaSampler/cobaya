@@ -3,9 +3,9 @@ from copy import deepcopy
 from typing import MutableMapping, Mapping
 
 # Local
-from cobaya.cobaya_input import get_default_info, merge_info
+from cobaya.input_processing import get_default_info, merge_info
 from cobaya.parameterization import reduce_info_param
-from cobaya.cobaya_typing import InputDict
+from cobaya.typing_conventions import InputDict
 from . import input_database
 
 

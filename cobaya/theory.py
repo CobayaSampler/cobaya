@@ -33,7 +33,7 @@ see :doc:`theories_and_dependencies`.
 from collections import deque
 from typing import Sequence, Optional, Union, Tuple, Dict, Iterable, Set, Any, List
 # Local
-from cobaya.cobaya_typing import TheoryDictIn, TheoriesDict, InfoDict, ParamValuesDict, \
+from cobaya.typing_conventions import TheoryDictIn, TheoriesDict, InfoDict, ParamValuesDict, \
     ParamsDict, empty_dict, unset_params
 from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
 from cobaya.tools import str_to_list

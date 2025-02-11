@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 from cobaya.run import run
-from cobaya.cobaya_yaml import yaml_load_file
+from cobaya.yaml_helpers import yaml_load_file
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 

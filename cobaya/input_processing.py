@@ -20,16 +20,16 @@ from collections import defaultdict
 # Local
 from cobaya.conventions import products_path, kinds, separator_files, \
     get_chi2_name, get_chi2_label, Extension, FileSuffix, packages_path_input
-from cobaya.cobaya_typing import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
+from cobaya.typing_conventions import InputDict, InfoDict, ModelDict, ExpandedParamsDict, LikesDict, \
     empty_dict
 from cobaya.tools import recursive_update, str_to_list, get_base_classes, \
     fuzzy_match, deepcopy_where_possible
 from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.cobaya_yaml import yaml_load_file, yaml_load
+from cobaya.yaml_helpers import yaml_load_file, yaml_load
 from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
 from cobaya import mpi
-import cobaya.cobaya_typing
+import cobaya.typing_conventions
 
 # Logger
 logger = get_logger(__name__)
@@ -142,8 +142,8 @@ def load_info_overrides(*infos_or_yaml_or_files, **flags) -> InputDict:
     for flag, value in flags.items():
         if value is not None:
             info[flag] = value
-    if cobaya.cobaya_typing.enforce_type_checking:
-        cobaya.cobaya_typing.validate_type(InputDict, info)
+    if cobaya.typing_conventions.enforce_type_checking:
+        cobaya.typing_conventions.validate_type(InputDict, info)
     return info
 
 

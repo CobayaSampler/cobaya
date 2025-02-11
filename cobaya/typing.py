@@ -1,7 +1,7 @@
 import warnings
-from cobaya import cobaya_typing  # Replace with actual new path
+from cobaya import typing_conventions  # Replace with actual new path
 
-warnings.warn("cobaya.typing is deprecated. Use cobaya.cobaya_typing instead.", DeprecationWarning, stacklevel=2)
+warnings.warn("cobaya.typing is deprecated. Use cobaya.typing_conventions instead.", DeprecationWarning, stacklevel=2)
 
 # Expose everything from the new module
-globals().update(vars(cobaya_typing))
+globals().update(vars(typing_conventions))

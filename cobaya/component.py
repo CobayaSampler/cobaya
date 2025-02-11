@@ -8,11 +8,11 @@ from importlib import import_module, resources
 from typing import Optional, Union, List, Set, get_type_hints
 
 from cobaya.log import HasLogger, LoggedError, get_logger
-from cobaya.cobaya_typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
+from cobaya.typing_conventions import Any, InfoDict, InfoDictIn, empty_dict, validate_type
 from cobaya.tools import resolve_packages_path, load_module, get_base_classes, \
     get_internal_class_component_name, deepcopy_where_possible, VersionCheckError
 from cobaya.conventions import kinds, cobaya_package, reserved_attributes
-from cobaya.cobaya_yaml import yaml_load_file, yaml_dump, yaml_load
+from cobaya.yaml_helpers import yaml_load_file, yaml_dump, yaml_load
 from cobaya.mpi import is_main_process
 import cobaya
 
@@ -435,13 +435,13 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     def validate_attributes(self, annotations: dict):
         """
-        If _enforce_types or cobaya.cobaya_typing.enforce_type_checking is set, this
+        If _enforce_types or cobaya.typing_conventions.enforce_type_checking is set, this
         checks all class attributes against the annotation types
 
         :param annotations: resolved inherited dictionary of attributes for this class
         :raises: TypeError if any attribute does not match the annotation type
         """
-        check = cobaya.cobaya_typing.enforce_type_checking
+        check = cobaya.typing_conventions.enforce_type_checking
         if check or self._enforce_types and check is not False:
             hints = get_type_hints(self.__class__)  # resolve any deferred attributes
             for name in annotations:

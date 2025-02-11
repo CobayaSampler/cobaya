@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1  # Use the latest stable version
+    rev: 7.0.0  # Use the latest stable version
     hooks:
       - id: flake8
         name: flake8 (cobaya)
@@ -8,4 +8,5 @@ repos:
         language: python
         types: [python]
         files: ^cobaya/
+        args: ["--select=E713,E704,E703,E714,E741,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6"]
 

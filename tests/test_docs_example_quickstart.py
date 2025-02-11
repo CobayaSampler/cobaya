@@ -8,8 +8,8 @@ from io import StringIO
 import os
 import pytest
 
-from cobaya.cobaya_yaml import yaml_load_file
-from cobaya.cobaya_input import is_equal_info
+from cobaya.yaml_helpers import yaml_load_file
+from cobaya.input_processing import is_equal_info
 from cobaya.tools import KL_norm, working_directory
 from .common_sampler import KL_tolerance
 from .common import stdout_redirector

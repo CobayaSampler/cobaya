@@ -4,7 +4,7 @@ from copy import deepcopy
 from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import LikelihoodInterface, Likelihood
-from cobaya.cobaya_typing import InputDict, empty_dict, ParamDict
+from cobaya.typing_conventions import InputDict, empty_dict, ParamDict
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 from .test_cosmo_camb import get_camb

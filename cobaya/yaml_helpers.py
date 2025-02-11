@@ -22,7 +22,7 @@ from typing import Mapping, Optional, Any
 # Local
 from cobaya.tools import prepare_comment, recursive_update
 from cobaya.conventions import Extension
-from cobaya.cobaya_typing import InfoDict
+from cobaya.typing_conventions import InfoDict
 
 
 # Exceptions #############################################################################

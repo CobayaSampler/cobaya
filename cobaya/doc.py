@@ -15,7 +15,7 @@ from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
     similar_internal_class_names
 from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.conventions import subfolders, kinds
-from cobaya.cobaya_input import get_default_info
+from cobaya.input_processing import get_default_info
 from cobaya.log import logger_setup, get_logger
 
 _indent = 2 * " "

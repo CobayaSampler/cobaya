@@ -1,0 +1,132 @@
+theory:
+  camb:
+    version: 1.5.9
+    path: null
+    speed: 0.3
+    stop_at_error: true
+    extra_args:
+      num_massive_neutrinos: 1
+      nnu: 3.044
+      mnu: 0.06
+      omk: 0
+      dark_energy_model: ppf
+      theta_H0_range:
+      - 10
+      - 1000
+    ignore_obsolete: false
+    use_renames: false
+    external_primordial_pk: false
+    renames:
+      omegabh2: ombh2
+      omegach2: omch2
+      omegal: omega_de
+      omegak: omk
+      yhe: YHe
+      yheused: YHe
+      YpBBN: Y_p
+    input_params:
+    - w
+    - wa
+    - thetastar
+    - ombh2
+    - omch2
+    output_params:
+    - H0
+likelihood:
+  bao.desi_2024_bao_all:
+    measurements_file: bao_data/desi_2024_gaussian_bao_ALL_GCcomb_mean.txt
+    cov_file: bao_data/desi_2024_gaussian_bao_ALL_GCcomb_cov.txt
+    rs_fid: 1
+    aliases:
+    - BAO
+    speed: 2000
+    type: BAO
+    rs_rescale: null
+    prob_dist: null
+    invcov_file: null
+    redshift: null
+    observable_1: null
+    observable_2: null
+    observable_3: null
+    grid_file: null
+    stop_at_error: false
+    version: null
+    input_params: []
+    output_params: []
+params:
+  w:
+    value: -1
+  wa:
+    value: 0
+  thetastar:
+    prior:
+      dist: norm
+      loc: 0.0104103
+      scale: 2.6e-06
+    ref: 0.0104103
+    proposal: 2.6e-06
+    latex: \theta_\star
+  ombh2:
+    prior:
+      dist: norm
+      loc: 0.02223
+      scale: 0.00015
+    ref: 0.02223
+    proposal: 0.00015
+    latex: \omega_\mathrm{b} h^2
+    renames:
+    - omegabh2
+  omch2:
+    prior:
+      dist: norm
+      loc: 0.1192
+      scale: 0.0013
+    ref: 0.1192
+    proposal: 0.0013
+    latex: \omega_\mathrm{c}h^2
+    renames:
+    - omegach2
+  H0:
+    latex: H_0
+    derived: true
+  chi2__BAO:
+    latex: \chi^2_\mathrm{BAO}
+    derived: true
+sampler:
+  mcmc:
+    burn_in: 0.3
+    max_tries: 10000
+    covmat: auto
+    covmat_params: null
+    proposal_scale: 2.4
+    output_every: 60s
+    learn_every: 40d
+    temperature: 1
+    learn_proposal: true
+    learn_proposal_Rminus1_max: 2.0
+    learn_proposal_Rminus1_max_early: 30.0
+    learn_proposal_Rminus1_min: 0.0
+    max_samples: .inf
+    Rminus1_stop: 0.01
+    Rminus1_cl_stop: 0.2
+    Rminus1_cl_level: 0.95
+    Rminus1_single_split: 4
+    measure_speeds: true
+    oversample_power: 0.4
+    oversample_thin: true
+    drag: false
+    blocking:
+    - - 1
+      - - thetastar
+        - ombh2
+        - omch2
+    callback_function: null
+    callback_every: null
+    seed: null
+    check_every: null
+    oversample: null
+    drag_limits: null
+    fallback_covmat_scale: 4
+    version: 3.5.4
+output: theta_omch2_ombh2
+version: 3.5.4

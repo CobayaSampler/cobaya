@@ -34,7 +34,7 @@ from contextlib import contextmanager
 from cobaya.conventions import subfolders, kinds, packages_path_config_file, \
     packages_path_env, packages_path_arg, dump_sort_cosmetic, packages_path_input
 from cobaya.log import LoggedError, HasLogger, get_logger
-from cobaya.cobaya_typing import Kind
+from cobaya.typing_conventions import Kind
 
 # Set up logger
 log = get_logger(__name__)
@@ -989,7 +989,7 @@ def load_config_file():
     Returns the config info, stored in the config file, or an empty dict if not present.
     """
     # Just-in-time import to avoid recursion
-    from cobaya.cobaya_yaml import yaml_load_file
+    from cobaya.yaml_helpers import yaml_load_file
     try:
         return yaml_load_file(
             os.path.join(get_config_path(), packages_path_config_file)) or {}
@@ -1002,7 +1002,7 @@ def write_config_file(config_info, append=True):
     Writes the given info into the config file.
     """
     # Just-in-time import to avoid recursion
-    from cobaya.cobaya_yaml import yaml_dump_file
+    from cobaya.yaml_helpers import yaml_dump_file
     try:
         info = {}
         if append:

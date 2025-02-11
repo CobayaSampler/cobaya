@@ -8,7 +8,7 @@ import numpy as np
 from itertools import chain
 
 from cobaya.likelihoods.gaussian_mixture import random_cov
-from cobaya.cobaya_typing import InputDict
+from cobaya.typing_conventions import InputDict
 from cobaya.run import run
 from cobaya.sampler import CovmatSampler
 from cobaya import mpi

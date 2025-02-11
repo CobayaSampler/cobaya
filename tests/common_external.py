@@ -14,10 +14,10 @@ import scipy.stats as stats
 # Local
 from cobaya.conventions import FileSuffix, get_chi2_name
 from cobaya.run import run
-from cobaya.cobaya_yaml import yaml_load
+from cobaya.yaml_helpers import yaml_load
 from cobaya.tools import getfullargspec
 from cobaya.likelihood import Likelihood
-from cobaya.cobaya_typing import InputDict
+from cobaya.typing_conventions import InputDict
 from cobaya import mpi
 
 # Definition of external (log)pdfs

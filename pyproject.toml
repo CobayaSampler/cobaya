@@ -36,7 +36,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-xdist", "flaky", "mpi4py", "iminuit", "flake8", "pre-commit"]
+test = ["pytest", "pytest-xdist", "flaky", "mpi4py", "iminuit", "pre-commit", "pyproject-flake8"]
 speed = ["numba", "mpi4py"]
 gui = ["pyside6", "matplotlib"]
 docs = [
@@ -82,3 +82,7 @@ Documentation = "https://cobaya.readthedocs.io"
 Source = "https://github.com/CobayaSampler/cobaya"
 Tracker = "https://github.com/CobayaSampler/cobaya/issues"
 Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"
+
+[tool.flake8]
+select = ["E713", "E704", "E703", "E714", "E741", "E10", "E11", "E20", "E22", "E23", "E25", "E27", "E301", "E302", "E304", "E9", "F405", "F406", "F5", "F6", "F7", "F8", "W1", "W2", "W3", "W6"]
+show_source = true
