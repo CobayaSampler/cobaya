@@ -1,7 +1,9 @@
-## 3.5.x
+## 3.5.5
 
+- Option for stricter run-time input type checking (#388)
 - Detect and fix incomplete last lines when resuming or minimizing from existing runs (#306, #378)
 - Added functions module and refactored some numerical functions into it
+- Tidier numpy2 outputs and other minor fixes
 
 ## 3.5.4
 
