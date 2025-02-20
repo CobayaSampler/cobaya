@@ -1,7 +1,7 @@
 __author__ = "Jesus Torrado and Antony Lewis"
-__version__ = "3.5.4"
+__version__ = "3.5.5"
 __obsolete__ = False
-__year__ = "2024"
+__year__ = "2025"
 __url__ = "https://cobaya.readthedocs.io"
 
 import sys
