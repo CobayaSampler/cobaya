@@ -10,10 +10,10 @@ env:
 
 jobs:
   should_run:
-    # only run on pushes that are not also part of PR
+    # only run on pushes that are not also part of PR, EXCEPT for master branch pushes (always run on master)
     runs-on: ubuntu-latest
     outputs:
-      run_tests: github.event_name == 'push' || ${{ steps.check.outputs.run_tests }}
+      run_tests: ${{ steps.check.outputs.run_tests }}
     steps:
       - name: Check if tests should run
         id: check
@@ -22,13 +22,22 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
-              state: 'open'
-            });
-            const shouldRun = prs.length === 0;
+            const ref = context.ref;
+            const isMasterPush = ref === 'refs/heads/master';
+            let shouldRun = false;
+
+            if (isMasterPush) {
+              shouldRun = true; // Always run on master pushes
+            } else {
+              // For other branches, check for open PRs
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+                state: 'open'
+              });
+              shouldRun = prs.length === 0; // Run if no open PRs for this branch
+            }
             core.setOutput('run_tests', shouldRun ? 'true' : 'false');
 
   tests:
