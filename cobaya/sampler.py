@@ -52,14 +52,14 @@ from numpy.random import SeedSequence, default_rng
 
 # Local
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.typing import SamplersDict, SamplerDict
+from cobaya.typing_conventions import SamplersDict, SamplerDict
 from cobaya.tools import deepcopy_where_possible, find_with_regexp, recursive_update, \
     str_to_list
 from cobaya.model import Model
 from cobaya.log import LoggedError, get_logger, is_debug
-from cobaya.yaml import yaml_load_file, yaml_dump
+from cobaya.yaml_helpers import yaml_load_file, yaml_dump
 from cobaya.component import CobayaComponent, get_component_class
-from cobaya.input import update_info, is_equal_info, get_preferred_old_values
+from cobaya.input_processing import update_info, is_equal_info, get_preferred_old_values
 from cobaya.output import OutputDummy, Output
 from cobaya import mpi
 
@@ -140,8 +140,8 @@ def get_sampler(info_sampler: SamplersDict, model: Model, output: Optional[Outpu
     assert isinstance(info_sampler, Mapping), (
         "The first argument must be a dictionary with the info needed for the sampler. "
         "If you were trying to pass the name of an input file instead, "
-        "load it first with 'cobaya.input.load_input', "
-        "or, if you were passing a yaml string, load it with 'cobaya.yaml.yaml_load'.")
+        "load it first with 'cobaya.input_processing.load_input', "
+        "or, if you were passing a yaml string, load it with 'cobaya.yaml_helpers.yaml_load'.")
     logger_sampler = get_logger(__name__)
     info_sampler = deepcopy_where_possible(info_sampler)
     if output is None:

@@ -11,9 +11,9 @@ from typing import Optional, List, Dict, FrozenSet, NamedTuple
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.tools import str_to_list, get_translated_params, get_cache_path
 from cobaya.parameterization import is_sampled_param
-from cobaya.input import update_info
+from cobaya.input_processing import update_info
 from cobaya.log import LoggedError, get_logger, is_debug
-from cobaya.typing import empty_dict
+from cobaya.typing_conventions import empty_dict
 
 _covmats_file = "covmat_%s.pkl"
 
