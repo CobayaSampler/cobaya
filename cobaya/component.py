@@ -747,8 +747,7 @@ def _bare_load_external_module(name, path=None, min_version=None, reload=False,
     Loads an external module ``name``.
 
     If a ``path`` is given, it looks for an installation there and fails if it does
-    not find one. If ``path`` is not given, tries a global
-    ``import``.
+    not find one. If ``path`` is not given, tries a global ``import``.
 
     Raises :class:`component.ComponetNotInstalledError` if the module could not be
     imported.

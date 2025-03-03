@@ -275,10 +275,25 @@ class classy(BoltzmannBase):
             install_path = self.get_path(self.packages_path)
         min_version = None if self.ignore_obsolete else self._min_classy_version
         try:
-            self.classy_module = load_external_module(
-                "classy", path=self.path, install_path=install_path,
-                min_version=min_version, get_import_path=self.get_import_path,
-                logger=self.log, not_installed_level="debug")
+            try:
+                self.classy_module = load_external_module(
+                    "classy", path=self.path, install_path=install_path,
+                    min_version=min_version, get_import_path=self.get_import_path,
+                    logger=self.log, not_installed_level="debug")
+            # Regression introduced by CLASS v3.3 -- Deprecate CLASS <v3.3 eventually
+            except (VersionCheckError,ComponentNotInstalledError) as ni_internal_excpt:
+                try:
+                    self.classy_module = load_external_module(
+                        "classy", path=self.path, install_path=install_path,
+                        min_version=min_version, get_import_path=self.get_import_path_old,
+                        logger=self.log, not_installed_level="debug")
+                    # Only runs if passed:
+                    self.log.warning(
+                        "Detected an old CLASS version (<3.3). "
+                        "Please update: support for this will be deprecated soon."
+                    )
+                except ComponentNotInstalledError:
+                    raise ni_internal_excpt
         except VersionCheckError as vc_excpt:
             raise VersionCheckError(
                 str(vc_excpt) + " If you are using CLASS unmodified, upgrade with"
@@ -748,6 +763,10 @@ class classy(BoltzmannBase):
 
     @staticmethod
     def get_import_path(path):
+        return get_compiled_import_path(path)
+
+    @staticmethod
+    def get_import_path_old(path):
         return get_compiled_import_path(os.path.join(path, "python"))
 
     @classmethod
@@ -765,8 +784,22 @@ class classy(BoltzmannBase):
                 "classy", path=kwargs["path"], get_import_path=cls.get_import_path,
                 min_version=cls._min_classy_version, reload=reload,
                 logger=get_logger(cls.__name__), not_installed_level="debug"))
+        # Regression introduced by CLASS v3.3 -- Deprecate CLASS <v3.3 eventually
         except ComponentNotInstalledError:
-            return False
+            try:
+                success = bool(load_external_module(
+                    "classy", path=kwargs["path"],
+                    get_import_path=cls.get_import_path_old,
+                    min_version=cls._min_classy_version, reload=reload,
+                    logger=get_logger(cls.__name__), not_installed_level="debug"))
+                # Only runs if passed:
+                get_logger(cls.__name__).warning(
+                    "Detected an old CLASS version (<3.3). "
+                    "Please update: support for this will be deprecated soon."
+                )
+                return success
+            except ComponentNotInstalledError:
+                return False
 
     @classmethod
     def install(cls, path=None, code=True, no_progress_bars=False, **_kwargs):
@@ -775,8 +808,6 @@ class classy(BoltzmannBase):
             log.info("Code not requested. Nothing to do.")
             return True
         log.info("Installing pre-requisites...")
-        # TODO: remove version restriction below when this issue is fixed:
-        # https://github.com/lesgourg/class_public/issues/531
         exit_status = pip_install("cython")
         if exit_status:
             log.error("Could not install pre-requisite: cython")
