@@ -222,7 +222,7 @@ from itertools import chain
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, check_gcc_version
+from cobaya.install import download_github_release, check_gcc_version, pip_install
 from cobaya.tools import getfullargspec, get_class_methods, get_properties, \
     check_module_version, str_to_list, Pool1D, Pool2D, PoolND, VersionCheckError
 from cobaya.theory import HelperTheory
@@ -960,6 +960,11 @@ class CAMB(BoltzmannBase):
         if not code:
             log.info("Code not requested. Nothing to do.")
             return True
+        log.info("Installing pre-requisites...")
+        exit_status = pip_install("wheel")
+        if exit_status:
+            log.error("Could not install pre-requisite: wheel")
+            return False
         log.info("Downloading camb...")
         success = download_github_release(
             os.path.join(path, "code"), cls._camb_repo_name, cls._camb_repo_version,
