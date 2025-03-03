@@ -281,7 +281,7 @@ class classy(BoltzmannBase):
                     min_version=min_version, get_import_path=self.get_import_path,
                     logger=self.log, not_installed_level="debug")
             # Regression introduced by CLASS v3.3 -- Deprecate CLASS <v3.3 eventually
-            except (VersionCheckError,ComponentNotInstalledError) as ni_internal_excpt:
+            except (VersionCheckError, ComponentNotInstalledError) as ni_internal_excpt:
                 try:
                     self.classy_module = load_external_module(
                         "classy", path=self.path, install_path=install_path,
