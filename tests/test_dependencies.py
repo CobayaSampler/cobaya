@@ -4,7 +4,7 @@ from cobaya.model import get_model
 from cobaya.theory import Theory
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, NoLogging
-from cobaya.typing import InputDict
+from cobaya.typing_conventions import InputDict
 
 debug = False
 

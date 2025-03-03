@@ -20,7 +20,7 @@ from getdist.paramnames import makeList as make_list
 from .conventions import input_folder, script_folder, input_folder_post, yaml_ext
 import cobaya
 from cobaya.conventions import Extension
-from cobaya.yaml import yaml_load_file
+from cobaya.yaml_helpers import yaml_load_file
 from cobaya.output import use_portalocker
 from cobaya.tools import PythonPath
 

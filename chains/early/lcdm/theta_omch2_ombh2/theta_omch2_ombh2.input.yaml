@@ -1,0 +1,49 @@
+theory:
+  camb:
+    extra_args:
+      num_massive_neutrinos: 1
+      nnu: 3.044
+      mnu: 0.06
+      omk: 0
+      dark_energy_model: ppf
+      theta_H0_range:
+      - 10
+      - 1000
+    stop_at_error: true
+likelihood:
+  bao.desi_2024_bao_all: null
+params:
+  w: -1
+  wa: 0
+  thetastar:
+    prior:
+      dist: norm
+      loc: 0.0104103
+      scale: 2.6e-06
+    ref: 0.0104103
+    proposal: 2.6e-06
+    latex: \theta_\star
+  ombh2:
+    prior:
+      dist: norm
+      loc: 0.02223
+      scale: 0.00015
+    ref: 0.02223
+    proposal: 0.00015
+    latex: \omega_\mathrm{b} h^2
+  omch2:
+    prior:
+      dist: norm
+      loc: 0.1192
+      scale: 0.0013
+    ref: 0.1192
+    proposal: 0.0013
+    latex: \omega_\mathrm{c}h^2
+  H0:
+    latex: H_0
+sampler:
+  mcmc:
+    covmat: auto
+    burn_in: 0.3
+    max_tries: 10000
+output: theta_omch2_ombh2

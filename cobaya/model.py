@@ -18,16 +18,16 @@ import numpy as np
 # Local
 from cobaya.conventions import overhead_time, get_chi2_name, \
     packages_path_input, prior_1d_name
-from cobaya.typing import InfoDict, InputDict, LikesDict, TheoriesDict, \
+from cobaya.typing_conventions import InfoDict, InputDict, LikesDict, TheoriesDict, \
     ParamsDict, PriorsDict, ParamValuesDict, empty_dict, unset_params
-from cobaya.input import update_info, load_info_overrides
+from cobaya.input_processing import update_info, load_info_overrides
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 from cobaya.likelihood import LikelihoodCollection, AbsorbUnusedParamsLikelihood, \
     is_LikelihoodInterface
 from cobaya.theory import TheoryCollection, Theory, Provider
 from cobaya.log import LoggedError, logger_setup, get_logger, is_debug, HasLogger
-from cobaya.yaml import yaml_dump
+from cobaya.yaml_helpers import yaml_dump
 from cobaya.tools import deepcopy_where_possible, are_different_params_lists, \
     str_to_list, sort_parameter_blocks, recursive_update, sort_cosmetic
 from cobaya import mpi

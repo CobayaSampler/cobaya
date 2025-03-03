@@ -3,9 +3,9 @@ Body of the best-fit test for cosmological likelihoods
 """
 from copy import deepcopy
 
-from cobaya.typing import empty_dict
+from cobaya.typing_conventions import empty_dict
 from cobaya.model import get_model
-from cobaya.input import update_info
+from cobaya.input_processing import update_info
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.tools import recursive_update
 from .common import process_packages_path
