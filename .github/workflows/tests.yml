@@ -105,7 +105,7 @@ jobs:
       - name: Install dependencies (pip)
         if: matrix.pydist != 'ANACONDA'
         run: |
-          pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit numba camb
+          pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit numba cython
 
       - name: Install mpi
         if: matrix.pydist != 'ANACONDA' && matrix.os != 'windows-latest'
