@@ -837,6 +837,8 @@ class classy(BoltzmannBase):
         env.update({"PYTHON": sys.executable})
         process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
         out, err = process_make.communicate()
+        log.info(out)
+        log.info(err)
         if process_make.returncode:
             log.info(out)
             log.info(err)
