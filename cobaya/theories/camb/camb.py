@@ -979,8 +979,8 @@ class CAMB(BoltzmannBase):
                              cwd=camb_path, stdout=PIPE, stderr=PIPE)
         out, err = process_make.communicate()
         if process_make.returncode:
-            log.info(out.decode())
-            log.info(err.decode())
+            log.info(out.decode("utf-8"))
+            log.info(err.decode("utf-8"))
             gcc_check = check_gcc_version(cls._camb_min_gcc_version, error_returns=False)
             if not gcc_check:
                 cause = (" Possible cause: it looks like `gcc` does not have the correct "

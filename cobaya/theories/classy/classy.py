@@ -840,8 +840,8 @@ class classy(BoltzmannBase):
         log.info(out)
         log.info(err)
         if process_make.returncode:
-            log.info(out)
-            log.info(err)
+            log.info(out.decode("utf-8"))
+            log.info(err.decode("utf-8"))
             log.error("Compilation failed!")
             return False
         return True

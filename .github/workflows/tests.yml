@@ -56,12 +56,12 @@ jobs:
             os: ubuntu-latest
             python-version: 3.x
             mpi: openmpi
-            cobaya_skip: polychord
+            cobaya_skip: classy, polychord
           - name: "OS X Python 3.8 (with classy)"
             os: macos-latest
             python-version: 3.8
             mpi: openmpi
-            cobaya_skip: classy, polychord
+            cobaya_skip: polychord
           - name: "Windows Python 3.12"
             os: windows-latest
             python-version: 3.12
