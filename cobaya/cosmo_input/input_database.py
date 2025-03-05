@@ -403,6 +403,7 @@ cmb_precision["camb"] = {"lens_potential_accuracy": 1}
 planck_lss_precision = deepcopy(base_precision)
 planck_lss_precision["camb"] = {"halofit_version": "mead",
                                 "bbn_predictor": "PArthENoPE_880.2_standard.dat"}
+planck_lss_precision["classy"] = {"nonlinear_min_k_max": 25}
 
 planck_precision = deepcopy(planck_lss_precision)
 planck_precision["camb"]["lens_potential_accuracy"] = 1

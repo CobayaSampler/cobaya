@@ -2,4 +2,4 @@ Full log-posterior:
    logposterior: -16826.4
    logpriors: {'0': -21.068028542859743, 'SZ': -4.4079090809077135}
    loglikelihoods: {'planck_2018_lowl.TT': -11.659342468489626, 'planck_2018_lowl.EE': -199.91123947242667, 'planck_2018_highl_plik.TTTEEE': -16584.946305616675, 'planck_2018_lensing.clik': -4.390708962961917}
-   derived params: {'A_s': 2.1327557162026904e-09, 'Omega_Lambda': 0.68165001855872, 'YHe': 0.2453671312631958}
+   derived params: {'A_s': 2.1327557162026904e-09, 'Omega_Lambda': 0.68165001855872, 'YHe': 0.245273361911158}

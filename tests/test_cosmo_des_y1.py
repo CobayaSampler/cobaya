@@ -7,6 +7,9 @@ from cobaya.cosmo_input import planck_lss_precision
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 info_camb = MappingProxyType({"camb": {"extra_args": planck_lss_precision["camb"]}})
 info_classy = MappingProxyType({"classy": {"extra_args": planck_lss_precision["classy"]}})
+# Backport for getting reference test values
+info_classy = deepcopy(info_classy)
+info_classy["classy"]["extra_args"]["hmcode_version"] = 16
 
 
 def test_cosmo_des_y1_shear_camb(packages_path, skip_not_installed,
