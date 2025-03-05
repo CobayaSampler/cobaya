@@ -55,6 +55,7 @@ Release checklist
 + Update year of copyright in ``__init__.py``.
 + Update year of copyright in ``LICENCE.txt``.
 + Commit + tag with new version + ``git push`` + ``git push --tags``
++ Create a release in GitHub from the tag, with the Changelog as description
 + If needed, re-build the documentation.
 + If applicable, delete branches merged for this version.
 + Notify via the e-mail list.
