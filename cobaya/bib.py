@@ -20,8 +20,8 @@ from cobaya.log import logger_setup, get_logger
 from cobaya.conventions import Extension, dump_sort_cosmetic
 from cobaya.tools import create_banner, warn_deprecation, similar_internal_class_names
 from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.input import load_input, get_used_components
-from cobaya.typing import InfoDict
+from cobaya.input_processing import load_input, get_used_components
+from cobaya.typing_conventions import InfoDict
 
 # Banner defaults
 _default_symbol = "="

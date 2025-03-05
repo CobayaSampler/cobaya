@@ -16,7 +16,7 @@ from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.conventions import prior_1d_name, OutPar, get_chi2_name, \
     undo_chi2_name, get_minuslogpior_name, separator_files, minuslogprior_names
-from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
+from cobaya.input_processing import update_info, add_aggregated_chi2_params, load_input_dict
 from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
 from cobaya.model import Model, DummyModel
 from cobaya.output import get_output
@@ -26,7 +26,7 @@ from cobaya.parameterization import is_fixed_or_function_param, is_sampled_param
 from cobaya.prior import Prior
 from cobaya.tools import progress_bar, recursive_update, deepcopy_where_possible, \
     str_to_list
-from cobaya.typing import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
+from cobaya.typing_conventions import ExpandedParamsDict, ModelBlock, ParamValuesDict, InputDict, \
     PostDict
 
 if TYPE_CHECKING:

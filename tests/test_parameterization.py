@@ -8,7 +8,7 @@ import pytest
 from scipy.stats import multivariate_normal
 import numpy as np
 # Local
-from cobaya.yaml import yaml_load
+from cobaya.yaml_helpers import yaml_load
 from cobaya.run import run
 from cobaya.tools import get_external_function
 from cobaya.likelihood import Likelihood

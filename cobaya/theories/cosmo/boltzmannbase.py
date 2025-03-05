@@ -15,7 +15,7 @@ from cobaya.theory import Theory
 from cobaya.tools import deepcopy_where_possible, combine_1d, combine_2d, check_2d
 from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.conventions import Const
-from cobaya.typing import empty_dict, InfoDict
+from cobaya.typing_conventions import empty_dict, InfoDict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 

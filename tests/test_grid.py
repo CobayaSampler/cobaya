@@ -1,5 +1,5 @@
 import os
-from cobaya.yaml import yaml_load_file
+from cobaya.yaml_helpers import yaml_load_file
 from cobaya import grid_tools
 from cobaya.grid_tools import grid_create, grid_run, grid_converge, grid_tables, \
     grid_param_compare, grid_getdist, grid_list, grid_copy, grid_extract, grid_cleanup

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
-from cobaya.typing import empty_dict
+from cobaya.typing_conventions import empty_dict
 
 
 def _test_sn(packages_path, skip_not_installed, lik, theory='camb',

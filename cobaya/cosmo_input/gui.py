@@ -9,7 +9,7 @@ import io
 from typing import Optional
 
 # Local
-from cobaya.yaml import yaml_dump
+from cobaya.yaml_helpers import yaml_dump
 from cobaya.cosmo_input import input_database
 from cobaya.cosmo_input.input_database import _combo_dict_text
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
@@ -17,7 +17,7 @@ from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import pretty_repr_bib, get_bib_info, get_bib_component
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
     cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
-from cobaya.input import get_default_info
+from cobaya.input_processing import get_default_info
 from cobaya.conventions import subfolders, kinds, packages_path_env, packages_path_input
 
 # per-platform settings for correct high-DPI scaling
@@ -380,7 +380,7 @@ class DefaultsDialog(QWidget):
         _indent = "  "
         defaults_txt = (kind + ":\n" + _indent + component + ":\n" +
                         2 * _indent + ("\n" + 2 * _indent).join(defaults_txt.split("\n")))
-        from cobaya.yaml import yaml_load
+        from cobaya.yaml_helpers import yaml_load
         self.display["python"].setText(pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
         self.display["bibliography"].setText(get_bib_component(component, kind))

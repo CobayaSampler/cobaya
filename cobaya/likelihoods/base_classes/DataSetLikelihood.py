@@ -11,7 +11,7 @@ import os
 # Local
 from cobaya.log import LoggedError
 from cobaya.component import ComponentNotInstalledError
-from cobaya.typing import InfoDict
+from cobaya.typing_conventions import InfoDict
 from cobaya.conventions import packages_path_input
 from .InstallableLikelihood import InstallableLikelihood
 
