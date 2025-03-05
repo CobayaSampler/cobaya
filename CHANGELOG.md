@@ -1,9 +1,12 @@
-## 3.5.5 (unreleased)
+## 3.5.5 – 2025-02-05
 
-- Option for stricter run-time input type checking (#388)
+### General
+
+- Option for stricter run-time input type checking (#388, thanks @ggalloni)
 - Detect and fix incomplete last lines when resuming or minimizing from existing runs (#306, #378)
 - Added functions module and refactored some numerical functions into it
-- Tidier numpy2 outputs and other minor fixes
+- Tidier numpy2 outputs
+- Other minor fixes (thanks @mgerbino, @ark93-cosmo, @MariaLuisaGallavotti, @ewanchamberlain)
 
 ### Cosmology
 
