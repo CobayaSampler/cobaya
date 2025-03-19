@@ -31,6 +31,8 @@ List of external packages
  * `MFLike-plik <https://github.com/simonsobs/LAT_MFLike/tree/mflike-plik>`_
  * `ACTPol DR4 <https://github.com/ACTCollaboration/pyactlike>`_
  * `ACT DR6 Lensing <https://github.com/ACTCollaboration/act_dr6_lenslike>`_
+ * `ACT DR6 Multi-Frequency Likelihood <https://github.com/ACTCollaboration/act_dr6_mflike>`_
+ * `ACT DR6 CMB-only Likelihood <https://github.com/ACTCollaboration/DR6-ACT-lite>`_
  * `SPT-SZ, SPTPol & SPT-3G <https://github.com/xgarrido/spt_likelihoods>`_
  * `cobaya-mock-cmb <https://github.com/misharash/cobaya_mock_cmb>`_
  * `pyWMAP <https://github.com/HTJense/pyWMAP>`_
