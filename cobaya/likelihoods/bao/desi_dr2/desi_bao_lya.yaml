@@ -1,0 +1,10 @@
+# DESI BAO results for Lya
+path: null
+measurements_file: bao_data/desi_bao_dr2/desi_gaussian_bao_Lya_GCcomb_mean.txt
+cov_file: bao_data/desi_bao_dr2/desi_gaussian_bao_Lya_GCcomb_cov.txt
+# Fiducial sound horizon with which data have been stored
+rs_fid: 1  # Mpc
+# Aliases for automatic covariance matrix
+aliases: [BAO]
+# Speed in evaluations/second
+speed: 2000

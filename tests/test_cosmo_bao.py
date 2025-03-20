@@ -308,6 +308,15 @@ def test_DESI_y1_camb(packages_path, skip_not_installed):
     body_of_test(packages_path, best_fit, info_likelihood, info_theory,
                  chi2_DESI_y1_bao, skip_not_installed=skip_not_installed)
 
+def test_DESI_dr2_camb(packages_path, skip_not_installed):
+    like = "bao.desi_dr2"
+    info_likelihood = {like: {}}
+    info_theory = {"camb": None}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_DESI_dr2_bao, skip_not_installed=skip_not_installed)
+    info_likelihood = {"bao.desi_dr2.desi_bao_elg2": {}}
+    body_of_test(packages_path, best_fit, info_likelihood, info_theory,
+                 chi2_DESI_dr2_elg2, skip_not_installed=skip_not_installed)
 
 # BEST FIT AND REFERENCE VALUES ##########################################################
 
@@ -347,3 +356,7 @@ chi2_sdss_dr7_mgs = {
     "bao.sdss_dr7_mgs": 0.92689, "tolerance": 0.02}
 chi2_DESI_y1_bao = {
     "bao.desi_2024_bao_all": 21.37, "tolerance": 0.02}
+chi2_DESI_dr2_bao = {
+    "bao.desi_dr2": 30.51, "tolerance": 0.02}
+chi2_DESI_dr2_elg2 = {
+    "bao.desi_dr2.desi_bao_elg2": 2.24, "tolerance": 0.01}
