@@ -19,7 +19,7 @@ using the :doc:`input generator <cosmo_basic_runs>`. For example:
    likelihood:
      bao.desi_dr2
 
-Please cite the relevant papers, for bibtex run e.g. ``cobaya-doc bao.desi_dr2``.
+Please cite the relevant papers, for bibtex run e.g. ``cobaya-bib bao.desi_dr2``.
 
 These likelihoods have no nuisance parameters or particular settings that you may want
 to change (except for the installation path; see below).

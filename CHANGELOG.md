@@ -1,3 +1,8 @@
+## 3.5.6 - 2025-03-21
+
+### Cosmology
+- Added DESI DR2 bao likelihoods (thanks @desihub)
+
 ## 3.5.5 – 2025-02-05
 
 ### General

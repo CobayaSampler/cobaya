@@ -6,4 +6,3 @@ class desi_bao_all(BAO):
     DESI BAO likelihood for all tracers.
     """
     bibtex_file = 'desi_dr2.bibtex'
-

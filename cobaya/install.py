@@ -190,9 +190,9 @@ def install(*infos, **kwargs):
             package_install = info.get("package_install") or {}
             # If a class_name AND pip install were specified, make sure the class name is
             # used. Otherwise the pip package would be inferred from the alias.
-            if (package_install == "pip"):
+            if package_install == "pip":
                 package_install = {"pip": None}
-            if ("pip" in package_install and package_install["pip"] is None):
+            if "pip" in package_install and package_install["pip"] is None:
                 package_install["pip"] = class_name
             min_version = package_install.get('min_version')
 
