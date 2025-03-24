@@ -41,6 +41,8 @@ def get_args(vals=None):
     parser.add_argument('--read-only', action='store_true', help=(
         'option to configure an already-run existing grid'))
     # Arguments related to installation of requisites
+    parser.add_argument('--install', action="store_true", help=(
+        'install required code and data for the grid using default.'))
     parser.add_argument('--install-reqs-at', help=(
         'install required code and data for the grid in the given folder.'))
     parser.add_argument("--install-reqs-force", action="store_true", default=False,
@@ -104,8 +106,8 @@ def set_minimize(info, minimize_info=None):
 
 # noinspection PyUnboundLocalVariable
 def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
-             interactive=False, install_reqs_at=None, install_reqs_force=None,
-             show_covmats=False):
+             interactive=False, install=False, install_reqs_at=None,
+             install_reqs_force=None, show_covmats=False):
     print("Generating grid...")
     batchPath = os.path.abspath(batchPath) + os.sep
     if not settings:
@@ -141,7 +143,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         batch.make_directories(settingName or settings.__file__)
         batch.save()
     infos = {}
-    components_used = {}
 
     from_yaml = isinstance(settings, dict)
     dic = settings if from_yaml else settings.__dict__
@@ -166,7 +167,9 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
     minimize_defaults = merge_info(*dicts_or_load(dic.get('minimize_defaults')))
     params = dict_option('params')
     param_extra = dict_option('param_extra_opts')
+    install = install or install_reqs_at
 
+    components_infos = {}
     for job_item in batch.items(wantSubItems=False):
         # Model info
         job_item.makeChainPath()
@@ -191,7 +194,6 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
             combined_info = merge_info(create_input(**preset), combined_info)
         combined_info["output"] = job_item.chainRoot
         # Requisites
-        components_used = get_used_components(components_used, combined_info)
         if install_reqs_at:
             combined_info[packages_path_input] = os.path.abspath(install_reqs_at)
         # Save the info (we will write it after installation:
@@ -199,12 +201,13 @@ def makeGrid(batchPath, settingName=None, settings=None, read_only=False,
         if job_item.paramtag not in infos:
             infos[job_item.paramtag] = {}
         infos[job_item.paramtag][job_item.data_set.tag] = combined_info
+        components_infos = merge_info(components_infos, combined_info)
     # Installing requisites
-    if install_reqs_at:
+    if install:
         print("Installing required code and data for the grid.")
         from cobaya.log import logger_setup
         logger_setup()
-        install_reqs(components_used, path=install_reqs_at, force=install_reqs_force)
+        install_reqs(components_infos, path=install_reqs_at, force=install_reqs_force)
     print("Adding covmats (if necessary) and writing input files")
     cov_dir = dic.get("cov_dir")  # None means use the default from mcmc settings
     def_packages = cov_dir or install_reqs_at or resolve_packages_path()

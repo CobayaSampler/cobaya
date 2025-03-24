@@ -4,7 +4,7 @@ defaults:
       extra_args:
         lens_potential_accuracy: 1
   timing: True
-  # Presets for shorter input
+  # Presets for shorter input, defined in cobaya.cosmo_input.input_database
   # Any other field overwrites the presets
   preset:
     # Base model
@@ -15,7 +15,7 @@ defaults:
     neutrinos: one_heavy_planck
     dark_energy: lambda
     bbn: consistency
-    reionization: gauss_prior
+    reionization: std
     # Sampler
     sampler: MCMC
     # Theory code
