@@ -41,11 +41,17 @@ class GaussianMixture(Likelihood):
         """
         return len(self.input_params)
 
+    def initialize(self):
+        super().initialize()
+        self._input_params_order = self.input_params
+
+
     def initialize_with_params(self):
         """
         Initializes the gaussian distributions.
         """
         self.log.debug("Initializing")
+        self._input_params_order = self._input_params_order or self.input_params
         # Load mean and cov, and check consistency of n_modes and dimensionality
         if self.means is not None and self.covs is not None:
             # Wrap them in the right arrays (n_mode, param) and check consistency
@@ -120,7 +126,7 @@ class GaussianMixture(Likelihood):
         """
         self.wait()
         # Prepare the vector of sampled parameter values
-        x = np.array([params_values[p] for p in self.input_params])
+        x = np.array([params_values[p] for p in self._input_params_order])
         # Fill the derived parameters
         derived = params_values.get("_derived")
         if derived is not None:
