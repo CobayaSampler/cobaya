@@ -226,13 +226,22 @@ def get_compiled_import_path(source_path):
     return os.path.join(build_path, post)
 
 
-def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
+def import_all_classes(path, pkg: str, subclass_of: type, hidden=False, helpers=False,
+                       stem: str = None):
     import pkgutil
     from cobaya.theory import HelperTheory
     result = set()
-    for (module_loader, name, ispkg) in pkgutil.iter_modules([path]):
+    if stem:
+        stem_root, stem_rest = stem.split(".", 1) if "." in stem else (stem, "")
+        stem_module = pkg + '.' + stem_root
+    else:
+        stem_module = ''
+        stem_rest = None
+    for (module_loader, name, is_pkg) in pkgutil.iter_modules([path]):
         if hidden or not name.startswith('_'):
             module_name = pkg + '.' + name
+            if stem and module_name != stem_module:
+                continue
             m = load_module(module_name)
             if hidden or not getattr(m, '_is_abstract', False):
                 for class_name, cls in inspect.getmembers(m, inspect.isclass):
@@ -241,13 +250,15 @@ def import_all_classes(path, pkg, subclass_of, hidden=False, helpers=False):
                             cls.__module__ == module_name and \
                             (hidden or not cls.__dict__.get('_is_abstract')):
                         result.add(cls)
-                if ispkg:
+                if is_pkg:
                     result.update(import_all_classes(os.path.dirname(m.__file__),
-                                                     m.__name__, subclass_of, hidden))
+                                                     m.__name__, subclass_of,
+                                                     hidden, helpers,
+                                                     stem_rest))
     return result
 
 
-def get_available_internal_classes(kind, hidden=False):
+def get_available_internal_classes(kind, hidden=False, stem=None):
     """
     Gets all class names of a given kind.
     """
@@ -255,17 +266,18 @@ def get_available_internal_classes(kind, hidden=False):
     from cobaya.component import CobayaComponent
     path = os.path.join(os.path.dirname(__file__), subfolders[kind])
     return import_all_classes(path, 'cobaya.%s' % subfolders[kind], CobayaComponent,
-                              hidden)
+                              hidden, stem=stem)
 
 
-def get_all_available_internal_classes(hidden=False):
-    return set(chain(*(get_available_internal_classes(k, hidden) for k in kinds)))
+def get_all_available_internal_classes(hidden=False, stem=None):
+    return set(chain(*(get_available_internal_classes(k, hidden, stem) for k in kinds)))
 
 
-def get_available_internal_class_names(kind=None, hidden=False) -> Iterable[str]:
+def get_available_internal_class_names(kind=None, hidden=False,
+                                       stem=None) -> Iterable[str]:
     return sorted(set(cls.get_qualified_class_name() for cls in
-                      (get_available_internal_classes(kind, hidden) if kind
-                       else get_all_available_internal_classes(hidden))))
+                      (get_available_internal_classes(kind, hidden, stem) if kind
+                       else get_all_available_internal_classes(hidden, stem))))
 
 
 def replace_optimizations(function_string: str) -> str:

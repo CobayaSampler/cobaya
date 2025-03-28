@@ -18,7 +18,7 @@ from getdist.paramnames import makeList as make_list
 # Local
 from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.input import get_used_components, merge_info, update_info
+from cobaya.input import merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.tools import sort_cosmetic, warn_deprecation, resolve_packages_path
 from cobaya.grid_tools import batchjob

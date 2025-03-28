@@ -6,7 +6,7 @@ r"""
         modification)
 
 This code provides a template for BAO, :math:`f\sigma_8`, :math:`H`
-and other redshift dependent functions.
+and other redshift-dependent functions.
 
 Usage
 -----
@@ -22,11 +22,11 @@ using the :doc:`input generator <cosmo_basic_runs>`. For example:
 Please cite the relevant papers, for bibtex run e.g. ``cobaya-bib bao.desi_dr2``.
 
 These likelihoods have no nuisance parameters or particular settings that you may want
-to change (except for the installation path; see below).
+to change.
 
 Note that although called "bao", some of these data combinations also include redshift
 distortion data (RSD), encapsulated via a single "f sigma8" parameter (which is not
-accurate for some non-LCDM models).
+accurate for some non-LCDM models). The DESI likelihoods are all BAO-only.
 
 
 Defining your own BAO likelihood
@@ -70,29 +70,8 @@ Installation
 ------------
 
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
-If are following the instructions there (you should!), you don't need to read the rest
-of this section.
-
-Manual installation of the BAO likelihood data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Assuming you are installing all your
-likelihoods under ``/path/to/likelihoods``, simply do
-
-.. code:: bash
-
-   $ cd /path/to/likelihoods
-   $ git clone https://github.com/CobayaSampler/bao_data.git
-
-After this, mention the path to this likelihood when you include it in an input file, e.g.
-
-.. code-block:: yaml
-
-   likelihood:
-     bao.desi_dr2:
-       path: /path/to/likelihoods/
 """
-# Global
+
 import os
 import numpy as np
 from scipy.interpolate import UnivariateSpline, RectBivariateSpline, \

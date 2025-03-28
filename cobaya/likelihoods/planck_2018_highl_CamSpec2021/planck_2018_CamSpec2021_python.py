@@ -9,6 +9,7 @@ class Planck2018CamSpec2021Python(Planck2018CamSpecPython):
                        "directory": "planck_2018_CamSpec2021"}
 
     bibtex_file = 'CamSpec2021.bibtex'
+    _is_abstract = True
 
     def get_powerlaw_residuals(self, data_params):
 
