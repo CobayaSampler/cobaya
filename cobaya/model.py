@@ -1082,8 +1082,14 @@ class Model(HasLogger):
         for assign, option in ((input_assign, "input_params"),
                                (output_assign, "output_params")):
             for component in self.components:
-                setattr(component, option,
-                        [p for p, assign in assign.items() if component in assign])
+                assign_params = [p for p, assign in assign.items() if component in assign]
+                if (current_assign := getattr(component, option)) is unset_params:
+                    setattr(component, option, assign_params)
+                elif set(assign_params) != set(current_assign):
+                    raise LoggedError(
+                        self.log, "exising %s %r do not match assigned parameters %r",
+                        option, assign_params, current_assign)
+
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_likelihood if component in self.likelihood.values() else
                        info_theory)
