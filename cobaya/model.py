@@ -1079,11 +1079,18 @@ class Model(HasLogger):
                 "Output params can only be computed by one likelihood/theory, "
                 "but some were claimed by more than one: %r.", multi_assigned_output)
         # Finished! Assign and update infos
-        for assign, option in ((input_assign, "input_params"),
-                               (output_assign, "output_params")):
+        for assign, option, output in ((input_assign, "input_params", False),
+                                       (output_assign, "output_params", True)):
             for component in self.components:
-                setattr(component, option,
-                        [p for p, assign in assign.items() if component in assign])
+                assign_params = [p for p, assign in assign.items() if component in assign]
+                current_assign = getattr(component, option)
+                if output or current_assign is unset_params:
+                    setattr(component, option, assign_params)
+                elif set(assign_params) != set(current_assign):
+                    raise LoggedError(
+                        self.log, "exising %s %r do not match assigned parameters %r",
+                        option, assign_params, current_assign)
+
                 # Update infos! (helper theory parameters stored in yaml with host)
                 inf = (info_likelihood if component in self.likelihood.values() else
                        info_theory)
