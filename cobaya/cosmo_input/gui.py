@@ -61,9 +61,6 @@ try:
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
 
-# Quit with C-c
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-
 
 def text(key, contents):
     desc = (contents or {}).get("desc")
@@ -414,6 +411,8 @@ def gui_script():
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
 
+    # Quit with C-c
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     window = MainWindow()
     window.show()
     sys.exit(getattr(app, exec_method_name)())
