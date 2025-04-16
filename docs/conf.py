@@ -46,8 +46,14 @@ extensions = [
     'sphinxcontrib.programoutput',
     'sphinx_rtd_theme',
     'sphinxcontrib.jquery',
-    'sphinx_markdown_builder'
 ]
+
+# Add sphinx_markdown_builder if available (used for LLM context generation)
+try:
+    import sphinx_markdown_builder
+    extensions.append('sphinx_markdown_builder')
+except ImportError:
+    pass
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates', 'theme_customisation']

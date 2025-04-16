@@ -7,12 +7,6 @@ on:
     paths:
       - 'docs/**'
       - 'cobaya/**'
-  pull_request:
-    branches: [ master ]
-    paths:
-      - 'docs/**'
-      - 'cobaya/**'
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +17,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
@@ -34,7 +28,7 @@ jobs:
     - name: Build documentation as Markdown
       run: |
         mkdir -p docs/_build
-        python build_docs_to_markdown.py --exclude "cluster_amazon,devel" --output docs/_build/cobaya_docs_combined.md
+        python docs/build_docs_to_markdown.py --exclude "cluster_amazon,devel" --output docs/_build/cobaya_docs_combined.md
 
     - name: Upload documentation as artifact
       uses: actions/upload-artifact@v4
