@@ -45,7 +45,8 @@ extensions = [
     'sphinx.ext.graphviz',
     'sphinxcontrib.programoutput',
     'sphinx_rtd_theme',
-    'sphinxcontrib.jquery'
+    'sphinxcontrib.jquery',
+    'sphinx_markdown_builder'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
