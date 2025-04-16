@@ -13,7 +13,6 @@ python:
       path: .
       extra_requirements:
         - docs
-    - requirements: docs/requirements_rtd.txt
 
 formats:
   - pdf
