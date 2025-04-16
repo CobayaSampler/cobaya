@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -33,10 +33,11 @@ jobs:
 
     - name: Build documentation as Markdown
       run: |
+        mkdir -p docs/_build
         python build_docs_to_markdown.py --exclude "cluster_amazon,devel" --output docs/_build/cobaya_docs_combined.md
 
     - name: Upload documentation as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: cobaya-docs-markdown
         path: docs/_build/cobaya_docs_combined.md
