@@ -270,7 +270,7 @@ class MainWindow(QWidget):
                 "\nIn order to find a covariance matrix, you need to define an external "
                 "packages installation path, e.g. via the env variable %r.\n" %
                 packages_path_env)
-        elif any(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
+        elif all(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
                  for d in covmat_folders):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "
