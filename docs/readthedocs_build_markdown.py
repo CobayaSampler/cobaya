@@ -9,6 +9,7 @@ import sys
 import subprocess
 import shutil
 
+
 def main():
     """Build markdown documentation and copy it to the HTML output directory."""
     print("Building markdown documentation for ReadTheDocs...")
