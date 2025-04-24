@@ -19,12 +19,13 @@ Downloading the Markdown Documentation
 
 You can download the complete Cobaya documentation as a single Markdown file:
 
-* `Download Cobaya Documentation as Markdown <cobaya_docs_combined.md>`_
+* `Download as Markdown <_static/cobaya_docs_combined.md>`_ - Plain text format for direct use with LLMs
+* `View as HTML <_static/cobaya_docs_combined.html>`_ - HTML formatted version for easier reading
 
 This file contains the entire documentation, including all sections, code examples, and explanations.
 
 Using the Markdown Documentation with LLMs
----------------------------------------
+------------------------------------------
 
 The Markdown documentation can be used as context for LLMs in several ways:
 
