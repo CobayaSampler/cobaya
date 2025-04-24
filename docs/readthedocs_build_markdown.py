@@ -59,19 +59,11 @@ def main():
     if os.path.exists(output_file):
         print(f"Markdown file generated at: {output_file}")
 
-        # Create directories in the output directory
-        # We'll place the file directly in the root of the HTML output
+        # Copy the file directly to the output directory root
         # This makes it accessible at the URL: /cobaya_docs_combined.md
         dest_file = os.path.join(output_dir, "cobaya_docs_combined.md")
         shutil.copy2(output_file, dest_file)
         print(f"Copied markdown file to: {dest_file}")
-
-        # Also copy to the _static directory as a backup
-        static_dir = os.path.join(output_dir, "_static")
-        os.makedirs(static_dir, exist_ok=True)
-        static_file = os.path.join(static_dir, "cobaya_docs_combined.md")
-        shutil.copy2(output_file, static_file)
-        print(f"Also copied markdown file to: {static_file}")
     else:
         print(f"ERROR: Failed to generate markdown file at {output_file}")
 
