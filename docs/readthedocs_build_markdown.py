@@ -15,37 +15,61 @@ def main():
     print("Building markdown documentation for ReadTheDocs...")
 
     # Get the output directory from environment variables
-    output_dir = os.environ.get('READTHEDOCS_OUTPUT', 'docs/_readthedocs/html')
+    # ReadTheDocs sets READTHEDOCS_OUTPUT/html for the HTML output
+    output_dir = os.environ.get('READTHEDOCS_OUTPUT', '')
+    if output_dir:
+        output_dir = os.path.join(output_dir, 'html')
+    else:
+        # Fallback to a local directory if not running on ReadTheDocs
+        output_dir = '_build/html'
+
+    print(f"Output directory: {output_dir}")
 
     # Create the output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
+    # Create _build directory
+    os.makedirs("_build", exist_ok=True)
+
     # Run the build_docs_to_markdown.py script
-    subprocess.run(
+    build_script = "docs/build_docs_to_markdown.py"
+    output_file = "_build/cobaya_docs_combined.md"
+
+    print(f"Running {build_script} to generate {output_file}")
+
+    # Run the script
+    result = subprocess.run(
         [
             sys.executable,
-            "docs/build_docs_to_markdown.py",
+            build_script,
             "--exclude", "cluster_amazon,devel",
-            "--output", "docs/_build/cobaya_docs_combined.md"
+            "--output", output_file
         ],
-        check=True
+        check=False,
+        capture_output=True,
+        text=True
     )
 
-    # Copy the markdown file to the output directory
-    shutil.copy2(
-        "docs/_build/cobaya_docs_combined.md",
-        os.path.join(output_dir, "cobaya_docs_combined.md")
-    )
+    # Print output for debugging
+    print(f"Build script stdout: {result.stdout}")
+    if result.stderr:
+        print(f"Build script stderr: {result.stderr}")
 
-    # Also copy to the static directory for the HTML link to work
-    static_dir = os.path.join(output_dir, "_static")
-    os.makedirs(static_dir, exist_ok=True)
-    shutil.copy2(
-        "docs/_build/cobaya_docs_combined.md",
-        os.path.join(static_dir, "cobaya_docs_combined.md")
-    )
+    # Check if the markdown file was generated
+    if os.path.exists(output_file):
+        print(f"Markdown file generated at: {output_file}")
 
-    print("Markdown documentation built and copied to the output directory.")
+        # Copy to the static directory for the HTML link to work
+        static_dir = os.path.join(output_dir, "_static")
+        os.makedirs(static_dir, exist_ok=True)
+        static_file = os.path.join(static_dir, "cobaya_docs_combined.md")
+
+        shutil.copy2(output_file, static_file)
+        print(f"Copied markdown file to: {static_file}")
+    else:
+        print(f"ERROR: Failed to generate markdown file at {output_file}")
+
+    print("Markdown documentation process completed.")
     return 0
 
 
