@@ -28,8 +28,36 @@ Using the Markdown Documentation with LLMs
 
 The Markdown documentation can be used as context for LLMs in several ways:
 
-1. **Direct upload**: Many LLM platforms allow you to upload documents as context
+1. **Direct upload**: Many LLM platforms allow you to upload documents as context into a custom agent system prompt
 2. **Embedding**: The documentation can be embedded and used with retrieval-augmented generation (RAG)
-3. **Copy-paste**: For smaller sections, you can copy and paste relevant parts directly into your prompts
+3. **Copy-paste**: For one-off use, you can copy and paste directly into your prompts
 
 The documentation is structured to maintain the same organization as the HTML version, making it easy to find specific information.
+
+Generating the Markdown Documentation Locally
+--------------------------------------------
+
+If you want to generate the markdown documentation locally, you can use the provided script:
+
+.. code-block:: bash
+
+    python docs/markdown_builder.py
+
+This will:
+
+1. Install the required dependencies
+2. Build the Sphinx documentation in markdown format
+3. Combine all markdown files into a single file at ``docs/cobaya_docs_combined.md``
+
+You can customize the output with these options:
+
+.. code-block:: bash
+
+    python docs/markdown_builder.py --exclude "file1,file2" --output "custom_path.md" --no-install
+
+Where:
+
+* ``--exclude``: Comma-separated list of files to exclude (without .md extension)
+* ``--output``: Custom output file path
+* ``--no-install``: Skip installation of dependencies
+
