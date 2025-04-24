@@ -175,7 +175,7 @@ def combine_markdown_files(build_dir, exclude_files, output_file):
             print(f"  Adding {section_name}...")
 
             # Add section header
-            outfile.write(f"## {section_name}\n\n")
+            outfile.write(f"## {file_name}\n\n")
 
             # Add file content
             with open(file_path, "r", encoding="utf-8") as infile:
