@@ -15,11 +15,11 @@ Markdown is a lightweight markup language that is easy for both humans and machi
 3. It's compact, allowing more content to fit within token limits
 
 Downloading the Markdown Documentation
--------------------------------------
+---------------------------------------
 
 You can download the complete Cobaya documentation as a single Markdown file:
 
-* `Download Cobaya Documentation as Markdown <_static/cobaya_docs_combined.md>`_
+* `Download Cobaya Documentation as Markdown <cobaya_docs_combined.md>`_
 
 This file contains the entire documentation, including all sections, code examples, and explanations.
 
