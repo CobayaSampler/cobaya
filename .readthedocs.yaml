@@ -6,6 +6,9 @@ build:
     python: "3.11"
   apt_packages:
     - graphviz
+  jobs:
+    post_build:
+      - python docs/readthedocs_build_markdown.py
 
 python:
   install:
@@ -13,6 +16,7 @@ python:
       path: .
       extra_requirements:
         - docs
+    - requirements: docs/requirements.txt
 
 formats:
   - pdf
