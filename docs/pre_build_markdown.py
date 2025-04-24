@@ -11,8 +11,8 @@ import traceback
 
 
 def update_conf_py():
-    """Update conf.py to include the markdown file in html_extra_path."""
-    print("Updating conf.py to include the markdown file in html_extra_path...")
+    """Update conf.py to include the markdown file in html_static_path."""
+    print("Updating conf.py to include the markdown file in html_static_path...")
 
     conf_path = "docs/conf.py"
     with open(conf_path, "r", encoding="utf-8") as f:
@@ -21,24 +21,24 @@ def update_conf_py():
     # The path to the markdown file relative to the conf.py directory
     md_path = "cobaya_docs_combined.md"
 
-    # Check if html_extra_path is already set
-    if "html_extra_path = " in content:
-        # Replace the existing html_extra_path
-        if "html_extra_path = []" in content:
+    # Check if html_static_path is already set
+    if "html_static_path = " in content:
+        # Replace the existing html_static_path
+        if "html_static_path = []" in content:
             # Replace empty list
             content = content.replace(
-                "html_extra_path = []",
-                f"html_extra_path = ['{md_path}']"
+                "html_static_path = []",
+                f"html_static_path = ['{md_path}']"
             )
         elif f"'{md_path}'" not in content and f'"{md_path}"' not in content:
             # Add to existing list if not already there
             content = content.replace(
-                "html_extra_path = [",
-                f"html_extra_path = ['{md_path}', "
+                "html_static_path = [",
+                f"html_static_path = ['{md_path}', "
             )
     else:
-        # Add html_extra_path if not present
-        content += f"\n\n# Extra files to include\nhtml_extra_path = ['{md_path}']\n"
+        # Add html_static_path if not present
+        content += f"\n\n# Extra files to include\nhtml_static_path = ['{md_path}']\n"
 
     # Write the updated content back to the file
     with open(conf_path, "w", encoding="utf-8") as f:
