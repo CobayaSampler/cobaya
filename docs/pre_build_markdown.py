@@ -1,24 +1,23 @@
 #!/usr/bin/env python
 """
 Script to build markdown documentation for ReadTheDocs.
-This script is automatically run by ReadTheDocs before the main documentation build.
+This script is run by ReadTheDocs before the main documentation build.
 """
 
 import os
 import sys
 import subprocess
-import shutil
 import re
 
 
 def update_conf_py():
     """Update conf.py to include the markdown file in html_extra_path."""
     print("Updating conf.py to include the markdown file in html_extra_path...")
-    
+
     conf_path = "docs/conf.py"
     with open(conf_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Check if html_extra_path is already set
     if "html_extra_path = " in content:
         # Replace the existing html_extra_path
@@ -43,27 +42,31 @@ def update_conf_py():
             "html_static_path = ['theme_customisation']",
             "html_static_path = ['theme_customisation']\n\n# Add any extra paths that contain custom files\nhtml_extra_path = ['../cobaya_docs_combined.md']"
         )
-    
+
     # Write the updated content back to the file
     with open(conf_path, "w", encoding="utf-8") as f:
         f.write(content)
-    
+
     print("conf.py updated successfully.")
 
 
 def main():
     """Build markdown documentation before the Sphinx build."""
     print("Building markdown documentation for ReadTheDocs...")
-    
+
     # Create _build directory
     os.makedirs("_build", exist_ok=True)
-    
+
     # Run the build_docs_to_markdown.py script
     build_script = "docs/build_docs_to_markdown.py"
-    output_file = "cobaya_docs_combined.md"
-    
+    output_dir = "_build"
+    output_file = os.path.join(output_dir, "cobaya_docs_combined.md")
+
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
     print(f"Running {build_script} to generate {output_file}")
-    
+
     # Run the script
     result = subprocess.run(
         [
@@ -76,21 +79,21 @@ def main():
         capture_output=True,
         text=True
     )
-    
+
     # Print output for debugging
     print(f"Build script stdout: {result.stdout}")
     if result.stderr:
         print(f"Build script stderr: {result.stderr}")
-    
+
     # Check if the markdown file was generated
     if os.path.exists(output_file):
         print(f"Markdown file generated at: {output_file}")
-        
+
         # Update conf.py to include the markdown file
         update_conf_py()
     else:
         print(f"ERROR: Failed to generate markdown file at {output_file}")
-    
+
     print("Pre-build markdown documentation process completed.")
     return 0
 
