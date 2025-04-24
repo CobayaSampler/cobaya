@@ -216,41 +216,21 @@ def combine_markdown_files(build_dir, exclude_files, output_file):
     with open(output_file, "w", encoding="utf-8") as outfile:
         # Add a comprehensive header
         outfile.write("# Cobaya Documentation\n\n")
-        outfile.write("*This is a combined markdown version of the Cobaya documentation for use with Large Language Models.*\n\n")
-        outfile.write("*Generated from the official documentation at https://cobaya.readthedocs.io/*\n\n")
-        outfile.write("---\n\n")
-        
-        # Add table of contents
-        outfile.write("## Table of Contents\n\n")
-        for file_path in filtered_files:
-            file_name = os.path.basename(file_path)
-            section_name = os.path.splitext(file_name)[0]
-            # Make the section name more readable by replacing underscores with spaces and capitalizing
-            readable_name = section_name.replace('_', ' ').title()
-            outfile.write(f"- [{readable_name}](#{section_name})\n")
-        
-        outfile.write("\n---\n\n")
+        outfile.write("---\n\n")     
 
         # Add each file's content
         for file_path in filtered_files:
             file_name = os.path.basename(file_path)
             section_name = os.path.splitext(file_name)[0]
-            # Make the section name more readable
-            readable_name = section_name.replace('_', ' ').title()
-
+   
             print(f"  Adding {section_name}...")
-
-            # Add section header with anchor
-            outfile.write(f"<a id='{section_name}'></a>\n\n")
-            outfile.write(f"## {readable_name}\n\n")
+            outfile.write(f"## {file_name}\n\n")
 
             # Add file content
             with open(file_path, "r", encoding="utf-8") as infile:
                 content = infile.read()
-                # Fix internal links to work within the combined document
-                # This is a simplified approach - more complex link fixing might be needed
                 outfile.write(content)
-                outfile.write("\n\n---\n\n")
+                outfile.write("\n\n")
 
     print(f"Combined documentation written to {output_file}")
     print(f"File size: {os.path.getsize(output_file) / 1024:.2f} KB")
@@ -258,11 +238,6 @@ def combine_markdown_files(build_dir, exclude_files, output_file):
 
 
 def main():
-    """Main function."""
-    print("=" * 80)
-    print("Cobaya Markdown Documentation Builder")
-    print("=" * 80)
-    
     args = parse_args()
 
     try:
