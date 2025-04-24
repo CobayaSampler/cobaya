@@ -8,7 +8,7 @@ build:
     - graphviz
   jobs:
     pre_build:
-      - python docs/pre_build_markdown.py
+      - python docs/markdown_builder.py
 
 python:
   install:
