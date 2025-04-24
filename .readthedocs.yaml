@@ -7,8 +7,8 @@ build:
   apt_packages:
     - graphviz
   jobs:
-    post_build:
-      - python docs/readthedocs_build_markdown.py
+    pre_build:
+      - python docs/pre_build_markdown.py
 
 python:
   install:
