@@ -54,57 +54,86 @@ def update_conf_py():
     with open(conf_path, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print("conf.py updated successfully.")
+    # Verify the update by reading the file again
+    with open(conf_path, "r", encoding="utf-8") as f:
+        updated_content = f.read()
+
+    # Check if html_extra_path is in the updated content
+    if f"html_extra_path = ['{md_path}']" in updated_content or \
+       f'html_extra_path = ["{md_path}"]' in updated_content or \
+       f"'{md_path}'" in updated_content and "html_extra_path = [" in updated_content:
+        print("conf.py updated successfully with html_extra_path.")
+    else:
+        print("ERROR: Failed to update conf.py with html_extra_path.")
+        print("Current content of conf.py:")
+        print("---")
+        print(updated_content)
+        print("---")
+        raise RuntimeError("Failed to update conf.py with html_extra_path.")
 
 
 def main():
     """Build markdown documentation before the Sphinx build."""
     print("Building markdown documentation for ReadTheDocs...")
 
-    # Use docs directory for output
-    output_dir = "docs"
-    output_file = os.path.join(output_dir, "cobaya_docs_combined.md")
+    try:
+        # Use docs directory for output
+        output_dir = "docs"
+        output_file = os.path.join(output_dir, "cobaya_docs_combined.md")
 
-    # Run the build_docs_to_markdown.py script
-    build_script = "docs/build_docs_to_markdown.py"
+        # Run the build_docs_to_markdown.py script
+        build_script = "docs/build_docs_to_markdown.py"
 
-    print(f"Running {build_script} to generate {output_file}")
+        print(f"Running {build_script} to generate {output_file}")
 
-    # Run the script
-    result = subprocess.run(
-        [
-            sys.executable,
-            build_script,
-            "--exclude", "cluster_amazon,devel",
-            "--output", output_file
-        ],
-        check=False,
-        capture_output=True,
-        text=True
-    )
+        # Run the script
+        result = subprocess.run(
+            [
+                sys.executable,
+                build_script,
+                "--exclude", "cluster_amazon,devel",
+                "--output", output_file
+            ],
+            check=False,
+            capture_output=True,
+            text=True
+        )
 
-    # Print output for debugging
-    print(f"Build script stdout: {result.stdout}")
-    if result.stderr:
-        print(f"Build script stderr: {result.stderr}")
+        # Print output for debugging
+        print(f"Build script stdout: {result.stdout}")
+        if result.stderr:
+            print(f"Build script stderr: {result.stderr}")
 
-    # Check if the build was successful
-    if result.returncode != 0:
-        print(f"ERROR: Build script failed with return code {result.returncode}")
+        # Check if the build was successful
+        if result.returncode != 0:
+            print(f"ERROR: Build script failed with return code "
+                  f"{result.returncode}")
+            return 1
+
+        # Check if the markdown file was generated
+        if not os.path.exists(output_file):
+            print(f"ERROR: Failed to generate markdown file at {output_file}")
+            return 1
+
+        print(f"Markdown file generated at: {output_file}")
+
+        # Update conf.py to include the markdown file
+        update_conf_py()
+
+        # Verify the file exists and has content
+        file_size = os.path.getsize(output_file)
+        print(f"Markdown file size: {file_size} bytes")
+        if file_size == 0:
+            print("ERROR: Markdown file is empty")
+            return 1
+
+        print("Pre-build markdown documentation process completed successfully.")
+        return 0
+    except Exception as e:
+        print(f"ERROR: An exception occurred during the build process: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
-
-    # Check if the markdown file was generated
-    if not os.path.exists(output_file):
-        print(f"ERROR: Failed to generate markdown file at {output_file}")
-        return 1
-
-    print(f"Markdown file generated at: {output_file}")
-
-    # Update conf.py to include the markdown file
-    update_conf_py()
-
-    print("Pre-build markdown documentation process completed.")
-    return 0
 
 
 if __name__ == "__main__":
