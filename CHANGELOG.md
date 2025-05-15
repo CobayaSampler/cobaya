@@ -1,3 +1,22 @@
+
+## 3.5.7 - 2025-03-31
+
+### General
+
+- Fixed issue with changing parameter order using gaussian_mixture with input_params
+- cobaya-doc can be used to list components of a given type, e.g. `cobaya-doc bao`
+- Small tidies for float output with numpy2
+
+### Cosmology
+
+- BAO, DESI, and SN likelihood docs now automatically list all available internal likelihoods
+
+## 3.5.6 - 2025-03-21
+
+### Cosmology
+- Added DESI DR2 bao likelihoods (thanks @desihub)
+- ACT DR6 added to list of external likelihoods (thanks @ACTCollaboration)
+
 ## 3.5.5 – 2025-02-05
 
 ### General

@@ -8,3 +8,4 @@ class Planck2020CamSpecPython(Planck2018CamSpec2021Python):
                        "directory": "planck_NPIPE_CamSpec"}
 
     bibtex_file = 'CamSpec_NPIPE_2022.bibtex'
+    _is_abstract = True

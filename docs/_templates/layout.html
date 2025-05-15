@@ -1,0 +1,9 @@
+{% extends "!layout.html" %}
+
+{% block menu %}
+{{ super() }}
+<p class="caption"><span class="caption-text">Downloads</span></p>
+<ul>
+  <li class="toctree-l1"><a href="{{ pathto('cobaya_docs_combined.md', 1) }}">Download as Markdown (for LLMs)</a></li>
+</ul>
+{% endblock %}

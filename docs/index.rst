@@ -83,6 +83,12 @@ Table of contents
    component
    inheritance
 
+.. toctree::
+   :caption: Resources
+   :maxdepth: 1
+
+   llm_context
+
 Indices and tables
 ==================
 

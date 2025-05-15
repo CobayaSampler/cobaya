@@ -6,6 +6,9 @@ build:
     python: "3.11"
   apt_packages:
     - graphviz
+  jobs:
+    pre_build:
+      - python docs/markdown_builder.py
 
 python:
   install:
@@ -13,6 +16,7 @@ python:
       path: .
       extra_requirements:
         - docs
+    - requirements: docs/requirements.txt
 
 formats:
   - pdf

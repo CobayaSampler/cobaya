@@ -1,7 +1,7 @@
 """
 .. module:: cobaya.grid_tools.gridmanage
 
-:Synopsis: tools for managing grids of chains (Cobaya version)
+:Synopsis: tools for managing batches (grids) of chains (Cobaya version)
 :Author: Antony Lewis (based on CosmoMC version of the same code)
 
 """
@@ -32,9 +32,11 @@ def run_and_wait(processes, commands=None, procs=1):
 
 
 def grid_converge(args=None):
-    opts = BatchArgs('Find chains which have failed or not converged, and show'
-                     'Gelman-Rubin R-1 values for each run. Note need more than one'
-                     'chain for getdist to calculate R-1.',
+    opts = BatchArgs('Find chains which have failed or not converged, and show '
+                     'Gelman-Rubin R-1 values for each run. Note need more than one '
+                     'chain for getdist to calculate R-1. '
+                     'Use checkpoint option to probe running chains, rather than '
+                     'getdist results.',
                      'cobaya-grid-converge', importance=True, converge=True)
 
     opts.parser.add_argument('--exist', action='store_true', help='chain must exist')
@@ -468,8 +470,8 @@ def grid_extract(args=None):
                     if fnmatch.fnmatch(f, jobItem.name + pattern):
                         print(jobItem.distPath + f)
                         if args.normalize_names:
-                            fout = jobItem.makeNormedName(replacements)[0] + \
-                                   os.path.splitext(f)[1]
+                            file_out = jobItem.makeNormedName(replacements)[0] + \
+                                       os.path.splitext(f)[1]
                         else:
-                            fout = f
-                        shutil.copyfile(jobItem.distPath + f, target_dir + fout)
+                            file_out = f
+                        shutil.copyfile(jobItem.distPath + f, target_dir + file_out)

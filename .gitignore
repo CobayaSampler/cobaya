@@ -15,6 +15,7 @@ __pycache__
 
 # Documentation
 docs/_*
+!docs/_templates
 docs/.ipynb_checkpoints
 docs/src_examples/*/*.png
 docs/src_examples/advanced_and_models/chains/

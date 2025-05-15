@@ -2,13 +2,14 @@
 .. module:: doc
 
 :Synopsis: Show defaults options for components.
-:Author: Jesus Torrado
+:Author: Jesus Torrado and Antony Lewis
 
 """
 
 # Global
 import argparse
 from pprint import pformat
+from inspect import cleandoc
 
 # Local
 from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
@@ -16,7 +17,7 @@ from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
 from cobaya.component import get_component_class, ComponentNotFoundError
 from cobaya.conventions import subfolders, kinds
 from cobaya.input import get_default_info
-from cobaya.log import logger_setup, get_logger
+from cobaya.log import logger_setup, get_logger, NoLogging
 
 _indent = 2 * " "
 
@@ -68,9 +69,25 @@ def doc_script(args=None):
     kind = None
     if ":" in arguments.component:
         kind, arguments.component = arguments.component.split(":")
+
     try:
-        cls = get_component_class(arguments.component, kind=kind, logger=logger)
-    except ComponentNotFoundError:
+        with NoLogging("CRITICAL"):
+            cls = get_component_class(arguments.component, kind=kind, logger=logger)
+    except (ComponentNotFoundError, AttributeError):
+        if matches := list(get_available_internal_class_names(kind=kind,
+                                                              stem=arguments.component)):
+            if not matches[0].startswith(arguments.component + '.'):
+                logger.error(
+                    f"Could not identify component '{arguments.component}'. "
+                    f"Options in this package are:")
+
+            for match in matches:
+                description = cleandoc(get_component_class(match).get_desc() or "")
+                print(f'{match}:\n' +
+                      ((_indent + description.replace('\n', '\n' + _indent)) if
+                       description else "") + '\n')
+            return 0
+
         suggestions = similar_internal_class_names(arguments.component)
         logger.error(
             f"Could not identify component '{arguments.component}'. "

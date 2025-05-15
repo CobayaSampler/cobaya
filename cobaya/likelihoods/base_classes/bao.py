@@ -6,72 +6,27 @@ r"""
         modification)
 
 This code provides a template for BAO, :math:`f\sigma_8`, :math:`H`
-and other redshift dependent functions.
-
-The datasets implemented at this moment are:
-
-- ``bao.sixdf_2011_bao``
-- ``bao.sdss_dr7_mgs``
-- ``bao.sdss_dr12_consensus_bao``
-- ``bao.sdss_dr12_consensus_full_shape``
-- ``bao.sdss_dr12_consensus_final`` (combined data of the previous two)
-- ``bao.sdss_dr16_baoplus_lrg`` (combining data from BOSS DR12 and eBOSS DR16, BAO+RSD)
-- ``bao.sdss_dr16_baoplus_qso`` (DR16 BAO+RSD)
-- ``bao.sdss_dr16_baoplus_elg`` (DR16 ELG BAO+RSD)
-- ``bao.sdss_dr12_lrg_bao_dmdh`` (DR12 LRG BAO-only, independent of DR16 below)
-- ``bao.sdss_dr16_lrg_bao_dmdh`` (DR16 LRG BAO-only, independent of DR12 above)
-- ``bao.sdss_dr16_bao_elg`` (DR16 ELG BAO-only)
-- ``bao.sdss_dr16_qso_bao_dmdh`` (DR16 QSO BAO-only)
-- ``bao.sdss_dr16_baoplus_lyauto`` (DR16 LyA BAO-only)
-- ``bao.sdss_dr16_baoplus_lyxqso`` (DR16 LyA x QSO BAO-only)
-
-
-.. |br| raw:: html
-
-   <br />
-
-.. note::
-
-   If you use the likelihood ``sixdf_2011_bao``, please cite:
-   |br|
-   F. Beutler et al,
-   `The 6dF Galaxy Survey: baryon acoustic oscillations and the local Hubble constant`
-   `(arXiv:1106.3366) <https://arxiv.org/abs/1106.3366>`_
-   |br| |br|
-   If you use the likelihood ``sdss_dr7_mgs``, please cite:
-   |br|
-   A.J. Ross et al,
-   `The clustering of the SDSS DR7 main Galaxy sample - I.
-   A 4 per cent distance measure at z = 0.15`
-   `(arXiv:1409.3242) <https://arxiv.org/abs/1409.3242>`_
-   |br| |br|
-   If you use any of the likelihoods ``sdss_dr12_*``, please cite:
-   |br|
-   S. Alam et al,
-   `The clustering of galaxies in the completed SDSS-III Baryon Oscillation Spectroscopic
-   Survey: cosmological analysis of the DR12 galaxy sample`
-   `(arXiv:1607.03155) <https://arxiv.org/abs/1607.03155>`_
-   |br| |br|
-   If you use any of the likelihoods ``sdss_dr16_*``, please cite:
-   |br|
-   S. Alam et al,
-   `The Completed SDSS-IV extended Baryon Oscillation Spectroscopic Survey: Cosmological
-   Implications from two Decades of Spectroscopic Surveys at the Apache Point observatory`
-   `(arXiv:2007.08991) <https://arxiv.org/abs/2007.08991>`_
-
+and other redshift-dependent functions.
 
 Usage
 -----
 
 To use any of these likelihoods, simply mention them in the likelihoods block, or add them
-using the :doc:`input generator <cosmo_basic_runs>`.
+using the :doc:`input generator <cosmo_basic_runs>`. For example:
+
+.. code-block:: yaml
+
+   likelihood:
+     bao.desi_dr2
+
+Please cite the relevant papers, for bibtex run e.g. ``cobaya-bib bao.desi_dr2``.
 
 These likelihoods have no nuisance parameters or particular settings that you may want
-to change (except for the installation path; see below).
+to change.
 
-Note that although called "bao", many of these data combinations also include redshift
+Note that although called "bao", some of these data combinations also include redshift
 distortion data (RSD), encapsulated via a single "f sigma8" parameter (which is not
-accurate for some non-LCDM models).
+accurate for some non-LCDM models). The DESI likelihoods are all BAO-only.
 
 
 Defining your own BAO likelihood
@@ -96,7 +51,7 @@ The available quantities are
 - ``DA_over_rs``: Physical angular diameter distance, over sound horizon radius
 - ``Hz_rs``: Hubble parameter, times sound horizon radius
 - ``f_sigma8``: Differential matter linear growth rate,
-  times amplitude of present-day fuctuations
+  times amplitude of present-day fluctuations
 - ``F_AP``: Anisotropy (Alcock-Paczynski) parameter
 
 In addition create a file, e.g. ``myBAO.cov``, containing the covariance matrix for those
@@ -115,29 +70,8 @@ Installation
 ------------
 
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
-If are following the instructions there (you should!), you don't need to read the rest
-of this section.
-
-Manual installation of the BAO likelihood data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Assuming you are installing all your
-likelihoods under ``/path/to/likelihoods``, simply do
-
-.. code:: bash
-
-   $ cd /path/to/likelihoods
-   $ git clone https://github.com/CobayaSampler/bao_data.git
-
-After this, mention the path to this likelihood when you include it in an input file, e.g.
-
-.. code-block:: yaml
-
-   likelihood:
-     bao.sdss_dr12_consensus_[bao|full_shape|final|...]:
-       path: /path/to/likelihoods/bao_data
 """
-# Global
+
 import os
 import numpy as np
 from scipy.interpolate import UnivariateSpline, RectBivariateSpline, \
@@ -156,7 +90,7 @@ class BAO(InstallableLikelihood):
     type = "BAO"
 
     install_options = {"github_repository": "CobayaSampler/bao_data",
-                       "github_release": "v2.5"}
+                       "github_release": "v2.6"}
 
     prob_dist_bounds: Optional[Sequence[float]]
     measurements_file: Optional[str] = None

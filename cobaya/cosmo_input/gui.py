@@ -61,9 +61,6 @@ try:
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
 
-# Quit with C-c
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-
 
 def text(key, contents):
     desc = (contents or {}).get("desc")
@@ -273,7 +270,7 @@ class MainWindow(QWidget):
                 "\nIn order to find a covariance matrix, you need to define an external "
                 "packages installation path, e.g. via the env variable %r.\n" %
                 packages_path_env)
-        elif any(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
+        elif all(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
                  for d in covmat_folders):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "
@@ -414,6 +411,8 @@ def gui_script():
             "Check Cobaya's documentation for the cosmo_generator "
             "('Basic cosmology runs').")
 
+    # Quit with C-c
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     window = MainWindow()
     window.show()
     sys.exit(getattr(app, exec_method_name)())

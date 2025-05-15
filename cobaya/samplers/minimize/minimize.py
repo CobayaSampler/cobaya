@@ -357,7 +357,7 @@ class Minimize(Minimizer, CovmatSampler):
         affine_transform_baselines = list(chain(*affine_transform_baselines))
         transform_matrices = list(chain(*transform_matrices))
         if len(results) > 1:
-            mins = [(getattr(r, evals_attr_) if s else np.inf)
+            mins = [(float(getattr(r, evals_attr_)) if s else np.inf)
                     for r, s in zip(results, successes)]
             i_min: int = np.argmin(mins)  # type: ignore
         else:
@@ -403,7 +403,7 @@ class Minimize(Minimizer, CovmatSampler):
         self.dump_getdist()
         if len(results) > 1:
             all_mins = {
-                f"{i}": (getattr(res[0], evals_attr_), res[1])
+                f"{i}": (float(getattr(res[0], evals_attr_)), res[1])
                 for i, res in enumerate(zip(results, successes))
             }
             self.full_set_of_mins = all_mins

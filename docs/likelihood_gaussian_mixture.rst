@@ -63,10 +63,7 @@ The default option values for this likelihood are
 Gaussian mixture likelihood class
 ---------------------------------
 
-.. automodule:: likelihoods.gaussian_mixture.gaussian_mixture
-   :noindex:
-
-.. autoclass:: likelihoods.gaussian_mixture.gaussian_mixture
+.. autoclass:: likelihoods.gaussian_mixture.GaussianMixture
    :members:
 
 Generating random means and covariance matrices
