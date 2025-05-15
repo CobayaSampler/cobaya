@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/csachs/pyproject-flake8
+    rev: v7.0.0
+    hooks:
+      - id: pyproject-flake8
+        files: ^cobaya/.*\.py$
