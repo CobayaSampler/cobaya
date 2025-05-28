@@ -122,37 +122,33 @@ valid_methods = tuple(evals_attr)
 # Conventions conventions
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 get_collection_extension = (
-    lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt")
+    lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt"
+)
 
 _bobyqa_errors = {
-    controller.EXIT_MAXFUN_WARNING:
-        "Maximum allowed objective evaluations reached. "
-        "This is the most likely return value when using multiple restarts.",
-    controller.EXIT_SLOW_WARNING:
-        "Maximum number of slow iterations reached.",
-    controller.EXIT_FALSE_SUCCESS_WARNING:
-        "Py-BOBYQA reached the maximum number of restarts which decreased the"
-        " objective, but to a worse value than was found in a previous run.",
-    controller.EXIT_INPUT_ERROR:
-        "Error in the inputs.",
-    controller.EXIT_TR_INCREASE_ERROR:
-        "Error occurred when solving the trust region subproblem.",
-    controller.EXIT_LINALG_ERROR:
-        "Linear algebra error, e.g. the interpolation points produced a "
-        "singular linear system."}
+    controller.EXIT_MAXFUN_WARNING: "Maximum allowed objective evaluations reached. "
+    "This is the most likely return value when using multiple restarts.",
+    controller.EXIT_SLOW_WARNING: "Maximum number of slow iterations reached.",
+    controller.EXIT_FALSE_SUCCESS_WARNING: "Py-BOBYQA reached the maximum number of restarts which decreased the"
+    " objective, but to a worse value than was found in a previous run.",
+    controller.EXIT_INPUT_ERROR: "Error in the inputs.",
+    controller.EXIT_TR_INCREASE_ERROR: "Error occurred when solving the trust region subproblem.",
+    controller.EXIT_LINALG_ERROR: "Linear algebra error, e.g. the interpolation points produced a "
+    "singular linear system.",
+}
 
 
 class Minimize(Minimizer, CovmatSampler):
-    file_base_name = 'minimize'
+    file_base_name = "minimize"
 
     ignore_prior: bool
     confidence_for_unbounded: float
     method: str
     best_of: int
-    override_bobyqa: Optional[dict]
-    override_scipy: Optional[dict]
-    override_iminuit: Optional[dict]
-    max_evals: Union[str, int]
+    override_bobyqa: dict | None
+    override_scipy: dict | None
+    override_iminuit: dict | None
+    max_evals: str | int
 
     def initialize(self):
         """
@@ -160,8 +156,12 @@ class Minimize(Minimizer, CovmatSampler):
         points and sets up the affine transformation.
         """
         if self.method not in evals_attr:
-            raise LoggedError(self.log, "Method '%s' not recognized. Try one of %r.",
-                              self.method, list(evals_attr))
+            raise LoggedError(
+                self.log,
+                "Method '%s' not recognized. Try one of %r.",
+                self.method,
+                list(evals_attr),
+            )
         self.mpi_info("Initializing")
         self.max_iter = int(read_dnumber(self.max_evals, self.model.prior.d()))
         # Configure target
@@ -182,53 +182,69 @@ class Minimize(Minimizer, CovmatSampler):
         for start in range(num_starts):
             initial_point = None
             if files:
-                collection_in: Optional[SampleCollection]
+                collection_in: SampleCollection | None
                 if mpi.more_than_one_process() or num_starts > 1:
                     index = 1 + mpi.rank() * num_starts + start
                     if index <= len(files):
                         collection_in = SampleCollection(
-                            self.model, self.output, name=str(index), resuming=True)
+                            self.model, self.output, name=str(index), resuming=True
+                        )
                     else:
                         collection_in = None
                 else:
-                    collection_in = self.output.load_collections(self.model,
-                                                                 concatenate=True)
+                    collection_in = self.output.load_collections(
+                        self.model, concatenate=True
+                    )
                 if collection_in:
-                    initial_point = (collection_in.bestfit() if self.ignore_prior
-                                     else collection_in.MAP())
+                    initial_point = (
+                        collection_in.bestfit()
+                        if self.ignore_prior
+                        else collection_in.MAP()
+                    )
                     initial_point = initial_point[
-                        list(self.model.parameterization.sampled_params())].values
+                        list(self.model.parameterization.sampled_params())
+                    ].values
                     self.log.info(
                         "Run %d/%d will start from %s of previous sample:",
-                        start + 1, num_starts, "best fit" if self.ignore_prior else "MAP"
+                        start + 1,
+                        num_starts,
+                        "best fit" if self.ignore_prior else "MAP",
                     )
                     # Compute covmat if input but no .covmat file (e.g. with PolyChord)
                     # Prefer old over `covmat` definition in yaml (same as MCMC)
                     self.covmat = collection_in.cov(derived=False)
                     self.covmat_params = list(
-                        self.model.parameterization.sampled_params())
+                        self.model.parameterization.sampled_params()
+                    )
             if initial_point is None:
                 for _ in range(self.max_iter // 10 + 5):
                     initial_point = self.model.prior.reference(random_state=self._rng)
                     if np.isfinite(self.logp(initial_point)):
                         break
                 else:
-                    raise LoggedError(self.log, "Could not find random starting point "
-                                                "giving finite posterior")
+                    raise LoggedError(
+                        self.log,
+                        "Could not find random starting point giving finite posterior",
+                    )
                 self.log.info(
                     "Run %d/%d will start from random initial point:",
-                    start + 1, num_starts
+                    start + 1,
+                    num_starts,
                 )
             self.log.info(
-                dict(zip(self.model.parameterization.sampled_params(), initial_point)))
+                dict(zip(self.model.parameterization.sampled_params(), initial_point))
+            )
             self.initial_points.append(initial_point)
         self._bounds = self.model.prior.bounds(
-            confidence_for_unbounded=self.confidence_for_unbounded)
+            confidence_for_unbounded=self.confidence_for_unbounded
+        )
         # TODO: if ignore_prior, one should use *like* covariance (this is *post*)
         covmat = self._load_covmat(prefer_load_old=self.output)[0]
         # scale by conditional parameter widths (since not using correlation structure)
-        scales = np.minimum(1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
-                            (self._bounds[:, 1] - self._bounds[:, 0]) / 3)
+        scales = np.minimum(
+            1 / np.sqrt(np.diag(np.linalg.inv(covmat))),
+            (self._bounds[:, 1] - self._bounds[:, 0]) / 3,
+        )
         # Cov and affine transformation
         # Transform to space where initial point is at centre, and cov is normalised
         # Cannot do rotation, as supported minimization routines assume bounds aligned
@@ -249,8 +265,11 @@ class Minimize(Minimizer, CovmatSampler):
     def inv_affine_transform(self, x):
         """Transforms a point from the search space back into the parameter space."""
         # Fix up rounding errors on bounds to avoid -np.inf likelihoods
-        return np.clip(x * self._scales + self._affine_transform_baseline,
-                       self._bounds[:, 0], self._bounds[:, 1])
+        return np.clip(
+            x * self._scales + self._affine_transform_baseline,
+            self._bounds[:, 0],
+            self._bounds[:, 1],
+        )
 
     def run(self):
         """
@@ -267,9 +286,10 @@ class Minimize(Minimizer, CovmatSampler):
             self.log.debug("Starting point: %r", initial_point)
             self._affine_transform_baseline = initial_point
             initial_point = self.affine_transform(initial_point)
-            assert np.allclose(initial_point, 0.)
+            assert np.allclose(initial_point, 0.0)
             bounds = np.array(
-                [self.affine_transform(self._bounds[:, i]) for i in range(2)]).T
+                [self.affine_transform(self._bounds[:, i]) for i in range(2)]
+            ).T
             try:
                 # Configure method
                 if self.method.lower() == "bobyqa":
@@ -278,34 +298,38 @@ class Minimize(Minimizer, CovmatSampler):
                         "x0": initial_point,
                         "bounds": np.array(list(zip(*bounds))),
                         "maxfun": self.max_iter,
-                        "rhobeg": 1.,
-                        "do_logging": self.is_debug()}
-                    self.kwargs = recursive_update(self.kwargs,
-                                                   self.override_bobyqa or {})
-                    self.log.debug("Arguments for pybobyqa.solve:\n%r",
-                                   {k: v for k, v in self.kwargs.items() if
-                                    k != "objfun"})
+                        "rhobeg": 1.0,
+                        "do_logging": self.is_debug(),
+                    }
+                    self.kwargs = recursive_update(
+                        self.kwargs, self.override_bobyqa or {}
+                    )
+                    self.log.debug(
+                        "Arguments for pybobyqa.solve:\n%r",
+                        {k: v for k, v in self.kwargs.items() if k != "objfun"},
+                    )
                     result = pybobyqa.solve(**self.kwargs)
                     success = result.flag == result.EXIT_SUCCESS
                     if not success:
                         self.log.error(
                             "Finished unsuccessfully. Reason: %s",
-                            _bobyqa_errors[result.flag]
+                            _bobyqa_errors[result.flag],
                         )
                 elif self.method.lower() == "iminuit":
                     try:
                         import iminuit
                     except ImportError:
                         raise ComponentNotInstalledError(
-                            self.log, "You need to install iminuit to use the "
-                                      "'iminuit' minimizer. Try 'pip install iminuit'.")
+                            self.log,
+                            "You need to install iminuit to use the "
+                            "'iminuit' minimizer. Try 'pip install iminuit'.",
+                        )
                     self.kwargs = {
                         "fun": minuslogp_transf,
                         "x0": initial_point,
                         "bounds": bounds,
-                        "options": {
-                            "maxfun": self.max_iter,
-                            "disp": self.is_debug()}}
+                        "options": {"maxfun": self.max_iter, "disp": self.is_debug()},
+                    }
                     self.kwargs = recursive_update(
                         self.kwargs, self.override_iminuit or {}
                     )
@@ -323,12 +347,13 @@ class Minimize(Minimizer, CovmatSampler):
                         "fun": minuslogp_transf,
                         "x0": initial_point,
                         "bounds": bounds,
-                        "options": {
-                            "maxiter": self.max_iter,
-                            "disp": self.is_debug()}}
+                        "options": {"maxiter": self.max_iter, "disp": self.is_debug()},
+                    }
                     self.kwargs = recursive_update(self.kwargs, self.override_scipy or {})
-                    self.log.debug("Arguments for scipy.optimize.Minimize:\n%r",
-                                   {k: v for k, v in self.kwargs.items() if k != "fun"})
+                    self.log.debug(
+                        "Arguments for scipy.optimize.Minimize:\n%r",
+                        {k: v for k, v in self.kwargs.items() if k != "fun"},
+                    )
                     result = optimize.minimize(**self.kwargs)
                     if not (success := result.success):
                         self.log.error("Finished unsuccessfully.")
@@ -339,14 +364,29 @@ class Minimize(Minimizer, CovmatSampler):
                 raise excpt
             results += [result]
             successes += [success]
-        self.process_results(*mpi.zip_gather(
-            [results, successes, self.initial_points,
-             [self._inv_affine_transform_matrix] * len(self.initial_points)]))
+        self.process_results(
+            *mpi.zip_gather(
+                [
+                    results,
+                    successes,
+                    self.initial_points,
+                    [self._inv_affine_transform_matrix] * len(self.initial_points),
+                ]
+            )
+        )
 
-    @mpi.set_from_root(("_inv_affine_transform_matrix", "_affine_transform_baseline",
-                        "result", "minimum", "full_set_of_mins"))
-    def process_results(self, results, successes, affine_transform_baselines,
-                        transform_matrices):
+    @mpi.set_from_root(
+        (
+            "_inv_affine_transform_matrix",
+            "_affine_transform_baseline",
+            "result",
+            "minimum",
+            "full_set_of_mins",
+        )
+    )
+    def process_results(
+        self, results, successes, affine_transform_baselines, transform_matrices
+    ):
         """
         Determines success (or not), chooses best (if MPI or multiple starts)
         and produces output (if requested).
@@ -357,8 +397,10 @@ class Minimize(Minimizer, CovmatSampler):
         affine_transform_baselines = list(chain(*affine_transform_baselines))
         transform_matrices = list(chain(*transform_matrices))
         if len(results) > 1:
-            mins = [(float(getattr(r, evals_attr_)) if s else np.inf)
-                    for r, s in zip(results, successes)]
+            mins = [
+                (float(getattr(r, evals_attr_)) if s else np.inf)
+                for r, s in zip(results, successes)
+            ]
             i_min: int = np.argmin(mins)  # type: ignore
         else:
             i_min = 0
@@ -367,38 +409,56 @@ class Minimize(Minimizer, CovmatSampler):
         self._inv_affine_transform_matrix = transform_matrices[i_min]
         if not any(successes):
             raise LoggedError(
-                self.log, "Minimization failed! Here is the raw result object:\n%s",
-                str(self.result))
+                self.log,
+                "Minimization failed! Here is the raw result object:\n%s",
+                str(self.result),
+            )
         elif not all(successes):
-            self.log.warning('Some minimizations failed!')
+            self.log.warning("Some minimizations failed!")
         elif len(results) > 1:
-            self.log.info('Finished successfully!')
+            self.log.info("Finished successfully!")
             # noinspection PyUnboundLocalVariable
             if max(mins) - min(mins) > 1:
-                self.log.warning('Big spread in minima: %r', mins)
+                self.log.warning("Big spread in minima: %r", mins)
             elif max(mins) - min(mins) > 0.2:
-                self.log.warning('Modest spread in minima: %r', mins)
+                self.log.warning("Modest spread in minima: %r", mins)
         logp_min = -np.array(getattr(self.result, evals_attr_))
         x_min = self.inv_affine_transform(self.result.x)
-        self.log.info("-log(%s) minimized to %g",
-                      "likelihood" if self.ignore_prior else "posterior", -logp_min)
+        self.log.info(
+            "-log(%s) minimized to %g",
+            "likelihood" if self.ignore_prior else "posterior",
+            -logp_min,
+        )
         recomputed_post_min = self.model.logposterior(x_min, cached=False)
-        recomputed_logp_min = (recomputed_post_min.loglike if self.ignore_prior
-                               else recomputed_post_min.logpost)
+        recomputed_logp_min = (
+            recomputed_post_min.loglike
+            if self.ignore_prior
+            else recomputed_post_min.logpost
+        )
         if not np.allclose(logp_min, recomputed_logp_min, atol=1e-2):
             raise LoggedError(
-                self.log, "Cannot reproduce log minimum to within 0.01. Maybe your "
-                          "likelihood is stochastic or large numerical error? "
-                          "Recomputed min: %g (was %g) at %r",
-                recomputed_logp_min, logp_min, x_min)
-        self.minimum = OnePoint(self.model, self.output, name="",
-                                extension=get_collection_extension(self.ignore_prior))
-        self.minimum.add(x_min, derived=recomputed_post_min.derived,
-                         logpost=recomputed_post_min.logpost,
-                         logpriors=recomputed_post_min.logpriors,
-                         loglikes=recomputed_post_min.loglikes)
-        self.log.info(
-            "Parameter values at minimum:\n%s", self.minimum.data.to_string())
+                self.log,
+                "Cannot reproduce log minimum to within 0.01. Maybe your "
+                "likelihood is stochastic or large numerical error? "
+                "Recomputed min: %g (was %g) at %r",
+                recomputed_logp_min,
+                logp_min,
+                x_min,
+            )
+        self.minimum = OnePoint(
+            self.model,
+            self.output,
+            name="",
+            extension=get_collection_extension(self.ignore_prior),
+        )
+        self.minimum.add(
+            x_min,
+            derived=recomputed_post_min.derived,
+            logpost=recomputed_post_min.logpost,
+            logpriors=recomputed_post_min.logpriors,
+            loglikes=recomputed_post_min.loglikes,
+        )
+        self.log.info("Parameter values at minimum:\n%s", self.minimum.data.to_string())
         self.minimum.out_update()
         self.dump_getdist()
         if len(results) > 1:
@@ -438,23 +498,26 @@ class Minimize(Minimizer, CovmatSampler):
         This inverse transformation needs to be applied to the coordinates appearing
         inside the ``result_object``.
         """
-        return {"minimum": self.minimum, "result_object": self.result,
-                "full_set_of_mins": self.full_set_of_mins,
-                "M": self._inv_affine_transform_matrix,
-                "X0": self._affine_transform_baseline}
+        return {
+            "minimum": self.minimum,
+            "result_object": self.result,
+            "full_set_of_mins": self.full_set_of_mins,
+            "M": self._inv_affine_transform_matrix,
+            "X0": self._affine_transform_baseline,
+        }
 
     def getdist_point_text(self, params, weight=None, minuslogpost=None):
         """Creates the multi-line string containing the minimum in GetDist format."""
         lines = []
         if weight is not None:
-            lines.append('  weight    = %s' % weight)
+            lines.append("  weight    = %s" % weight)
         if minuslogpost is not None:
-            lines.append(' -log(Like) = %s' % minuslogpost)
-            lines.append('  chi-sq    = %s' % (2 * minuslogpost))
-        lines.append('')
+            lines.append(" -log(Like) = %s" % minuslogpost)
+            lines.append("  chi-sq    = %s" % (2 * minuslogpost))
+        lines.append("")
         labels = self.model.parameterization.labels()
         label_list = list(labels)
-        if hasattr(params, 'chi2_names'):
+        if hasattr(params, "chi2_names"):
             label_list += params.chi2_names
         width = max(len(lab) for lab in label_list) + 2
 
@@ -468,18 +531,25 @@ class Minimize(Minimizer, CovmatSampler):
                     lines.append("%5d  %-17s %-*s %s" % (num, val, width, p, lab))
 
         add_section(
-            [(p, params[p]) for p in self.model.parameterization.sampled_params()])
-        lines.append('')
-        add_section([[p, value] for p, value in
-                     self.model.parameterization.constant_params().items()])
-        lines.append('')
+            [(p, params[p]) for p in self.model.parameterization.sampled_params()]
+        )
+        lines.append("")
         add_section(
-            [[p, params[p]] for p in self.model.parameterization.derived_params()])
-        if hasattr(params, 'chi2_names'):
+            [
+                [p, value]
+                for p, value in self.model.parameterization.constant_params().items()
+            ]
+        )
+        lines.append("")
+        add_section(
+            [[p, params[p]] for p in self.model.parameterization.derived_params()]
+        )
+        if hasattr(params, "chi2_names"):
             labels.update(
-                {p: r'\chi^2_{\rm %s}' % (
-                    undo_chi2_name(p).replace("_", r"\ "))
-                 for p in params.chi2_names}
+                {
+                    p: r"\chi^2_{\rm %s}" % (undo_chi2_name(p).replace("_", r"\ "))
+                    for p in params.chi2_names
+                }
             )
             add_section([[chi2, params[chi2]] for chi2 in params.chi2_names])
         return "\n".join(lines)
@@ -488,12 +558,14 @@ class Minimize(Minimizer, CovmatSampler):
         """Writes the GetDist format point."""
         if not self.output:
             return
-        getdist_bf = self.getdist_point_text(self.minimum,
-                                             minuslogpost=self.minimum['minuslogpost'])
+        getdist_bf = self.getdist_point_text(
+            self.minimum, minuslogpost=self.minimum["minuslogpost"]
+        )
         out_filename = os.path.join(
             self.output.folder,
-            self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior])
-        with open(out_filename, 'w', encoding="utf-8") as f:
+            self.output.prefix + getdist_ext_ignore_prior[self.ignore_prior],
+        )
+        with open(out_filename, "w", encoding="utf-8") as f:
             f.write(getdist_bf)
 
     @classmethod
@@ -510,7 +582,8 @@ class Minimize(Minimizer, CovmatSampler):
         ext_getdist = getdist_ext_ignore_prior[ignore_prior]
         regexps = [
             re.compile(output.prefix_regexp_str + re.escape(ext.lstrip(".")) + "$")
-            for ext in [ext_collection, ext_getdist]]
+            for ext in [ext_collection, ext_getdist]
+        ]
         return [(r, None) for r in regexps]
 
     @classmethod
@@ -522,9 +595,11 @@ class Minimize(Minimizer, CovmatSampler):
         if output.is_resuming():
             if mpi.is_main_process():
                 raise LoggedError(
-                    output.log, "Minimizer does not support resuming. "
-                                "If you want to start over, force "
-                                "('-f', '--force', 'force: True')")
+                    output.log,
+                    "Minimizer does not support resuming. "
+                    "If you want to start over, force "
+                    "('-f', '--force', 'force: True')",
+                )
         super().check_force_resume(output, info=info)
 
     @classmethod
@@ -533,14 +608,20 @@ class Minimize(Minimizer, CovmatSampler):
             method = None
         else:
             method = info.get("method", cls.get_defaults()["method"])
-        desc_bobyqa = (r"Py-BOBYQA implementation "
-                       r"\cite{2018arXiv180400154C,2018arXiv181211343C} of the BOBYQA "
-                       r"minimization algorithm \cite{BOBYQA}")
-        desc_scipy = (r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
-                      r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
-                      r"ference/generated/scipy.optimize.Minimize.html}")
-        desc_iminuit = (r"iminuit minimizer(check citation for the "
-                        r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}")
+        desc_bobyqa = (
+            r"Py-BOBYQA implementation "
+            r"\cite{2018arXiv180400154C,2018arXiv181211343C} of the BOBYQA "
+            r"minimization algorithm \cite{BOBYQA}"
+        )
+        desc_scipy = (
+            r"Scipy minimizer \cite{2020SciPy-NMeth} (check citation for the "
+            r"actual algorithm used at \url{https://docs.scipy.org/doc/scipy/re"
+            r"ference/generated/scipy.optimize.Minimize.html}"
+        )
+        desc_iminuit = (
+            r"iminuit minimizer(check citation for the "
+            r"actual algorithm used at \url{https://iminuit.readthedocs.io/en/stable/reference.html#scipy-like-interface}"
+        )
         if method and method.lower() == "bobyqa":
             return desc_bobyqa
         elif method and method.lower() == "scipy":
@@ -548,5 +629,7 @@ class Minimize(Minimizer, CovmatSampler):
         elif method and method.lower() == "iminuit":
             return desc_iminuit
         else:  # unknown method or no info passed (None)
-            return ("Minimizer -- method unknown, possibly one of:"
-                    "\na) " + desc_bobyqa + "\nb) " + desc_scipy)
+            return (
+                "Minimizer -- method unknown, possibly one of:"
+                "\na) " + desc_bobyqa + "\nb) " + desc_scipy
+            )

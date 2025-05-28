@@ -33,5 +33,7 @@ def test_cosmo_docs_basic():
             print("----------------------------------------")
             print("NEW:\n%s" % info_yaml_new)
             sys.stdout.flush()
-    assert flag, ("Differences in example input file. "
-                  "Files have been re-generated; check out your git diff.")
+    assert flag, (
+        "Differences in example input file. "
+        "Files have been re-generated; check out your git diff."
+    )

@@ -58,8 +58,9 @@ def get_desc_component(component, kind, info=None):
 def get_bib_component(component, kind):
     """Extract the bibliographic sources of a component, if defined."""
     cls = get_component_class(component, kind)
-    lines = ((cls.get_bibtex() or "").lstrip("\n").rstrip("\n") or
-             "# [no bibliography information found]")
+    lines = (cls.get_bibtex() or "").lstrip("\n").rstrip(
+        "\n"
+    ) or "# [no bibliography information found]"
     return lines + "\n"
 
 
@@ -84,13 +85,15 @@ def get_bib_info(*infos, logger=None):
         for component in components:
             try:
                 descs[kind][component] = get_desc_component(
-                    component, kind, component_infos[component])
+                    component, kind, component_infos[component]
+                )
                 bibs[kind][component] = get_bib_component(component, kind)
             except ComponentNotFoundError:
                 sugg = similar_internal_class_names(component)
                 logger.error(
                     f"Could not identify component '{component}'. "
-                    f"Did you mean any of the following? {sugg} (mind capitalization!)")
+                    f"Did you mean any of the following? {sugg} (mind capitalization!)"
+                )
                 continue
     # Deal with bare component names
     for component in used_components.get(None, []):
@@ -103,7 +106,8 @@ def get_bib_info(*infos, logger=None):
             sugg = similar_internal_class_names(component)
             logger.error(
                 f"Could not identify component '{component}'. "
-                f"Did you mean any of the following? {sugg} (mind capitalization!)")
+                f"Did you mean any of the following? {sugg} (mind capitalization!)"
+            )
             continue
         kind = cls.get_kind()
         if kind not in descs:
@@ -126,15 +130,20 @@ def pretty_repr_bib(descs, bibs):
     sorted_kinds = [k for k in dump_sort_cosmetic if k in descs]
     sorted_kinds += [k for k in descs if k not in dump_sort_cosmetic]
     txt = ""
-    txt += create_banner(
-        "Descriptions", symbol=_default_symbol, length=_default_length) + "\n"
+    txt += (
+        create_banner("Descriptions", symbol=_default_symbol, length=_default_length)
+        + "\n"
+    )
     for kind in sorted_kinds:
         txt += kind + ":\n\n"
         for component, desc in descs[kind].items():
-            txt += " * [%s] %s\n" % (component, desc)
+            txt += " * [{}] {}\n".format(component, desc)
         txt += "\n"
-    txt += "\n" + create_banner(
-        "Bibtex", symbol=_default_symbol, length=_default_length) + "\n"
+    txt += (
+        "\n"
+        + create_banner("Bibtex", symbol=_default_symbol, length=_default_length)
+        + "\n"
+    )
     for kind in sorted_kinds:
         for component, bib in bibs[kind].items():
             txt += "\n### %s " % component + "########################" + "\n\n"
@@ -144,21 +153,30 @@ def pretty_repr_bib(descs, bibs):
 
 # Command-line script ####################################################################
 
+
 def bib_script(args=None):
     """Command line script for the bibliography."""
     warn_deprecation()
     # Parse arguments and launch
-    parser = argparse.ArgumentParser(prog="cobaya bib", description=(
-        "Prints bibliography to be cited for one or more components or input files."))
-    parser.add_argument("files_or_components", action="store", nargs="+",
-                        metavar="input_file.yaml|component_name",
-                        help="Component(s) or input file(s) whose bib info is requested.")
+    parser = argparse.ArgumentParser(
+        prog="cobaya bib",
+        description=(
+            "Prints bibliography to be cited for one or more components or input files."
+        ),
+    )
+    parser.add_argument(
+        "files_or_components",
+        action="store",
+        nargs="+",
+        metavar="input_file.yaml|component_name",
+        help="Component(s) or input file(s) whose bib info is requested.",
+    )
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup()
     logger = get_logger("bib")
     # Gather requests
-    infos: List[Union[Dict, str]] = []
+    infos: list[dict | str] = []
     for f in arguments.files_or_components:
         if os.path.splitext(f)[1].lower() in Extension.yamls:
             infos += [load_input(f)]
@@ -170,5 +188,5 @@ def bib_script(args=None):
     print(pretty_repr_bib(*get_bib_info(*infos, logger=logger)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     bib_script()

@@ -11,8 +11,12 @@ from typing import Union, Optional, Tuple
 import os
 
 # Local
-from cobaya.conventions import packages_path_arg, packages_path_arg_posix, get_version, \
-    packages_path_input
+from cobaya.conventions import (
+    packages_path_arg,
+    packages_path_arg_posix,
+    get_version,
+    packages_path_input,
+)
 from cobaya.typing import InputDict, LiteralFalse
 from cobaya.output import get_output
 from cobaya.model import Model
@@ -25,17 +29,20 @@ from cobaya.post import post, PostResult
 from cobaya import mpi
 
 
-def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
-        packages_path: Optional[str] = None,
-        output: Union[str, LiteralFalse, None] = None,
-        debug: Union[bool, int, None] = None,
-        stop_at_error: Optional[bool] = None,
-        resume: Optional[bool] = None, force: Optional[bool] = None,
-        minimize: Optional[bool] = None,
-        no_mpi: bool = False, test: Optional[bool] = None,
-        override: Optional[InputDict] = None,
-        allow_changes: bool = False
-        ) -> Tuple[InputDict, Union[Sampler, PostResult]]:
+def run(
+    info_or_yaml_or_file: InputDict | str | os.PathLike,
+    packages_path: str | None = None,
+    output: str | LiteralFalse | None = None,
+    debug: bool | int | None = None,
+    stop_at_error: bool | None = None,
+    resume: bool | None = None,
+    force: bool | None = None,
+    minimize: bool | None = None,
+    no_mpi: bool = False,
+    test: bool | None = None,
+    override: InputDict | None = None,
+    allow_changes: bool = False,
+) -> tuple[InputDict, Sampler | PostResult]:
     """
     Run from an input dictionary, file name or yaml string, with optional arguments
     to override settings in the input as needed.
@@ -62,11 +69,18 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
     if no_mpi or test:
         mpi.set_mpi_disabled()
     with mpi.ProcessState("run"):
-        flags = {packages_path_input: packages_path, "debug": debug,
-                 "stop_at_error": stop_at_error, "resume": resume, "force": force,
-                 "minimize": minimize, "test": test}
+        flags = {
+            packages_path_input: packages_path,
+            "debug": debug,
+            "stop_at_error": stop_at_error,
+            "resume": resume,
+            "force": force,
+            "minimize": minimize,
+            "test": test,
+        }
         info: InputDict = load_info_overrides(
-            info_or_yaml_or_file, override or {}, **flags)
+            info_or_yaml_or_file, override or {}, **flags
+        )
         logger_setup(info.get("debug"))
         logger_run = get_logger(run.__name__)
         try:
@@ -81,7 +95,8 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 raise LoggedError(
                     logger_run,
                     "You need to specify a sampler using the 'sampler' key "
-                    "as e.g. `sampler: {mcmc: None}.`") from excpt
+                    "as e.g. `sampler: {mcmc: None}.`",
+                ) from excpt
         if info.get("post"):
             if isinstance(output, str) or output is False:
                 info["post"]["output"] = output or None
@@ -91,8 +106,12 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
             info["output"] = output or None
         # 1. Prepare output driver, if requested by defining an output prefix
         infix = "minimize" if which_sampler == "minimize" else None
-        with get_output(prefix=info.get("output"), resume=info.get("resume"),
-                        force=info.get("force"), infix=infix) as out:
+        with get_output(
+            prefix=info.get("output"),
+            resume=info.get("resume"),
+            force=info.get("force"),
+            infix=infix,
+        ) as out:
             # 2. Update the input info with the defaults for each component
             updated_info = update_info(info)
             if is_debug(logger_run):
@@ -101,46 +120,65 @@ def run(info_or_yaml_or_file: Union[InputDict, str, os.PathLike],
                 if not out and mpi.is_main_process():
                     logger_run.info(
                         "Input info updated with defaults (dumped to YAML):\n%s",
-                        yaml_dump(sort_cosmetic(updated_info)))
+                        yaml_dump(sort_cosmetic(updated_info)),
+                    )
             # 3. If output requested, check compatibility if existing one, and dump.
             # 3.1 First: model only
-            out.check_and_dump_info(info, updated_info, cache_old=True,
-                                    check_compatible=not allow_changes,
-                                    ignore_blocks=["sampler"])
+            out.check_and_dump_info(
+                info,
+                updated_info,
+                cache_old=True,
+                check_compatible=not allow_changes,
+                ignore_blocks=["sampler"],
+            )
             # 3.2 Then sampler -- 1st get the first sampler mentioned in the updated.yaml
             if not (info_sampler := updated_info.get("sampler")):
                 raise LoggedError(logger_run, "No sampler requested.")
             sampler_name, sampler_class = get_sampler_name_and_class(info_sampler)
             updated_info["sampler"] = check_sampler_info(
                 (out.get_updated_info(use_cache=True) or {}).get("sampler"),
-                updated_info["sampler"], is_resuming=out.is_resuming())
+                updated_info["sampler"],
+                is_resuming=out.is_resuming(),
+            )
             # Dump again, now including sampler info
             out.check_and_dump_info(info, updated_info, check_compatible=False)
             # Check if resumable run
             sampler_class.check_force_resume(
-                out, info=updated_info["sampler"][sampler_name])
+                out, info=updated_info["sampler"][sampler_name]
+            )
             # 4. Initialize the posterior and the sampler
-            with Model(updated_info["params"], updated_info["likelihood"],
-                       updated_info.get("prior"), updated_info.get("theory"),
-                       packages_path=info.get("packages_path"),
-                       timing=updated_info.get("timing"),
-                       allow_renames=False,
-                       stop_at_error=info.get("stop_at_error", False)) as model:
+            with Model(
+                updated_info["params"],
+                updated_info["likelihood"],
+                updated_info.get("prior"),
+                updated_info.get("theory"),
+                packages_path=info.get("packages_path"),
+                timing=updated_info.get("timing"),
+                allow_renames=False,
+                stop_at_error=info.get("stop_at_error", False),
+            ) as model:
                 # Re-dump the updated info, now containing parameter routes and version
                 updated_info = recursive_update(updated_info, model.info())
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
-                sampler = sampler_class(updated_info["sampler"][sampler_name],
-                                        model, out, name=sampler_name,
-                                        packages_path=info.get("packages_path"))
+                sampler = sampler_class(
+                    updated_info["sampler"][sampler_name],
+                    model,
+                    out,
+                    name=sampler_name,
+                    packages_path=info.get("packages_path"),
+                )
                 # Re-dump updated info, now also containing updates from the sampler
-                updated_info["sampler"][sampler_name] = \
-                    recursive_update(updated_info["sampler"][sampler_name],
-                                     sampler.info())
+                updated_info["sampler"][sampler_name] = recursive_update(
+                    updated_info["sampler"][sampler_name], sampler.info()
+                )
                 out.check_and_dump_info(None, updated_info, check_compatible=False)
                 mpi.sync_processes()
                 if info.get("test"):
-                    logger_run.info("Test initialization successful! "
-                                    "You can probably run now without `--%s`.", "test")
+                    logger_run.info(
+                        "Test initialization successful! "
+                        "You can probably run now without `--%s`.",
+                        "test",
+                    )
                     return updated_info, sampler
                 # Run the sampler
                 sampler.run()
@@ -152,51 +190,83 @@ def run_script(args=None):
     """Shell script wrapper for :func:`run.run` (including :func:`post.post`)"""
     warn_deprecation()
     import argparse  # pylint: disable=import-outside-toplevel
+
     # kwargs for flags that should be True|None, instead of True|False
     # (needed in order not to mistakenly override input file inside the run() function
     trueNone_kwargs = {"action": "store_true", "default": None}
     parser = argparse.ArgumentParser(
-        prog="cobaya run", description="Cobaya's run script.")
-    parser.add_argument("input_file", action="store", metavar="input_file.yaml",
-                        help="An input file to run.")
-    parser.add_argument("-" + packages_path_arg[0], "--" + packages_path_arg_posix,
-                        action="store", metavar="/packages/path", default=None,
-                        help="Path where external packages were installed.")
-    parser.add_argument("-" + "o", "--" + "output",
-                        action="store", metavar="/some/path", default=None,
-                        help="Path and prefix for the text output.")
-    parser.add_argument("-" + "d", "--" + "debug",
-                        help="Produce verbose debug output.", **trueNone_kwargs)
+        prog="cobaya run", description="Cobaya's run script."
+    )
+    parser.add_argument(
+        "input_file",
+        action="store",
+        metavar="input_file.yaml",
+        help="An input file to run.",
+    )
+    parser.add_argument(
+        "-" + packages_path_arg[0],
+        "--" + packages_path_arg_posix,
+        action="store",
+        metavar="/packages/path",
+        default=None,
+        help="Path where external packages were installed.",
+    )
+    parser.add_argument(
+        "-" + "o",
+        "--" + "output",
+        action="store",
+        metavar="/some/path",
+        default=None,
+        help="Path and prefix for the text output.",
+    )
+    parser.add_argument(
+        "-" + "d", "--" + "debug", help="Produce verbose debug output.", **trueNone_kwargs
+    )
     continuation = parser.add_mutually_exclusive_group(required=False)
-    continuation.add_argument("-" + "r", "--" + "resume",
-                              help=("Resume an existing chain if it has similar info "
-                                    "(fails otherwise)."), **trueNone_kwargs)
-    continuation.add_argument("-" + "f", "--" + "force",
-                              help=("Overwrites previous output, if it exists "
-                                    "(use with care!)"), **trueNone_kwargs)
-    parser.add_argument("--%s" % "test",
-                        help="Initialize model and sampler, and exit.", **trueNone_kwargs)
-    parser.add_argument("-M", "--minimize",
-                        help=("Replaces the sampler in the input and runs a minimization "
-                              "process (incompatible with post-processing)."),
-                        **trueNone_kwargs)
-    parser.add_argument("--allow-changes",
-                        help="Allow changing input parameters when resuming "
-                             "or minimizing, skipping consistency checks",
-                        **trueNone_kwargs)
+    continuation.add_argument(
+        "-" + "r",
+        "--" + "resume",
+        help=("Resume an existing chain if it has similar info (fails otherwise)."),
+        **trueNone_kwargs,
+    )
+    continuation.add_argument(
+        "-" + "f",
+        "--" + "force",
+        help=("Overwrites previous output, if it exists (use with care!)"),
+        **trueNone_kwargs,
+    )
+    parser.add_argument(
+        "--%s" % "test", help="Initialize model and sampler, and exit.", **trueNone_kwargs
+    )
+    parser.add_argument(
+        "-M",
+        "--minimize",
+        help=(
+            "Replaces the sampler in the input and runs a minimization "
+            "process (incompatible with post-processing)."
+        ),
+        **trueNone_kwargs,
+    )
+    parser.add_argument(
+        "--allow-changes",
+        help="Allow changing input parameters when resuming "
+        "or minimizing, skipping consistency checks",
+        **trueNone_kwargs,
+    )
     parser.add_argument("--version", action="version", version=get_version())
-    parser.add_argument("--no-mpi",
-                        help=("disable MPI when mpi4py installed but MPI does "
-                              "not actually work"),
-                        **trueNone_kwargs)
+    parser.add_argument(
+        "--no-mpi",
+        help=("disable MPI when mpi4py installed but MPI does not actually work"),
+        **trueNone_kwargs,
+    )
     arguments = parser.parse_args(args)
     info = arguments.input_file
     del arguments.input_file
-    if not info.endswith('.yaml') and not os.path.exists(info):
-        if os.path.exists(info + '.yaml'):
-            info = info + '.yaml'
+    if not info.endswith(".yaml") and not os.path.exists(info):
+        if os.path.exists(info + ".yaml"):
+            info = info + ".yaml"
     run(info, **arguments.__dict__)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_script()

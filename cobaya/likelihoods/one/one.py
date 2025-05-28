@@ -18,7 +18,8 @@ class one(AbsorbUnusedParamsLikelihood):
     """
     Likelihood that evaluates to 1.
     """
-    noise: Optional[float]
+
+    noise: float | None
 
     def initialize(self):
         if self.noise:
@@ -28,7 +29,7 @@ class one(AbsorbUnusedParamsLikelihood):
 
     def logp_one(self, **_params_values):
         self.wait()
-        return 0.
+        return 0.0
 
     def logp_noise(self, **_params_values):
         self.wait()

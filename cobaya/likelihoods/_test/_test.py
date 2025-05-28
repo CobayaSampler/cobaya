@@ -10,4 +10,4 @@ class _test(Likelihood):
     def logp(self, **params_values):
         self.wait()
         params_values["_derived"]["b1"] = 0
-        return 0.
+        return 0.0

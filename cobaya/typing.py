@@ -1,5 +1,5 @@
-from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal, Mapping, \
-    Callable, Sequence, Iterable
+from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal
+from collections.abc import Mapping, Callable, Sequence, Iterable
 from types import MappingProxyType
 import contextlib
 import typing
@@ -7,7 +7,7 @@ import numbers
 import numpy as np
 import sys
 
-InfoDict = Dict[str, Any]
+InfoDict = dict[str, Any]
 InfoDictIn = Mapping[str, Any]
 
 # an immutable empty dict (e.g. for argument defaults)
@@ -24,15 +24,25 @@ LikeDictIn = InfoDictIn
 TheoryDictIn = InfoDictIn
 SamplerDictIn = InfoDictIn
 
-ParamValuesDict = Dict[str, float]
+ParamValuesDict = dict[str, float]
 # Do not yet explicitly support passing instances here
-TheoriesDict = Dict[str, Union[None, TheoryDict, Type]]
-LikesDict = Dict[str, Union[None, str, LikeDict, Type, Callable]]
-SamplersDict = Dict[str, Optional[SamplerDict]]
-PriorsDict = Dict[str, Union[str, Callable]]
+TheoriesDict = dict[str, Union[None, TheoryDict, type]]
+LikesDict = dict[str, Union[None, str, LikeDict, type, Callable]]
+SamplersDict = dict[str, Optional[SamplerDict]]
+PriorsDict = dict[str, Union[str, Callable]]
 
-partags = {"prior", "ref", "proposal", "value", "drop",
-           "derived", "latex", "renames", "min", "max"}
+partags = {
+    "prior",
+    "ref",
+    "proposal",
+    "value",
+    "drop",
+    "derived",
+    "latex",
+    "renames",
+    "min",
+    "max",
+}
 
 LiteralFalse = Literal[False]
 ModelBlock = Literal["theory", "likelihood", "prior", "params"]
@@ -52,12 +62,12 @@ class SciPyMinMaxDict(TypedDict, total=False):
 
 
 class ParamDict(TypedDict, total=False):
-    value: Union[float, Callable, str]
-    derived: Union[bool, str, Callable]
-    prior: Union[None, Sequence[float], SciPyDistDict, SciPyMinMaxDict]
-    ref: Union[None, float, Sequence[float], SciPyDistDict, SciPyMinMaxDict]
-    proposal: Optional[float]
-    renames: Union[str, Sequence[str]]
+    value: float | Callable | str
+    derived: bool | str | Callable
+    prior: None | Sequence[float] | SciPyDistDict | SciPyMinMaxDict
+    ref: None | float | Sequence[float] | SciPyDistDict | SciPyMinMaxDict
+    proposal: float | None
+    renames: str | Sequence[str]
     latex: str
     drop: bool  # true if parameter should not be available for assignment to theories
     min: float  # hard bounds (does not affect prior)
@@ -73,8 +83,8 @@ class ParamDict(TypedDict, total=False):
 #    'ref' mean and standard deviation for starting positions, and optionally
 #    proposal width. Allowed lengths, 2, 4, 5
 ParamInput = Union[ParamDict, None, str, float, Sequence[float]]
-ParamsDict = Dict[str, ParamInput]
-ExpandedParamsDict = Dict[str, ParamDict]
+ParamsDict = dict[str, ParamInput]
+ExpandedParamsDict = dict[str, ParamDict]
 
 
 class ModelDict(TypedDict, total=False):
@@ -86,28 +96,28 @@ class ModelDict(TypedDict, total=False):
 
 
 class PostDict(TypedDict, total=False):
-    add: Optional[ModelDict]
-    remove: Union[None, ModelDict, Dict[str, Union[str, Sequence[str]]]]
-    output: Optional[str]
-    suffix: Optional[str]
-    skip: Union[None, float, int]
-    thin: Optional[int]
-    packages_path: Optional[str]
+    add: ModelDict | None
+    remove: None | ModelDict | dict[str, str | Sequence[str]]
+    output: str | None
+    suffix: str | None
+    skip: None | float | int
+    thin: int | None
+    packages_path: str | None
 
 
 class InputDict(ModelDict, total=False):
     sampler: SamplersDict
     post: PostDict
     force: bool
-    debug: Union[bool, int, str]
+    debug: bool | int | str
     resume: bool
     minimize: bool
     stop_at_error: bool
     test: bool
     timing: bool
-    packages_path: Optional[str]
-    output: Optional[str]
-    version: Optional[Union[str, InfoDict]]
+    packages_path: str | None
+    output: str | None
+    version: str | InfoDict | None
 
 
 enforce_type_checking = None
@@ -128,7 +138,7 @@ def type_checking(value: bool):
         enforce_type_checking = original_value
 
 
-def validate_type(expected_type: type, value: Any, path: str = ''):
+def validate_type(expected_type: type, value: Any, path: str = ""):
     """
     Checks for soft compatibility of a value with a type.
     Raises TypeError with descriptive messages when validation fails.
@@ -141,47 +151,47 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
     if value is None or expected_type is Any:
         return
 
-    curr_path = f"'{path}'" if path else 'value'
+    curr_path = f"'{path}'" if path else "value"
 
     if expected_type is int:
         if not (value in (np.inf, -np.inf) or isinstance(value, numbers.Integral)):
-            raise TypeError(
-                f"{curr_path} must be an integer, got {type(value).__name__}"
-            )
+            raise TypeError(f"{curr_path} must be an integer, got {type(value).__name__}")
         return
 
     if expected_type is float:
-        if not (isinstance(value, numbers.Real) or
-                (isinstance(value, np.ndarray) and value.ndim == 0)):
+        if not (
+            isinstance(value, numbers.Real)
+            or (isinstance(value, np.ndarray) and value.ndim == 0)
+        ):
             raise TypeError(f"{curr_path} must be a float, got {type(value).__name__}")
         return
 
     if expected_type is bool:
         if not isinstance(value, bool):
-            raise TypeError(
-                f"{curr_path} must be boolean, got {type(value).__name__}"
-            )
+            raise TypeError(f"{curr_path} must be boolean, got {type(value).__name__}")
         return
 
-    if sys.version_info < (3, 10):
-        from typing_extensions import is_typeddict
-    else:
-        from typing import is_typeddict
+    from typing import is_typeddict
 
     if is_typeddict(expected_type):
         type_hints = typing.get_type_hints(expected_type)
         if not isinstance(value, Mapping):
-            raise TypeError(f"{curr_path} must be a mapping for TypedDict "
-                            f"'{expected_type.__name__}', got {type(value).__name__}")
+            raise TypeError(
+                f"{curr_path} must be a mapping for TypedDict "
+                f"'{expected_type.__name__}', got {type(value).__name__}"
+            )
         if invalid_keys := set(value) - set(type_hints):
-            raise TypeError(f"{curr_path} contains invalid keys for TypedDict "
-                            f"'{expected_type.__name__}': {invalid_keys}")
+            raise TypeError(
+                f"{curr_path} contains invalid keys for TypedDict "
+                f"'{expected_type.__name__}': {invalid_keys}"
+            )
         for key, val in value.items():
             validate_type(type_hints[key], val, f"{path}.{key}" if path else str(key))
         return
 
     if (origin := typing.get_origin(expected_type)) and (
-            args := typing.get_args(expected_type)):
+        args := typing.get_args(expected_type)
+    ):
         # complex types like Dict[str, float] etc.
 
         if origin is Union:
@@ -191,14 +201,14 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
                     return validate_type(t, value, path)
                 except TypeError as e:
                     error_msg = str(e)
-                    error_path = error_msg.split(' ')[0].strip("'")
+                    error_path = error_msg.split(" ")[0].strip("'")
                     errors.append((error_path, error_msg))
 
             longest_path = max((p for p, _ in errors), key=len)
-            path_errors = set(e for p, e in errors if p == longest_path)
+            path_errors = {e for p, e in errors if p == longest_path}
             raise TypeError(
-                f"{longest_path} failed to match any Union type:\n" +
-                "\n".join(f"- {e}" for e in path_errors)
+                f"{longest_path} failed to match any Union type:\n"
+                + "\n".join(f"- {e}" for e in path_errors)
             )
 
         if not isinstance(origin, type):
@@ -236,28 +246,38 @@ def validate_type(expected_type: type, value: Any, path: str = ''):
                     validate_type(args[0], item, f"{path}[{i}]" if path else f"[{i}]")
             else:
                 if not isinstance(value, Sequence):
-                    raise TypeError(f"{curr_path} must be a sequence for "
-                                    f"tuple types, got {type(value).__name__}")
+                    raise TypeError(
+                        f"{curr_path} must be a sequence for "
+                        f"tuple types, got {type(value).__name__}"
+                    )
                 if len(args) != len(value):
-                    raise TypeError(f"{curr_path} has wrong length: "
-                                    f"expected {len(args)}, got {len(value)}")
+                    raise TypeError(
+                        f"{curr_path} has wrong length: "
+                        f"expected {len(args)}, got {len(value)}"
+                    )
                 for i, (t, v) in enumerate(zip(args, value)):
                     validate_type(t, v, f"{path}[{i}]" if path else f"[{i}]")
             return
 
-    if not isinstance(expected_type, type) or isinstance(value, expected_type) \
-            or expected_type is Sequence and isinstance(value, np.ndarray):
+    if (
+        not isinstance(expected_type, type)
+        or isinstance(value, expected_type)
+        or expected_type is Sequence
+        and isinstance(value, np.ndarray)
+    ):
         return
 
     type_name = getattr(expected_type, "__name__", repr(expected_type))
 
     # special case for Cobaya's NumberWithUnits, if not instance yet
-    if type_name == 'NumberWithUnits':
+    if type_name == "NumberWithUnits":
         if not isinstance(value, (numbers.Real, str)):
             raise TypeError(
                 f"{curr_path} must be a number or string for NumberWithUnits,"
-                f" got {type(value).__name__}")
+                f" got {type(value).__name__}"
+            )
         return
 
-    raise TypeError(f"{curr_path} must be of type {type_name}, "
-                    f"got {type(value).__name__}")
+    raise TypeError(
+        f"{curr_path} must be of type {type_name}, got {type(value).__name__}"
+    )

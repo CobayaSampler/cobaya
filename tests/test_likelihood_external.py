@@ -13,9 +13,17 @@ For manual testing, and observing/plotting the density, pass ``manual=True`` to
 """
 
 # Local
-from .common_external import info_string, info_callable, info_mixed, info_import, \
-    info_method_args, info_method_kwargs, info_method_unnamed_kwargs, info_derived, \
-    body_of_test
+from .common_external import (
+    info_string,
+    info_callable,
+    info_mixed,
+    info_import,
+    info_method_args,
+    info_method_kwargs,
+    info_method_unnamed_kwargs,
+    info_derived,
+    body_of_test,
+)
 
 
 def test_likelihood_external_string(tmpdir):

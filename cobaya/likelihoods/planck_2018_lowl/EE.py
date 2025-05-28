@@ -13,9 +13,13 @@ class EE(InstallableLikelihood):
     Calibration error is very small compared to EE uncertainty, but calibration can be
     used; otherwise taken to be 1
     """
-    install_options = {"github_repository": "CobayaSampler/planck_native_data",
-                       "github_release": "v1", "asset": "planck_2018_lowE.zip",
-                       "directory": "planck_2018_lowE_native"}
+
+    install_options = {
+        "github_repository": "CobayaSampler/planck_native_data",
+        "github_release": "v1",
+        "asset": "planck_2018_lowE.zip",
+        "directory": "planck_2018_lowE_native",
+    }
     type = "CMB"
     aliases = ["lowE"]
 
@@ -23,11 +27,12 @@ class EE(InstallableLikelihood):
     _lmax = 29
     _nstepsEE = 3000
     _stepEE = 0.0001
-    _table_file_name = 'prob_table.txt'
+    _table_file_name = "prob_table.txt"
 
     @classmethod
     def get_bibtex(cls):
         from cobaya.likelihoods.base_classes import Planck2018Clik
+
         return Planck2018Clik.get_bibtex()
 
     def initialize(self):
@@ -36,10 +41,10 @@ class EE(InstallableLikelihood):
             self.probEE = np.loadtxt(os.path.join(path, self._table_file_name))
 
     def get_can_support_params(self):
-        return ['A_planck']
+        return ["A_planck"]
 
     def get_requirements(self):
-        return {'Cl': {'ee': self._lmax}}
+        return {"Cl": {"ee": self._lmax}}
 
     def log_likelihood(self, cls_EE, calib=1):
         r"""
@@ -49,8 +54,9 @@ class EE(InstallableLikelihood):
         :param calib: optional calibration parameter
         :return: log likelihood
         """
-        EE_index = (cls_EE[self._lmin:self._lmax + 1]
-                    / (calib ** 2 * self._stepEE)).astype(int)
+        EE_index = (
+            cls_EE[self._lmin : self._lmax + 1] / (calib**2 * self._stepEE)
+        ).astype(int)
         try:
             return np.take_along_axis(self.probEE, EE_index[np.newaxis, :], 0).sum()
         except IndexError:
@@ -58,5 +64,5 @@ class EE(InstallableLikelihood):
             return -np.inf
 
     def logp(self, **params_values):
-        cls = self.provider.get_Cl(ell_factor=True)['ee']
-        return self.log_likelihood(cls, params_values.get('A_planck', 1))
+        cls = self.provider.get_Cl(ell_factor=True)["ee"]
+        return self.log_likelihood(cls, params_values.get("A_planck", 1))

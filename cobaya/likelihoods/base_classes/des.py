@@ -45,6 +45,7 @@ Installation
 This likelihood can be installed automatically as explained in :doc:`installation_cosmo`.
 
 """
+
 # Global
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
@@ -59,7 +60,7 @@ from cobaya.conventions import Const
 from cobaya.functions import numba
 
 # DES data types
-def_DES_types = ['xip', 'xim', 'gammat', 'wtheta']
+def_DES_types = ["xip", "xim", "gammat", "wtheta"]
 
 _spline = InterpolatedUnivariateSpline
 
@@ -68,63 +69,63 @@ def get_def_cuts():  # pragma: no cover
     ranges = {}
     for tp in def_DES_types:
         ranges[tp] = np.empty((6, 6), dtype=object)
-    ranges['xip'][1][1] = [7.195005, 250.0]
-    ranges['xip'][1][2] = [7.195005, 250.0]
-    ranges['xip'][1][3] = [5.715196, 250.0]
-    ranges['xip'][1][4] = [5.715196, 250.0]
-    ranges['xip'][2][1] = [7.195005, 250.0]
-    ranges['xip'][2][2] = [4.539741, 250.0]
-    ranges['xip'][2][3] = [4.539741, 250.0]
-    ranges['xip'][2][4] = [4.539741, 250.0]
-    ranges['xip'][3][1] = [5.715196, 250.0]
-    ranges['xip'][3][2] = [4.539741, 250.0]
-    ranges['xip'][3][3] = [3.606045, 250.0]
-    ranges['xip'][3][4] = [3.606045, 250.0]
-    ranges['xip'][4][1] = [5.715196, 250.0]
-    ranges['xip'][4][2] = [4.539741, 250.0]
-    ranges['xip'][4][3] = [3.606045, 250.0]
-    ranges['xip'][4][4] = [3.606045, 250.0]
-    ranges['xim'][1][1] = [90.579750, 250.0]
-    ranges['xim'][1][2] = [71.950053, 250.0]
-    ranges['xim'][1][3] = [71.950053, 250.0]
-    ranges['xim'][1][4] = [71.950053, 250.0]
-    ranges['xim'][2][1] = [71.950053, 250.0]
-    ranges['xim'][2][2] = [57.151958, 250.0]
-    ranges['xim'][2][3] = [57.151958, 250.0]
-    ranges['xim'][2][4] = [45.397414, 250.0]
-    ranges['xim'][3][1] = [71.950053, 250.0]
-    ranges['xim'][3][2] = [57.151958, 250.0]
-    ranges['xim'][3][3] = [45.397414, 250.0]
-    ranges['xim'][3][4] = [45.397414, 250.0]
-    ranges['xim'][4][1] = [71.950053, 250.0]
-    ranges['xim'][4][2] = [45.397414, 250.0]
-    ranges['xim'][4][3] = [45.397414, 250.0]
-    ranges['xim'][4][4] = [36.060448, 250.0]
-    ranges['gammat'][1][1] = [64.0, 250.0]
-    ranges['gammat'][1][2] = [64.0, 250.0]
-    ranges['gammat'][1][3] = [64.0, 250.0]
-    ranges['gammat'][1][4] = [64.0, 250.0]
-    ranges['gammat'][2][1] = [40.0, 250.0]
-    ranges['gammat'][2][2] = [40.0, 250.0]
-    ranges['gammat'][2][3] = [40.0, 250.0]
-    ranges['gammat'][2][4] = [40.0, 250.0]
-    ranges['gammat'][3][1] = [30.0, 250.0]
-    ranges['gammat'][3][2] = [30.0, 250.0]
-    ranges['gammat'][3][3] = [30.0, 250.0]
-    ranges['gammat'][3][4] = [30.0, 250.0]
-    ranges['gammat'][4][1] = [24.0, 250.0]
-    ranges['gammat'][4][2] = [24.0, 250.0]
-    ranges['gammat'][4][3] = [24.0, 250.0]
-    ranges['gammat'][4][4] = [24.0, 250.0]
-    ranges['gammat'][5][1] = [21.0, 250.0]
-    ranges['gammat'][5][2] = [21.0, 250.0]
-    ranges['gammat'][5][3] = [21.0, 250.0]
-    ranges['gammat'][5][4] = [21.0, 250.0]
-    ranges['wtheta'][1][1] = [43.0, 250.0]
-    ranges['wtheta'][2][2] = [27.0, 250.0]
-    ranges['wtheta'][3][3] = [20.0, 250.0]
-    ranges['wtheta'][4][4] = [16.0, 250.0]
-    ranges['wtheta'][5][5] = [14.0, 250.0]
+    ranges["xip"][1][1] = [7.195005, 250.0]
+    ranges["xip"][1][2] = [7.195005, 250.0]
+    ranges["xip"][1][3] = [5.715196, 250.0]
+    ranges["xip"][1][4] = [5.715196, 250.0]
+    ranges["xip"][2][1] = [7.195005, 250.0]
+    ranges["xip"][2][2] = [4.539741, 250.0]
+    ranges["xip"][2][3] = [4.539741, 250.0]
+    ranges["xip"][2][4] = [4.539741, 250.0]
+    ranges["xip"][3][1] = [5.715196, 250.0]
+    ranges["xip"][3][2] = [4.539741, 250.0]
+    ranges["xip"][3][3] = [3.606045, 250.0]
+    ranges["xip"][3][4] = [3.606045, 250.0]
+    ranges["xip"][4][1] = [5.715196, 250.0]
+    ranges["xip"][4][2] = [4.539741, 250.0]
+    ranges["xip"][4][3] = [3.606045, 250.0]
+    ranges["xip"][4][4] = [3.606045, 250.0]
+    ranges["xim"][1][1] = [90.579750, 250.0]
+    ranges["xim"][1][2] = [71.950053, 250.0]
+    ranges["xim"][1][3] = [71.950053, 250.0]
+    ranges["xim"][1][4] = [71.950053, 250.0]
+    ranges["xim"][2][1] = [71.950053, 250.0]
+    ranges["xim"][2][2] = [57.151958, 250.0]
+    ranges["xim"][2][3] = [57.151958, 250.0]
+    ranges["xim"][2][4] = [45.397414, 250.0]
+    ranges["xim"][3][1] = [71.950053, 250.0]
+    ranges["xim"][3][2] = [57.151958, 250.0]
+    ranges["xim"][3][3] = [45.397414, 250.0]
+    ranges["xim"][3][4] = [45.397414, 250.0]
+    ranges["xim"][4][1] = [71.950053, 250.0]
+    ranges["xim"][4][2] = [45.397414, 250.0]
+    ranges["xim"][4][3] = [45.397414, 250.0]
+    ranges["xim"][4][4] = [36.060448, 250.0]
+    ranges["gammat"][1][1] = [64.0, 250.0]
+    ranges["gammat"][1][2] = [64.0, 250.0]
+    ranges["gammat"][1][3] = [64.0, 250.0]
+    ranges["gammat"][1][4] = [64.0, 250.0]
+    ranges["gammat"][2][1] = [40.0, 250.0]
+    ranges["gammat"][2][2] = [40.0, 250.0]
+    ranges["gammat"][2][3] = [40.0, 250.0]
+    ranges["gammat"][2][4] = [40.0, 250.0]
+    ranges["gammat"][3][1] = [30.0, 250.0]
+    ranges["gammat"][3][2] = [30.0, 250.0]
+    ranges["gammat"][3][3] = [30.0, 250.0]
+    ranges["gammat"][3][4] = [30.0, 250.0]
+    ranges["gammat"][4][1] = [24.0, 250.0]
+    ranges["gammat"][4][2] = [24.0, 250.0]
+    ranges["gammat"][4][3] = [24.0, 250.0]
+    ranges["gammat"][4][4] = [24.0, 250.0]
+    ranges["gammat"][5][1] = [21.0, 250.0]
+    ranges["gammat"][5][2] = [21.0, 250.0]
+    ranges["gammat"][5][3] = [21.0, 250.0]
+    ranges["gammat"][5][4] = [21.0, 250.0]
+    ranges["wtheta"][1][1] = [43.0, 250.0]
+    ranges["wtheta"][2][2] = [27.0, 250.0]
+    ranges["wtheta"][3][3] = [20.0, 250.0]
+    ranges["wtheta"][4][4] = [16.0, 250.0]
+    ranges["wtheta"][5][5] = [14.0, 250.0]
     for tp in def_DES_types:
         ranges[tp] = ranges[tp][1:, 1:]
     return ranges
@@ -136,12 +137,10 @@ if numba:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
 
-
         @numba.njit("void(float64[::1],float64[::1],float64[::1],float64[::1])")
         def _get_lensing_dots(wq_b, chis, n_chi, dchis):
             for i, chi in enumerate(chis):
                 wq_b[i] = np.dot(n_chi[i:], (1 - chi / chis[i:]) * dchis[i:])
-
 
         @numba.njit("void(float64[:,::1],float64[:,::1],float64[::1],float64)")
         def _limber_PK_terms(powers, ks, dchifac, kmax):
@@ -154,8 +153,10 @@ if numba:
 
 
 class DES(DataSetLikelihood):
-    install_options = {"github_repository": "CobayaSampler/des_data",
-                       "github_release": "v1.0"}
+    install_options = {
+        "github_repository": "CobayaSampler/des_data",
+        "github_release": "v1.0",
+    }
 
     # variables defined in yaml
     acc: float
@@ -168,18 +169,20 @@ class DES(DataSetLikelihood):
         self.l_max = self.l_max or int(50000 * self.acc)
         # lmax here is an internal parameter for transforms
         if filename.endswith(".fits"):
-
             if dataset_params:
                 raise LoggedError(
-                    self.log, "'dataset_params' can only be specified "
-                              "for .dataset (not .fits) file.")
+                    self.log,
+                    "'dataset_params' can only be specified "
+                    "for .dataset (not .fits) file.",
+                )
             try:
-
                 self.load_fits_data(filename)
-            except IOError:
+            except OSError:
                 raise LoggedError(
-                    self.log, "The data file '%s' could not be found'. "
-                              "Check your paths!", filename)
+                    self.log,
+                    "The data file '%s' could not be found'. Check your paths!",
+                    filename,
+                )
 
         else:
             super().load_dataset_file(filename, dataset_params)
@@ -189,15 +192,15 @@ class DES(DataSetLikelihood):
         self.indices = []
         self.used_indices = []
         self.used_items = []
-        self.fullcov = np.loadtxt(ini.relativeFileName('cov_file'))
-        ntheta = ini.int('num_theta_bins')
-        self.theta_bins = np.loadtxt(ini.relativeFileName('theta_bins_file'))
-        self.iintrinsic_alignment_model = ini.string('intrinsic_alignment_model')
-        self.data_types = ini.string('data_types').split()
-        self.used_types = ini.list('used_data_types', self.data_types)
-        with open(ini.relativeFileName('data_selection'), encoding="utf-8") as f:
+        self.fullcov = np.loadtxt(ini.relativeFileName("cov_file"))
+        ntheta = ini.int("num_theta_bins")
+        self.theta_bins = np.loadtxt(ini.relativeFileName("theta_bins_file"))
+        self.iintrinsic_alignment_model = ini.string("intrinsic_alignment_model")
+        self.data_types = ini.string("data_types").split()
+        self.used_types = ini.list("used_data_types", self.data_types)
+        with open(ini.relativeFileName("data_selection"), encoding="utf-8") as f:
             header = f.readline()
-            assert ('#  type bin1 bin2 theta_min theta_max' == header.strip())
+            assert "#  type bin1 bin2 theta_min theta_max" == header.strip()
             lines = f.readlines()
         ranges = {}
         for tp in self.data_types:
@@ -205,18 +208,18 @@ class DES(DataSetLikelihood):
         for line in lines:
             items = line.split()
             if items[0] in self.used_types:
-                bin1, bin2 = [int(x) - 1 for x in items[1:3]]
+                bin1, bin2 = (int(x) - 1 for x in items[1:3])
                 ranges[items[0]][bin1][bin2] = [np.float64(x) for x in items[3:]]
         self.ranges = ranges
-        self.nzbins = ini.int('num_z_bins')  # for lensing sources
-        self.nwbins = ini.int('num_gal_bins', 0)  # for galaxies
+        self.nzbins = ini.int("num_z_bins")  # for lensing sources
+        self.nwbins = ini.int("num_gal_bins", 0)  # for galaxies
         maxbin = max(self.nzbins, self.nwbins)
         cov_ix = 0
-        self.bin_pairs: List[List[Tuple]] = []
+        self.bin_pairs: list[list[tuple]] = []
         self.data_arrays = []
         self.thetas = []
         for i, tp in enumerate(self.data_types):
-            xi = np.loadtxt(ini.relativeFileName('measurements[%s]' % tp))
+            xi = np.loadtxt(ini.relativeFileName("measurements[%s]" % tp))
             bin1 = xi[:, 0].astype(int) - 1
             bin2 = xi[:, 1].astype(int) - 1
             tbin = xi[:, 2].astype(int) - 1
@@ -226,7 +229,7 @@ class DES(DataSetLikelihood):
             self.bin_pairs.append([])
             for f1, f2, ix, dat in zip(bin1, bin2, tbin, xi[:, 3]):
                 self.indices.append((i, f1, f2, ix))
-                if not (f1, f2) in self.bin_pairs[i]:
+                if (f1, f2) not in self.bin_pairs[i]:
                     self.bin_pairs[i].append((f1, f2))
                     corr[f1, f2] = np.zeros(ntheta)
                 corr[f1, f2][ix] = dat
@@ -237,41 +240,43 @@ class DES(DataSetLikelihood):
                         self.used_indices.append(cov_ix)
                         self.used_items.append(self.indices[-1])
                 cov_ix += 1
-        nz_source = np.loadtxt(ini.relativeFileName('nz_file'))
+        nz_source = np.loadtxt(ini.relativeFileName("nz_file"))
         self.zmid = nz_source[:, 1]
         self.zbin_sp = []
         for b in range(self.nzbins):
             self.zbin_sp += [InterpolatedUnivariateSpline(self.zmid, nz_source[:, b + 3])]
-        nz_lens = np.loadtxt(ini.relativeFileName('nz_gal_file'))
-        assert (np.array_equal(nz_lens[:, 1], self.zmid))
+        nz_lens = np.loadtxt(ini.relativeFileName("nz_gal_file"))
+        assert np.array_equal(nz_lens[:, 1], self.zmid)
         self.zbin_w_sp = []
         for b in range(self.nwbins):
             self.zbin_w_sp += [InterpolatedUnivariateSpline(self.zmid, nz_lens[:, b + 3])]
         self.zmax = self.zmid[-1]
         # k_max actually computed, assumes extrapolated beyond that
-        self.k_max = ini.float('kmax', 15)
+        self.k_max = ini.float("kmax", 15)
 
     def load_fits_data(self, filename, ranges=None):  # pragma: no cover
         # noinspection PyUnresolvedReferences
         import astropy.io.fits as fits
+
         if ranges is None:
             ranges = get_def_cuts()
         hdulist = fits.open(filename)
         self.indices = []
-        self.intrinsic_alignment_model = 'DES1YR'
+        self.intrinsic_alignment_model = "DES1YR"
         self.used_indices = []
         self.used_items = []
         self.ranges = ranges
-        self.fullcov = hdulist['COVMAT'].data
+        self.fullcov = hdulist["COVMAT"].data
         cov_ix = 0
-        self.bin_pairs: List[List[Tuple]] = []
+        self.bin_pairs: list[list[tuple]] = []
         self.data_types = def_DES_types
         self.used_types = def_DES_types
         for i, tp in enumerate(def_DES_types):
             xi = hdulist[tp].data
             self.bin_pairs.append([])
-            for f1, f2, ix, dat, theta in zip(xi.field(0) - 1, xi.field(1) - 1,
-                                              xi.field(2), xi.field(3), xi.field(4)):
+            for f1, f2, ix, dat, theta in zip(
+                xi.field(0) - 1, xi.field(1) - 1, xi.field(2), xi.field(3), xi.field(4)
+            ):
                 self.indices.append((i, f1, f2, ix))
                 if (f1, f2) not in self.bin_pairs[i]:
                     self.bin_pairs[i].append((f1, f2))
@@ -288,44 +293,56 @@ class DES(DataSetLikelihood):
         ntheta = 20
         self.theta_bins = np.empty(ntheta)
         for xi, corrs in zip(
-                [hdulist['xip'].data, hdulist['xim'].data], [corrs_p, corrs_m]):
-            for f1, f2, ix, dat, theta in zip(xi.field(0) - 1, xi.field(1) - 1,
-                                              xi.field(2), xi.field(3), xi.field(4)):
+            [hdulist["xip"].data, hdulist["xim"].data], [corrs_p, corrs_m]
+        ):
+            for f1, f2, ix, dat, theta in zip(
+                xi.field(0) - 1, xi.field(1) - 1, xi.field(2), xi.field(3), xi.field(4)
+            ):
                 if corrs[f1, f2] is None:
                     corrs[f1, f2] = np.zeros(ntheta)
                 if f1 == 0 and f2 == 0:
                     self.theta_bins[ix] = theta
-                assert (np.abs(self.theta_bins[ix] / theta - 1) < 2e-3)
+                assert np.abs(self.theta_bins[ix] / theta - 1) < 2e-3
                 corrs[f1, f2][ix] = dat
         self.nwbins = 5  # for galaxies
         corrs_w = np.empty((self.nwbins, self.nwbins), dtype=object)
         for f1 in range(self.nwbins):
             corrs_w[f1, f1] = np.empty(ntheta)
-        wdata = hdulist['wtheta'].data
-        for f1, f2, ix, dat, theta in zip(wdata.field(0) - 1, wdata.field(1) - 1,
-                                          wdata.field(2), wdata.field(3), wdata.field(4)):
-            assert (f1 == f2)
-            assert (np.abs(self.theta_bins[ix] / theta - 1) < 2e-3)
+        wdata = hdulist["wtheta"].data
+        for f1, f2, ix, dat, theta in zip(
+            wdata.field(0) - 1,
+            wdata.field(1) - 1,
+            wdata.field(2),
+            wdata.field(3),
+            wdata.field(4),
+        ):
+            assert f1 == f2
+            assert np.abs(self.theta_bins[ix] / theta - 1) < 2e-3
             corrs_w[f1, f2][ix] = dat
         corrs_t = np.empty((self.nwbins, self.nwbins), dtype=object)
         corrs_t[:, :] = None
-        tdata = hdulist['gammat'].data
-        for f1, f2, ix, dat, theta in zip(tdata.field(0) - 1, tdata.field(1) - 1,
-                                          tdata.field(2), tdata.field(3), tdata.field(4)):
-            assert (np.abs(self.theta_bins[ix] / theta - 1) < 2e-3)
+        tdata = hdulist["gammat"].data
+        for f1, f2, ix, dat, theta in zip(
+            tdata.field(0) - 1,
+            tdata.field(1) - 1,
+            tdata.field(2),
+            tdata.field(3),
+            tdata.field(4),
+        ):
+            assert np.abs(self.theta_bins[ix] / theta - 1) < 2e-3
             if corrs_t[f1, f2] is None:
                 corrs_t[f1, f2] = np.empty(ntheta)
             corrs_t[f1, f2][ix] = dat
         self.data_arrays = [corrs_p, corrs_m, corrs_t, corrs_w]
-        self.zmid = hdulist['NZ_SOURCE'].data.field('Z_MID')
+        self.zmid = hdulist["NZ_SOURCE"].data.field("Z_MID")
         self.zbin_sp = []
         for b in range(self.nzbins):
-            self.zbin_sp += [_spline(self.zmid, hdulist['NZ_SOURCE'].data.field(b + 3))]
-        zmid_w = hdulist['NZ_LENS'].data.field('Z_MID')
-        assert (np.array_equal(zmid_w, self.zmid))
+            self.zbin_sp += [_spline(self.zmid, hdulist["NZ_SOURCE"].data.field(b + 3))]
+        zmid_w = hdulist["NZ_LENS"].data.field("Z_MID")
+        assert np.array_equal(zmid_w, self.zmid)
         self.zbin_w_sp = []
         for b in range(self.nwbins):
-            self.zbin_w_sp += [_spline(self.zmid, hdulist['NZ_LENS'].data.field(b + 3))]
+            self.zbin_w_sp += [_spline(self.zmid, hdulist["NZ_LENS"].data.field(b + 3))]
         self.zmax = self.zmid[351]  # last non-zero
 
     def initialize_postload(self):
@@ -344,6 +361,7 @@ class DES(DataSetLikelihood):
         if self.use_hankel:  # pragma: no cover
             # noinspection PyUnresolvedReferences
             import hankel
+
             maxx = self.theta_bins_radians[-1] * self.l_max
             h = 3.2 * np.pi / maxx
             N = int(3.2 / h)
@@ -354,13 +372,22 @@ class DES(DataSetLikelihood):
             # Approximate bessel integral as binned smooth C_L against integrals of
             # bessel in each bin. Here we crudely precompute an approximation to the
             # bessel integral by brute force
-            dls = np.diff(np.unique((np.exp(np.linspace(
-                np.log(1.), np.log(self.l_max), int(500 * self.acc)))).astype(int)))
+            dls = np.diff(
+                np.unique(
+                    (
+                        np.exp(
+                            np.linspace(
+                                np.log(1.0), np.log(self.l_max), int(500 * self.acc)
+                            )
+                        )
+                    ).astype(int)
+                )
+            )
             groups = []
             ell = 2  # ell_min
             self.ls_bessel = np.zeros(dls.size)
             for i, dlx in enumerate(dls):
-                self.ls_bessel[i] = (2 * ell + dlx - 1) / 2.
+                self.ls_bessel[i] = (2 * ell + dlx - 1) / 2.0
                 groups.append(np.arange(ell, ell + dlx))
                 ell += dlx
             js = np.empty((3, self.ls_bessel.size, len(self.theta_bins_radians)))
@@ -405,22 +432,38 @@ class DES(DataSetLikelihood):
             "H0": None,
             "omegam": None,
             "Pk_interpolator": {
-                "z": self.zs_interp, "k_max": 15 * self.acc, "nonlinear": True,
-                "vars_pairs": ([("delta_tot", "delta_tot")] +
-                               ([("Weyl", "Weyl")] if self.use_Weyl else []))},
+                "z": self.zs_interp,
+                "k_max": 15 * self.acc,
+                "nonlinear": True,
+                "vars_pairs": (
+                    [("delta_tot", "delta_tot")]
+                    + ([("Weyl", "Weyl")] if self.use_Weyl else [])
+                ),
+            },
             "comoving_radial_distance": {"z": self.zs},
-            "Hubble": {"z": self.zs}}
+            "Hubble": {"z": self.zs},
+        }
 
     # noinspection PyUnboundLocalVariable
-    def get_theory(self, PKdelta, PKWeyl, bin_bias, shear_calibration_parameters,
-                   intrinsic_alignment_A, intrinsic_alignment_alpha,
-                   intrinsic_alignment_z0, wl_photoz_errors, lens_photoz_errors):
+    def get_theory(
+        self,
+        PKdelta,
+        PKWeyl,
+        bin_bias,
+        shear_calibration_parameters,
+        intrinsic_alignment_A,
+        intrinsic_alignment_alpha,
+        intrinsic_alignment_z0,
+        wl_photoz_errors,
+        lens_photoz_errors,
+    ):
         h2 = (self.provider.get_param("H0") / 100) ** 2
         omegam = self.provider.get_param("omegam")
         chis = self.provider.get_comoving_radial_distance(self.zs)
         Hs = self.provider.get_Hubble(self.zs, units="1/Mpc")
         dchis = np.hstack(
-            ((chis[1] + chis[0]) / 2, (chis[2:] - chis[:-2]) / 2, (chis[-1] - chis[-2])))
+            ((chis[1] + chis[0]) / 2, (chis[2:] - chis[:-2]) / 2, (chis[-1] - chis[-2]))
+        )
         D_growth = PKdelta.P(self.zs, 0.001)
         D_growth = np.sqrt(D_growth / PKdelta.P(0, 0.001))
         c = Const.c_km_s * 1e3  # m/s
@@ -434,11 +477,16 @@ class DES(DataSetLikelihood):
                 n_chi[zshift < 0] = 0
                 qgal[b] = n_chi * bin_bias[b]
         if any(t in self.used_types for t in ["gammat", "xim", "xip"]):
-
-            Alignment_z = (intrinsic_alignment_A *
-                           (((1 + self.zs) / (1 + intrinsic_alignment_z0)) **
-                            intrinsic_alignment_alpha) * 0.0134 / D_growth)
-            Alignment_z /= (chis * (1 + self.zs) * 3 * h2 * (1e5 / c) ** 2 / 2)
+            Alignment_z = (
+                intrinsic_alignment_A
+                * (
+                    ((1 + self.zs) / (1 + intrinsic_alignment_z0))
+                    ** intrinsic_alignment_alpha
+                )
+                * 0.0134
+                / D_growth
+            )
+            Alignment_z /= chis * (1 + self.zs) * 3 * h2 * (1e5 / c) ** 2 / 2
 
             wq = np.empty((self.nzbins, len(chis)))
             wq_b = np.empty(chis.shape)
@@ -455,17 +503,24 @@ class DES(DataSetLikelihood):
                 wq[b] = wq_b - Alignment_z * n_chi
 
             if PKWeyl is not None:
-                if 'gammat' in self.used_types:
-                    raise LoggedError(self.log, "DES currently only supports Weyl "
-                                                "potential for lensing only")
+                if "gammat" in self.used_types:
+                    raise LoggedError(
+                        self.log,
+                        "DES currently only supports Weyl potential for lensing only",
+                    )
                 qs = chis * wq
             else:
                 qs = 3 * omegam * h2 * (1e5 / c) ** 2 * chis * (1 + self.zs) / 2 * wq
-        ls_cl = np.hstack((np.arange(2., 100 - 4 / self.acc, 4 / self.acc),
-                           np.exp(np.linspace(np.log(100.), np.log(self.l_max),
-                                              int(50 * self.acc)))))
+        ls_cl = np.hstack(
+            (
+                np.arange(2.0, 100 - 4 / self.acc, 4 / self.acc),
+                np.exp(
+                    np.linspace(np.log(100.0), np.log(self.l_max), int(50 * self.acc))
+                ),
+            )
+        )
         # Get the angular power spectra and transform back
-        dchifac = dchis / chis ** 2
+        dchifac = dchis / chis**2
         if numba:
             ks = np.outer(ls_cl + 0.5, 1 / chis)
             tmp = PKdelta.P(self.zs, ks, grid=False)
@@ -501,46 +556,58 @@ class DES(DataSetLikelihood):
         if self.use_hankel:  # pragma: no cover
             # Note that the absolute value of the correlation depends
             # on what you do about L_min (e.g. 1 vs 2 vs 0 makes a difference).
-            if 'xip' in self.used_types or 'xim' in self.used_types:
-                for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
+            if "xip" in self.used_types or "xim" in self.used_types:
+                for f1, f2 in self.bin_pairs[self.data_types.index("xip")]:
                     cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))
-                    fac = ((1 + shear_calibration_parameters[f1]) * (
-                            1 + shear_calibration_parameters[f2]) / 2 / np.pi)
-                    corrs_th_p[f1, f2] = self.hankel0.transform(cl,
-                                                                self.theta_bins_radians,
-                                                                ret_err=False) * fac
-                    corrs_th_m[f1, f2] = self.hankel4.transform(cl,
-                                                                self.theta_bins_radians,
-                                                                ret_err=False) * fac
-            if 'gammat' in self.used_types:
-                for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
+                    fac = (
+                        (1 + shear_calibration_parameters[f1])
+                        * (1 + shear_calibration_parameters[f2])
+                        / 2
+                        / np.pi
+                    )
+                    corrs_th_p[f1, f2] = (
+                        self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False)
+                        * fac
+                    )
+                    corrs_th_m[f1, f2] = (
+                        self.hankel4.transform(cl, self.theta_bins_radians, ret_err=False)
+                        * fac
+                    )
+            if "gammat" in self.used_types:
+                for f1, f2 in self.bin_pairs[self.data_types.index("gammat")]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))
                     fac = (1 + shear_calibration_parameters[f2]) / 2 / np.pi
-                    corrs_th_t[f1, f2] = self.hankel2.transform(
-                        cl, self.theta_bins_radians, ret_err=False) * fac
-            if 'wtheta' in self.used_types:
-                for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
+                    corrs_th_t[f1, f2] = (
+                        self.hankel2.transform(cl, self.theta_bins_radians, ret_err=False)
+                        * fac
+                    )
+            if "wtheta" in self.used_types:
+                for f1, f2 in self.bin_pairs[self.data_types.index("wtheta")]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))
-                    corrs_th_w[f1, f2] = self.hankel0.transform(cl,
-                                                                self.theta_bins_radians,
-                                                                ret_err=False) / 2 / np.pi
+                    corrs_th_w[f1, f2] = (
+                        self.hankel0.transform(cl, self.theta_bins_radians, ret_err=False)
+                        / 2
+                        / np.pi
+                    )
         else:
             j0s, j2s, j4s = self.bessel_cache
             ls_bessel = self.ls_bessel
-            if 'xip' in self.used_types or 'xim' in self.used_types:
-                for (f1, f2) in self.bin_pairs[self.data_types.index('xip')]:
+            if "xip" in self.used_types or "xim" in self.used_types:
+                for f1, f2 in self.bin_pairs[self.data_types.index("xip")]:
                     cl = _spline(ls_cl, np.dot(tmplens, qs[f1] * qs[f2]))(ls_bessel)
                     fac = (1 + shear_calibration_parameters[f1]) * (
-                            1 + shear_calibration_parameters[f2])
+                        1 + shear_calibration_parameters[f2]
+                    )
                     corrs_th_p[f1, f2] = np.dot(cl, j0s) * fac
                     corrs_th_m[f1, f2] = np.dot(cl, j4s) * fac
-            if 'gammat' in self.used_types:
-                for (f1, f2) in self.bin_pairs[self.data_types.index('gammat')]:
+            if "gammat" in self.used_types:
+                for f1, f2 in self.bin_pairs[self.data_types.index("gammat")]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qs[f2]))(ls_bessel)
                     corrs_th_t[f1, f2] = np.dot(cl, j2s) * (
-                            1 + shear_calibration_parameters[f2])
-            if 'wtheta' in self.used_types:
-                for (f1, f2) in self.bin_pairs[self.data_types.index('wtheta')]:
+                        1 + shear_calibration_parameters[f2]
+                    )
+            if "wtheta" in self.used_types:
+                for f1, f2 in self.bin_pairs[self.data_types.index("wtheta")]:
                     cl = _spline(ls_cl, np.dot(tmp, qgal[f1] * qgal[f2]))(ls_bessel)
                     corrs_th_w[f1, f2] = np.dot(cl, j0s)
         return [corrs_th_p, corrs_th_m, corrs_th_t, corrs_th_w]
@@ -569,56 +636,66 @@ class DES(DataSetLikelihood):
             return chi2
 
     def logp(self, **params_values):
-        PKdelta = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
-                                                    extrap_kmax=3000 * self.acc)
+        PKdelta = self.provider.get_Pk_interpolator(
+            ("delta_tot", "delta_tot"), extrap_kmax=3000 * self.acc
+        )
         if self.use_Weyl:
-            PKWeyl = self.provider.get_Pk_interpolator(("Weyl", "Weyl"),
-                                                       extrap_kmax=3000 * self.acc)
+            PKWeyl = self.provider.get_Pk_interpolator(
+                ("Weyl", "Weyl"), extrap_kmax=3000 * self.acc
+            )
         else:
             PKWeyl = None
 
         wl_photoz_errors = [
-            params_values.get(p, None) for p in
-            ['DES_DzS1', 'DES_DzS2', 'DES_DzS3', 'DES_DzS4']]
+            params_values.get(p, None)
+            for p in ["DES_DzS1", "DES_DzS2", "DES_DzS3", "DES_DzS4"]
+        ]
         lens_photoz_errors = [
-            params_values.get(p, None) for p in
-            ['DES_DzL1', 'DES_DzL2', 'DES_DzL3', 'DES_DzL4', 'DES_DzL5']]
+            params_values.get(p, None)
+            for p in ["DES_DzL1", "DES_DzL2", "DES_DzL3", "DES_DzL4", "DES_DzL5"]
+        ]
         bin_bias = [
-            params_values.get(p, None) for p in
-            ['DES_b1', 'DES_b2', 'DES_b3', 'DES_b4', 'DES_b5']]
+            params_values.get(p, None)
+            for p in ["DES_b1", "DES_b2", "DES_b3", "DES_b4", "DES_b5"]
+        ]
         shear_calibration_parameters = [
-            params_values.get(p, None) for p in
-            ['DES_m1', 'DES_m2', 'DES_m3', 'DES_m4']]
+            params_values.get(p, None) for p in ["DES_m1", "DES_m2", "DES_m3", "DES_m4"]
+        ]
         theory = self.get_theory(
-            PKdelta, PKWeyl,
+            PKdelta,
+            PKWeyl,
             bin_bias=bin_bias,
             wl_photoz_errors=wl_photoz_errors,
             lens_photoz_errors=lens_photoz_errors,
             shear_calibration_parameters=shear_calibration_parameters,
-            intrinsic_alignment_A=params_values.get('DES_AIA'),
-            intrinsic_alignment_alpha=params_values.get('DES_alphaIA'),
-            intrinsic_alignment_z0=params_values.get('DES_z0IA'))
+            intrinsic_alignment_A=params_values.get("DES_AIA"),
+            intrinsic_alignment_alpha=params_values.get("DES_alphaIA"),
+            intrinsic_alignment_z0=params_values.get("DES_z0IA"),
+        )
         return -0.5 * self.chi_squared(theory, return_theory_vector=False)
 
     # Plotting methods ###################################################################
 
     def plot_source_windows(self):
         import matplotlib.pyplot as plt
+
         for b in range(self.nzbins):
             plt.plot(self.zmid, self.zbin_sp[b](self.zmid))
         plt.xlim([0, 1.8])
 
     def plot_gal_windows(self):
         import matplotlib.pyplot as plt
+
         for b in range(self.nwbins):
             plt.plot(self.zmid, self.zbin_w_sp[b](self.zmid))
         plt.xlim([0, 1.2])
 
-    def plot_w(self, corrs_w=None, errors=True, diff=False, axs=None, ls='-'):
+    def plot_w(self, corrs_w=None, errors=True, diff=False, axs=None, ls="-"):
         if "wtheta" not in self.used_types:
             self.log.warning("Clustering not computed. Nothing to plot.")
             return
         import matplotlib.pyplot as plt
+
         if axs is None:
             _, axs = plt.subplots(1, self.nwbins, figsize=(16, 3))
         for f1 in range(self.nwbins):
@@ -640,21 +717,23 @@ class DES(DataSetLikelihood):
                 ax.semilogx(self.theta_bins, data, ls=ls)
             if corrs_w is not None and not diff:
                 ax.semilogx(self.theta_bins, fac * corrs_w[f1, f1], ls=ls)
-            ax.axvspan(*self.ranges['wtheta'][f1][f1], color='gray', alpha=0.1)
+            ax.axvspan(*self.ranges["wtheta"][f1][f1], color="gray", alpha=0.1)
             ax.set_title(f1 + 1)
         return axs
 
-    def plot_lensing(self, corrs_p=None, corrs_m=None, errors=True,
-                     diff=False, axs=None, ls='-'):  # pragma: no cover
+    def plot_lensing(
+        self, corrs_p=None, corrs_m=None, errors=True, diff=False, axs=None, ls="-"
+    ):  # pragma: no cover
         if any(t not in self.used_types for t in ["xip", "xim"]):
             self.log.warning("Shear not computed. Nothing to plot.")
             return
         import matplotlib.pyplot as plt
+
         if axs is None:
             _, axs = plt.subplots(self.nzbins, self.nzbins, figsize=(14, 14))
         for f1, f2 in self.bin_pairs[0]:
             ax = axs[f1, f2]
-            ax.axvspan(*self.ranges['xip'][f1][f2], color='gray', alpha=0.1)
+            ax.axvspan(*self.ranges["xip"][f1][f2], color="gray", alpha=0.1)
             xip = self.data_arrays[0][f1, f2]
             xim = self.data_arrays[1][f1, f2]
             if diff:
@@ -674,24 +753,27 @@ class DES(DataSetLikelihood):
                 xip = xip * fac
                 xim = xim * fac
             if errors and not diff:
-                ax.errorbar(self.theta_bins, xip, fac * self.errors[0][f1, f2],
-                            color='C0', ls=ls)
-                ax.errorbar(self.theta_bins, xim, facm * self.errors[1][f1, f2],
-                            color='C1', ls=ls)
+                ax.errorbar(
+                    self.theta_bins, xip, fac * self.errors[0][f1, f2], color="C0", ls=ls
+                )
+                ax.errorbar(
+                    self.theta_bins, xim, facm * self.errors[1][f1, f2], color="C1", ls=ls
+                )
             else:
-                ax.semilogx(self.theta_bins, xip, color='C0', ls=ls)
-                ax.semilogx(self.theta_bins, xim, color='C1', ls=ls)
+                ax.semilogx(self.theta_bins, xip, color="C0", ls=ls)
+                ax.semilogx(self.theta_bins, xim, color="C1", ls=ls)
             if corrs_p is not None and not diff:
-                ax.semilogx(self.theta_bins, fac * corrs_p[f1, f2], color='C0', ls='--')
-                ax.semilogx(self.theta_bins, facm * corrs_m[f1, f2], color='C1', ls='--')
-            ax.set_title('%s-%s' % (f1 + 1, f2 + 1))
+                ax.semilogx(self.theta_bins, fac * corrs_p[f1, f2], color="C0", ls="--")
+                ax.semilogx(self.theta_bins, facm * corrs_m[f1, f2], color="C1", ls="--")
+            ax.set_title("{}-{}".format(f1 + 1, f2 + 1))
         return axs
 
-    def plot_cross(self, corrs_t=None, errors=True, diff=False, axs=None, ls='-'):
+    def plot_cross(self, corrs_t=None, errors=True, diff=False, axs=None, ls="-"):
         if "gammat" not in self.used_types:
             self.log.warning("Galaxy x galaxy-lensing not computed. Nothing to plot.")
             return
         import matplotlib.pyplot as plt
+
         if axs is None:
             _, axs = plt.subplots(self.nzbins, self.nwbins, figsize=(16, 14))
         for f1 in range(self.nzbins):
@@ -704,78 +786,97 @@ class DES(DataSetLikelihood):
                         fac = 1
                     else:
                         data = data / corrs_t[f2, f1] - 1
-                        fac = 1. / corrs_t[f2, f1]
+                        fac = 1.0 / corrs_t[f2, f1]
                 else:
                     fac = 100 * self.theta_bins
                     data = data * fac
                 if errors and not diff:
-                    ax.errorbar(self.theta_bins, data, fac * self.errors[2][f2, f1],
-                                ls=ls)
+                    ax.errorbar(
+                        self.theta_bins, data, fac * self.errors[2][f2, f1], ls=ls
+                    )
                 else:
                     ax.semilogx(self.theta_bins, data, ls=ls)
                 if corrs_t is not None and not diff:
                     ax.semilogx(self.theta_bins, fac * corrs_t[f2, f1], ls=ls)
-                ax.axvspan(*self.ranges['gammat'][f2][f1], color='gray', alpha=0.1)
-                ax.set_title('%s-%s' % (f2 + 1, f1 + 1))
+                ax.axvspan(*self.ranges["gammat"][f2][f1], color="gray", alpha=0.1)
+                ax.set_title("{}-{}".format(f2 + 1, f1 + 1))
         return axs
 
 
 # Conversion .fits --> .dataset  #########################################################
 
+
 def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
     # noinspection PyUnresolvedReferences
     import astropy.io.fits as fits
+
     if ranges is None:
         ranges = get_def_cuts()
     hdulist = fits.open(filename)
     outlines = []
-    outlines += ['measurements_format = DES']
-    outlines += ['kmax = 10']  # matches what DES used and is good enough for likelihood
-    outlines += ['intrinsic_alignment_model = DES1YR']
-    outlines += ['data_types = xip xim gammat wtheta']
-    outlines += ['used_data_types = xip xim gammat wtheta']
-    outlines += ['num_z_bins = %s' % (max(hdulist['xip'].data['BIN1']))]
-    outlines += ['num_gal_bins = %s' % (max(hdulist['wtheta'].data['BIN1']))]
-    ntheta = max(hdulist['wtheta'].data['ANGBIN']) + 1
-    outlines += ['num_theta_bins = %s' % ntheta]
-    thetas = hdulist['xip'].data['ANG'][:ntheta]
-    np.savetxt(outdir + root + '_theta_bins.dat', thetas, header='theta_arcmin')
-    outlines += ['theta_bins_file = %s' % (root + '_theta_bins.dat')]
-    np.savetxt(outdir + root + '_cov.dat', hdulist['COVMAT'].data, fmt='%.4e')
-    outlines += ['cov_file = %s' % (root + '_cov.dat')]
+    outlines += ["measurements_format = DES"]
+    outlines += ["kmax = 10"]  # matches what DES used and is good enough for likelihood
+    outlines += ["intrinsic_alignment_model = DES1YR"]
+    outlines += ["data_types = xip xim gammat wtheta"]
+    outlines += ["used_data_types = xip xim gammat wtheta"]
+    outlines += ["num_z_bins = %s" % (max(hdulist["xip"].data["BIN1"]))]
+    outlines += ["num_gal_bins = %s" % (max(hdulist["wtheta"].data["BIN1"]))]
+    ntheta = max(hdulist["wtheta"].data["ANGBIN"]) + 1
+    outlines += ["num_theta_bins = %s" % ntheta]
+    thetas = hdulist["xip"].data["ANG"][:ntheta]
+    np.savetxt(outdir + root + "_theta_bins.dat", thetas, header="theta_arcmin")
+    outlines += ["theta_bins_file = %s" % (root + "_theta_bins.dat")]
+    np.savetxt(outdir + root + "_cov.dat", hdulist["COVMAT"].data, fmt="%.4e")
+    outlines += ["cov_file = %s" % (root + "_cov.dat")]
     out_ranges = []
     for i, tp in enumerate(def_DES_types):
         pairs = []
-        for b1, b2 in zip(hdulist[tp].data['BIN1'], hdulist[tp].data['BIN2']):
-            if not (b1, b2) in pairs:
+        for b1, b2 in zip(hdulist[tp].data["BIN1"], hdulist[tp].data["BIN2"]):
+            if (b1, b2) not in pairs:
                 pairs.append((b1, b2))
         for x, y in pairs:
-            out_ranges += ['%s %s %s %s %s' % (
-                tp, x, y, ranges[tp][x - 1][y - 1][0], ranges[tp][x - 1][y - 1][1])]
+            out_ranges += [
+                "{} {} {} {} {}".format(
+                    tp, x, y, ranges[tp][x - 1][y - 1][0], ranges[tp][x - 1][y - 1][1]
+                )
+            ]
         # drop theta value, as assuming shared to all data
-        dat = np.asarray(zip(*[hdulist[tp].data[n]
-                               for n in list(hdulist[tp].data.names)[:-2]]))
+        dat = np.asarray(
+            zip(*[hdulist[tp].data[n] for n in list(hdulist[tp].data.names)[:-2]])
+        )
         # fix anomaly that z bins are 1 based but theta bins zero based
         dat[:, 2] += 1
         # noinspection PyTypeChecker
-        np.savetxt(outdir + root + '_%s.dat' % tp, dat, fmt=['%u', '%u', '%u', '%.8e'],
-                   header=" ".join(list(hdulist[tp].data.dtype.names)[:-2]))
-        outlines += ['measurements[%s] = %s_%s.dat' % (tp, root, tp)]
-    sourcedata = hdulist['NZ_SOURCE'].data
+        np.savetxt(
+            outdir + root + "_%s.dat" % tp,
+            dat,
+            fmt=["%u", "%u", "%u", "%.8e"],
+            header=" ".join(list(hdulist[tp].data.dtype.names)[:-2]),
+        )
+        outlines += ["measurements[{}] = {}_{}.dat".format(tp, root, tp)]
+    sourcedata = hdulist["NZ_SOURCE"].data
     maxi = sourcedata.shape[0] - 1
     while np.all(np.asarray(sourcedata[maxi][3:]) == 0):
         maxi -= 1
-    np.savetxt(outdir + root + '_nz_source.dat', sourcedata[:maxi + 1], fmt='%.6e',
-               header=" ".join(hdulist['NZ_SOURCE'].data.dtype.names))
-    outlines += ['nz_file = %s_nz_source.dat' % root]
-    assert (np.all(np.asarray(hdulist['NZ_LENS'].data[maxi + 1][3:]) == 0))
-    np.savetxt(outdir + root + '_nz_lens.dat', hdulist['NZ_LENS'].data[:maxi + 1],
-               fmt='%.6e', header=" ".join(hdulist['NZ_LENS'].data.dtype.names))
-    outlines += ['nz_gal_file = %s_nz_lens.dat' % root]
-    with open(outdir + root + '_selection.dat', 'w', encoding="utf-8") as f:
-        f.write('#  type bin1 bin2 theta_min theta_max\n')
+    np.savetxt(
+        outdir + root + "_nz_source.dat",
+        sourcedata[: maxi + 1],
+        fmt="%.6e",
+        header=" ".join(hdulist["NZ_SOURCE"].data.dtype.names),
+    )
+    outlines += ["nz_file = %s_nz_source.dat" % root]
+    assert np.all(np.asarray(hdulist["NZ_LENS"].data[maxi + 1][3:]) == 0)
+    np.savetxt(
+        outdir + root + "_nz_lens.dat",
+        hdulist["NZ_LENS"].data[: maxi + 1],
+        fmt="%.6e",
+        header=" ".join(hdulist["NZ_LENS"].data.dtype.names),
+    )
+    outlines += ["nz_gal_file = %s_nz_lens.dat" % root]
+    with open(outdir + root + "_selection.dat", "w", encoding="utf-8") as f:
+        f.write("#  type bin1 bin2 theta_min theta_max\n")
         f.write("\n".join(out_ranges))
-    outlines += ['data_selection = %s_selection.dat' % root]
-    outlines += ['nuisance_params = DES.paramnames']
-    with open(outdir + root + '.dataset', 'w', encoding="utf-8") as f:
+    outlines += ["data_selection = %s_selection.dat" % root]
+    outlines += ["nuisance_params = DES.paramnames"]
+    with open(outdir + root + ".dataset", "w", encoding="utf-8") as f:
         f.write("\n".join(outlines))

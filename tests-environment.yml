@@ -16,7 +16,7 @@ dependencies:
   - openmpi
   - pip
   - pip:
-    - flake8
+    - ruff
     - flaky
     - pytest-xdist
     - pytest-cov

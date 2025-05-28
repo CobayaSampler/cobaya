@@ -83,13 +83,24 @@ class RandDirectionProposer(IndexCycler):
 
 class RandProposer1D(RandDirectionProposer):
     def propose_vec(self, scale: float = 1):
-        return np.array([self.propose_r() * scale if self.random_state.integers(2)
-                         else -self.propose_r() * scale])
+        return np.array(
+            [
+                self.propose_r() * scale
+                if self.random_state.integers(2)
+                else -self.propose_r() * scale
+            ]
+        )
 
 
 class BlockedProposer(HasLogger):
-    def __init__(self, parameter_blocks, random_state, oversampling_factors=None,
-                 i_last_slow_block=None, proposal_scale=2.4):
+    def __init__(
+        self,
+        parameter_blocks,
+        random_state,
+        oversampling_factors=None,
+        i_last_slow_block=None,
+        proposal_scale=2.4,
+    ):
         """
         Proposal density for fast and slow parameters, where parameters are
         grouped into blocks which are changed at the same time.
@@ -113,13 +124,18 @@ class BlockedProposer(HasLogger):
         else:
             if len(oversampling_factors) != len(parameter_blocks):
                 raise LoggedError(
-                    self.log, "List of oversampling factors has a different length that "
-                              "list of blocks: %d vs %d.",
-                    len(oversampling_factors), len(parameter_blocks))
+                    self.log,
+                    "List of oversampling factors has a different length that "
+                    "list of blocks: %d vs %d.",
+                    len(oversampling_factors),
+                    len(parameter_blocks),
+                )
             if np.any(oversampling_factors != np.floor(np.array(oversampling_factors))):
                 raise LoggedError(
-                    self.log, "Oversampling factors must be integer! Got %r.",
-                    oversampling_factors)
+                    self.log,
+                    "Oversampling factors must be integer! Got %r.",
+                    oversampling_factors,
+                )
             self.oversampling_factors = np.array(oversampling_factors, dtype=int)
         # Binary fast-slow split
         self.i_last_slow_block = i_last_slow_block
@@ -131,19 +147,28 @@ class BlockedProposer(HasLogger):
                     self.log,
                     "The index given for the last slow block, %d, is not valid: "
                     "there are only %d blocks.",
-                    self.i_last_slow_block, len(parameter_blocks))
+                    self.i_last_slow_block,
+                    len(parameter_blocks),
+                )
         n_block = np.array([len(b) for b in parameter_blocks])
         n_all = sum(n_block)
-        n_slow = sum(n_block[:1 + self.i_last_slow_block])
+        n_slow = sum(n_block[: 1 + self.i_last_slow_block])
         self.nsamples_slow = 0
         self.nsamples_fast = 0
         if set(chain(*parameter_blocks)) != set(range(n_all)):
-            raise LoggedError(self.log,
-                              "The blocks do not contain all the parameter indices.")
+            raise LoggedError(
+                self.log, "The blocks do not contain all the parameter indices."
+            )
 
         # Creating the blocked proposers
-        self.proposer = [(RandDirectionProposer(n, random_state) if n > 1
-                          else RandProposer1D(1, random_state)) for n in n_block]
+        self.proposer = [
+            (
+                RandDirectionProposer(n, random_state)
+                if n > 1
+                else RandProposer1D(1, random_state)
+            )
+            for n in n_block
+        ]
 
         # Prepare indices for the cycler, repeated if there is oversampling
 
@@ -208,13 +233,20 @@ class BlockedProposer(HasLogger):
         """
         if propose_matrix.shape[0] != self.d():
             raise LoggedError(
-                self.log, "The covariance matrix does not have the correct dimension: "
-                          "it's %d, but it should be %d.", propose_matrix.shape[0],
-                self.d())
-        if not (np.allclose(propose_matrix.T, propose_matrix) and
-                np.all(np.linalg.eigvals(propose_matrix) > 0)):
-            raise LoggedError(self.log, "The given covmat is not a positive-definite, "
-                                        "symmetric square matrix.")
+                self.log,
+                "The covariance matrix does not have the correct dimension: "
+                "it's %d, but it should be %d.",
+                propose_matrix.shape[0],
+                self.d(),
+            )
+        if not (
+            np.allclose(propose_matrix.T, propose_matrix)
+            and np.all(np.linalg.eigvals(propose_matrix) > 0)
+        ):
+            raise LoggedError(
+                self.log,
+                "The given covmat is not a positive-definite, symmetric square matrix.",
+            )
         self.propose_matrix = propose_matrix.copy()
         propose_matrix_j_sorted = self.propose_matrix[np.ix_(self.i_of_j, self.i_of_j)]
         sigmas_diag, L = choleskyL_corr(propose_matrix_j_sorted)
@@ -222,8 +254,9 @@ class BlockedProposer(HasLogger):
         self.transform = []
         for j_start, bp in zip(self.j_start, self.proposer):
             j_end = j_start + bp.n
-            self.transform += [sigmas_diag[j_start:, j_start:].dot(L[j_start:,
-                                                                   j_start:j_end])]
+            self.transform += [
+                sigmas_diag[j_start:, j_start:].dot(L[j_start:, j_start:j_end])
+            ]
 
     def get_covariance(self):
         return self.propose_matrix.copy()

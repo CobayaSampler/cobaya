@@ -1,6 +1,7 @@
 """
 Body of the best-fit test for cosmological likelihoods
 """
+
 from copy import deepcopy
 
 from cobaya.typing import empty_dict
@@ -15,8 +16,16 @@ from .conftest import install_test_wrapper
 tolerance_derived = 0.055
 
 
-def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2,
-                 best_fit_derived=None, extra_model=empty_dict, skip_not_installed=False):
+def body_of_test(
+    packages_path,
+    best_fit,
+    info_likelihood,
+    info_theory,
+    ref_chi2,
+    best_fit_derived=None,
+    extra_model=empty_dict,
+    skip_not_installed=False,
+):
     # Create base info
     theo = list(info_theory)[0]
     # In Class, theta_s is exact, but different from the approximate one cosmomc_theta
@@ -51,9 +60,9 @@ def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2
     # Check value of likelihoods
     for like in info["likelihood"]:
         chi2 = -2 * likes[like]
-        msg = ("Testing likelihood '%s': | %.2f (now) - %.2f (ref) | = %.2f >=? %.2f" % (
-            like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]),
-            ref_chi2["tolerance"]))
+        msg = "Testing likelihood '{}': | {:.2f} (now) - {:.2f} (ref) | = {:.2f} >=? {:.2f}".format(
+            like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]), ref_chi2["tolerance"]
+        )
         assert abs(chi2 - ref_chi2[like]) < ref_chi2["tolerance"], msg
         print(msg)
     # Check value of derived parameters
@@ -63,13 +72,13 @@ def body_of_test(packages_path, best_fit, info_likelihood, info_theory, ref_chi2
         if best_fit_derived[p][0] is None or p not in best_fit_derived:
             not_tested += [p]
             continue
-        rel = (abs(derived[p] - best_fit_derived[p][0]) /
-               best_fit_derived[p][1])
+        rel = abs(derived[p] - best_fit_derived[p][0]) / best_fit_derived[p][1]
         if rel > tolerance_derived * (
-                2 if p in (
-                        "YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1):
+            2 if p in ("YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1
+        ):
             not_passed += [(p, rel, derived[p], best_fit_derived[p][0])]
     if not_tested:
         print("Derived parameters not tested because not implemented: %r" % not_tested)
-    assert not not_passed, "Some derived parameters were off. Fractions of " \
-                           "test tolerance: %r" % not_passed
+    assert not not_passed, (
+        "Some derived parameters were off. Fractions of test tolerance: %r" % not_passed
+    )

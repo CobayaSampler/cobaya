@@ -1,6 +1,7 @@
 """General test for types of components."""
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Mapping
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
+from collections.abc import Mapping
 import numpy as np
 import pytest
 
@@ -17,14 +18,14 @@ class GenericComponent(CobayaComponent):
     noise: float = 0
     none: int = None
     numpy_int: int = np.int64(1)
-    optional: Optional[int] = None
+    optional: int | None = None
     paramdict_params: ParamDict
-    params: Dict[str, List[float]]
-    tuple_params: Tuple[float, float] = (0.0, 1.0)
+    params: dict[str, list[float]]
+    tuple_params: tuple[float, float] = (0.0, 1.0)
     array: Sequence[float]
     array2: Sequence[float]
     map: Mapping[float, str]
-    deferred: 'ParamDict'
+    deferred: "ParamDict"
     unset = 1
     install_options: ClassVar
 
@@ -47,8 +48,8 @@ def test_component_types():
         "array": np.arange(2, dtype=np.float64),
         "array2": [1, 2],
         "map": {1.0: "a", 2.0: "b"},
-        "deferred": {'value': lambda x: x},
-        "install_options": {}
+        "deferred": {"value": lambda x: x},
+        "install_options": {},
     }
     GenericComponent(correct_kwargs)
 
@@ -68,7 +69,7 @@ def test_component_types():
         {"tuple_params": "not_a_tuple"},
         {"tuple_params": (0.0, "not_a_float")},
         {"array": 2},
-        {"map": {"a": 2.0}}
+        {"map": {"a": 2.0}},
     ]
     for case in wrong_cases:
         with pytest.raises(TypeError):

@@ -17,7 +17,6 @@ except (ImportError, SystemError):
 else:
     import warnings
 
-
     def random_SO_N(dim, random_state):
         """
         Draw random samples from SO(N).
@@ -38,24 +37,22 @@ else:
         _rvs(dim, xx, H)
         return H
 
-
-    logging.getLogger('numba').setLevel(logging.ERROR)
+    logging.getLogger("numba").setLevel(logging.ERROR)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-
 
         @numba.njit("void(int64,float64[::1],float64[:,::1])")
         def _rvs(dim, xx, H):
             D = np.empty((dim,))
             ix = 0
             for n in range(dim - 1):
-                x = xx[ix:ix + dim - n]
+                x = xx[ix : ix + dim - n]
                 ix += dim - n
                 norm2 = np.dot(x, x)
                 x0 = x[0].item()
                 D[n] = np.sign(x[0]) if x[0] != 0 else 1
                 x[0] += D[n] * np.sqrt(norm2)
-                x /= np.sqrt((norm2 - x0 ** 2 + x[0] ** 2) / 2.)
+                x /= np.sqrt((norm2 - x0**2 + x[0] ** 2) / 2.0)
                 # Householder transformation
                 tmp = np.dot(H[:, n:], x)
                 H[:, n:] -= np.outer(tmp, x)
@@ -75,9 +72,9 @@ def chi_squared(c_inv, delta):
         return c_inv.dot(delta).dot(delta)
     else:
         # use symmetry
-        return scipy.linalg.blas.dsymv(alpha=1.0,
-                                       a=c_inv if np.isfortran(c_inv) else c_inv.T,
-                                       x=delta, lower=0).dot(delta)
+        return scipy.linalg.blas.dsymv(
+            alpha=1.0, a=c_inv if np.isfortran(c_inv) else c_inv.T, x=delta, lower=0
+        ).dot(delta)
 
 
 def inverse_cholesky(cov):

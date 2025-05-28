@@ -38,8 +38,8 @@ def body_of_test(dim, tmpdir=None, random_state=None):
 
     n_altered = int(dim / 4)
     i_proposal = i_s[:n_altered]
-    i_ref = i_s[n_altered:2 * n_altered]
-    i_prior = i_s[2 * n_altered:3 * n_altered]
+    i_ref = i_s[n_altered : 2 * n_altered]
+    i_prior = i_s[2 * n_altered : 3 * n_altered]
     removed = list(chain(*(i_proposal, i_ref, i_prior)))
     i_covmat = [i for i in range(dim) if i not in removed]
     for i in removed:
@@ -64,8 +64,10 @@ def body_of_test(dim, tmpdir=None, random_state=None):
         if i in i_proposal:
             info["params"][p]["proposal"] = sigma
         elif i in i_ref:
-            info["params"][prefix + str(i)]["ref"] = {"dist": "norm",
-                                                      "scale": sigma * fallback_scale}
+            info["params"][prefix + str(i)]["ref"] = {
+                "dist": "norm",
+                "scale": sigma * fallback_scale,
+            }
         elif i in i_prior:
             info["params"][prefix + str(i)]["prior"]["scale"] = sigma * fallback_scale
     reduced_covmat = initial_random_covmat[np.ix_(i_covmat, i_covmat)]
@@ -84,7 +86,12 @@ def body_of_test(dim, tmpdir=None, random_state=None):
     def callback(sampler):
         assert np.allclose(to_compare, sampler.proposer.get_covariance())
 
-    info["sampler"]["mcmc"].update({
-        "callback_function": callback, "callback_every": 1, "max_samples": 1,
-        "burn_in": 0})
+    info["sampler"]["mcmc"].update(
+        {
+            "callback_function": callback,
+            "callback_every": 1,
+            "max_samples": 1,
+            "burn_in": 0,
+        }
+    )
     run(info)

@@ -11,72 +11,106 @@ info_classy = MappingProxyType({"classy": {"extra_args": planck_lss_precision["c
 info_classy["classy"]["extra_args"]["hmcode_version"] = 16
 
 
-def test_cosmo_des_y1_shear_camb(packages_path, skip_not_installed,
-                                 info_theory=info_camb):
+def test_cosmo_des_y1_shear_camb(
+    packages_path, skip_not_installed, info_theory=info_camb
+):
     like = "des_y1.shear"
     info_likelihood = {like: {}}
     best_fit_shear = deepcopy(best_fit)
     best_fit_shear.update(test_params_shear)
-    body_of_test(packages_path, best_fit_shear, info_likelihood, info_theory,
-                 {like: ref_chi2["shear"], "tolerance": tolerance},
-                 skip_not_installed=skip_not_installed)
+    body_of_test(
+        packages_path,
+        best_fit_shear,
+        info_likelihood,
+        info_theory,
+        {like: ref_chi2["shear"], "tolerance": tolerance},
+        skip_not_installed=skip_not_installed,
+    )
 
 
-def test_cosmo_des_y1_clustering_camb(packages_path, skip_not_installed,
-                                      info_theory=info_camb):
+def test_cosmo_des_y1_clustering_camb(
+    packages_path, skip_not_installed, info_theory=info_camb
+):
     like = "des_y1.clustering"
     info_likelihood = {like: {}}
     best_fit_clustering = deepcopy(best_fit)
     best_fit_clustering.update(test_params_clustering)
-    body_of_test(packages_path, best_fit_clustering, info_likelihood, info_theory,
-                 {like: ref_chi2["clustering"], "tolerance": tolerance},
-                 skip_not_installed=skip_not_installed)
+    body_of_test(
+        packages_path,
+        best_fit_clustering,
+        info_likelihood,
+        info_theory,
+        {like: ref_chi2["clustering"], "tolerance": tolerance},
+        skip_not_installed=skip_not_installed,
+    )
 
 
-def test_cosmo_des_y1_galaxy_galaxy_camb(packages_path, skip_not_installed,
-                                         info_theory=info_camb):
+def test_cosmo_des_y1_galaxy_galaxy_camb(
+    packages_path, skip_not_installed, info_theory=info_camb
+):
     like = "des_y1.galaxy_galaxy"
     info_likelihood = {like: {}}
     best_fit_galaxy_galaxy = deepcopy(best_fit)
     best_fit_galaxy_galaxy.update(test_params_shear)
     best_fit_galaxy_galaxy.update(test_params_clustering)
-    body_of_test(packages_path, best_fit_galaxy_galaxy, info_likelihood, info_theory,
-                 {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance},
-                 skip_not_installed=skip_not_installed)
+    body_of_test(
+        packages_path,
+        best_fit_galaxy_galaxy,
+        info_likelihood,
+        info_theory,
+        {like: ref_chi2["galaxy_galaxy"], "tolerance": tolerance},
+        skip_not_installed=skip_not_installed,
+    )
 
 
-def test_cosmo_des_y1_joint_camb(packages_path, skip_not_installed,
-                                 info_theory=info_camb):
+def test_cosmo_des_y1_joint_camb(
+    packages_path, skip_not_installed, info_theory=info_camb
+):
     like = "des_y1.joint"
     info_likelihood = {like: {}}
     best_fit_joint = deepcopy(best_fit)
     best_fit_joint.update(test_params_shear)
     best_fit_joint.update(test_params_clustering)
-    body_of_test(packages_path, best_fit_joint, info_likelihood, info_theory,
-                 {like: ref_chi2["joint"], "tolerance": tolerance},
-                 skip_not_installed=skip_not_installed)
+    body_of_test(
+        packages_path,
+        best_fit_joint,
+        info_likelihood,
+        info_theory,
+        {like: ref_chi2["joint"], "tolerance": tolerance},
+        skip_not_installed=skip_not_installed,
+    )
 
 
-def test_cosmo_des_y1_shear_classy(packages_path, skip_not_installed,
-                                   info_theory=info_classy):
-    test_cosmo_des_y1_shear_camb(packages_path, info_theory=info_theory,
-                                 skip_not_installed=skip_not_installed)
+def test_cosmo_des_y1_shear_classy(
+    packages_path, skip_not_installed, info_theory=info_classy
+):
+    test_cosmo_des_y1_shear_camb(
+        packages_path, info_theory=info_theory, skip_not_installed=skip_not_installed
+    )
 
 
-def test_cosmo_des_y1_clustering_classy(packages_path, skip_not_installed,
-                                        info_theory=info_classy):
-    test_cosmo_des_y1_clustering_camb(packages_path, info_theory=info_theory,
-                                      skip_not_installed=skip_not_installed)
+def test_cosmo_des_y1_clustering_classy(
+    packages_path, skip_not_installed, info_theory=info_classy
+):
+    test_cosmo_des_y1_clustering_camb(
+        packages_path, info_theory=info_theory, skip_not_installed=skip_not_installed
+    )
 
 
-def test_cosmo_des_y1_galaxy_galaxy_classy(packages_path, skip_not_installed,
-                                           info_theory=info_classy):
-    test_cosmo_des_y1_galaxy_galaxy_camb(packages_path, info_theory=info_theory,
-                                         skip_not_installed=skip_not_installed)
+def test_cosmo_des_y1_galaxy_galaxy_classy(
+    packages_path, skip_not_installed, info_theory=info_classy
+):
+    test_cosmo_des_y1_galaxy_galaxy_camb(
+        packages_path, info_theory=info_theory, skip_not_installed=skip_not_installed
+    )
 
 
-ref_chi2 = {"shear": 242.825, "clustering": 100.78,
-            "galaxy_galaxy": 208.005, "joint": 570.428}
+ref_chi2 = {
+    "shear": 242.825,
+    "clustering": 100.78,
+    "galaxy_galaxy": 208.005,
+    "joint": 570.428,
+}
 tolerance = 0.2
 
 test_params_shear = {
@@ -93,7 +127,8 @@ test_params_shear = {
     # Intrinsic Alignment
     "DES_AIA": 1.0,
     "DES_alphaIA": 1.0,
-    "DES_z0IA": 0.62}
+    "DES_z0IA": 0.62,
+}
 
 test_params_clustering = {
     # lens_photoz_errors
@@ -107,4 +142,5 @@ test_params_clustering = {
     "DES_b2": 1.55,
     "DES_b3": 1.65,
     "DES_b4": 1.8,
-    "DES_b5": 2.0}
+    "DES_b5": 2.0,
+}

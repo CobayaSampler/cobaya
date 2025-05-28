@@ -35,8 +35,8 @@ def range_to_ells(use_range):
     if isinstance(use_range, str):
         ranges = []
         for ell_range in use_range.split():
-            if '-' in ell_range:
-                mn, mx = [int(x) for x in ell_range.split('-')]
+            if "-" in ell_range:
+                mn, mx = (int(x) for x in ell_range.split("-"))
                 ranges.append(range(mn, mx + 1))
             else:
                 ranges.append(int(ell_range))
@@ -47,9 +47,12 @@ def range_to_ells(use_range):
 
 
 class Planck2018CamSpecPython(DataSetLikelihood):
-    install_options = {"github_repository": "CobayaSampler/planck_native_data",
-                       "github_release": "v1", "asset": "CamSpec2018.zip",
-                       "directory": "planck_2018_CamSpec_native"}
+    install_options = {
+        "github_repository": "CobayaSampler/planck_native_data",
+        "github_release": "v1",
+        "asset": "CamSpec2018.zip",
+        "directory": "planck_2018_CamSpec_native",
+    }
 
     type = "CMB"
 
@@ -57,12 +60,13 @@ class Planck2018CamSpecPython(DataSetLikelihood):
     def get_bibtex(cls):
         if not (res := super().get_bibtex()):
             from cobaya.likelihoods.base_classes import Planck2018Clik
+
             return Planck2018Clik.get_bibtex()
         return res
 
     def read_normalized(self, filename, pivot=None):
         # arrays all based at L=0, in L(L+1)/2pi units
-        self.mpi_debug('Loading: %s', filename)
+        self.mpi_debug("Loading: %s", filename)
         dat = np.loadtxt(filename)
         assert int(dat[0, 0]) == 2
         dat = np.hstack(([0, 0], dat[:, 1]))
@@ -72,24 +76,24 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         return dat
 
     def init_params(self, ini, silent=False):
-        spectra = np.loadtxt(ini.relativeFileName('cl_hat_file'))
-        covmat_cl = ini.split('covmat_cl')
-        self.use_cl = ini.split('use_cl', covmat_cl)
-        if ini.hasKey('use_range'):
-            used_ell = ini.params['use_range']
+        spectra = np.loadtxt(ini.relativeFileName("cl_hat_file"))
+        covmat_cl = ini.split("covmat_cl")
+        self.use_cl = ini.split("use_cl", covmat_cl)
+        if ini.hasKey("use_range"):
+            used_ell = ini.params["use_range"]
             if isinstance(used_ell, dict):
-                self.mpi_info('Using range %s', used_ell)
+                self.mpi_info("Using range %s", used_ell)
                 used_ell = {key: range_to_ells(value) for key, value in used_ell.items()}
             else:
                 if silent:
-                    self.mpi_info('CamSpec using range: %s', used_ell)
+                    self.mpi_info("CamSpec using range: %s", used_ell)
                 used_ell = range_to_ells(used_ell)
         else:
             used_ell = None
         data_vector = []
         nX = 0
         used_indices = []
-        with open(ini.relativeFileName('data_ranges'), "r", encoding="utf-8-sig") as f:
+        with open(ini.relativeFileName("data_ranges"), encoding="utf-8-sig") as f:
             lines = f.readlines()
             while not lines[-1].strip():
                 lines = lines[:-1]
@@ -103,20 +107,22 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                 items = line.split()
                 tp = items[0]
                 self.cl_names.append(tp)
-                lmin[i], lmax[i] = [int(x) for x in items[1:]]
+                lmin[i], lmax[i] = (int(x) for x in items[1:])
                 if lmax[i] and lmax[i] >= lmin[i]:
                     n = lmax[i] - lmin[i] + 1
-                    data_vector.append(spectra[lmin[i]:lmax[i] + 1, i])
+                    data_vector.append(spectra[lmin[i] : lmax[i] + 1, i])
                     if tp in self.use_cl:
                         if used_ell is not None and (
-                                not isinstance(used_ell, dict) or tp in used_ell):
+                            not isinstance(used_ell, dict) or tp in used_ell
+                        ):
                             if isinstance(used_ell, dict):
                                 ells = used_ell[tp]
                             else:
                                 ells = used_ell
                             self.ell_ranges[i] = np.array(
                                 [L for L in range(lmin[i], lmax[i] + 1) if L in ells],
-                                dtype=int)
+                                dtype=int,
+                            )
                             used_indices.append(self.ell_ranges[i] + (nX - lmin[i]))
                         else:
                             used_indices.append(range(nX, nX + n))
@@ -126,21 +132,23 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                         lmax[i] = -1
                     nX += n
 
-        self.cl_used = np.array([name in self.use_cl for name in self.cl_names],
-                                dtype=bool)
-        covfile = ini.relativeFileName('covmat_fiducial')
+        self.cl_used = np.array(
+            [name in self.use_cl for name in self.cl_names], dtype=bool
+        )
+        covfile = ini.relativeFileName("covmat_fiducial")
         with open(covfile, "rb") as cov_f:
-            cov = np.fromfile(cov_f, dtype=[np.float32, np.float64]['64.bin' in covfile])
-        assert (nX ** 2 == cov.shape[0])
+            cov = np.fromfile(cov_f, dtype=[np.float32, np.float64]["64.bin" in covfile])
+        assert nX**2 == cov.shape[0]
         used_indices = np.concatenate(used_indices)
         self.data_vector = np.concatenate(data_vector)[used_indices]
         self.cov = cov.reshape(nX, nX)[np.ix_(used_indices, used_indices)].astype(
-            np.float64)
+            np.float64
+        )
         if not silent:
             for name, mn, mx in zip(self.cl_names, lmin, lmax):
                 if name in self.use_cl:
                     self.mpi_info("L-range for %s: %s %s", name, mn, mx)
-            self.mpi_info('Number of data points: %s', self.cov.shape[0])
+            self.mpi_info("Number of data points: %s", self.cov.shape[0])
         self.lmax = lmax
         self.lmin = lmin
         max_l = np.max(self.lmax)
@@ -149,31 +157,46 @@ class Planck2018CamSpecPython(DataSetLikelihood):
 
         if np.any(self.cl_used[:4]):
             pivot = 3000
-            self.sz_143 = self.read_normalized(
-                ini.relativeFileName('sz143file'), pivot)[:max_l + 1]
-            self.ksz = self.read_normalized(
-                ini.relativeFileName('kszfile'), pivot)[:max_l + 1]
+            self.sz_143 = self.read_normalized(ini.relativeFileName("sz143file"), pivot)[
+                : max_l + 1
+            ]
+            self.ksz = self.read_normalized(ini.relativeFileName("kszfile"), pivot)[
+                : max_l + 1
+            ]
             self.tszxcib = self.read_normalized(
-                ini.relativeFileName('tszxcibfile'), pivot)[:max_l + 1]
+                ini.relativeFileName("tszxcibfile"), pivot
+            )[: max_l + 1]
 
             self.cib_217 = self.read_normalized(
-                ini.relativeFileName('cib217file'), pivot)[:max_l + 1]
+                ini.relativeFileName("cib217file"), pivot
+            )[: max_l + 1]
 
             self.dust = np.vstack(
-                (self.read_normalized(ini.relativeFileName('dust100file'))[:max_l + 1],
-                 self.read_normalized(ini.relativeFileName('dust143file'))[:max_l + 1],
-                 self.read_normalized(ini.relativeFileName('dust217file'))[:max_l + 1],
-                 self.read_normalized(ini.relativeFileName('dust143x217file'))[
-                 :max_l + 1]))
+                (
+                    self.read_normalized(ini.relativeFileName("dust100file"))[
+                        : max_l + 1
+                    ],
+                    self.read_normalized(ini.relativeFileName("dust143file"))[
+                        : max_l + 1
+                    ],
+                    self.read_normalized(ini.relativeFileName("dust217file"))[
+                        : max_l + 1
+                    ],
+                    self.read_normalized(ini.relativeFileName("dust143x217file"))[
+                        : max_l + 1
+                    ],
+                )
+            )
             self.lnrat = self.ls * 0
             l_min = np.min(lmin[self.cl_used])
             self.lnrat[l_min:] = np.log(self.ls[l_min:] / np.float64(pivot))
 
         import hashlib
-        cache_file = self.dataset_filename.replace('.dataset',
-                                                   '_covinv_%s.npy' % hashlib.md5(
-                                                       str(ini.params).encode(
-                                                           'utf8')).hexdigest())
+
+        cache_file = self.dataset_filename.replace(
+            ".dataset",
+            "_covinv_%s.npy" % hashlib.md5(str(ini.params).encode("utf8")).hexdigest(),
+        )
         if use_cache and os.path.exists(cache_file):
             self.covinv = np.load(cache_file).astype(np.float64)
         else:
@@ -182,39 +205,43 @@ class Planck2018CamSpecPython(DataSetLikelihood):
                 np.save(cache_file, self.covinv.astype(np.float32))
 
     def get_foregrounds(self, data_params):
-
         sz_bandpass100_nom143 = 2.022
         cib_bandpass143_nom143 = 1.134
         sz_bandpass143_nom143 = 0.95
         cib_bandpass217_nom217 = 1.33
 
         Aps = np.empty(4)
-        Aps[0] = data_params['aps100']
-        Aps[1] = data_params['aps143']
-        Aps[2] = data_params['aps217']
-        Aps[3] = data_params['psr'] * np.sqrt(Aps[1] * Aps[2])
+        Aps[0] = data_params["aps100"]
+        Aps[1] = data_params["aps143"]
+        Aps[2] = data_params["aps217"]
+        Aps[3] = data_params["psr"] * np.sqrt(Aps[1] * Aps[2])
         Aps *= 1e-6 / 9  # scaling convention
 
         Adust = np.atleast_2d(
-            [data_params['dust100'], data_params['dust143'], data_params['dust217'],
-             data_params['dust143x217']]).T
+            [
+                data_params["dust100"],
+                data_params["dust143"],
+                data_params["dust217"],
+                data_params["dust143x217"],
+            ]
+        ).T
 
-        acib143 = data_params.get('acib143', -1)
-        acib217 = data_params['acib217']
-        cibr = data_params['cibr']
-        ncib = data_params['ncib']
-        cibrun = data_params['cibrun']
+        acib143 = data_params.get("acib143", -1)
+        acib217 = data_params["acib217"]
+        cibr = data_params["cibr"]
+        ncib = data_params["ncib"]
+        cibrun = data_params["cibrun"]
 
-        asz143 = data_params['asz143']
-        xi = data_params['xi']
-        aksz = data_params['aksz']
+        asz143 = data_params["asz143"]
+        xi = data_params["xi"]
+        aksz = data_params["aksz"]
 
         lmax = np.max(self.lmax)
 
-        cl_cib = np.exp(ncib * self.lnrat + cibrun * self.lnrat ** 2 / 2) * self.cib_217
+        cl_cib = np.exp(ncib * self.lnrat + cibrun * self.lnrat**2 / 2) * self.cib_217
         if acib143 < 0:
             # fix 143 from 217
-            acib143 = .094 * acib217 / cib_bandpass143_nom143 * cib_bandpass217_nom217
+            acib143 = 0.094 * acib217 / cib_bandpass143_nom143 * cib_bandpass217_nom217
             # The above came from ratioing Paolo's templates, which were already
             # colour-corrected, and assumed perfect correlation
 
@@ -227,9 +254,12 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         A_sz_143_bandpass = asz143 * sz_bandpass143_nom143
         A_cib_143_bandpass = acib143 * cib_bandpass143_nom143
         zCIB = A_cib_143_bandpass * cl_cib
-        C_foregrounds[1, :] = (zCIB + ksz + A_sz_143_bandpass * self.sz_143
-                               - 2.0 * np.sqrt(
-                    A_cib_143_bandpass * A_sz_143_bandpass) * xi * self.tszxcib)
+        C_foregrounds[1, :] = (
+            zCIB
+            + ksz
+            + A_sz_143_bandpass * self.sz_143
+            - 2.0 * np.sqrt(A_cib_143_bandpass * A_sz_143_bandpass) * xi * self.tszxcib
+        )
 
         # 217
         A_cib_217_bandpass = acib217 * cib_bandpass217_nom217
@@ -238,8 +268,11 @@ class Planck2018CamSpecPython(DataSetLikelihood):
 
         # 143x217
         zCIB = np.sqrt(A_cib_143_bandpass * A_cib_217_bandpass) * cl_cib
-        C_foregrounds[3, :] = (cibr * zCIB + ksz - np.sqrt(
-            A_cib_217_bandpass * A_sz_143_bandpass) * xi * self.tszxcib)
+        C_foregrounds[3, :] = (
+            cibr * zCIB
+            + ksz
+            - np.sqrt(A_cib_217_bandpass * A_sz_143_bandpass) * xi * self.tszxcib
+        )
 
         # Add dust and point sources
         C_foregrounds += Adust * self.dust + np.outer(Aps, self.llp1)
@@ -247,15 +280,14 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         return C_foregrounds
 
     def get_cals(self, data_params):
-        calPlanck = data_params.get('A_planck', 1) ** 2
-        cal0 = data_params.get('cal0', 1)
-        cal2 = data_params.get('cal2', 1)
-        calTE = data_params.get('calTE', 1)
-        calEE = data_params.get('calEE', 1)
+        calPlanck = data_params.get("A_planck", 1) ** 2
+        cal0 = data_params.get("cal0", 1)
+        cal2 = data_params.get("cal2", 1)
+        calTE = data_params.get("calTE", 1)
+        calEE = data_params.get("calEE", 1)
         return np.array([cal0, 1, cal2, np.sqrt(cal2), calTE, calEE]) * calPlanck
 
     def chi_squared(self, CT, CTE, CEE, data_params):
-
         cals = self.get_cals(data_params)
         if np.any(self.cl_used[:4]):
             foregrounds = self.get_foregrounds(data_params)
@@ -265,38 +297,46 @@ class Planck2018CamSpecPython(DataSetLikelihood):
             if n > 0:
                 if i <= 3:
                     # noinspection PyUnboundLocalVariable
-                    delta_vector[ix:ix + n] -= (CT[self.ell_ranges[i]] +
-                                                foregrounds[i][self.ell_ranges[i]]) / cal
+                    delta_vector[ix : ix + n] -= (
+                        CT[self.ell_ranges[i]] + foregrounds[i][self.ell_ranges[i]]
+                    ) / cal
                 elif i == 4:
-                    delta_vector[ix:ix + n] -= CTE[self.ell_ranges[i]] / cal
+                    delta_vector[ix : ix + n] -= CTE[self.ell_ranges[i]] / cal
                 elif i == 5:
-                    delta_vector[ix:ix + n] -= CEE[self.ell_ranges[i]] / cal
+                    delta_vector[ix : ix + n] -= CEE[self.ell_ranges[i]] / cal
                 ix += n
         return self._fast_chi_squared(self.covinv, delta_vector)
 
     def logp(self, **data_params):
         Cls = self.provider.get_Cl(ell_factor=True)
-        return -0.5 * self.chi_squared(Cls.get('tt'), Cls.get('te'), Cls.get('ee'),
-                                       data_params)
+        return -0.5 * self.chi_squared(
+            Cls.get("tt"), Cls.get("te"), Cls.get("ee"), data_params
+        )
 
     def get_requirements(self):
         # State requisites to the theory code
         l_max = np.max(self.lmax)
         used = []
         if np.any(self.cl_used[:4]):
-            used += ['tt']
-        if 'TE' in self.use_cl:
-            used += ['te']
-        if 'EE' in self.use_cl:
-            used += ['ee']
+            used += ["tt"]
+        if "TE" in self.use_cl:
+            used += ["te"]
+        if "EE" in self.use_cl:
+            used += ["ee"]
         return {"Cl": {cl: l_max for cl in used}}
 
-    def coadded_TT(self, data_params=None, foregrounds=None, cals=None,
-                   want_cov=True, data_vector=None):
+    def coadded_TT(
+        self,
+        data_params=None,
+        foregrounds=None,
+        cals=None,
+        want_cov=True,
+        data_vector=None,
+    ):
         nTT = np.sum(self.used_sizes[:4])
         assert nTT
         if foregrounds is not None and cals is not None and data_params is not None:
-            raise ValueError('data_params not used')
+            raise ValueError("data_params not used")
         if foregrounds is None:
             assert data_params is not None
             foregrounds = self.get_foregrounds(data_params)
@@ -314,41 +354,44 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         ix = 0
         for i, (cal, n) in enumerate(zip(cals[:4], self.used_sizes[:4])):
             if n > 0:
-                delta_vector[ix:ix + n] -= foregrounds[i][self.ell_ranges[i]] / cal
-                LS[ix:ix + n] = self.ell_ranges[i]
-                cal_vector[ix:ix + n] = cal
+                delta_vector[ix : ix + n] -= foregrounds[i][self.ell_ranges[i]] / cal
+                LS[ix : ix + n] = self.ell_ranges[i]
+                cal_vector[ix : ix + n] = cal
                 ix += n
         pcov = np.zeros((n_p, n_p))
         d = self.covinv[:nTT, :nTT].dot(delta_vector)
         dL = np.zeros(n_p)
         ix1 = 0
         ell_offsets = [LS - lmin for LS in self.ell_ranges[:4]]
-        contiguous = not any(np.count_nonzero(LS - np.arange(LS[0],
-                                                             LS[-1] + 1, dtype=int))
-                             for LS in self.ell_ranges[:4])
+        contiguous = not any(
+            np.count_nonzero(LS - np.arange(LS[0], LS[-1] + 1, dtype=int))
+            for LS in self.ell_ranges[:4]
+        )
         for i, (cal, LS, n) in enumerate(zip(cals[:4], ell_offsets, self.used_sizes[:4])):
-            dL[LS] += d[ix1:ix1 + n] / cal
+            dL[LS] += d[ix1 : ix1 + n] / cal
             ix = 0
             for cal2, r in zip(cals[:4], ell_offsets):
                 if contiguous:
-                    pcov[LS[0]:LS[0] + n, r[0]:r[0] + len(r)] += \
-                        self.covinv[ix1:ix1 + n, ix:ix + len(r)] / (cal2 * cal)
+                    pcov[LS[0] : LS[0] + n, r[0] : r[0] + len(r)] += self.covinv[
+                        ix1 : ix1 + n, ix : ix + len(r)
+                    ] / (cal2 * cal)
                 else:
-                    pcov[np.ix_(LS, r)] += \
-                        self.covinv[ix1:ix1 + n, ix:ix + len(r)] / (cal2 * cal)
+                    pcov[np.ix_(LS, r)] += self.covinv[
+                        ix1 : ix1 + n, ix : ix + len(r)
+                    ] / (cal2 * cal)
                 ix += len(r)
             ix1 += n
 
         CTot = np.zeros(self.ls[-1] + 1)
         if want_cov:
             pcovinv = np.linalg.inv(pcov)
-            CTot[lmin:lmax + 1] = pcovinv.dot(dL)
+            CTot[lmin : lmax + 1] = pcovinv.dot(dL)
             return CTot, pcovinv
         else:
             try:
-                CTot[lmin:lmax + 1] = scipy.linalg.solve(pcov, dL, assume_a='pos')
+                CTot[lmin : lmax + 1] = scipy.linalg.solve(pcov, dL, assume_a="pos")
             except:
-                CTot[lmin:lmax + 1] = np.linalg.solve(pcov, dL)
+                CTot[lmin : lmax + 1] = np.linalg.solve(pcov, dL)
             return CTot
 
     def get_weights(self, data_params):
@@ -359,9 +402,10 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         for i in range(4):
             ells = self.ell_ranges[i]
             vec = np.zeros(self.data_vector.shape)
-            vec[ix:ix + len(ells)] = 1
-            Ti = self.coadded_TT(data_params, data_vector=vec, want_cov=False,
-                                 foregrounds=f)
+            vec[ix : ix + len(ells)] = 1
+            Ti = self.coadded_TT(
+                data_params, data_vector=vec, want_cov=False, foregrounds=f
+            )
             weights.append((ells, Ti[ells]))
             ix += len(ells)
         return weights
@@ -384,19 +428,26 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         lmin = np.max([min(r) for r in self.ell_ranges[[i, j]]])
 
         diff = np.zeros(self.ls[-1] + 1)
-        diff[self.ell_ranges[i]] = (self.data_vector[off1:off1 + self.used_sizes[i]] *
-                                    cals[i] - foregrounds[i][self.ell_ranges[i]])
+        diff[self.ell_ranges[i]] = (
+            self.data_vector[off1 : off1 + self.used_sizes[i]] * cals[i]
+            - foregrounds[i][self.ell_ranges[i]]
+        )
         diff[self.ell_ranges[j]] -= (
-                self.data_vector[off2:off2 + self.used_sizes[j]] * cals[j] -
-                foregrounds[j][
-                    self.ell_ranges[j]])
+            self.data_vector[off2 : off2 + self.used_sizes[j]] * cals[j]
+            - foregrounds[j][self.ell_ranges[j]]
+        )
         cov = self.cov
         n_p = lmax - lmin + 1
         off1 += lmin - np.min(self.ell_ranges[i])
         off2 += lmin - np.min(self.ell_ranges[j])
-        pcov = cals[i] ** 2 * cov[off1:off1 + n_p, off1:off1 + n_p] \
-               + cals[j] ** 2 * cov[off2:off2 + n_p, off2:off2 + n_p] \
-               - cals[i] * cals[j] * (
-                       cov[off2:off2 + n_p, off1:off1 + n_p] + cov[off1:off1 + n_p,
-                                                               off2:off2 + n_p])
-        return range(lmin, lmax + 1), diff[lmin:lmax + 1], pcov
+        pcov = (
+            cals[i] ** 2 * cov[off1 : off1 + n_p, off1 : off1 + n_p]
+            + cals[j] ** 2 * cov[off2 : off2 + n_p, off2 : off2 + n_p]
+            - cals[i]
+            * cals[j]
+            * (
+                cov[off2 : off2 + n_p, off1 : off1 + n_p]
+                + cov[off1 : off1 + n_p, off2 : off2 + n_p]
+            )
+        )
+        return range(lmin, lmax + 1), diff[lmin : lmax + 1], pcov

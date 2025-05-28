@@ -5,6 +5,7 @@
 :Author: Jesus Torrado
 
 """
+
 # Global
 import os
 import sys
@@ -13,15 +14,25 @@ import re
 import shutil
 from typing import Optional, Any
 from packaging import version
+
 # Local
-from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file, \
-    OutputError, InputImportError
+from cobaya.yaml import (
+    yaml_dump,
+    yaml_load,
+    yaml_load_file,
+    OutputError,
+    InputImportError,
+)
 from cobaya.conventions import resume_default, Extension, kinds, get_version
 from cobaya.typing import InputDict
 from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
 from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
-from cobaya.tools import deepcopy_where_possible, find_with_regexp, sort_cosmetic, \
-    has_non_yaml_reproducible
+from cobaya.tools import (
+    deepcopy_where_possible,
+    find_with_regexp,
+    sort_cosmetic,
+    has_non_yaml_reproducible,
+)
 from cobaya.component import get_component_class
 from cobaya import mpi
 
@@ -31,7 +42,7 @@ _ext = "txt"
 
 
 def use_portalocker():
-    if os.getenv('COBAYA_USE_FILE_LOCKING', 't').lower() in ('true', '1', 't'):
+    if os.getenv("COBAYA_USE_FILE_LOCKING", "t").lower() in ("true", "1", "t"):
         try:
             import portalocker  # pylint: disable=import-outside-toplevel
         except ModuleNotFoundError:
@@ -54,8 +65,8 @@ class FileLock:
     def set_lock(self, log, filename, force=False):
         if self.has_lock():
             return
-        self.lock_file = filename + '.locked'
-        self.lock_error_file = filename + '.lock_err'
+        self.lock_file = filename + ".locked"
+        self.lock_error_file = filename + ".lock_err"
         try:
             os.remove(self.lock_error_file)
         except OSError:
@@ -65,8 +76,9 @@ class FileLock:
             h: Any = None
             if use_portalocker():
                 import portalocker  # pylint: disable=import-outside-toplevel
+
                 try:
-                    h = open(self.lock_file, 'wb')
+                    h = open(self.lock_file, "wb")
                     portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
                     self._file_handle = h
                 except portalocker.exceptions.BaseLockException:
@@ -75,7 +87,7 @@ class FileLock:
                     self.lock_error()
             else:
                 # will work, but crashes will leave .lock files that will raise error
-                self._file_handle = open(self.lock_file, 'wb' if force else 'xb')
+                self._file_handle = open(self.lock_file, "wb" if force else "xb")
         except OSError:
             self.lock_error()
 
@@ -85,36 +97,43 @@ class FileLock:
             try:
                 # make lock_err so process holding lock can check
                 # another process had an error
-                with open(self.lock_error_file, 'wb'):
+                with open(self.lock_error_file, "wb"):
                     pass
             except OSError:
                 pass
         if mpi.is_disabled():
-            raise LoggedError(self.log,
-                              "File %s is locked by another process, you are running "
-                              "with MPI disabled but may have more than one process. "
-                              "Make sure that you have mpi4py installed and working."
-                              "Note that --test should not be used with MPI.", self.lock_file)
+            raise LoggedError(
+                self.log,
+                "File %s is locked by another process, you are running "
+                "with MPI disabled but may have more than one process. "
+                "Make sure that you have mpi4py installed and working."
+                "Note that --test should not be used with MPI.",
+                self.lock_file,
+            )
         if mpi.get_mpi():
             import mpi4py  # pylint: disable=import-outside-toplevel
         else:
             mpi4py = None
         if mpi.is_main_process() and use_portalocker() is None:
             self.log.warning('install "portalocker" for better file lock control.')
-        raise LoggedError(self.log,
-                          "File %s is locked.\nYou may be running multiple jobs with "
-                          "the same output when you intended to run with MPI. "
-                          "Check that mpi4py is correctly installed and "
-                          "configured (using the same mpi as mpirun/mpiexec); "
-                          "e.g. try the test at\n"
-                          "https://cobaya.readthedocs.io/en/latest/installation."
-                          "html#mpi-parallelization-optional-but-encouraged\n" +
-                          ("Your current mpi4py config is:"
-                           "\n %s" % mpi4py.get_config()
-                           if mpi4py is not None else
-                           "mpi4py is NOT currently installed.") +
-                          "\nIf this is a lock issue you can disable this check by "
-                          "setting env COBAYA_USE_FILE_LOCKING=False.", self.lock_file)
+        raise LoggedError(
+            self.log,
+            "File %s is locked.\nYou may be running multiple jobs with "
+            "the same output when you intended to run with MPI. "
+            "Check that mpi4py is correctly installed and "
+            "configured (using the same mpi as mpirun/mpiexec); "
+            "e.g. try the test at\n"
+            "https://cobaya.readthedocs.io/en/latest/installation."
+            "html#mpi-parallelization-optional-but-encouraged\n"
+            + (
+                "Your current mpi4py config is:\n %s" % mpi4py.get_config()
+                if mpi4py is not None
+                else "mpi4py is NOT currently installed."
+            )
+            + "\nIf this is a lock issue you can disable this check by "
+            "setting env COBAYA_USE_FILE_LOCKING=False.",
+            self.lock_file,
+        )
 
     def check_error(self):
         if self.lock_error_file and os.path.exists(self.lock_error_file):
@@ -146,25 +165,30 @@ class OutputReadOnly:
     useful to be able to do these operations within isolated MPI processes.
     """
 
-    _old_updated_info: Optional[InputDict]
+    _old_updated_info: InputDict | None
 
     def __init__(self, prefix, infix=None):
         self.folder, self.prefix = split_prefix(prefix)
         self.prefix_regexp_str = re.escape(self.prefix) + (
-            r"[\._]" if self.prefix else "")
+            r"[\._]" if self.prefix else ""
+        )
         # Prepare file names, and check if chain exists
         self.file_input = get_info_path(
-            self.folder, self.prefix, infix=infix, kind="input")
+            self.folder, self.prefix, infix=infix, kind="input"
+        )
         self.file_updated = get_info_path(self.folder, self.prefix, infix=infix)
         self.dump_file_updated = get_info_path(
-            self.folder, self.prefix, infix=infix, ext=Extension.dill)
+            self.folder, self.prefix, infix=infix, ext=Extension.dill
+        )
         # Output kind and collection extension
         self.kind = _kind
         self.ext = _ext
 
     def __str__(self):
-        return (f"Output instance defined within folder '{self.folder}' "
-                f"with prefix '{self.prefix}'.")
+        return (
+            f"Output instance defined within folder '{self.folder}' "
+            f"with prefix '{self.prefix}'."
+        )
 
     def __repr__(self):
         return self.__str__()
@@ -205,10 +229,11 @@ class OutputReadOnly:
         Returns the full output prefix (folder and file name prefix) combined with a
         given suffix, inserting a given separator in between (default: `_`) if needed.
         """
-        return os.path.join(self.folder,
-                            self.prefix + self.separator_if_needed(separator) + suffix)
+        return os.path.join(
+            self.folder, self.prefix + self.separator_if_needed(separator) + suffix
+        )
 
-    def get_updated_info(self, use_cache=False, cache=False) -> Optional[InputDict]:
+    def get_updated_info(self, use_cache=False, cache=False) -> InputDict | None:
         """
         Returns the version of the input file updated with defaults, loading it if
         necessary not previously cached, or if forced by ``use_cache=False``.
@@ -220,7 +245,7 @@ class OutputReadOnly:
             return self._old_updated_info
         return self.reload_updated_info(cache=cache)
 
-    def reload_updated_info(self, cache=False) -> Optional[InputDict]:
+    def reload_updated_info(self, cache=False) -> InputDict | None:
         """
         Reloads and returns the version of the input file updated with defaults.
 
@@ -236,7 +261,7 @@ class OutputReadOnly:
             if cache:
                 self._old_updated_info = deepcopy_where_possible(loaded)
             return loaded
-        except IOError:
+        except OSError:
             if cache:
                 self._old_updated_info = None
             return None
@@ -250,13 +275,21 @@ class OutputReadOnly:
         field, making it simply ``[folder]/[prefix].[extension]``.
         """
         if name is None:
-            name = (datetime.datetime.now().isoformat().replace("T", "")
-                    .replace(":", "").replace(".", "")
-                    .replace("-", "")[:(4 + 2 + 2) + (2 + 2 + 2 + 3)])  # up to ms
+            name = (
+                datetime.datetime.now()
+                .isoformat()
+                .replace("T", "")
+                .replace(":", "")
+                .replace(".", "")
+                .replace("-", "")[: (4 + 2 + 2) + (2 + 2 + 2 + 3)]
+            )  # up to ms
         file_name = os.path.join(
             self.folder,
-            self.prefix + ("." if self.prefix else "") + (name + "." if name else "") +
-            self.sanitize_collection_extension(extension))
+            self.prefix
+            + ("." if self.prefix else "")
+            + (name + "." if name else "")
+            + self.sanitize_collection_extension(extension),
+        )
         return file_name, self.kind
 
     def collection_regexp(self, name=None, extension=None):
@@ -273,8 +306,9 @@ class OutputReadOnly:
         else:
             name = re.escape(name) + r"\."
         extension = self.sanitize_collection_extension(extension)
-        return re.compile(self.prefix_regexp_str + name +
-                          re.escape(extension.lower()) + "$")
+        return re.compile(
+            self.prefix_regexp_str + name + re.escape(extension.lower()) + "$"
+        )
 
     def is_collection_file_name(self, file_name, name=None, extension=None):
         """
@@ -283,9 +317,14 @@ class OutputReadOnly:
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
-        return (file_name ==
-                getattr(self.collection_regexp(name=name, extension=extension)
-                        .match(file_name), "group", lambda: None)())
+        return (
+            file_name
+            == getattr(
+                self.collection_regexp(name=name, extension=extension).match(file_name),
+                "group",
+                lambda: None,
+            )()
+        )
 
     def find_collections(self, name=None, extension=None):
         """
@@ -296,12 +335,23 @@ class OutputReadOnly:
         Pass `False` to mean there is nothing between the output prefix and the extension.
         """
         return sorted(
-            f2 for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
+            f2
+            for f2 in [os.path.join(self.folder, f) for f in os.listdir(self.folder)]
             if self.is_collection_file_name(
-                os.path.split(f2)[1], name=name, extension=extension))
+                os.path.split(f2)[1], name=name, extension=extension
+            )
+        )
 
-    def load_collections(self, model, skip=0, thin=1, combined=False,
-                         name=None, extension=None, concatenate=None):
+    def load_collections(
+        self,
+        model,
+        skip=0,
+        thin=1,
+        combined=False,
+        name=None,
+        extension=None,
+        concatenate=None,
+    ):
         """
         Loads all collection files found which are compatible with this `Output`
         instance, including their path in their name.
@@ -317,15 +367,26 @@ class OutputReadOnly:
         filenames = self.find_collections(name=name, extension=extension)
         # pylint: disable=import-outside-toplevel
         from cobaya.collection import SampleCollection
+
         collections = [
-            SampleCollection(model, self, name="%d" % (1 + i), file_name=filename,
-                             load=True, onload_skip=skip, onload_thin=thin,
-                             is_batch=len(filenames) > 1)
-            for i, filename in enumerate(filenames)]
+            SampleCollection(
+                model,
+                self,
+                name="%d" % (1 + i),
+                file_name=filename,
+                load=True,
+                onload_skip=skip,
+                onload_thin=thin,
+                is_batch=len(filenames) > 1,
+            )
+            for i, filename in enumerate(filenames)
+        ]
         # MARKED FOR DEPRECATION IN v3.4
         if concatenate is not None:
-            print("*WARNING*: Argument 'concatenate' will be deprecated soon. "
-                  "Please use 'combined' instead.")
+            print(
+                "*WARNING*: Argument 'concatenate' will be deprecated soon. "
+                "Please use 'combined' instead."
+            )
             # BEHAVIOUR TO BE REPLACED BY AN ERROR
             combined = concatenate
         # END OF DEPRECATION BLOCK
@@ -346,9 +407,21 @@ class Output(HasLogger, OutputReadOnly):
     :class:`~collection.SampleCollection` files, etc.
     """
 
-    @mpi.set_from_root(("force", "folder", "prefix", "kind", "ext",
-                        "file_input", "file_updated", "dump_file_updated",
-                        "_resuming", "prefix_regexp_str", "log"))
+    @mpi.set_from_root(
+        (
+            "force",
+            "folder",
+            "prefix",
+            "kind",
+            "ext",
+            "file_input",
+            "file_updated",
+            "dump_file_updated",
+            "_resuming",
+            "prefix_regexp_str",
+            "log",
+        )
+    )
     def __init__(self, prefix, resume=resume_default, force=False, infix=None):
         OutputReadOnly.__init__(self, prefix, infix)
         self.name = "output"
@@ -360,7 +433,8 @@ class Output(HasLogger, OutputReadOnly):
             raise LoggedError(
                 self.log,
                 "Make 'resume: True' or 'force: True', not both at the same time: "
-                "can't simultaneously overwrite a chain and resume from it.")
+                "can't simultaneously overwrite a chain and resume from it.",
+            )
         if not os.path.exists(self.folder):
             self.log.debug("Creating output folder '%s'", self.folder)
             try:
@@ -369,18 +443,20 @@ class Output(HasLogger, OutputReadOnly):
                 self.log.error(get_traceback_text(sys.exc_info()))
                 raise LoggedError(
                     self.log,
-                    "Could not create folder '%s'. "
-                    "See traceback on top of this message.",
-                    self.folder
+                    "Could not create folder '%s'. See traceback on top of this message.",
+                    self.folder,
                 ) from excpt
-        self.log.info("Output to be read-from/written-into folder '%s', with prefix '%s'",
-                      self.folder, self.prefix)
+        self.log.info(
+            "Output to be read-from/written-into folder '%s', with prefix '%s'",
+            self.folder,
+            self.prefix,
+        )
         self._resuming = False
         self._has_old_updated_info = os.path.isfile(self.file_updated)
         if self._has_old_updated_info:
             self.log.info(
-                "Found existing info files with the requested output prefix: '%s'",
-                prefix)
+                "Found existing info files with the requested output prefix: '%s'", prefix
+            )
             if self.force:
                 self.log.info("Will delete previous products ('force' was requested).")
                 self.delete_infos()
@@ -405,7 +481,8 @@ class Output(HasLogger, OutputReadOnly):
                 os.makedirs(folder)
         except Exception as e:
             raise LoggedError(
-                self.log, "Could not create folder %r. Reason: %r", folder, str(e)) from e
+                self.log, "Could not create folder %r. Reason: %r", folder, str(e)
+            ) from e
 
     @mpi.root_only
     def delete_infos(self):
@@ -425,7 +502,7 @@ class Output(HasLogger, OutputReadOnly):
 
     # MARKED FOR DEPRECATION IN v3.4
     @mpi.from_root
-    def load_updated_info(self, cache=False, use_cache=False) -> Optional[InputDict]:
+    def load_updated_info(self, cache=False, use_cache=False) -> InputDict | None:
         """
         Returns the version of the input file updated with defaults, loading it if
         necessary.
@@ -437,7 +514,7 @@ class Output(HasLogger, OutputReadOnly):
         return self.reload_updated_info(cache=cache, use_cache=use_cache)
         # END OF DEPRECATION BLOCK
 
-    def reload_updated_info(self, cache=False, **kwargs) -> Optional[InputDict]:
+    def reload_updated_info(self, cache=False, **kwargs) -> InputDict | None:
         """
         Reloads and returns the version of the input file updated with defaults.
 
@@ -447,9 +524,11 @@ class Output(HasLogger, OutputReadOnly):
         """
         # MARKED FOR DEPRECATION IN v3.4
         if kwargs.get("use_cache", None):
-            self.log.warning("The `use_cache` argument will be deprecated soon. If you "
-                             "want to ensure that you receive a cached version, call the "
-                             "new method ``get_updated_info(use_cache=True)`.")
+            self.log.warning(
+                "The `use_cache` argument will be deprecated soon. If you "
+                "want to ensure that you receive a cached version, call the "
+                "new method ``get_updated_info(use_cache=True)`."
+            )
             # BEHAVIOUR TO BE REPLACED BY AN ERROR
             return self.get_updated_info(use_cache=kwargs["use_cache"])
         # END OF DEPRECATION BLOCK
@@ -461,8 +540,15 @@ class Output(HasLogger, OutputReadOnly):
             self._old_updated_info = loaded
         return loaded
 
-    def check_and_dump_info(self, input_info, updated_info, check_compatible=True,
-                            cache_old=False, use_cache_old=False, ignore_blocks=()):
+    def check_and_dump_info(
+        self,
+        input_info,
+        updated_info,
+        check_compatible=True,
+        cache_old=False,
+        use_cache_old=False,
+        ignore_blocks=(),
+    ):
         """
         Saves the info in the chain folder twice:
            - the input info.
@@ -481,8 +567,7 @@ class Output(HasLogger, OutputReadOnly):
             # We will test the old info against the dumped+loaded new info.
             # This is because we can't actually check if python objects do change
             try:
-                old_info = self.get_updated_info(cache=cache_old,
-                                                 use_cache=use_cache_old)
+                old_info = self.get_updated_info(cache=cache_old, use_cache=use_cache_old)
             except InputImportError:
                 # for example, when there's a dynamically generated class that cannot
                 # be found by the yaml loader (could use yaml loader that ignores them)
@@ -490,13 +575,18 @@ class Output(HasLogger, OutputReadOnly):
             if check_compatible and old_info and not old_info.get("test"):
                 old_info = yaml_load(yaml_dump(old_info))
                 new_info = yaml_load(yaml_dump(updated_info_trimmed))
-                if not is_equal_info(old_info, new_info, strict=False,
-                                     ignore_blocks=list(ignore_blocks) + [
-                                         "output"]):
+                if not is_equal_info(
+                    old_info,
+                    new_info,
+                    strict=False,
+                    ignore_blocks=list(ignore_blocks) + ["output"],
+                ):
                     raise LoggedError(
-                        self.log, "Old and new run information not compatible! "
-                                  "Resuming not possible!\n"
-                                  "Use --allow-changes to proceed anyway.")
+                        self.log,
+                        "Old and new run information not compatible! "
+                        "Resuming not possible!\n"
+                        "Use --allow-changes to proceed anyway.",
+                    )
                 # Deal with version comparison separately:
                 # - If not specified now, take the one used in resume info
                 # - If specified both now and before, check new older than old one
@@ -506,10 +596,13 @@ class Output(HasLogger, OutputReadOnly):
                 if isinstance(old_version, str) and isinstance(new_version, str):
                     if version.parse(old_version) > version.parse(new_version):
                         raise LoggedError(
-                            self.log, "You are trying to resume a run performed with a "
-                                      "newer version of Cobaya: %r (you are using %r). "
-                                      "Please, update your Cobaya installation.",
-                            old_version, new_version)
+                            self.log,
+                            "You are trying to resume a run performed with a "
+                            "newer version of Cobaya: %r (you are using %r). "
+                            "Please, update your Cobaya installation.",
+                            old_version,
+                            new_version,
+                        )
                 for k in set(kinds).intersection(updated_info):
                     if k in ignore_blocks or updated_info[k] is None:
                         continue
@@ -521,15 +614,24 @@ class Output(HasLogger, OutputReadOnly):
                             updated_info_trimmed[k][c]["version"] = old_version
                         elif old_version is not None:
                             cls = get_component_class(
-                                c, k, class_name=updated_info[k][c].get("class"),
-                                logger=self.log)
+                                c,
+                                k,
+                                class_name=updated_info[k][c].get("class"),
+                                logger=self.log,
+                            )
                             if cls and cls.compare_versions(
-                                    old_version, new_version, equal=False):
+                                old_version, new_version, equal=False
+                            ):
                                 raise LoggedError(
-                                    self.log, "You have requested version %r for "
-                                              "%s:%s, but you are trying to resume a "
-                                              "run that used a newer version: %r.",
-                                    new_version, k, c, old_version)
+                                    self.log,
+                                    "You have requested version %r for "
+                                    "%s:%s, but you are trying to resume a "
+                                    "run that used a newer version: %r.",
+                                    new_version,
+                                    k,
+                                    c,
+                                    old_version,
+                                )
         # If resuming, we don't want to do *partial* dumps
         if ignore_blocks and self.is_resuming():
             return
@@ -538,8 +640,10 @@ class Output(HasLogger, OutputReadOnly):
         if input_info is not None:
             input_info = deepcopy_where_possible(input_info)
         # Write the new one
-        for f, info in [(self.file_input, input_info),
-                        (self.file_updated, updated_info_trimmed)]:
+        for f, info in [
+            (self.file_input, input_info),
+            (self.file_updated, updated_info_trimmed),
+        ]:
             if info:
                 for k in tuple(ignore_blocks) + ("debug", "force", "resume"):
                     info.pop(k, None)
@@ -558,16 +662,28 @@ class Output(HasLogger, OutputReadOnly):
                 self.mpi_info('Install "dill" to save reproducible options file.')
             else:
                 import pickle  # pylint: disable=import-outside-toplevel
+
                 try:
-                    with open(self.dump_file_updated, 'wb') as f:
-                        dill.dump(sort_cosmetic(updated_info_trimmed), f,
-                                  pickle.HIGHEST_PROTOCOL)
+                    with open(self.dump_file_updated, "wb") as f:
+                        dill.dump(
+                            sort_cosmetic(updated_info_trimmed),
+                            f,
+                            pickle.HIGHEST_PROTOCOL,
+                        )
                 except pickle.PicklingError as e:
                     os.remove(self.dump_file_updated)
-                    self.mpi_info('Options file cannot be pickled %s', e)
+                    self.mpi_info("Options file cannot be pickled %s", e)
 
-    def load_collections(self, model, skip=0, thin=1, combined=False,
-                         name=None, extension=None, concatenate=None):
+    def load_collections(
+        self,
+        model,
+        skip=0,
+        thin=1,
+        combined=False,
+        name=None,
+        extension=None,
+        concatenate=None,
+    ):
         """
         Loads all collection files found which are compatible with this `Output`
         instance, including their path in their name.
@@ -582,8 +698,14 @@ class Output(HasLogger, OutputReadOnly):
         """
         self.check_lock()
         return super().load_collections(
-            model, skip=skip, thin=thin, combined=combined,
-            name=name, extension=extension, concatenate=concatenate)
+            model,
+            skip=skip,
+            thin=thin,
+            combined=combined,
+            name=name,
+            extension=extension,
+            concatenate=concatenate,
+        )
 
     def delete_with_regexp(self, regexp, root=None):
         """
@@ -597,8 +719,11 @@ class Output(HasLogger, OutputReadOnly):
             file_names = find_with_regexp(regexp, root)
             if file_names:
                 self.log.debug(
-                    "From regexp %r in folder %r, deleting files %r", regexp.pattern,
-                    root, file_names)
+                    "From regexp %r in folder %r, deleting files %r",
+                    regexp.pattern,
+                    root,
+                    file_names,
+                )
         else:
             file_names = [root]
             self.log.debug("Deleting folder %r", root)
@@ -657,7 +782,7 @@ class OutputDummy(Output):
         _func_name = "__name__"
         for attrname, attr in list(Output.__dict__.items()):
             func_name = getattr(attr, _func_name, None)
-            if func_name and func_name not in exclude and '__' not in func_name:
+            if func_name and func_name not in exclude and "__" not in func_name:
                 setattr(self, attrname, self.nullfunc)
 
     def nullfunc(self, *args, **kwargs):
@@ -727,10 +852,8 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
     all processes.
     """
     # yaml: load and look for "output", or use file name without extension
-    is_yaml_filename = (
-            isinstance(prefix, str) and
-            any(os.path.splitext(prefix)[1].lower() == ext.lower() for ext in
-                Extension.yamls)
+    is_yaml_filename = isinstance(prefix, str) and any(
+        os.path.splitext(prefix)[1].lower() == ext.lower() for ext in Extension.yamls
     )
     if is_yaml_filename:
         file_name, _ = os.path.splitext(prefix)
@@ -745,10 +868,14 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
             f"(looked for file '{output.file_updated}')."
         )
     from cobaya.model import DummyModel  # pylint: disable=import-outside-toplevel
+
     dummy_model = DummyModel(info["params"], info["likelihood"], info.get("prior"))
     if to_getdist:
         collections = output.load_collections(
-            dummy_model, skip=skip, thin=thin, combined=False,
+            dummy_model,
+            skip=skip,
+            thin=thin,
+            combined=False,
         )
         if collections:
             collections = collections[0].to_getdist(combine_with=collections[1:])

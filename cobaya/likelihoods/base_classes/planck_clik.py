@@ -6,6 +6,7 @@ r"""
          by Julien Lesgourgues and Benjamin Audren)
 
 """
+
 # Global
 import os
 import sys
@@ -19,15 +20,19 @@ from cobaya.log import LoggedError, get_logger
 from cobaya.input import get_default_info
 from cobaya.install import pip_install, download_file
 from cobaya.component import ComponentNotInstalledError, load_external_module
-from cobaya.tools import (are_different_params_lists, create_banner,
-                          VersionCheckError, working_directory)
+from cobaya.tools import (
+    are_different_params_lists,
+    create_banner,
+    VersionCheckError,
+    working_directory,
+)
 
 _deprecation_msg_2015 = create_banner("""
 The likelihoods from the Planck 2015 data release have been superseded
 by the 2018 ones, and will eventually be deprecated.
 """)
 
-clik_url = 'https://github.com/benabed/clik/archive/refs/heads/main.zip'
+clik_url = "https://github.com/benabed/clik/archive/refs/heads/main.zip"
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
 last_version_supp_data_and_covmats = "v2.1"
@@ -47,46 +52,67 @@ class PlanckClik(Likelihood):
             for line in _deprecation_msg_2015.split("\n"):
                 self.log.warning(line)
         try:
-            install_path = (
-                lambda p: self.get_code_path(p) if p else None)(self.packages_path)
+            install_path = (lambda p: self.get_code_path(p) if p else None)(
+                self.packages_path
+            )
             # min_version here is checked inside get_clik_import_path, since it is
             # displayed in the folder name and cannot be retrieved from the module.
             clik = load_clik(
-                "clik", path=self.path, install_path=install_path,
-                get_import_path=get_clik_import_path, logger=self.log,
-                not_installed_level="debug")
+                "clik",
+                path=self.path,
+                install_path=install_path,
+                get_import_path=get_clik_import_path,
+                logger=self.log,
+                not_installed_level="debug",
+            )
         except VersionCheckError as excpt:
             raise VersionCheckError(
                 str(excpt) + " Upgrade with `cobaya-install "
-                             "planck_2018_highl_plik.TTTEEE --upgrade`.")
+                "planck_2018_highl_plik.TTTEEE --upgrade`."
+            )
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
-                self.log, (f"Could not find clik: {excpt}. To install it, "
-                           f"run `cobaya-install planck_2018_highl_plik.TTTEEE`"))
+                self.log,
+                (
+                    f"Could not find clik: {excpt}. To install it, "
+                    f"run `cobaya-install planck_2018_highl_plik.TTTEEE`"
+                ),
+            )
         # Loading the likelihood data
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         if not os.path.isabs(self.clik_file):
-            self.path_data = getattr(self, "path_data", os.path.join(
-                self.path or self.packages_path, "data", data_path))
+            self.path_data = getattr(
+                self,
+                "path_data",
+                os.path.join(self.path or self.packages_path, "data", data_path),
+            )
             self.clik_file = os.path.join(self.path_data, self.clik_file)
         # Differences in the wrapper for lensing and non-lensing likes
         self.lensing = clik.try_lensing(self.clik_file)
         try:
-            self.clik = clik.clik_lensing(self.clik_file) if self.lensing \
+            self.clik = (
+                clik.clik_lensing(self.clik_file)
+                if self.lensing
                 else clik.clik(self.clik_file)
+            )
         except clik.lkl.CError:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
                 raise ComponentNotInstalledError(
-                    self.log, "The .clik file was not found where specified in the "
-                              "'clik_file' field of the settings of this likelihood. "
-                              "Maybe the 'path' given is not correct? The full path where"
-                              " the .clik file was searched for is '%s'", self.clik_file)
+                    self.log,
+                    "The .clik file was not found where specified in the "
+                    "'clik_file' field of the settings of this likelihood. "
+                    "Maybe the 'path' given is not correct? The full path where"
+                    " the .clik file was searched for is '%s'",
+                    self.clik_file,
+                )
             # Else: unknown clik error
-            self.log.error("An unexpected error occurred in clik (possibly related to "
-                           "multiple simultaneous initialization, or simultaneous "
-                           "initialization of incompatible likelihoods; e.g. polarised "
-                           "vs non-polarised 'lite' likelihoods. See error info below:")
+            self.log.error(
+                "An unexpected error occurred in clik (possibly related to "
+                "multiple simultaneous initialization, or simultaneous "
+                "initialization of incompatible likelihoods; e.g. polarised "
+                "vs non-polarised 'lite' likelihoods. See error info below:"
+            )
             raise
         self.l_maxs = self.clik.get_lmax()
         # calculate requirements here so class can also be separately instantiated
@@ -100,22 +126,26 @@ class PlanckClik(Likelihood):
         self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
         self.expected_params = list(self.clik.extra_parameter_names)
         # Placeholder for vector passed to clik
-        length = (len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl()))
+        length = len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl())
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
 
     def initialize_with_params(self):
         # Check that the parameters are the right ones
         differences = are_different_params_lists(
-            self.input_params, self.expected_params, name_A="given", name_B="expected")
+            self.input_params, self.expected_params, name_A="given", name_B="expected"
+        )
         if differences:
             raise LoggedError(
-                self.log, "Configuration error in parameters: %r. "
-                          "If this has happened without you fiddling with the defaults, "
-                          "please open an issue in GitHub.", differences)
+                self.log,
+                "Configuration error in parameters: %r. "
+                "If this has happened without you fiddling with the defaults, "
+                "please open an issue in GitHub.",
+                differences,
+            )
 
     def get_requirements(self):
         # State requisites to the theory code
-        return {'Cl': dict(zip(self.requested_cls, self.l_maxs_cls))}
+        return {"Cl": dict(zip(self.requested_cls, self.l_maxs_cls))}
 
     def logp(self, **params_values):
         # get Cl's from the theory code
@@ -124,17 +154,24 @@ class PlanckClik(Likelihood):
 
     def log_likelihood(self, cl, **params_values):
         # fill with Cl's
-        self.vector[:-len(self.expected_params)] = np.concatenate(
-            [(cl[spectrum][:1 + lmax] if spectrum not in ["tb", "eb"]
-              else np.zeros(1 + lmax))
-             for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)])
+        self.vector[: -len(self.expected_params)] = np.concatenate(
+            [
+                (
+                    cl[spectrum][: 1 + lmax]
+                    if spectrum not in ["tb", "eb"]
+                    else np.zeros(1 + lmax)
+                )
+                for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)
+            ]
+        )
         # check for nan's: mey produce a segfault in clik
         # dot product is apparently the fastest way in threading-enabled numpy
         if np.isnan(np.dot(self.vector, self.vector)):
             return -np.inf
         # fill with likelihood parameters
-        self.vector[-len(self.expected_params):] = (
-            [params_values[p] for p in self.expected_params])
+        self.vector[-len(self.expected_params) :] = [
+            params_values[p] for p in self.expected_params
+        ]
         loglike = self.clik(self.vector)[0]
         # "zero" of clik, and sometimes nan's returned
         if np.allclose(loglike, -1e30) or np.isnan(loglike):
@@ -152,6 +189,7 @@ class PlanckClik(Likelihood):
     @classmethod
     def is_compatible(cls):
         import platform
+
         return platform.system() != "Windows"
 
     @classmethod
@@ -160,26 +198,41 @@ class PlanckClik(Likelihood):
         data_path = get_data_path(cls.get_qualified_class_name())
         result = True
         if kwargs.get("code", True):
-            result &= bool(is_installed_clik(
-                os.path.realpath(os.path.join(kwargs["path"], "code", code_path)),
-                reload=reload))
+            result &= bool(
+                is_installed_clik(
+                    os.path.realpath(os.path.join(kwargs["path"], "code", code_path)),
+                    reload=reload,
+                )
+            )
         if kwargs.get("data", True):
             # NB: will never raise VersionCheckerror, since version number is in the path
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
-            result &= os.path.exists(os.path.realpath(
-                os.path.join(kwargs["path"], "data", data_path, filename)))
+            result &= os.path.exists(
+                os.path.realpath(
+                    os.path.join(kwargs["path"], "data", data_path, filename)
+                )
+            )
             # Check for additional data and covmats -- can raise VersionCheckerror
             from cobaya.likelihoods.planck_2018_lensing import native
+
             result &= native.is_installed(**kwargs)
         return result
 
     @classmethod
-    def install(cls, path=None, force=False, code=True, data=True,
-                no_progress_bars=False, **_kwargs):
+    def install(
+        cls,
+        path=None,
+        force=False,
+        code=True,
+        data=True,
+        no_progress_bars=False,
+        **_kwargs,
+    ):
         name = cls.get_qualified_class_name()
         log = get_logger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
         import platform
+
         if platform.system() == "Windows":
             log.error("Not compatible with Windows.")
             return False
@@ -201,8 +254,10 @@ class PlanckClik(Likelihood):
             log.info("Installing the clik code.")
             success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
             if not success:
-                log.warning("clik code installation failed! "
-                            "Try configuring+compiling by hand at " + paths["code"])
+                log.warning(
+                    "clik code installation failed! "
+                    "Try configuring+compiling by hand at " + paths["code"]
+                )
                 _clik_install_failed = True
         if data:
             # 2nd test, in case the code wasn't there but the data is:
@@ -213,19 +268,34 @@ class PlanckClik(Likelihood):
                 url = pla_url_prefix + product_id
                 # Helper for the progress bars: some known product download sizes
                 # (no actual effect if missing or wrong!)
-                size = {"1900": 314153370, "1903": 4509715660, "151902": 60293120,
-                        "151905": 5476083302, "151903": 8160437862}.get(product_id)
-                if not download_file(url, paths["data"], size=size,
-                                     logger=log, no_progress_bars=no_progress_bars):
+                size = {
+                    "1900": 314153370,
+                    "1903": 4509715660,
+                    "151902": 60293120,
+                    "151905": 5476083302,
+                    "151903": 8160437862,
+                }.get(product_id)
+                if not download_file(
+                    url,
+                    paths["data"],
+                    size=size,
+                    logger=log,
+                    no_progress_bars=no_progress_bars,
+                ):
                     log.error("Not possible to download this likelihood.")
                     success = False
                 # Additional data and covmats, stored in same repo as the
                 # 2018 python lensing likelihood
                 from cobaya.likelihoods.planck_2018_lensing import native
+
                 if not native.is_installed(data=True, path=path):
-                    success *= native.install(path=path, force=force, code=code,
-                                              data=data,
-                                              no_progress_bars=no_progress_bars)
+                    success *= native.install(
+                        path=path,
+                        force=force,
+                        code=code,
+                        data=data,
+                        no_progress_bars=no_progress_bars,
+                    )
         return success
 
 
@@ -235,8 +305,7 @@ class PlanckClik(Likelihood):
 common_path = "planck"
 
 # To see full clik build output even if installs OK (e.g. to check warnings)
-_clik_verbose = any((s in os.getenv('COMMIT_MESSAGE', ''))
-                    for s in ["clik", "planck"])
+_clik_verbose = any((s in os.getenv("COMMIT_MESSAGE", "")) for s in ["clik", "planck"])
 # Don't try again to install clik if it failed for a previous likelihood
 _clik_install_failed = False
 
@@ -260,11 +329,20 @@ def get_clik_source_folder(starting_path):
     Raises ``FileNotFoundError`` if no clik install was found.
     """
     source_dir = starting_path
-    while len(folders := [f for f in os.listdir(source_dir)
-                          if os.path.isdir(os.path.join(source_dir, f))]) <= 1:
+    while (
+        len(
+            folders := [
+                f
+                for f in os.listdir(source_dir)
+                if os.path.isdir(os.path.join(source_dir, f))
+            ]
+        )
+        <= 1
+    ):
         if len(folders) == 0:
             raise FileNotFoundError(
-                f"Could not find a clik installation under {starting_path}")
+                f"Could not find a clik installation under {starting_path}"
+            )
         source_dir = os.path.join(source_dir, folders[0])
     return source_dir
 
@@ -278,10 +356,10 @@ def get_clik_import_path(path, min_version=min_version_clik):
     :class:`tools.VersionCheckError` if the installed version is too old.
     """
     clik_src_path = get_clik_source_folder(path)
-    version_file = os.path.join(clik_src_path, 'readme.md')
+    version_file = os.path.join(clik_src_path, "readme.md")
     if os.path.exists(version_file):
-        with open(version_file, 'r') as f:
-            if version_match := re.search(r'(clik|plc) (\d+\.\d+)', f.read()):
+        with open(version_file) as f:
+            if version_match := re.search(r"(clik|plc) (\d+\.\d+)", f.read()):
                 installed_version = version_match.group(2)
             else:
                 installed_version = "16.0"
@@ -291,10 +369,11 @@ def get_clik_import_path(path, min_version=min_version_clik):
     if installed_version < version.parse(min_version):
         raise VersionCheckError(
             f"Installed version of the Planck likelihood code 'clik' ({installed_version})"
-            f" older than minimum required one ({last_version_clik}).")
+            f" older than minimum required one ({last_version_clik})."
+        )
     elif installed_version > version.parse(last_version_clik):
         raise ValueError("This should not happen: min version needs update.")
-    return os.path.join(clik_src_path, 'lib/python/site-packages')
+    return os.path.join(clik_src_path, "lib/python/site-packages")
 
 
 def load_clik(*args, **kwargs):
@@ -305,7 +384,8 @@ def load_clik(*args, **kwargs):
     clik = load_external_module(*args, **kwargs)
     if not hasattr(clik, "try_lensing"):
         raise ComponentNotInstalledError(
-            kwargs.get("logger"), "Loaded wrong clik: `https://pypi.org/project/clik/`")
+            kwargs.get("logger"), "Loaded wrong clik: `https://pypi.org/project/clik/`"
+        )
     return clik
 
 
@@ -313,15 +393,23 @@ def is_installed_clik(path, reload=False):
     # min_version here is checked inside get_clik_import_path, since it is displayed
     # in the folder name and cannot be retrieved from the module.
     try:
-        return bool(load_clik(
-            "clik", path=path, get_import_path=get_clik_import_path,
-            reload=reload, logger=get_logger("clik"), not_installed_level="debug"))
+        return bool(
+            load_clik(
+                "clik",
+                path=path,
+                get_import_path=get_clik_import_path,
+                reload=reload,
+                logger=get_logger("clik"),
+                not_installed_level="debug",
+            )
+        )
     except ComponentNotInstalledError:
         return False
 
 
 def execute(command):
     from subprocess import Popen, PIPE, STDOUT
+
     if _clik_verbose:
         process = Popen(command, stdout=PIPE, stderr=STDOUT)
         out = []
@@ -337,8 +425,8 @@ def execute(command):
         stdout, stderr = process.communicate()
         OK = b"finished successfully" in stdout.split(b"\n")[-2]
         if not OK:
-            print(stdout.decode('utf-8'))
-            print(stderr.decode('utf-8'))
+            print(stdout.decode("utf-8"))
+            print(stderr.decode("utf-8"))
         return OK
 
 
@@ -354,11 +442,13 @@ def install_clik(path, no_progress_bars=False):
         log.error("Not possible to download clik.")
         return False
     source_dir = get_clik_source_folder(path)
-    log.info('Installing from directory %s' % source_dir)
+    log.info("Installing from directory %s" % source_dir)
     with working_directory(source_dir):
         log.info("Configuring... (and maybe installing dependencies...)")
-        flags = ["--install_all_deps",
-                 "--extra_lib=m"]  # missing for some reason in some systems, but harmless
+        flags = [
+            "--install_all_deps",
+            "--extra_lib=m",
+        ]  # missing for some reason in some systems, but harmless
         if not execute([sys.executable, "waf", "configure"] + flags):
             log.error("Configuration failed!")
             return False
@@ -377,8 +467,8 @@ def get_product_id_and_clik_file(name):
 
 
 class Planck2015Clik(PlanckClik):
-    bibtex_file = 'planck2015.bibtex'
+    bibtex_file = "planck2015.bibtex"
 
 
 class Planck2018Clik(PlanckClik):
-    bibtex_file = 'planck2018.bibtex'
+    bibtex_file = "planck2018.bibtex"

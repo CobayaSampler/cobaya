@@ -4,6 +4,7 @@ Allows calling `cobaya-[command]` as `python -m cobaya [command]`.
 `run` is optional: one can pass directly an input file as
 `python -m cobaya input.yaml`.
 """
+
 import sys
 from importlib import import_module, metadata
 
@@ -19,7 +20,7 @@ def run_command():
     for script in console_scripts:
         if script.name.startswith(prefix):
             commands[script.name] = script.value
-    commands_trimmed = [c[len(prefix):] for c in commands]
+    commands_trimmed = [c[len(prefix) :] for c in commands]
     help_msg = (
         "Add a one of the following commands and its arguments "
         f"(`<command> -h` for help): {commands_trimmed}"

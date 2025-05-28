@@ -6,18 +6,34 @@
 :Author: Jesus Torrado
 
 """
+
 # Global
 import numpy as np
 from numbers import Real
 from itertools import chain
 from copy import deepcopy
-from typing import Mapping, Sequence, Dict, Set, List, Tuple, Any, Callable, Union
+from typing import Dict, Set, List, Tuple, Any, Union
+from collections.abc import Mapping, Sequence, Callable
 
 # Local
-from cobaya.typing import ParamsDict, ParamDict, ParamInput, \
-    ExpandedParamsDict, ParamValuesDict, partags
-from cobaya.tools import get_external_function, ensure_nolatex, is_valid_variable_name, \
-    getfullargspec, deepcopy_where_possible, invert_dict, str_to_list, get_scipy_1d_pdf
+from cobaya.typing import (
+    ParamsDict,
+    ParamDict,
+    ParamInput,
+    ExpandedParamsDict,
+    ParamValuesDict,
+    partags,
+)
+from cobaya.tools import (
+    get_external_function,
+    ensure_nolatex,
+    is_valid_variable_name,
+    getfullargspec,
+    deepcopy_where_possible,
+    invert_dict,
+    str_to_list,
+    get_scipy_1d_pdf,
+)
 from cobaya.log import LoggedError, HasLogger
 
 
@@ -55,10 +71,13 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict
             values = list(info_param)
             allowed_lengths = [2, 4, 5]
             if len(values) not in allowed_lengths:
-                raise LoggedError(__name__,
-                                  "Parameter info length not valid: %d. "
-                                  "The allowed lengths are %r. See documentation.",
-                                  len(values), allowed_lengths)
+                raise LoggedError(
+                    __name__,
+                    "Parameter info length not valid: %d. "
+                    "The allowed lengths are %r. See documentation.",
+                    len(values),
+                    allowed_lengths,
+                )
             info_param = {"prior": [values[0], values[1]]}
             if len(values) >= 4:
                 info_param["ref"] = [values[2], values[3]]
@@ -93,7 +112,7 @@ def reduce_info_param(info_param: ParamDict) -> ParamInput:
     return info_param
 
 
-_WrappedFunc = Tuple[Callable, Dict[str, Any], List[str]]
+_WrappedFunc = tuple[Callable, dict[str, Any], list[str]]
 
 
 class Parameterization(HasLogger):
@@ -102,9 +121,12 @@ class Parameterization(HasLogger):
     Translates parameter between sampler+prior and likelihood
     """
 
-    def __init__(self, info_params: Union[ParamsDict, ExpandedParamsDict],
-                 allow_renames=True,
-                 ignore_unused_sampled=False):
+    def __init__(
+        self,
+        info_params: ParamsDict | ExpandedParamsDict,
+        allow_renames=True,
+        ignore_unused_sampled=False,
+    ):
         self.set_logger()
         self.allow_renames = allow_renames
         # First, we load the parameters,
@@ -116,24 +138,28 @@ class Parameterization(HasLogger):
         self._input: ParamValuesDict = {}
         self._input_funcs = {}
         self._input_args = {}
-        self._input_dependencies: Dict[str, Set[str]] = {}
-        self._dropped: Set[str] = set()
+        self._input_dependencies: dict[str, set[str]] = {}
+        self._dropped: set[str] = set()
         self._output: ParamValuesDict = {}
         self._constant: ParamValuesDict = {}
         self._sampled: ParamValuesDict = {}
-        self._sampled_renames: Dict[str, List[str]] = {}
+        self._sampled_renames: dict[str, list[str]] = {}
         self._derived: ParamValuesDict = {}
         self._derived_inputs = []
         self._derived_funcs = {}
         self._derived_args = {}
-        self._derived_dependencies: Dict[str, Set[str]] = {}
+        self._derived_dependencies: dict[str, set[str]] = {}
         # Notice here that expand_info_param *always* adds a "derived":True tag
         # to infos without "prior" or "value", and a "value" field
         # to fixed params
         for p, info in info_params.items():
             if isinstance(info, Mapping) and not set(info).issubset(partags):
-                raise LoggedError(self.log, "Parameter '%s' has unknown options %s",
-                                  p, set(info).difference(partags))
+                raise LoggedError(
+                    self.log,
+                    "Parameter '%s' has unknown options %s",
+                    p,
+                    set(info).difference(partags),
+                )
             info = expand_info_param(info)
             self._infos[p] = info
             if is_fixed_or_function_param(info):
@@ -167,19 +193,23 @@ class Parameterization(HasLogger):
         for p in chain(self._sampled, self._derived):
             if not is_valid_variable_name(p):
                 is_in = p in self._sampled
-                eg_in = "  p_prime:\n    prior: ...\n  %s: " \
-                        "'lambda p_prime: p_prime'\n" % p
-                eg_out = "  p_prime: 'lambda %s: %s'\n" % (p, p)
+                eg_in = (
+                    "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
+                )
+                eg_out = "  p_prime: 'lambda {}: {}'\n".format(p, p)
                 raise LoggedError(
-                    self.log, "Parameter name '%s' is not a valid Python variable name "
-                              "(it needs to start with a letter or '_').\n"
-                              "If this is an %s parameter of a likelihood or theory, "
-                              "whose name you cannot change,%s define an associated "
-                              "%s one with a valid name 'p_prime' as: \n\n%s",
-                    p, "input" if is_in else "output",
+                    self.log,
+                    "Parameter name '%s' is not a valid Python variable name "
+                    "(it needs to start with a letter or '_').\n"
+                    "If this is an %s parameter of a likelihood or theory, "
+                    "whose name you cannot change,%s define an associated "
+                    "%s one with a valid name 'p_prime' as: \n\n%s",
+                    p,
+                    "input" if is_in else "output",
                     "" if is_in else " remove it and",
                     "sampled" if is_in else "derived",
-                    eg_in if is_in else eg_out)
+                    eg_in if is_in else eg_out,
+                )
 
         # input params depend on input and sampled only,
         # never on output/derived unless constant
@@ -192,29 +222,37 @@ class Parameterization(HasLogger):
                 "input parameters. In particular, an input parameter cannot depend on %r."
                 " Use an explicit Theory calculator for more complex dependencies.\n"
                 "If you intended to define a derived output parameter use derived: "
-                "instead of value:", list(bad_input_dependencies))
+                "instead of value:",
+                list(bad_input_dependencies),
+            )
 
         # Assume that the *un*known function arguments are likelihood/theory
         # output parameters
-        for arg in (all_input_arguments.union(*self._derived_args.values())
-                .difference(known_input).difference(self._derived)):
+        for arg in (
+            all_input_arguments.union(*self._derived_args.values())
+            .difference(known_input)
+            .difference(self._derived)
+        ):
             self._output[arg] = np.nan
 
         # Useful set: directly "output-ed" derived
         self._directly_output = [p for p in self._derived if p in self._output]
 
-        self._wrapped_input_funcs, self._wrapped_derived_funcs = \
+        self._wrapped_input_funcs, self._wrapped_derived_funcs = (
             self._get_wrapped_functions_evaluation_order()
+        )
 
         # Useful mapping: input params that vary if each sample is varied
-        self._sampled_input_dependence = {s: [i for i in self._input
-                                              if s in self._input_dependencies.get(i, {})]
-                                          for s in self._sampled}
+        self._sampled_input_dependence = {
+            s: [i for i in self._input if s in self._input_dependencies.get(i, {})]
+            for s in self._sampled
+        }
         # From here on, some error control.
         # Only actually raise error after checking if used by prior.
         if not ignore_unused_sampled:
             self._dropped_not_directly_used = self._dropped.intersection(
-                p for p, v in self._sampled_input_dependence.items() if not v)
+                p for p, v in self._sampled_input_dependence.items() if not v
+            )
         else:
             self._dropped_not_directly_used = set()
 
@@ -223,9 +261,10 @@ class Parameterization(HasLogger):
         labels_inv_repeated = {k: v for k, v in labels_inv_repeated.items() if len(v) > 1}
         if labels_inv_repeated:
             self.mpi_warning(
-                "There are repeated parameter labels: %r", labels_inv_repeated)
+                "There are repeated parameter labels: %r", labels_inv_repeated
+            )
 
-    def dropped_param_set(self) -> Set[str]:
+    def dropped_param_set(self) -> set[str]:
         return self._dropped.copy()
 
     def input_params(self) -> ParamValuesDict:
@@ -241,20 +280,26 @@ class Parameterization(HasLogger):
         return self._sampled.copy()
 
     def sampled_params_info(self) -> ExpandedParamsDict:
-        return {p: deepcopy_where_possible(info) for p, info
-                in self._infos.items() if p in self._sampled}
+        return {
+            p: deepcopy_where_possible(info)
+            for p, info in self._infos.items()
+            if p in self._sampled
+        }
 
-    def sampled_params_renames(self) -> Dict[str, List[str]]:
+    def sampled_params_renames(self) -> dict[str, list[str]]:
         return deepcopy(self._sampled_renames)
 
     def derived_params(self) -> ParamValuesDict:
         return self._derived.copy()
 
     def derived_params_info(self) -> ExpandedParamsDict:
-        return {p: deepcopy_where_possible(info) for p, info
-                in self._infos.items() if p in self._derived}
+        return {
+            p: deepcopy_where_possible(info)
+            for p, info in self._infos.items()
+            if p in self._derived
+        }
 
-    def sampled_input_dependence(self) -> Dict[str, List[str]]:
+    def sampled_input_dependence(self) -> dict[str, list[str]]:
         return deepcopy(self._sampled_input_dependence)
 
     def get_input_func(self, p, **params_values):
@@ -263,7 +308,7 @@ class Parameterization(HasLogger):
         return func(*[params_values.get(arg) for arg in args])
 
     @property
-    def input_dependencies(self) -> Dict[str, Set[str]]:
+    def input_dependencies(self) -> dict[str, set[str]]:
         return self._input_dependencies
 
     def to_input(self, sampled_params_values) -> ParamValuesDict:
@@ -307,8 +352,9 @@ class Parameterization(HasLogger):
                 self._derived[p] = self._call_param_func(p, func, args)
         return self._derived
 
-    def check_sampled(self, sampled_params: Union[Sequence[float], Dict[str, float]]
-                      ) -> Union[Sequence[float], Dict[str, float]]:
+    def check_sampled(
+        self, sampled_params: Sequence[float] | dict[str, float]
+    ) -> Sequence[float] | dict[str, float]:
         """
         Performs some checks on the given sampled params.
 
@@ -325,10 +371,12 @@ class Parameterization(HasLogger):
             return self.check_sampled_dict(**sampled_params)
         else:
             if len(sampled_params) != len(self._sampled):
-                raise LoggedError(self.log, "Wrong number of sampled parameters passed: "
-                                            "%d given vs %d expected",
-                                  len(sampled_params),
-                                  len(self._sampled))
+                raise LoggedError(
+                    self.log,
+                    "Wrong number of sampled parameters passed: %d given vs %d expected",
+                    len(sampled_params),
+                    len(self._sampled),
+                )
             return sampled_params
 
     def check_sampled_dict(self, **sampled_params) -> ParamValuesDict:
@@ -349,15 +397,21 @@ class Parameterization(HasLogger):
         if len(sampled_output) < len(self._sampled):
             not_found = set(self._sampled).difference(sampled_output)
             if self.allow_renames:
-                msg = ("The following expected sampled parameters " +
-                       ("(or their aliases) " if self.allow_renames else "") +
-                       "were not found : %r",
-                       ({p: self._sampled_renames[p] for p in not_found}
-                        if self.allow_renames else not_found))
+                msg = (
+                    "The following expected sampled parameters "
+                    + ("(or their aliases) " if self.allow_renames else "")
+                    + "were not found : %r",
+                    (
+                        {p: self._sampled_renames[p] for p in not_found}
+                        if self.allow_renames
+                        else not_found
+                    ),
+                )
             else:
-                msg = ("The following expected sampled parameters "
-                       "were not found : %r",
-                       {p: self._sampled_renames[p] for p in not_found})
+                msg = (
+                    "The following expected sampled parameters were not found : %r",
+                    {p: self._sampled_renames[p] for p in not_found},
+                )
             raise LoggedError(self.log, *msg)
         # Ignore fixed input parameters if they have the correct value
         not_used = set(sampled_params)
@@ -370,25 +424,42 @@ class Parameterization(HasLogger):
                 self.log.debug("Fixed parameter %r ignored.", p)
             else:
                 raise LoggedError(
-                    self.log, "Cannot change value of constant parameter: "
-                              "%s = %g (new) vs %g (old).", p, value, known_value)
+                    self.log,
+                    "Cannot change value of constant parameter: "
+                    "%s = %g (new) vs %g (old).",
+                    p,
+                    value,
+                    known_value,
+                )
         if not_used:
             duplicated = not_used.intersection(
-                chain(
-                    *[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()]))
+                chain(*[list(chain(*[[k], v])) for k, v in self._sampled_renames.items()])
+            )
             not_used = not_used.difference(duplicated)
             derived = not_used.intersection(self._derived)
             input_ = not_used.intersection(self._input)
             unknown = not_used.difference(derived).difference(input_)
-            msg_text = ("Incorrect parameters! " +
-                        ("\n   Duplicated entries (using their aliases): %r" %
-                         list(duplicated) if duplicated else "") +
-                        ("\n   Not known: %r" % list(unknown) if unknown else "") +
-                        ("\n   Cannot be fixed: %r " % list(input_) +
-                         "--> instead, fix sampled parameters that depend on them!"
-                         if input_ else "") +
-                        ("\n   Cannot be fixed because are derived parameters: %r " %
-                         list(derived) if derived else ""))
+            msg_text = (
+                "Incorrect parameters! "
+                + (
+                    "\n   Duplicated entries (using their aliases): %r" % list(duplicated)
+                    if duplicated
+                    else ""
+                )
+                + ("\n   Not known: %r" % list(unknown) if unknown else "")
+                + (
+                    "\n   Cannot be fixed: %r " % list(input_)
+                    + "--> instead, fix sampled parameters that depend on them!"
+                    if input_
+                    else ""
+                )
+                + (
+                    "\n   Cannot be fixed because are derived parameters: %r "
+                    % list(derived)
+                    if derived
+                    else ""
+                )
+            )
             for line in msg_text.split("\n"):
                 self.log.error(line)
             raise LoggedError
@@ -404,9 +475,11 @@ class Parameterization(HasLogger):
                 "code, and never used as arguments for any prior or parameter "
                 "functions. Check that you are not using "
                 "the '%s' tag unintentionally.",
-                list(self._dropped_not_directly_used), "drop")
+                list(self._dropped_not_directly_used),
+                "drop",
+            )
 
-    def labels(self) -> Dict[str, str]:
+    def labels(self) -> dict[str, str]:
         """
         Returns a dictionary of LaTeX labels of the sampled and derived parameters.
 
@@ -414,8 +487,9 @@ class Parameterization(HasLogger):
         """
 
         def get_label(p, info):
-            return ensure_nolatex(getattr(info, "get", lambda x, y: y)
-                                  ("latex", p.replace("_", r"\ ")))
+            return ensure_nolatex(
+                getattr(info, "get", lambda x, y: y)("latex", p.replace("_", r"\ "))
+            )
 
         return {p: get_label(p, info) for p, info in self._infos.items()}
 
@@ -425,19 +499,26 @@ class Parameterization(HasLogger):
         except NameError as exception:
             unknown = str(exception).split("'")[1]
             raise LoggedError(
-                self.log, "Unknown variable '%s' was referenced in the definition of "
-                          "the parameter '%s', with arguments %r.", unknown, p,
-                list(kwargs))
+                self.log,
+                "Unknown variable '%s' was referenced in the definition of "
+                "the parameter '%s', with arguments %r.",
+                unknown,
+                p,
+                list(kwargs),
+            )
         except:
-            self.log.error("Function for parameter '%s' failed at evaluation "
-                           "and threw the following exception:", p)
+            self.log.error(
+                "Function for parameter '%s' failed at evaluation "
+                "and threw the following exception:",
+                p,
+            )
             raise
 
     def _get_wrapped_functions_evaluation_order(self):
         # get evaluation order for input and derived parameter function
         # and pre-prepare argument dicts
 
-        wrapped_funcs: Tuple[Dict[str, _WrappedFunc], Dict[str, _WrappedFunc]] = ({}, {})
+        wrapped_funcs: tuple[dict[str, _WrappedFunc], dict[str, _WrappedFunc]] = ({}, {})
         known = set(chain(self._constant, self._sampled))
 
         for derived, wrapped_func in zip((False, True), wrapped_funcs):
@@ -460,28 +541,33 @@ class Parameterization(HasLogger):
                         continue
                     known.add(p)
                     dependencies[p] = set(
-                        chain(args, *(dependencies.get(arg, []) for arg in args)))
+                        chain(args, *(dependencies.get(arg, []) for arg in args))
+                    )
 
                     if set(args).issubset(self._constant):
                         # all inputs are constant, so output is constant and precomputed
-                        self._constant[p] = \
-                            self._call_param_func(p, func,
-                                                  {arg: self._constant[arg] for arg in
-                                                   args})
+                        self._constant[p] = self._call_param_func(
+                            p, func, {arg: self._constant[arg] for arg in args}
+                        )
                         output[p] = self._constant[p]
                     else:
                         # Store function, argument dict with constants pre-filled,
                         # and unset args as tuple
-                        wrapped_func[p] = \
-                            (func, {arg: self._constant.get(arg) for arg in args},
-                             [arg for arg in args if arg not in self._constant])
+                        wrapped_func[p] = (
+                            func,
+                            {arg: self._constant.get(arg) for arg in args},
+                            [arg for arg in args if arg not in self._constant],
+                        )
                     del inputs[p]
                     break
                 else:
                     raise LoggedError(
-                        self.log, "Could not resolve arguments for parameters %s. "
-                                  "Maybe there is a circular dependency between derived "
-                                  "parameters?", list(inputs))
+                        self.log,
+                        "Could not resolve arguments for parameters %s. "
+                        "Maybe there is a circular dependency between derived "
+                        "parameters?",
+                        list(inputs),
+                    )
         return wrapped_funcs
 
 
@@ -512,13 +598,13 @@ def get_literal_param_range(param_info, confidence_for_unbounded=1):
 
 def get_literal_param_ranges(params_info, confidence_for_unbounded=1):
     """
-        Extracts parameters bounds from a parameter input dict, or a
-        :class:`~parameterization.Parameterization` instance.
+    Extracts parameters bounds from a parameter input dict, or a
+    :class:`~parameterization.Parameterization` instance.
 
-        Notes
-        -----
-        Only use this if you know what you are doing. In general, you should get parameter
-        bounds from a :class:`~model.Model` instance as :func:`model.Model.prior.bounds`.
+    Notes
+    -----
+    Only use this if you know what you are doing. In general, you should get parameter
+    bounds from a :class:`~model.Model` instance as :func:`model.Model.prior.bounds`.
     """
     if isinstance(params_info, Parameterization):
         # noinspection PyProtectedMember

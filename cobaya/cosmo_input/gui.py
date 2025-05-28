@@ -15,8 +15,13 @@ from cobaya.cosmo_input.input_database import _combo_dict_text
 from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
 from cobaya.cosmo_input.create_input import create_input
 from cobaya.bib import pretty_repr_bib, get_bib_info, get_bib_component
-from cobaya.tools import warn_deprecation, get_available_internal_class_names, \
-    cov_to_std_and_corr, resolve_packages_path, sort_cosmetic
+from cobaya.tools import (
+    warn_deprecation,
+    get_available_internal_class_names,
+    cov_to_std_and_corr,
+    resolve_packages_path,
+    sort_cosmetic,
+)
 from cobaya.input import get_default_info
 from cobaya.conventions import subfolders, kinds, packages_path_env, packages_path_input
 
@@ -31,12 +36,31 @@ else:  # Windows/Mac
 try:
     try:
         # noinspection PyUnresolvedReferences
-        from PySide6.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
-            QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
-            QFileDialog, QCheckBox, QLabel, QMenuBar, QDialog, QTableWidget, \
-            QTableWidgetItem, QAbstractItemView, QMainWindow
+        from PySide6.QtWidgets import (
+            QWidget,
+            QApplication,
+            QVBoxLayout,
+            QHBoxLayout,
+            QGroupBox,
+            QScrollArea,
+            QTabWidget,
+            QComboBox,
+            QPushButton,
+            QTextEdit,
+            QFileDialog,
+            QCheckBox,
+            QLabel,
+            QMenuBar,
+            QDialog,
+            QTableWidget,
+            QTableWidgetItem,
+            QAbstractItemView,
+            QMainWindow,
+        )
+
         # noinspection PyUnresolvedReferences
         from PySide6.QtGui import QColor, QAction
+
         # noinspection PyUnresolvedReferences
         from PySide6.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings, QPoint
 
@@ -44,16 +68,36 @@ try:
         exec_method_name = "exec"
     except ImportError:
         # noinspection PyUnresolvedReferences
-        from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
-            QGroupBox, QScrollArea, QTabWidget, QComboBox, QPushButton, QTextEdit, \
-            QFileDialog, QCheckBox, QLabel, QMenuBar, QAction, QDialog, QTableWidget, \
-            QTableWidgetItem, QAbstractItemView, QMainWindow
+        from PySide2.QtWidgets import (
+            QWidget,
+            QApplication,
+            QVBoxLayout,
+            QHBoxLayout,
+            QGroupBox,
+            QScrollArea,
+            QTabWidget,
+            QComboBox,
+            QPushButton,
+            QTextEdit,
+            QFileDialog,
+            QCheckBox,
+            QLabel,
+            QMenuBar,
+            QAction,
+            QDialog,
+            QTableWidget,
+            QTableWidgetItem,
+            QAbstractItemView,
+            QMainWindow,
+        )
+
         # noinspection PyUnresolvedReferences
         from PySide2.QtGui import QColor
+
         # noinspection PyUnresolvedReferences
         from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
 
-        os.environ['QT_API'] = 'pyside2'
+        os.environ["QT_API"] = "pyside2"
         exec_method_name = "exec_"
     for attribute in set_attributes:
         # noinspection PyArgumentList
@@ -69,12 +113,11 @@ def text(key, contents):
 
 # noinspection PyArgumentList
 def get_settings():
-    return QSettings('cobaya', 'gui')
+    return QSettings("cobaya", "gui")
 
 
 # noinspection PyArgumentList
 class MainWindow(QWidget):
-
     # noinspection PyUnresolvedReferences
     def __init__(self):
         super().__init__()
@@ -83,7 +126,8 @@ class MainWindow(QWidget):
         # Menu bar for defaults
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu(
-            '&Show defaults and bibliography for a component...')
+            "&Show defaults and bibliography for a component..."
+        )
         menu_actions = {}
         for kind in kinds:
             submenu = defaults_menu.addMenu(subfolders[kind])
@@ -125,7 +169,8 @@ class MainWindow(QWidget):
                     group_layout.addWidget(label)
                 group_layout.addWidget(self.combos[a])
                 self.combos[a].addItems(
-                    [text(k, v) for k, v in getattr(input_database, a).items()])
+                    [text(k, v) for k, v in getattr(input_database, a).items()]
+                )
         # PLANCK NAMES CHECKBOX TEMPORARILY DISABLED
         #                if a == "theory":
         #                    # Add Planck-naming checkbox
@@ -163,8 +208,8 @@ class MainWindow(QWidget):
         self.layout_output.addWidget(self.display_tabs)
         # Buttons
         self.buttons = QHBoxLayout()
-        self.save_button = QPushButton('Save as...', self)
-        self.copy_button = QPushButton('Copy to clipboard', self)
+        self.save_button = QPushButton("Save as...", self)
+        self.copy_button = QPushButton("Copy to clipboard", self)
         self.buttons.addWidget(self.save_button)
         self.buttons.addWidget(self.copy_button)
         self.save_button.released.connect(self.save_file)
@@ -181,24 +226,27 @@ class MainWindow(QWidget):
             return self.screen().availableGeometry()
         except:
             return QApplication.screenAt(
-                self.mapToGlobal(QPoint(self.width() // 2, 0))).availableGeometry()
+                self.mapToGlobal(QPoint(self.width() // 2, 0))
+            ).availableGeometry()
 
     def read_settings(self):
-
         settings = get_settings()
         # noinspection PyArgumentList
         screen = self.getScreen()
-        h = min(screen.height() * 5 / 6., 900)
-        size = QSize(min(screen.width() * 5 / 6., 1200), h)
-        pos: Optional[QPoint] = settings.value("pos", None)
+        h = min(screen.height() * 5 / 6.0, 900)
+        size = QSize(min(screen.width() * 5 / 6.0, 1200), h)
+        pos: QPoint | None = settings.value("pos", None)
         savesize = settings.value("size", size)
         if savesize.width() > screen.width():
             savesize.setWidth(size.width())
         if savesize.height() > screen.height():
             savesize.setHeight(size.height())
         self.resize(savesize)
-        if ((pos is None or pos.x() + savesize.width() > screen.width() or
-             pos.y() + savesize.height() > screen.height())):
+        if (
+            pos is None
+            or pos.x() + savesize.width() > screen.width()
+            or pos.y() + savesize.height() > screen.height()
+        ):
             self.move(screen.center() - self.rect().center())
         else:
             self.move(pos)
@@ -216,8 +264,12 @@ class MainWindow(QWidget):
         return create_input(
             get_comments=True,
             #           planck_names=self.planck_names.isChecked(),
-            **{field: list(getattr(input_database, field))[combo.currentIndex()]
-               for field, combo in self.combos.items() if field != "preset"})
+            **{
+                field: list(getattr(input_database, field))[combo.currentIndex()]
+                for field, combo in self.combos.items()
+                if field != "preset"
+            },
+        )
 
     @Slot()
     def refresh_keep_preset(self):
@@ -233,13 +285,15 @@ class MainWindow(QWidget):
     @Slot()
     def refresh_preset(self):
         preset = list(getattr(input_database, "preset"))[
-            self.combos["preset"].currentIndex()]
+            self.combos["preset"].currentIndex()
+        ]
         if preset is input_database.none:
             return
         info = create_input(
             get_comments=True,
             #            planck_names=self.planck_names.isChecked(),
-            preset=preset)
+            preset=preset,
+        )
         self.refresh_display(info)
         # Update combo boxes to reflect the preset values, without triggering update
         for k, v in input_database.preset[preset].items():
@@ -247,8 +301,8 @@ class MainWindow(QWidget):
                 continue
             self.combos[k].blockSignals(True)
             self.combos[k].setCurrentIndex(
-                self.combos[k].findText(
-                    text(v, getattr(input_database, k).get(v))))
+                self.combos[k].findText(text(v, getattr(input_database, k).get(v)))
+            )
             self.combos[k].blockSignals(False)
 
     def refresh_display(self, info):
@@ -256,25 +310,33 @@ class MainWindow(QWidget):
         try:
             comments = info.pop("comment", None)
             comments_text = "\n# " + "\n# ".join(comments)
-        except (TypeError,  # No comments
-                AttributeError):  # Failed to generate info (returned str instead)
+        except (
+            TypeError,  # No comments
+            AttributeError,
+        ):  # Failed to generate info (returned str instead)
             comments_text = ""
         self.display["python"].setText("info = " + pformat(info) + comments_text)
-        self.display["yaml"].setText((info if isinstance(info, str) else
-                                      yaml_dump(sort_cosmetic(info))) + comments_text)
+        self.display["yaml"].setText(
+            (info if isinstance(info, str) else yaml_dump(sort_cosmetic(info)))
+            + comments_text
+        )
         self.display["bibliography"].setText(pretty_repr_bib(*get_bib_info(info)))
         # Display covmat
         packages_path = resolve_packages_path()
         if not packages_path:
             self.covmat_text.setText(
                 "\nIn order to find a covariance matrix, you need to define an external "
-                "packages installation path, e.g. via the env variable %r.\n" %
-                packages_path_env)
-        elif all(not os.path.isdir(d.format(**{packages_path_input: packages_path}))
-                 for d in covmat_folders):
+                "packages installation path, e.g. via the env variable %r.\n"
+                % packages_path_env
+            )
+        elif all(
+            not os.path.isdir(d.format(**{packages_path_input: packages_path}))
+            for d in covmat_folders
+        ):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "
-                "expected: %r\n" % packages_path)
+                "expected: %r\n" % packages_path
+            )
         else:
             covmat_data = get_best_covmat(info, packages_path=packages_path)
             self.current_params_in_covmat = covmat_data["params"]
@@ -283,20 +345,23 @@ class MainWindow(QWidget):
             self.covmat_text.setText(
                 "\nCovariance file: %r\n\n"
                 "NB: you do *not* need to save or copy this covariance matrix: "
-                "it will be selected automatically.\n" % covmat_data["name"])
+                "it will be selected automatically.\n" % covmat_data["name"]
+            )
             self.covmat_table.setRowCount(len(self.current_params_in_covmat))
             self.covmat_table.setColumnCount(len(self.current_params_in_covmat))
             self.covmat_table.setHorizontalHeaderLabels(
-                list(self.current_params_in_covmat))
-            self.covmat_table.setVerticalHeaderLabels(
-                list(self.current_params_in_covmat))
+                list(self.current_params_in_covmat)
+            )
+            self.covmat_table.setVerticalHeaderLabels(list(self.current_params_in_covmat))
             # Color map for correlations
             from matplotlib import colormaps
+
             cmap_corr = colormaps["coolwarm_r"]
             for i, pi in enumerate(self.current_params_in_covmat):
                 for j, pj in enumerate(self.current_params_in_covmat):
                     self.covmat_table.setItem(
-                        i, j, QTableWidgetItem("%g" % self.current_covmat[i, j]))
+                        i, j, QTableWidgetItem("%g" % self.current_covmat[i, j])
+                    )
                     if i != j:
                         color = [256 * c for c in cmap_corr(corrmat[i, j] / 2 + 0.5)[:3]]
                     else:
@@ -313,21 +378,34 @@ class MainWindow(QWidget):
         if not file_handle:
             file_handle = io.BytesIO()
             return_txt = True
-        np.savetxt(file_handle, self.current_covmat,
-                   header=" ".join(self.current_params_in_covmat))
+        np.savetxt(
+            file_handle,
+            self.current_covmat,
+            header=" ".join(self.current_params_in_covmat),
+        )
         if return_txt:
             return file_handle.getvalue().decode()
 
     @Slot()
     def save_file(self):
-        ftype = next(k for k, w in self.display.items()
-                     if w is self.display_tabs.currentWidget())
-        ffilter = {"yaml": "Yaml files (*.yaml *.yml)", "python": "(*.py)",
-                   "bibliography": "(*.txt)", "covmat": "(*.covmat)"}[ftype]
-        fsuffix = {"yaml": ".yaml", "python": ".py",
-                   "bibliography": ".txt", "covmat": ".covmat"}[ftype]
+        ftype = next(
+            k for k, w in self.display.items() if w is self.display_tabs.currentWidget()
+        )
+        ffilter = {
+            "yaml": "Yaml files (*.yaml *.yml)",
+            "python": "(*.py)",
+            "bibliography": "(*.txt)",
+            "covmat": "(*.covmat)",
+        }[ftype]
+        fsuffix = {
+            "yaml": ".yaml",
+            "python": ".py",
+            "bibliography": ".txt",
+            "covmat": ".covmat",
+        }[ftype]
         fname, path = self.save_dialog.getSaveFileName(
-            self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd())
+            self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd()
+        )
         if not fname.endswith(fsuffix):
             fname += fsuffix
         with open(fname, "w+", encoding="utf-8") as f:
@@ -351,10 +429,9 @@ class MainWindow(QWidget):
 
 # noinspection PyUnresolvedReferences,PyArgumentList
 class DefaultsDialog(QWidget):
-
     def __init__(self, kind, component, parent=None):
         super().__init__()
-        self.setWindowTitle("%s : %s" % (kind, component))
+        self.setWindowTitle("{} : {}".format(kind, component))
         self.setGeometry(0, 0, 500, 500)
         # noinspection PyArgumentList
         self.move(parent.getScreen().center() - self.rect().center())
@@ -375,16 +452,24 @@ class DefaultsDialog(QWidget):
         # Fill text
         defaults_txt = get_default_info(component, kind, return_yaml=True)
         _indent = "  "
-        defaults_txt = (kind + ":\n" + _indent + component + ":\n" +
-                        2 * _indent + ("\n" + 2 * _indent).join(defaults_txt.split("\n")))
+        defaults_txt = (
+            kind
+            + ":\n"
+            + _indent
+            + component
+            + ":\n"
+            + 2 * _indent
+            + ("\n" + 2 * _indent).join(defaults_txt.split("\n"))
+        )
         from cobaya.yaml import yaml_load
+
         self.display["python"].setText(pformat(yaml_load(defaults_txt)))
         self.display["yaml"].setText(defaults_txt)
         self.display["bibliography"].setText(get_bib_component(component, kind))
         # Buttons
         self.buttons = QHBoxLayout()
-        self.close_button = QPushButton('Close', self)
-        self.copy_button = QPushButton('Copy to clipboard', self)
+        self.close_button = QPushButton("Close", self)
+        self.copy_button = QPushButton("Copy to clipboard", self)
         self.buttons.addWidget(self.close_button)
         self.buttons.addWidget(self.copy_button)
         self.close_button.released.connect(self.close)
@@ -404,12 +489,14 @@ def gui_script():
     except NameError:
         # TODO: fix this long logger setup
         from cobaya.log import logger_setup, LoggedError
+
         logger_setup(0, None)
         raise LoggedError(
             "cosmo_generator",
             "PySide is not installed! "
             "Check Cobaya's documentation for the cosmo_generator "
-            "('Basic cosmology runs').")
+            "('Basic cosmology runs').",
+        )
 
     # Quit with C-c
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -418,5 +505,5 @@ def gui_script():
     sys.exit(getattr(app, exec_method_name)())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gui_script()

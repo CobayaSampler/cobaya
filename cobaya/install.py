@@ -6,6 +6,7 @@
 :Author: Jesus Torrado
 
 """
+
 # Global
 import os
 import sys
@@ -17,7 +18,8 @@ import tempfile
 import logging
 from itertools import chain
 import importlib
-from typing import List, Mapping, Union
+from typing import List, Union
+from collections.abc import Mapping
 import requests  # type: ignore
 import tqdm  # type: ignore
 from packaging import version
@@ -25,13 +27,28 @@ from packaging import version
 # Local
 from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
 from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.tools import create_banner, warn_deprecation, \
-    write_packages_path_in_config_file, get_config_path, VersionCheckError, \
-    resolve_packages_path, similar_internal_class_names, find_with_regexp
+from cobaya.tools import (
+    create_banner,
+    warn_deprecation,
+    write_packages_path_in_config_file,
+    get_config_path,
+    VersionCheckError,
+    resolve_packages_path,
+    similar_internal_class_names,
+    find_with_regexp,
+)
 from cobaya.input import get_used_components
-from cobaya.conventions import code_path, data_path, packages_path_arg, \
-    packages_path_env, Extension, install_skip_env, packages_path_arg_posix, \
-    packages_path_config_file, packages_path_input
+from cobaya.conventions import (
+    code_path,
+    data_path,
+    packages_path_arg,
+    packages_path_env,
+    Extension,
+    install_skip_env,
+    packages_path_arg_posix,
+    packages_path_config_file,
+    packages_path_input,
+)
 from cobaya.mpi import set_mpi_disabled
 from cobaya.typing import InputDict, InfoDict
 from cobaya.yaml import yaml_load_file
@@ -41,48 +58,61 @@ _banner_length = 80
 _version_filename = "version.dat"
 
 
-def do_package_install(component: str, package_install: Union[InfoDict, str],
-                       full_code_path: str, logger):
+def do_package_install(
+    component: str, package_install: InfoDict | str, full_code_path: str, logger
+):
     # attempt to install package if package_install download info is present
     # similar to InstallableLikelihood install_options (could be refactored)
-    component_root = component.split('.')[0]
+    component_root = component.split(".")[0]
     directory = package_install.get("directory")
     min_version = package_install.get("min_version")
     if package_install == "pip":
         package_install = {"pip": None}
     elif not isinstance(package_install, Mapping):
-        raise LoggedError(logger, "Invalid package_install: must be 'pip' or a "
-                                  "dictionary with download_url or github_repository")
+        raise LoggedError(
+            logger,
+            "Invalid package_install: must be 'pip' or a "
+            "dictionary with download_url or github_repository",
+        )
     package = package_install.get("pip")
     if package is None:
         package = component_root
     cwd = None
     if repo := package_install.get("github_repository"):
-        logger.info('Downloading code from github (%s)', repo)
+        logger.info("Downloading code from github (%s)", repo)
         directory = directory or repo.split("/")[-1]
         if not download_github_release(
-                full_code_path, repo, package_install.get("github_release"),
-                directory=directory, logger=logger):
+            full_code_path,
+            repo,
+            package_install.get("github_release"),
+            directory=directory,
+            logger=logger,
+        ):
             return False
         cwd = os.path.join(full_code_path, directory)
-        package = '.'
+        package = "."
     elif url := package_install.get("download_url"):
-        logger.info('Downloading code from %s', url)
+        logger.info("Downloading code from %s", url)
         cwd = os.path.join(full_code_path, directory or component_root)
         if not download_file(url, cwd, logger=logger):
             return False
-        if not (paths := find_with_regexp('pyproject\\.toml', cwd, True)
-                         or find_with_regexp('setup\\.py', cwd, True)):
-            raise LoggedError(logger, "No setup.py or pyproject.toml "
-                                      "found in %s for %s", cwd, component)
+        if not (
+            paths := find_with_regexp("pyproject\\.toml", cwd, True)
+            or find_with_regexp("setup\\.py", cwd, True)
+        ):
+            raise LoggedError(
+                logger, "No setup.py or pyproject.toml found in %s for %s", cwd, component
+            )
         cwd = os.path.dirname(paths[0])
-        package = '.'
+        package = "."
     elif "pip" not in package_install:
-        raise LoggedError(logger, "Invalid package_install: must define pip, "
-                                  "github_repository or download_url")
+        raise LoggedError(
+            logger,
+            "Invalid package_install: must define pip, github_repository or download_url",
+        )
     if min_version is not None and package != ".":
         package += f">={min_version}"
-    logger.info('pip installing %s', package)
+    logger.info("pip installing %s", package)
     return not pip_install(package, upgrade=True, logger=logger, cwd=cwd)
 
 
@@ -118,16 +148,25 @@ def install(*infos, **kwargs):
         logger_setup(debug=debug)
         logger = get_logger("install")
     path = kwargs.get("path")
-    infos = [yaml_load_file(info)
-             if isinstance(info, str) and info.split('.')[-1] in Extension.yamls
-             else info for info in infos]
+    infos = [
+        yaml_load_file(info)
+        if isinstance(info, str) and info.split(".")[-1] in Extension.yamls
+        else info
+        for info in infos
+    ]
     infos_not_single_names = [info for info in infos if isinstance(info, Mapping)]
     if not (path := path or resolve_packages_path(*infos_not_single_names)):
         raise LoggedError(
-            logger, ("No 'path' argument given, and none could be found in input infos "
-                     "(as %r), the %r env variable or the config file. "
-                     "Maybe specify one via a command line argument '-%s [...]'?"),
-            packages_path_input, packages_path_env, packages_path_arg[0])
+            logger,
+            (
+                "No 'path' argument given, and none could be found in input infos "
+                "(as %r), the %r env variable or the config file. "
+                "Maybe specify one via a command line argument '-%s [...]'?"
+            ),
+            packages_path_input,
+            packages_path_env,
+            packages_path_arg[0],
+        )
     # General install path for all dependencies
     general_abspath = os.path.abspath(path)
     logger.info("Installing external packages at '%s'", general_abspath)
@@ -136,10 +175,13 @@ def install(*infos, **kwargs):
         write_packages_path_in_config_file(general_abspath)
         logger.info(
             "The installation path has been written into the global config file: %s",
-            os.path.join(get_config_path(), packages_path_config_file))
-    kwargs_install = {"force": kwargs.get("force", False),
-                      "no_progress_bars": kwargs.get("no_progress_bars"),
-                      "show_error": False}
+            os.path.join(get_config_path(), packages_path_config_file),
+        )
+    kwargs_install = {
+        "force": kwargs.get("force", False),
+        "no_progress_bars": kwargs.get("no_progress_bars"),
+        "show_error": False,
+    }
     for what in (code_path, data_path):
         kwargs_install[what] = kwargs.get(what, True)
         spath = os.path.join(general_abspath, what)
@@ -148,7 +190,8 @@ def install(*infos, **kwargs):
                 os.makedirs(spath)
             except OSError:
                 raise LoggedError(
-                    logger, f"Could not create the desired installation folder '{spath}'")
+                    logger, f"Could not create the desired installation folder '{spath}'"
+                )
     # To check e.g. for a version upgrade, it needs to reload the component class and
     # all relevant imported modules: the implementation of `is_installed` for each
     # class is expected to always reload external modules if passed `reload=True`
@@ -161,7 +204,8 @@ def install(*infos, **kwargs):
     # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
     skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
     skip_keywords_env = set(
-        os.environ.get(install_skip_env, "").replace(",", " ").lower().split())
+        os.environ.get(install_skip_env, "").replace(",", " ").lower().split()
+    )
     skip_keywords = skip_keywords_arg.union(skip_keywords_env)
     skipped = False
     # Combine all requested components and install them
@@ -172,8 +216,10 @@ def install(*infos, **kwargs):
         for component in components:
             name_w_kind = (kind + ":" if kind else "") + component
             print()
-            print(create_banner(name_w_kind,
-                                symbol=_banner_symbol, length=_banner_length), end="")
+            print(
+                create_banner(name_w_kind, symbol=_banner_symbol, length=_banner_length),
+                end="",
+            )
             print()
             if _skip_helper(component.lower(), skip_keywords, skip_keywords_env, logger):
                 skipped = True
@@ -181,7 +227,8 @@ def install(*infos, **kwargs):
             info = components_infos[component]
             if isinstance(info, str) or "external" in info:
                 logger.info(
-                    f"Component '{name_w_kind}' is a custom function. Nothing to do.")
+                    f"Component '{name_w_kind}' is a custom function. Nothing to do."
+                )
                 continue
             class_name = (info or {}).get("class")
             if class_name:
@@ -194,30 +241,40 @@ def install(*infos, **kwargs):
                 package_install = {"pip": None}
             if "pip" in package_install and package_install["pip"] is None:
                 package_install["pip"] = class_name
-            min_version = package_install.get('min_version')
+            min_version = package_install.get("min_version")
 
             def _imported_class():
                 return get_component_class(
-                    component, kind=kind, component_path=python_path,
-                    class_name=class_name, logger=logger, min_package_version=min_version,
-                    allow_internal=not package_install)
+                    component,
+                    kind=kind,
+                    component_path=python_path,
+                    class_name=class_name,
+                    logger=logger,
+                    min_package_version=min_version,
+                    allow_internal=not package_install,
+                )
 
             try:
                 try:
                     if package_install and (
-                            kwargs_install["force"] or kwargs.get("upgrade")):
+                        kwargs_install["force"] or kwargs.get("upgrade")
+                    ):
                         raise ComponentNotFoundError(logger)
                     imported_class = _imported_class()
                 except (ComponentNotFoundError, VersionCheckError):
                     if package_install:
-                        if do_package_install(component, package_install,
-                                              os.path.join(general_abspath, code_path),
-                                              logger):
+                        if do_package_install(
+                            component,
+                            package_install,
+                            os.path.join(general_abspath, code_path),
+                            logger,
+                        ):
                             importlib.invalidate_caches()
                             imported_class = _imported_class()
                         else:
                             logger.error(
-                                f"Package install failed for '{name_w_kind}'. Skipping.")
+                                f"Package install failed for '{name_w_kind}'. Skipping."
+                            )
                             unknown_components += [name_w_kind]
                             continue
                     else:
@@ -226,7 +283,8 @@ def install(*infos, **kwargs):
                     raise
             except ComponentNotFoundError:
                 logger.error(
-                    f"Component '{name_w_kind}' could not be identified. Skipping.")
+                    f"Component '{name_w_kind}' could not be identified. Skipping."
+                )
                 unknown_components += [name_w_kind]
                 continue
             except Exception:
@@ -235,8 +293,12 @@ def install(*infos, **kwargs):
                 failed_components += [name_w_kind]
                 continue
             else:
-                if _skip_helper(imported_class.__name__.lower(), skip_keywords,
-                                skip_keywords_env, logger):
+                if _skip_helper(
+                    imported_class.__name__.lower(),
+                    skip_keywords,
+                    skip_keywords_env,
+                    logger,
+                ):
                     skipped = True
                     continue
             # Update the name if the kind was unknown
@@ -244,15 +306,18 @@ def install(*infos, **kwargs):
                 name_w_kind = imported_class.get_kind() + ":" + component
             is_compatible = getattr(imported_class, "is_compatible", lambda: True)()
             if not is_compatible:
-                logger.error(f"Skipping '{name_w_kind}' "
-                             "because it is not compatible with your OS.")
+                logger.error(
+                    f"Skipping '{name_w_kind}' because it is not compatible with your OS."
+                )
                 failed_components += [name_w_kind]
                 continue
             logger.info("Checking if dependencies have already been installed...")
             is_installed = getattr(imported_class, "is_installed", None)
             if is_installed is None:
-                logger.info(f"Component '{name_w_kind}' is a fully built-in component: "
-                            "nothing to do.")
+                logger.info(
+                    f"Component '{name_w_kind}' is a fully built-in component: "
+                    "nothing to do."
+                )
                 continue
             this_component_install_path = general_abspath
             get_path = getattr(imported_class, "get_path", None)
@@ -265,11 +330,14 @@ def install(*infos, **kwargs):
                 try:
                     if kwargs.get("skip_global"):
                         has_been_installed = is_installed(
-                            path="global", **kwargs_install, **kwargs_is_installed)
+                            path="global", **kwargs_install, **kwargs_is_installed
+                        )
                     if not has_been_installed:
                         has_been_installed = is_installed(
-                            path=this_component_install_path, **kwargs_install,
-                            **kwargs_is_installed)
+                            path=this_component_install_path,
+                            **kwargs_install,
+                            **kwargs_is_installed,
+                        )
                 except VersionCheckError as excpt:
                     is_old_version_msg = str(excpt)
             if has_been_installed:  # no VersionCheckError was raised
@@ -294,7 +362,8 @@ def install(*infos, **kwargs):
                 if not debug:
                     logger.info(
                         "(If you expected this to be already installed, re-run "
-                        "`cobaya-install` with --debug to get more verbose output.)")
+                        "`cobaya-install` with --debug to get more verbose output.)"
+                    )
                 if kwargs.get("test"):
                     # We are only testing whether it was installed, so consider it failed
                     failed_components += [name_w_kind]
@@ -307,10 +376,12 @@ def install(*infos, **kwargs):
                 success = install_this(path=general_abspath, **install_args)
             except Exception:
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
-                logger.error("An unknown error occurred. Delete the external packages "
-                             "folder %r and try again. "
-                             "Please, notify the developers if this error persists.",
-                             general_abspath)
+                logger.error(
+                    "An unknown error occurred. Delete the external packages "
+                    "folder %r and try again. "
+                    "Please, notify the developers if this error persists.",
+                    general_abspath,
+                )
                 success = False
             if success:
                 logger.info("Successfully installed! Let's check it...")
@@ -318,75 +389,104 @@ def install(*infos, **kwargs):
                 logger.error(
                     "Installation failed! Look at the error messages above. "
                     "Solve them and try again, or, if you are unable to solve them, "
-                    "install the packages required by this component manually.")
+                    "install the packages required by this component manually."
+                )
                 failed_components += [name_w_kind]
                 continue
             # Test installation
             reloaded_class = get_component_class(
-                component, kind=kind, component_path=info.pop("python_path", None),
-                class_name=class_name, logger=logger)
+                component,
+                kind=kind,
+                component_path=info.pop("python_path", None),
+                class_name=class_name,
+                logger=logger,
+            )
             reloaded_is_installed = getattr(reloaded_class, "is_installed", None)
             with NoLogging(None if debug else logging.ERROR):
                 try:
                     successfully_installed = reloaded_is_installed(
-                        path=this_component_install_path, **kwargs_install,
-                        **kwargs_is_installed)
+                        path=this_component_install_path,
+                        **kwargs_install,
+                        **kwargs_is_installed,
+                    )
                 except Exception:
                     traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                     successfully_installed = False
             if not successfully_installed:
-                logger.error("Installation apparently worked, "
-                             "but the subsequent installation test failed! "
-                             "This does not always mean that there was an actual error, "
-                             "and is sometimes fixed simply by running the installer "
-                             "again. If not, look closely at the error messages above, "
-                             "or re-run with --debug for more verbose output. "
-                             "If you are unable to fix the issues above, "
-                             "try installing the packages required by this "
-                             "component manually.")
+                logger.error(
+                    "Installation apparently worked, "
+                    "but the subsequent installation test failed! "
+                    "This does not always mean that there was an actual error, "
+                    "and is sometimes fixed simply by running the installer "
+                    "again. If not, look closely at the error messages above, "
+                    "or re-run with --debug for more verbose output. "
+                    "If you are unable to fix the issues above, "
+                    "try installing the packages required by this "
+                    "component manually."
+                )
                 failed_components += [name_w_kind]
             else:
                 logger.info("Installation check successful.")
     print()
-    print(create_banner(" * Summary * ",
-                        symbol=_banner_symbol, length=_banner_length), end="")
+    print(
+        create_banner(" * Summary * ", symbol=_banner_symbol, length=_banner_length),
+        end="",
+    )
     print()
     bullet = "\n - "
     if unknown_components:
         suggestions_dict = {
-            name: similar_internal_class_names(name) for name in unknown_components}
-        suggestions_msg = \
-            bullet + bullet.join(
-                f"{name}: did you mean any of the following? {sugg} "
-                "(mind capitalization!)" for name, sugg in suggestions_dict.items())
+            name: similar_internal_class_names(name) for name in unknown_components
+        }
+        suggestions_msg = bullet + bullet.join(
+            f"{name}: did you mean any of the following? {sugg} (mind capitalization!)"
+            for name, sugg in suggestions_dict.items()
+        )
         raise LoggedError(
-            logger, ("The following components could not be identified and were skipped:"
-                     f"{suggestions_msg}"))
+            logger,
+            (
+                "The following components could not be identified and were skipped:"
+                f"{suggestions_msg}"
+            ),
+        )
     if failed_components:
         raise LoggedError(
-            logger, ("The installation (or installation test) of some component(s) has "
-                     "failed: %s\nCheck output of the installer of each component above "
-                     "for precise error info.\n"),
-            bullet + bullet.join(failed_components))
+            logger,
+            (
+                "The installation (or installation test) of some component(s) has "
+                "failed: %s\nCheck output of the installer of each component above "
+                "for precise error info.\n"
+            ),
+            bullet + bullet.join(failed_components),
+        )
     if obsolete_components:
         raise LoggedError(
-            logger, ("The following packages are obsolete. Re-run with `--upgrade` option"
-                     " (not upgrading by default to preserve possible user changes): %s"),
-            bullet + bullet.join(obsolete_components))
+            logger,
+            (
+                "The following packages are obsolete. Re-run with `--upgrade` option"
+                " (not upgrading by default to preserve possible user changes): %s"
+            ),
+            bullet + bullet.join(obsolete_components),
+        )
     if not unknown_components and not failed_components and not obsolete_components:
-        logger.info("All requested components' dependencies correctly installed at "
-                    f"{general_abspath}")
+        logger.info(
+            "All requested components' dependencies correctly installed at "
+            f"{general_abspath}"
+        )
         return not skipped
 
 
 def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
     try:
-        this_skip_keyword = next(s for s in skip_keywords
-                                 if s.lower() in name.lower())
-        env_msg = (" in env var %r" % install_skip_env
-                   if this_skip_keyword in skip_keywords_env else "")
-        logger.info("Skipping %r as per skip keyword %r" + env_msg,
-                    name, this_skip_keyword)
+        this_skip_keyword = next(s for s in skip_keywords if s.lower() in name.lower())
+        env_msg = (
+            " in env var %r" % install_skip_env
+            if this_skip_keyword in skip_keywords_env
+            else ""
+        )
+        logger.info(
+            "Skipping %r as per skip keyword %r" + env_msg, name, this_skip_keyword
+        )
         return True
     except StopIteration:
         return False
@@ -414,16 +514,17 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
             # get hinted filename if available:
             try:
                 filename = re.findall(
-                    "filename=(.+)", req.headers['content-disposition'])[0]
-                filename = filename.strip('"\'')
+                    "filename=(.+)", req.headers["content-disposition"]
+                )[0]
+                filename = filename.strip("\"'")
             except KeyError:
                 filename = os.path.basename(url)
             filename_tmp_path = os.path.normpath(os.path.join(tmp_path, filename))
-            size = size or int(req.headers.get('content-length', 0))
+            size = size or int(req.headers.get("content-length", 0))
             # Adapted from https://gist.github.com/yanqd0/c13ed29e29432e3cf3e7c38467f42f51
             if not no_progress_bars:
-                bar = tqdm.tqdm(total=size, unit='iB', unit_scale=True, unit_divisor=1024)
-            with open(filename_tmp_path, 'wb') as f:
+                bar = tqdm.tqdm(total=size, unit="iB", unit_scale=True, unit_divisor=1024)
+            with open(filename_tmp_path, "wb") as f:
                 for data in req.iter_content(chunk_size=32768):
                     chunk_size = f.write(data)
                     if not no_progress_bars:
@@ -431,42 +532,51 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
             if not no_progress_bars:
                 bar.close()
             if os.path.getsize(filename_tmp_path) < 1024:  # 1kb
-                with open(filename_tmp_path, "r") as f:
+                with open(filename_tmp_path) as f:
                     lines = f.readlines()
                     if lines[0].startswith("404") or "not found" in lines[0].lower():
                         raise ValueError("File not found (404)!")
-            logger.info('Downloaded filename %s', filename)
+            logger.info("Downloaded filename %s", filename)
         except Exception as excpt:
-            logger.error(
-                "Error downloading %s' to folder '%s': %s", url, tmp_path, excpt)
+            logger.error("Error downloading %s' to folder '%s': %s", url, tmp_path, excpt)
             return False
-        logger.debug('Got: %s', filename)
+        logger.debug("Got: %s", filename)
         extension = os.path.splitext(filename)[-1][1:]
         if not os.path.exists(path):
             os.makedirs(path)
         try:
             if extension == "zip":
                 from zipfile import ZipFile
-                with ZipFile(filename_tmp_path, 'r') as zipObj:
+
+                with ZipFile(filename_tmp_path, "r") as zipObj:
                     zipObj.extractall(path)
             else:
                 import tarfile
+
                 if extension == "tgz":
                     extension = "gz"
                 kwargs = {}
                 if sys.version_info >= (3, 12):
-                    kwargs['filter'] = 'data'
+                    kwargs["filter"] = "data"
                 with tarfile.open(filename_tmp_path, "r:" + extension) as tar:
                     tar.extractall(path, **kwargs)
-            logger.debug('Decompressed: %s', filename)
+            logger.debug("Decompressed: %s", filename)
             return True
         except Exception as excpt:
             logger.error("Error decompressing downloaded file! Corrupt file? [%s]", excpt)
             return False
 
 
-def download_github_release(base_directory, repo_name, release_name=None, *, asset=None,
-                            directory=None, no_progress_bars=False, logger=None):
+def download_github_release(
+    base_directory,
+    repo_name,
+    release_name=None,
+    *,
+    asset=None,
+    directory=None,
+    no_progress_bars=False,
+    logger=None,
+):
     """
     Downloads a release (i.e. a tagged commit) or a release asset from a GitHub repo.
 
@@ -486,31 +596,36 @@ def download_github_release(base_directory, repo_name, release_name=None, *, ass
     """
     logger = logger or get_logger("install")
     if "/" in repo_name:
-        github_user = repo_name[:repo_name.find("/")]
-        repo_name = repo_name[repo_name.find("/") + 1:]
+        github_user = repo_name[: repo_name.find("/")]
+        repo_name = repo_name[repo_name.find("/") + 1 :]
     else:
         github_user = "CobayaSampler"
     base_url = r"https://github.com/" + github_user + "/" + repo_name
     download_directory = base_directory
     if not release_name:
         data = requests.get(
-            "https://api.github.com/repos/" + github_user + "/" + repo_name).json()
-        release_name = (data or {}).get('default_branch', 'main')
+            "https://api.github.com/repos/" + github_user + "/" + repo_name
+        ).json()
+        release_name = (data or {}).get("default_branch", "main")
     if asset:
-        url = (base_url + "/releases/download/" + release_name + "/" + asset)
+        url = base_url + "/releases/download/" + release_name + "/" + asset
         # Asset would get decompressed in base directory
         download_directory = os.path.join(download_directory, directory or repo_name)
     else:
-        url = (base_url + "/archive/" + release_name + ".tar.gz")
+        url = base_url + "/archive/" + release_name + ".tar.gz"
 
-    if not download_file(url, download_directory,
-                         no_progress_bars=no_progress_bars, logger=logger):
+    if not download_file(
+        url, download_directory, no_progress_bars=no_progress_bars, logger=logger
+    ):
         return False
     # In releases, not assets, remove version number from directory name
     # and rename if requested
     if not asset:
-        w_version = next(d for d in os.listdir(base_directory)
-                         if (d.startswith(repo_name) and len(d) != len(repo_name)))
+        w_version = next(
+            d
+            for d in os.listdir(base_directory)
+            if (d.startswith(repo_name) and len(d) != len(repo_name))
+        )
         actual_download_directory = os.path.join(base_directory, w_version)
         download_directory = os.path.join(base_directory, directory or repo_name)
         if os.path.exists(download_directory):
@@ -519,8 +634,12 @@ def download_github_release(base_directory, repo_name, release_name=None, *, ass
     # Now save the version into a file to be checked later
     with open(os.path.join(download_directory, _version_filename), "w") as f:
         f.write(release_name)
-    logger.info((f"{asset} from " if asset else "") +
-                "%s %s downloaded and decompressed correctly.", repo_name, release_name)
+    logger.info(
+        (f"{asset} from " if asset else "")
+        + "%s %s downloaded and decompressed correctly.",
+        repo_name,
+        release_name,
+    )
     return True
 
 
@@ -532,9 +651,9 @@ def pip_install(packages, upgrade=False, logger=None, options=(), **kwargs):
     """
     if hasattr(packages, "split"):
         packages = [packages]
-    cmd = [sys.executable, '-m', 'pip', 'install', '-q']
+    cmd = [sys.executable, "-m", "pip", "install", "-q"]
     if upgrade:
-        cmd += ['--upgrade']
+        cmd += ["--upgrade"]
     cmd += list(options)
     # Assume that if the user has installed Cobaya on the system-wide Python,
     # then it is OK to overwrite system packages:
@@ -556,18 +675,29 @@ def check_gcc_version(min_version="6.4", error_returns=None):
     If an error is produced, returns ``error_returns``.
     """
     try:
-        ver = subprocess.check_output(
-            "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
+        ver = (
+            subprocess.check_output(
+                "gcc -dumpversion", shell=True, stderr=subprocess.STDOUT
+            )
+            .decode()
+            .strip()
+        )
     except subprocess.CalledProcessError:
         return error_returns
     # Change in gcc >= 7: -dumpversion only dumps major version
     if "." not in ver:
-        ver = subprocess.check_output(
-            "gcc -dumpfullversion", shell=True, stderr=subprocess.STDOUT).decode().strip()
+        ver = (
+            subprocess.check_output(
+                "gcc -dumpfullversion", shell=True, stderr=subprocess.STDOUT
+            )
+            .decode()
+            .strip()
+        )
     return version.parse(str(min_version)) <= version.parse(ver)
 
 
 # Command-line script ####################################################################
+
 
 def install_script(args=None):
     """Command line script for the installer."""
@@ -575,21 +705,31 @@ def install_script(args=None):
     warn_deprecation()
     # Parse arguments
     import argparse
+
     parser = argparse.ArgumentParser(
         prog="cobaya install",
-        description="Cobaya's installation tool for external packages.")
-    parser.add_argument("files_or_components", action="store", nargs="+",
-                        metavar="input_file.yaml|component_name",
-                        help="One or more input files or component names "
-                             "(or simply 'cosmo' to install all the requisites for basic"
-                             " cosmological runs)")
-    parser.add_argument("-" + packages_path_arg[0], "--" + packages_path_arg_posix,
-                        action="store", required=False,
-                        metavar="/packages/path", default=None,
-                        help="Desired path where to install external packages. "
-                             "Optional if one has been set globally or as an env variable"
-                             " (run with '--show_%s' to check)." %
-                             packages_path_arg_posix)
+        description="Cobaya's installation tool for external packages.",
+    )
+    parser.add_argument(
+        "files_or_components",
+        action="store",
+        nargs="+",
+        metavar="input_file.yaml|component_name",
+        help="One or more input files or component names "
+        "(or simply 'cosmo' to install all the requisites for basic"
+        " cosmological runs)",
+    )
+    parser.add_argument(
+        "-" + packages_path_arg[0],
+        "--" + packages_path_arg_posix,
+        action="store",
+        required=False,
+        metavar="/packages/path",
+        default=None,
+        help="Desired path where to install external packages. "
+        "Optional if one has been set globally or as an env variable"
+        " (run with '--show_%s' to check)." % packages_path_arg_posix,
+    )
     output_show_packages_path = resolve_packages_path()
     if output_show_packages_path and os.environ.get(packages_path_env):
         output_show_packages_path += " (from env variable %r)" % packages_path_env
@@ -597,59 +737,127 @@ def install_script(args=None):
         output_show_packages_path += " (from config file)"
     else:
         output_show_packages_path = "(Not currently set.)"
-    parser.add_argument("--show-" + packages_path_arg_posix, action="version",
-                        version=output_show_packages_path,
-                        help="Prints default external packages installation folder "
-                             "and exits.")
-    parser.add_argument("-" + "f", "--" + "force", action="store_true", default=False,
-                        help="Force re-installation of apparently installed packages.")
-    parser.add_argument("--%s" % "test", action="store_true", default=False,
-                        help="Just check whether components are installed.")
-    parser.add_argument("--upgrade", action="store_true", default=False,
-                        help="Force upgrade of obsolete components.")
-    parser.add_argument("--skip", action="store", nargs="*",
-                        metavar="keyword", help=("Keywords of components that will be "
-                                                 "skipped during installation."))
-    parser.add_argument("--skip-global", action="store_true", default=False,
-                        help="Skip installation of already-available Python modules.")
-    parser.add_argument("-" + "d", "--" + "debug", action="store_true",
-                        help="Produce verbose debug output.")
+    parser.add_argument(
+        "--show-" + packages_path_arg_posix,
+        action="version",
+        version=output_show_packages_path,
+        help="Prints default external packages installation folder and exits.",
+    )
+    parser.add_argument(
+        "-" + "f",
+        "--" + "force",
+        action="store_true",
+        default=False,
+        help="Force re-installation of apparently installed packages.",
+    )
+    parser.add_argument(
+        "--%s" % "test",
+        action="store_true",
+        default=False,
+        help="Just check whether components are installed.",
+    )
+    parser.add_argument(
+        "--upgrade",
+        action="store_true",
+        default=False,
+        help="Force upgrade of obsolete components.",
+    )
+    parser.add_argument(
+        "--skip",
+        action="store",
+        nargs="*",
+        metavar="keyword",
+        help=("Keywords of components that will be skipped during installation."),
+    )
+    parser.add_argument(
+        "--skip-global",
+        action="store_true",
+        default=False,
+        help="Skip installation of already-available Python modules.",
+    )
+    parser.add_argument(
+        "-" + "d",
+        "--" + "debug",
+        action="store_true",
+        help="Produce verbose debug output.",
+    )
     group_just = parser.add_mutually_exclusive_group(required=False)
-    group_just.add_argument("-C", "--just-code", action="store_false", default=True,
-                            help="Install code of the components.", dest=data_path)
-    group_just.add_argument("-D", "--just-data", action="store_false", default=True,
-                            help="Install data of the components.", dest=code_path)
-    parser.add_argument("--no-progress-bars", action="store_true", default=False,
-                        help=("No progress bars shown; use when output is saved into a "
-                              "text file (e.g. when running on a cluster)."))
-    parser.add_argument("--no-set-global", action="store_true", default=False,
-                        help="Do not store the installation path for later runs.")
+    group_just.add_argument(
+        "-C",
+        "--just-code",
+        action="store_false",
+        default=True,
+        help="Install code of the components.",
+        dest=data_path,
+    )
+    group_just.add_argument(
+        "-D",
+        "--just-data",
+        action="store_false",
+        default=True,
+        help="Install data of the components.",
+        dest=code_path,
+    )
+    parser.add_argument(
+        "--no-progress-bars",
+        action="store_true",
+        default=False,
+        help=(
+            "No progress bars shown; use when output is saved into a "
+            "text file (e.g. when running on a cluster)."
+        ),
+    )
+    parser.add_argument(
+        "--no-set-global",
+        action="store_true",
+        default=False,
+        help="Do not store the installation path for later runs.",
+    )
     arguments = parser.parse_args(args)
     # Configure the logger ASAP
     logger_setup(arguments.debug)
     logger = get_logger("install")
     # Gather requests
-    infos: List[Union[InputDict, str]] = []
+    infos: list[InputDict | str] = []
     for f in arguments.files_or_components:
         if f.lower() == "cosmo":
             logger.info("Installing basic cosmological packages.")
             from cobaya.cosmo_input import install_basic
+
             infos += [install_basic]
         elif f.lower() == "cosmo-tests":
             logger.info("Installing *tested* cosmological packages.")
             from cobaya.cosmo_input import install_tests
+
             infos += [install_tests]
         elif os.path.splitext(f)[1].lower() in Extension.yamls:
             from cobaya.input import load_input
+
             infos += [load_input(f)]
         else:  # a single component name, no kind specified
             infos += [f]
     # Launch installer
-    install(*infos, path=getattr(arguments, packages_path_arg), logger=logger,
-            **{arg: getattr(arguments, arg)
-               for arg in ["force", code_path, data_path, "no_progress_bars", "test",
-                           "no_set_global", "skip", "skip_global", "debug", "upgrade"]})
+    install(
+        *infos,
+        path=getattr(arguments, packages_path_arg),
+        logger=logger,
+        **{
+            arg: getattr(arguments, arg)
+            for arg in [
+                "force",
+                code_path,
+                data_path,
+                "no_progress_bars",
+                "test",
+                "no_set_global",
+                "skip",
+                "skip_global",
+                "debug",
+                "upgrade",
+            ]
+        },
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     install_script()

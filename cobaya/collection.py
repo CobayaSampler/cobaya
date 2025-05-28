@@ -11,7 +11,8 @@ import os
 import functools
 import warnings
 from copy import deepcopy
-from typing import Union, Sequence, Optional, Tuple, List
+from typing import Union, Optional, Tuple, List
+from collections.abc import Sequence
 from numbers import Number
 import numpy as np
 import pandas as pd
@@ -19,8 +20,15 @@ from getdist import MCSamples, chains  # type: ignore
 from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
 
 # Local
-from cobaya.conventions import OutPar, minuslogprior_names, chi2_names, \
-    derived_par_name_separator, minuslogprior_labels, chi2_labels, minuslogpost_label
+from cobaya.conventions import (
+    OutPar,
+    minuslogprior_names,
+    chi2_names,
+    derived_par_name_separator,
+    minuslogprior_labels,
+    chi2_labels,
+    minuslogpost_label,
+)
 from cobaya.parameterization import get_literal_param_ranges
 from cobaya.tools import load_DataFrame
 from cobaya.log import LoggedError, HasLogger, NoLogging
@@ -40,8 +48,9 @@ sample_types = ["mcmc", "nested"]
 def check_index(i, imax):
     """Makes sure that we don't reach the empty part of the dataframe."""
     if (i > 0 and i >= imax) or (i < 0 and -i > imax):
-        raise IndexError("Trying to access a sample index larger than "
-                         f"the amount of samples ({imax})!")
+        raise IndexError(
+            f"Trying to access a sample index larger than the amount of samples ({imax})!"
+        )
     if i < 0:
         return imax + i
     return i
@@ -104,8 +113,9 @@ def compute_temperature(logpost, logprior, loglike, check=True, extra_tolerance=
         if len(temp) > 1:
             if check:
                 rtol = 1e-3 * (10 if extra_tolerance else 1)
-                assert np.allclose(temp, temp[0], rtol=rtol), \
+                assert np.allclose(temp, temp[0], rtol=rtol), (
                     "Inconsistent temperature in sample."
+                )
             temp = np.mean(temp)
         else:
             temp = float(temp[0])
@@ -129,8 +139,9 @@ def detempering_weights_factor(tempered_logpost, temperature, max_tempered_logpo
     if max_tempered_logpost is None:
         max_log_ratio = max(log_ratio)
     else:
-        max_log_ratio = \
+        max_log_ratio = (
             remove_temperature(max_tempered_logpost, temperature) - max_tempered_logpost
+        )
     return np.exp(log_ratio - max_log_ratio)
 
 
@@ -167,10 +178,13 @@ class BaseCollection(HasLogger):
         # For unbound sampled params only, we take the most permissive bounds between
         # a 5-sigma prior interval and the samples extrema (with some enlargement factor)
         self._cached_ranges = get_literal_param_ranges(
-            model.parameterization, confidence_for_unbounded=1)
+            model.parameterization, confidence_for_unbounded=1
+        )
         self._cached_ranges_sampled_5sigma = {
-            p: bounds for p, bounds in get_literal_param_ranges(
-                model.parameterization, confidence_for_unbounded=0.9999995).items()
+            p: bounds
+            for p, bounds in get_literal_param_ranges(
+                model.parameterization, confidence_for_unbounded=0.9999995
+            ).items()
             if p in self.sampled_params
         }
 
@@ -208,13 +222,26 @@ class SampleCollection(BaseCollection):
     method, make sure to decorate it with ``@ensure_cache_dumped``.
     """
 
-    def __init__(self, model, output=None, cache_size=_default_cache_size, name=None,
-                 extension=None, file_name=None, resuming=False, load=False,
-                 temperature=None, onload_skip=0, onload_thin=1, sample_type=None,
-                 is_batch=False):
+    def __init__(
+        self,
+        model,
+        output=None,
+        cache_size=_default_cache_size,
+        name=None,
+        extension=None,
+        file_name=None,
+        resuming=False,
+        load=False,
+        temperature=None,
+        onload_skip=0,
+        onload_thin=1,
+        sample_type=None,
+        is_batch=False,
+    ):
         super().__init__(model, name)
-        if sample_type is not None and (not isinstance(sample_type, str) or
-                                        not sample_type.lower() in sample_types):
+        if sample_type is not None and (
+            not isinstance(sample_type, str) or sample_type.lower() not in sample_types
+        ):
             raise LoggedError(self.log, "'sample_type' must be one of %r.", sample_types)
         self.sample_type = sample_type.lower() if sample_type is not None else sample_type
         self.cache_size = cache_size
@@ -229,7 +256,8 @@ class SampleCollection(BaseCollection):
                 self.driver = output.kind
             else:
                 self.file_name, self.driver = output.prepare_collection(
-                    name=self.name, extension=extension)
+                    name=self.name, extension=extension
+                )
             self.root_file_name = os.path.join(output.folder, output.prefix)
         else:
             self.driver = "dummy"
@@ -242,23 +270,33 @@ class SampleCollection(BaseCollection):
                         self.thin_samples(onload_thin, inplace=True)
                     if load:
                         self.columns = list(self.data.columns)
-                        loaded_chi2_names = set(
-                            name for name in self.columns
-                            if name.startswith(OutPar.chi2 + derived_par_name_separator))
+                        loaded_chi2_names = {
+                            name
+                            for name in self.columns
+                            if name.startswith(OutPar.chi2 + derived_par_name_separator)
+                        }
                         loaded_chi2_names.discard(
-                            OutPar.chi2 + derived_par_name_separator + 'prior')
+                            OutPar.chi2 + derived_par_name_separator + "prior"
+                        )
                         if set(self.chi2_names).difference(loaded_chi2_names):
-                            raise LoggedError(self.log,
-                                              "Input samples do not have chi2 values "
-                                              "matching likelihoods in the model:\n "
-                                              "found: %s\nexpected: %s\n",
-                                              loaded_chi2_names, self.chi2_names)
+                            raise LoggedError(
+                                self.log,
+                                "Input samples do not have chi2 values "
+                                "matching likelihoods in the model:\n "
+                                "found: %s\nexpected: %s\n",
+                                loaded_chi2_names,
+                                self.chi2_names,
+                            )
                         unexpected = loaded_chi2_names.difference(
-                            self.chi2_names).difference(self.derived_params)
+                            self.chi2_names
+                        ).difference(self.derived_params)
                         if unexpected:
-                            raise LoggedError(self.log,
-                                              "Input samples have chi2 values "
-                                              "that are not expected: %s ", unexpected)
+                            raise LoggedError(
+                                self.log,
+                                "Input samples have chi2 values "
+                                "that are not expected: %s ",
+                                unexpected,
+                            )
                     else:
                         data_col_set = set(self.data.columns)
                         col_set = set(self.columns)
@@ -266,20 +304,26 @@ class SampleCollection(BaseCollection):
                             missing = set(self.columns).difference(self.data.columns)
                             unexpected = set(self.data.columns).difference(self.columns)
                             raise LoggedError(
-                                self.log, (f"Bad column names! Missing {missing}; "
-                                           f"unexpected: {unexpected}"))
+                                self.log,
+                                (
+                                    f"Bad column names! Missing {missing}; "
+                                    f"unexpected: {unexpected}"
+                                ),
+                            )
                     self._n_last_out = len(self)
-                except IOError:
+                except OSError:
                     if resuming:
                         self.log.info(
                             "Could not find a chain to resume. "
-                            "Maybe burn-in didn't finish. Creating new chain file!")
+                            "Maybe burn-in didn't finish. Creating new chain file!"
+                        )
                         resuming = False
                     elif load:
                         raise
             else:
-                raise LoggedError(self.log,
-                                  "No continuation possible if there is no output.")
+                raise LoggedError(
+                    self.log, "No continuation possible if there is no output."
+                )
         else:
             self._out_delete()
         if not resuming and not load:
@@ -296,8 +340,9 @@ class SampleCollection(BaseCollection):
                         "log probabilities and temperature (if present)."
                     )
                     self.temperature = self._check_logps(extra_tolerance=True)
-                if temperature is not None and \
-                        not np.isclose(temperature, self.temperature):
+                if temperature is not None and not np.isclose(
+                    temperature, self.temperature
+                ):
                     raise LoggedError(
                         self.log,
                         "Sample temperature appears to be %r, but the collection was "
@@ -308,9 +353,7 @@ class SampleCollection(BaseCollection):
                 self._check_weights()
             except LoggedError as excpt:
                 raise LoggedError(
-                    self.log,
-                    "Error when loading samples: %s",
-                    str(excpt)
+                    self.log, "Error when loading samples: %s", str(excpt)
                 ) from excpt
             self._drop_samples_null_weight()
             if self.is_tempered and not resuming:
@@ -328,13 +371,17 @@ class SampleCollection(BaseCollection):
         self.n_float = 8
         # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
         width_col = lambda col: max(7 + self.n_float, len(col))
-        self._numpy_fmts = ["%{}.{}".format(width_col(col), self.n_float) + "g"
-                            for col in self.data.columns]
+        self._numpy_fmts = [
+            f"%{width_col(col)}.{self.n_float}" + "g" for col in self.data.columns
+        ]
         self._header_formatter = [
-            eval('lambda s, w=width_col(col): '  # pylint: disable=eval-used
-                 '("{:>" + "{}".format(w) + "s}").format(s)',
-                 {'width_col': width_col, 'col': col})
-            for col in self.data.columns]
+            eval(
+                "lambda s, w=width_col(col): "  # pylint: disable=eval-used
+                '("{:>" + "{}".format(w) + "s}").format(s)',
+                {"width_col": width_col, "col": col},
+            )
+            for col in self.data.columns
+        ]
 
     def reset(self):
         """Create/reset the DataFrame."""
@@ -343,12 +390,15 @@ class SampleCollection(BaseCollection):
         if getattr(self, "file_name", None):
             self._n_last_out = 0
 
-    def add(self, values: Union[Sequence[float], np.ndarray],
-            logpost: Optional[Union[LogPosterior, float]] = None,
-            logpriors: Optional[Sequence[float]] = None,
-            loglikes: Optional[Sequence[float]] = None,
-            derived: Optional[Sequence[float]] = None,
-            weight: float = 1):
+    def add(
+        self,
+        values: Sequence[float] | np.ndarray,
+        logpost: LogPosterior | float | None = None,
+        logpriors: Sequence[float] | None = None,
+        loglikes: Sequence[float] | None = None,
+        derived: Sequence[float] | None = None,
+        weight: float = 1,
+    ):
         """
         Adds a point to the collection.
 
@@ -358,17 +408,24 @@ class SampleCollection(BaseCollection):
         If the weight is not specified, it is assumed to be 1.
         """
         logposterior = self._check_before_adding(
-            values, logpost=logpost, logpriors=logpriors,
-            loglikes=loglikes, derived=derived, weight=weight)
+            values,
+            logpost=logpost,
+            logpriors=logpriors,
+            loglikes=loglikes,
+            derived=derived,
+            weight=weight,
+        )
         self._cache_add(values, logposterior=logposterior, weight=weight)
 
-    def _check_before_adding(self, values: Union[Sequence[float], np.ndarray],
-                             logpost: Optional[Union[LogPosterior, float]] = None,
-                             logpriors: Optional[Sequence[float]] = None,
-                             loglikes: Optional[Sequence[float]] = None,
-                             derived: Optional[Sequence[float]] = None,
-                             weight: float = 1
-                             ) -> LogPosterior:
+    def _check_before_adding(
+        self,
+        values: Sequence[float] | np.ndarray,
+        logpost: LogPosterior | float | None = None,
+        logpriors: Sequence[float] | None = None,
+        loglikes: Sequence[float] | None = None,
+        derived: Sequence[float] | None = None,
+        weight: float = 1,
+    ) -> LogPosterior:
         """
         Checks that the arguments of collection.add are correctly formatted.
 
@@ -378,33 +435,43 @@ class SampleCollection(BaseCollection):
             raise LoggedError(self.log, "Weights must be positive. Got %r", weight)
         if len(values) != len(self.sampled_params):
             raise LoggedError(
-                self.log, "Got %d values for the sampled parameters. Should be %d.",
-                len(values), len(self.sampled_params))
+                self.log,
+                "Got %d values for the sampled parameters. Should be %d.",
+                len(values),
+                len(self.sampled_params),
+            )
         if derived is not None:
             if len(derived) != len(self.derived_params):
                 raise LoggedError(
-                    self.log, "Got %d values for the derived parameters. Should be %d.",
-                    len(derived), len(self.derived_params))
+                    self.log,
+                    "Got %d values for the derived parameters. Should be %d.",
+                    len(derived),
+                    len(self.derived_params),
+                )
         if isinstance(logpost, LogPosterior):
             # If priors and likes passed, check consistency
             if logpriors is not None:
                 if not np.allclose(logpriors, logpost.logpriors):
                     raise LoggedError(
                         self.log,
-                        "logpriors not consistent with LogPosterior object passed.")
+                        "logpriors not consistent with LogPosterior object passed.",
+                    )
             if loglikes is not None:
                 if not np.allclose(loglikes, logpost.loglikes):
                     raise LoggedError(
                         self.log,
-                        "loglikes not consistent with LogPosterior object passed.")
+                        "loglikes not consistent with LogPosterior object passed.",
+                    )
             if derived is not None:
                 # A simple np.allclose is not enough, because np.allclose([1], []) = True!
-                if len(derived) != len(logpost.derived) or \
-                        not np.allclose(derived, logpost.derived):
+                if len(derived) != len(logpost.derived) or not np.allclose(
+                    derived, logpost.derived
+                ):
                     raise LoggedError(
                         self.log,
                         "derived params not consistent with those of LogPosterior object "
-                        "passed.")
+                        "passed.",
+                    )
             return_logpost = logpost
         elif isinstance(logpost, float) or logpost is None:
             try:
@@ -419,39 +486,52 @@ class SampleCollection(BaseCollection):
                 raise LoggedError(self.log, str(valerr)) from valerr
         else:
             raise LoggedError(
-                self.log, "logpost must be a LogPosterior object, a number or None (in "
-                          "which case logpriors and loglikes are needed).")
+                self.log,
+                "logpost must be a LogPosterior object, a number or None (in "
+                "which case logpriors and loglikes are needed).",
+            )
         return return_logpost
 
     def _cache_reset(self):
         self._cache = np.full((self.cache_size, len(self.columns)), np.nan)
         self._cache_last = -1
 
-    def _cache_add(self, values: Union[Sequence[float], np.ndarray],
-                   logposterior: LogPosterior, weight: float = 1):
+    def _cache_add(
+        self,
+        values: Sequence[float] | np.ndarray,
+        logposterior: LogPosterior,
+        weight: float = 1,
+    ):
         """
         Adds the given point to the cache. Dumps and resets the cache if full.
         """
         if self._cache_last == self.cache_size - 1:
             self._cache_dump()
         self._cache_add_row(
-            self._cache_last + 1, values, logposterior=logposterior, weight=weight)
+            self._cache_last + 1, values, logposterior=logposterior, weight=weight
+        )
         self._cache_last += 1
 
-    def _cache_add_row(self, pos: int, values: Union[Sequence[float], np.ndarray],
-                       logposterior: LogPosterior, weight: float = 1):
+    def _cache_add_row(
+        self,
+        pos: int,
+        values: Sequence[float] | np.ndarray,
+        logposterior: LogPosterior,
+        weight: float = 1,
+    ):
         """
         Adds the given point to the cache at the given position.
         """
         self._cache[pos, self._icol[OutPar.weight]] = weight if weight is not None else 1
-        self._cache[pos, self._icol[OutPar.minuslogpost]] = \
-            -apply_temperature(logposterior.logpost, self.temperature)
+        self._cache[pos, self._icol[OutPar.minuslogpost]] = -apply_temperature(
+            logposterior.logpost, self.temperature
+        )
         for name, value in zip(self.sampled_params, values):
             self._cache[pos, self._icol[name]] = value
         if logposterior.logpriors is not None:
             for name, value in zip(self.minuslogprior_names, logposterior.logpriors):
                 self._cache[pos, self._icol[name]] = -value
-            self._cache[pos, self._icol[OutPar.minuslogprior]] = - logposterior.logprior
+            self._cache[pos, self._icol[OutPar.minuslogprior]] = -logposterior.logprior
         if logposterior.loglikes is not None:
             for name, value in zip(self.chi2_names, logposterior.loglikes):
                 self._cache[pos, self._icol[name]] = -2 * value
@@ -469,7 +549,10 @@ class SampleCollection(BaseCollection):
                         "sure that it returns a number (or nan), or set "
                         "'derived: False' for this parameter, so that its value"
                         " is not stored in the sample.",
-                        name, value, type(value).__class__)
+                        name,
+                        value,
+                        type(value).__class__,
+                    )
 
     def _cache_dump(self):
         """
@@ -478,8 +561,9 @@ class SampleCollection(BaseCollection):
         if self._cache_last == -1:
             return
         self._enlarge(self._cache_last + 1)
-        self._data.iloc[len(self._data) - (self._cache_last + 1):len(self._data)] = \
-            self._cache[:self._cache_last + 1]
+        self._data.iloc[len(self._data) - (self._cache_last + 1) : len(self._data)] = (
+            self._cache[: self._cache_last + 1]
+        )
         self._cache_reset()
 
     def _check_logps(self, temperature_only=False, extra_tolerance=False):
@@ -495,13 +579,19 @@ class SampleCollection(BaseCollection):
         """
         try:
             temperature = compute_temperature(
-                -self["minuslogpost"], -self["minuslogprior"], -self["chi2"] * 0.5,
-                check=True, extra_tolerance=extra_tolerance)
+                -self["minuslogpost"],
+                -self["minuslogprior"],
+                -self["chi2"] * 0.5,
+                check=True,
+                extra_tolerance=extra_tolerance,
+            )
         except AssertionError as excpt:
             raise LoggedError(
-                self.log, "The sample seems to have an inconsistent temperature.  "
-                          "This could be due to input file truncation on the last line "
-                          "due to crash/being killed before complete.") from excpt
+                self.log,
+                "The sample seems to have an inconsistent temperature.  "
+                "This could be due to input file truncation on the last line "
+                "due to crash/being killed before complete.",
+            ) from excpt
         if not temperature_only:
             tols = {
                 "rtol": 1e-4 * (10 if extra_tolerance else 1),
@@ -513,25 +603,23 @@ class SampleCollection(BaseCollection):
             )
             if not np.allclose(self[OutPar.minuslogprior], minuslogprior, **tols):
                 raise LoggedError(
-                    self.log,
-                    "The sum of logpriors in the sample is not consistent."
+                    self.log, "The sum of logpriors in the sample is not consistent."
                 )
             chi2 = np.sum(
-                np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)), axis=-1,
+                np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)),
+                axis=-1,
             )
             if not np.allclose(self[OutPar.chi2], chi2, **tols):
                 raise LoggedError(
                     self.log,
-                    "The sum of likelihood's chi2's in the sample is not consistent."
+                    "The sum of likelihood's chi2's in the sample is not consistent.",
                 )
         if np.isclose(temperature, 1):
             temperature = 1
         return temperature
 
     def _check_weights(
-            self,
-            weights: Optional[np.ndarray] = None,
-            length: Optional[Union[int, List[int]]] = None
+        self, weights: np.ndarray | None = None, length: int | list[int] | None = None
     ):
         """
         Checks correct length, shape and signs of the ``weights``.
@@ -556,19 +644,16 @@ class SampleCollection(BaseCollection):
                 raise LoggedError(
                     self.log,
                     f"The shape of the weights is wrong. {expected_msg}, "
-                    f"but got {weights}."
+                    f"but got {weights}.",
                 )
             if any(len(w) != l for w, l in zip(weights, lengths_array)):
                 raise LoggedError(
                     self.log,
                     f"The lengths of the weights vectors are wrong. Expected "
-                    f"{[len(w) for w in weights]} but got {lengths_array}."
+                    f"{[len(w) for w in weights]} but got {lengths_array}.",
                 )
         if any(np.any(ws < 0) for ws in weights):
-            raise LoggedError(
-                self.log,
-                "The weight vector contains negative elements."
-            )
+            raise LoggedError(self.log, "The weight vector contains negative elements.")
 
     @property
     def is_tempered(self) -> bool:
@@ -606,26 +691,30 @@ class SampleCollection(BaseCollection):
                 "Trying to get detempered weights for individual sample collection that "
                 "appears to be part of a batch (e.g. of parallel MCMC chains). This will "
                 "produce inconsistent weights across chains, unless passing the rest of "
-                "the batch as ``with_batch=[collection_1, collection_2,... ]``.")
+                "the batch as ``with_batch=[collection_1, collection_2,... ]``."
+            )
         temps = [c.temperature for c in batch]
         if not np.allclose(temps, temps[0]):
             raise LoggedError(
-                self.log,
-                f"Temperature inconsistent across the batch: {temps}."
+                self.log, f"Temperature inconsistent across the batch: {temps}."
             )
         for c in batch:
             c._cache_dump()
         if self.temperature == 1:
             return [c._data[OutPar.weight].to_numpy(dtype=np.float64) for c in batch]
-        max_logpost = np.max(np.concatenate(
-            [-c._data[OutPar.minuslogpost].to_numpy(dtype=np.float64) for c in batch]))
+        max_logpost = np.max(
+            np.concatenate(
+                [-c._data[OutPar.minuslogpost].to_numpy(dtype=np.float64) for c in batch]
+            )
+        )
         return [
-            c._data[OutPar.weight].to_numpy(dtype=np.float64) *
-            detempering_weights_factor(
+            c._data[OutPar.weight].to_numpy(dtype=np.float64)
+            * detempering_weights_factor(
                 -c._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
                 c.temperature,
-                max_tempered_logpost=max_logpost
-            ) for c in batch
+                max_tempered_logpost=max_logpost,
+            )
+            for c in batch
         ]
 
     def _detempered_minuslogpost(self):
@@ -633,8 +722,7 @@ class SampleCollection(BaseCollection):
         if self.temperature == 1:
             return self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64)
         return -remove_temperature(
-            -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64),
-            self.temperature
+            -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64), self.temperature
         )
 
     # pylint: disable=protected-access
@@ -667,8 +755,11 @@ class SampleCollection(BaseCollection):
         Enlarges the DataFrame by `n` rows.
         """
         new = pd.DataFrame(
-            np.nan, columns=self._data.columns, dtype=np.float64,
-            index=np.arange(len(self._data), len(self._data) + n))
+            np.nan,
+            columns=self._data.columns,
+            dtype=np.float64,
+            index=np.arange(len(self._data), len(self._data) + n),
+        )
         if self._data.empty:
             self._data = new
         else:
@@ -679,8 +770,7 @@ class SampleCollection(BaseCollection):
         Append another collection.
         Internal method: does not check for consistency!
         """
-        self._data = pd.concat([self.data, collection.data],
-                               ignore_index=True)
+        self._data = pd.concat([self.data, collection.data], ignore_index=True)
 
     def __len__(self):
         return len(self._data) + (self._cache_last + 1)
@@ -720,7 +810,7 @@ class SampleCollection(BaseCollection):
         """Returns the sample collection as a numpy array."""
         return self.data.to_numpy(copy=copy, dtype=dtype or np.float64)
 
-    def _copy(self, data=None, empty=False) -> 'SampleCollection':
+    def _copy(self, data=None, empty=False) -> "SampleCollection":
         """
         Returns a copy of the collection.
 
@@ -746,7 +836,7 @@ class SampleCollection(BaseCollection):
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.
-    def copy(self, empty=False) -> 'SampleCollection':
+    def copy(self, empty=False) -> "SampleCollection":
         """
         Returns a copy of the collection.
 
@@ -755,12 +845,12 @@ class SampleCollection(BaseCollection):
         return self._copy(empty=empty)
 
     def _weights_for_stats(
-            self,
-            first: Optional[int] = None,
-            last: Optional[int] = None,
-            weights: Optional[np.ndarray] = None,
-            tempered: bool = False,
-    ) -> Tuple[np.ndarray, bool]:
+        self,
+        first: int | None = None,
+        last: int | None = None,
+        weights: np.ndarray | None = None,
+        tempered: bool = False,
+    ) -> tuple[np.ndarray, bool]:
         """
         Returns ``(weights, are_int)``, where weights can be used for computation of
         statistical quantities such as mean and covariance, and ``are_int`` is ``True``
@@ -785,16 +875,16 @@ class SampleCollection(BaseCollection):
             return self._detempered_weights()[0][first:last], False
         return (
             self[OutPar.weight][first:last].to_numpy(dtype=np.float64),
-            self.has_int_weights
+            self.has_int_weights,
         )
 
     def mean(
-            self,
-            first: Optional[int] = None,
-            last: Optional[int] = None,
-            weights: Optional[np.ndarray] = None,
-            derived: bool = False,
-            tempered: bool = False,
+        self,
+        first: int | None = None,
+        last: int | None = None,
+        weights: np.ndarray | None = None,
+        derived: bool = False,
+        tempered: bool = False,
     ) -> np.ndarray:
         """
         Returns the (weighted) mean of the parameters in the chain,
@@ -819,20 +909,25 @@ class SampleCollection(BaseCollection):
         if not self:
             raise LoggedError(self.log, "Collection is empty. Cannot compute mean.")
         weights_mean, _ = self._weights_for_stats(
-            first, last, weights=weights, tempered=tempered)
-        return np.average(self[list(self.sampled_params) +
-                               (list(self.derived_params) if derived else [])]
-                          [first:last].to_numpy(dtype=np.float64).T, weights=weights_mean,
-                          axis=-1
-                          )
+            first, last, weights=weights, tempered=tempered
+        )
+        return np.average(
+            self[
+                list(self.sampled_params) + (list(self.derived_params) if derived else [])
+            ][first:last]
+            .to_numpy(dtype=np.float64)
+            .T,
+            weights=weights_mean,
+            axis=-1,
+        )
 
     def cov(
-            self,
-            first: Optional[int] = None,
-            last: Optional[int] = None,
-            weights: Optional[np.ndarray] = None,
-            derived: bool = False,
-            tempered: bool = False,
+        self,
+        first: int | None = None,
+        last: int | None = None,
+        weights: np.ndarray | None = None,
+        derived: bool = False,
+        tempered: bool = False,
     ) -> np.ndarray:
         """
         Returns the (weighted) covariance matrix of the parameters in the chain,
@@ -857,14 +952,21 @@ class SampleCollection(BaseCollection):
         if not self:
             raise LoggedError(self.log, "Collection is empty. Cannot compute cov.")
         weights_cov, are_int = self._weights_for_stats(
-            first, last, weights=weights, tempered=tempered)
+            first, last, weights=weights, tempered=tempered
+        )
         weight_type_kwarg = "fweights" if are_int else "aweights"
-        return np.atleast_2d(np.cov(  # type: ignore
-            self[list(self.sampled_params) +
-                 (list(self.derived_params) if derived else [])][first:last].to_numpy(
-                dtype=np.float64).T,
-            ddof=0,  # does simple mean w/o bias factor; weights are used as probabilities
-            **{weight_type_kwarg: weights_cov}))
+        return np.atleast_2d(
+            np.cov(  # type: ignore
+                self[
+                    list(self.sampled_params)
+                    + (list(self.derived_params) if derived else [])
+                ][first:last]
+                .to_numpy(dtype=np.float64)
+                .T,
+                ddof=0,  # does simple mean w/o bias factor; weights are used as probabilities
+                **{weight_type_kwarg: weights_cov},
+            )
+        )
 
     def _drop_samples_null_weight(self):
         """Removes from the DataFrame all samples that have 0 weight."""
@@ -897,18 +999,18 @@ class SampleCollection(BaseCollection):
         if check:
             self._check_weights(
                 importance_weights,
-                length=[len(self)] + [len(c) for c in with_batch or []]
+                length=[len(self)] + [len(c) for c in with_batch or []],
             )
         batch = [self] + list(with_batch or [])
         for c, iweights in zip(batch, importance_weights):
             c._data[OutPar.weight] *= iweights
             c._drop_samples_null_weight()
 
-    def filtered_copy(self, where) -> 'SampleCollection':
+    def filtered_copy(self, where) -> "SampleCollection":
         """Returns a copy of the collection with some condition ``where`` imposed."""
         return self._copy(self.data[where].reset_index(drop=True))
 
-    def skip_samples(self, skip: float, inplace: bool = False) -> 'SampleCollection':
+    def skip_samples(self, skip: float, inplace: bool = False) -> "SampleCollection":
         """
         Skips some initial samples, or an initial fraction of them.
 
@@ -945,7 +1047,7 @@ class SampleCollection(BaseCollection):
             raise LoggedError(
                 self.log,
                 "Number of fraction of skipped initial samples must be positive. Got %r",
-                skip
+                skip,
             )
         if 0 < skip < 1:
             skip = int(np.round(skip * len(self)))
@@ -957,7 +1059,7 @@ class SampleCollection(BaseCollection):
         else:
             return self.filtered_copy(slice(skip, None))
 
-    def thin_samples(self, thin: int, inplace: bool = False) -> 'SampleCollection':
+    def thin_samples(self, thin: int, inplace: bool = False) -> "SampleCollection":
         """
         Thins the sample collection by some factor ``thin>1``.
 
@@ -982,16 +1084,20 @@ class SampleCollection(BaseCollection):
         if thin == 1:
             return self if inplace else self.copy()
         if thin != int(thin) or thin < 1:
-            raise LoggedError(self.log, "Thin factor must be a positive integer, got %s",
-                              thin)
+            raise LoggedError(
+                self.log, "Thin factor must be a positive integer, got %s", thin
+            )
         thin = int(thin)
         try:
             if hasattr(WeightedSamples, "thin_indices_and_weights"):
-                unique, counts = \
-                    WeightedSamples.thin_indices_and_weights(
-                        thin, self[OutPar.weight].to_numpy(dtype=np.float64))
+                unique, counts = WeightedSamples.thin_indices_and_weights(
+                    thin, self[OutPar.weight].to_numpy(dtype=np.float64)
+                )
             else:
-                raise LoggedError(self.log, "Thinning requires GetDist 1.2+", )
+                raise LoggedError(
+                    self.log,
+                    "Thinning requires GetDist 1.2+",
+                )
         except WeightedSampleError as e:
             raise LoggedError(self.log, "Error thinning: %s", e) from e
         else:
@@ -1014,14 +1120,12 @@ class SampleCollection(BaseCollection):
 
     def MAP(self):
         """Maximum-a-posteriori (MAP) sample. Returns a copy."""
-        return self.data.loc[self.data[OutPar.minuslogpost].astype(np.float64).idxmin()] \
-            .copy()
+        return self.data.loc[
+            self.data[OutPar.minuslogpost].astype(np.float64).idxmin()
+        ].copy()
 
     def _sampled_to_getdist(
-            self,
-            first: Optional[int] = None,
-            last: Optional[int] = None,
-            tempered: bool = False
+        self, first: int | None = None, last: int | None = None, tempered: bool = False
     ) -> MCSamples:
         """
         Barebones interface with getdist. Internal use only!
@@ -1032,21 +1136,24 @@ class SampleCollection(BaseCollection):
         if self.is_tempered and not tempered:
             minuslogposts = self._detempered_minuslogpost()[first:last]
         else:
-            minuslogposts = self.data[OutPar.minuslogpost].to_numpy(
-                dtype=np.float64)[first:last]
+            minuslogposts = self.data[OutPar.minuslogpost].to_numpy(dtype=np.float64)[
+                first:last
+            ]
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         with NoLogging():
             mcsamples = MCSamples(
                 samples=self.data[names].to_numpy(dtype=np.float64)[first:last],
-                weights=weights, loglikes=minuslogposts, names=names,
+                weights=weights,
+                loglikes=minuslogposts,
+                names=names,
             )
         return mcsamples
 
     def to_getdist(
-            self,
-            label: Optional[str] = None,
-            model: Optional[Model] = None,
-            combine_with: Optional[List["SampleCollection"]] = None,
+        self,
+        label: str | None = None,
+        model: Model | None = None,
+        combine_with: list["SampleCollection"] | None = None,
     ) -> MCSamples:
         """
         Parameters
@@ -1074,11 +1181,12 @@ class SampleCollection(BaseCollection):
             self._cache_aux_model_quantities(model)
         elif model is not None:
             raise LoggedError(
-                self.log,
-                "Optional argument `model` must be a Cobaya Model instance."
+                self.log, "Optional argument `model` must be a Cobaya Model instance."
             )
-        used_names_dict = {p: p + ("*" if p not in self.sampled_params else "")
-                           for p in self.data.columns[2:]}
+        used_names_dict = {
+            p: p + ("*" if p not in self.sampled_params else "")
+            for p in self.data.columns[2:]
+        }
         if combine_with is None:
             combine_with = []
         all_collections = [self] + list(combine_with)
@@ -1115,8 +1223,11 @@ class SampleCollection(BaseCollection):
             temperature=self.temperature,
             sampler=deepcopy(self.sample_type),
             names=list(used_names_dict.values()),
-            labels=[deepcopy(self._cached_labels[p]) for p in used_names_dict
-                    if p in self._cached_labels],
+            labels=[
+                deepcopy(self._cached_labels[p])
+                for p in used_names_dict
+                if p in self._cached_labels
+            ],
             ranges=ranges,
             renames=deepcopy(self._cached_renames),
             name_tag=label,
@@ -1150,12 +1261,14 @@ class SampleCollection(BaseCollection):
             raise LoggedError(
                 self.log,
                 "Cannot skip samples from a sample of a nested sampler. "
-                "Would lead to a non-fair sample."
+                "Would lead to a non-fair sample.",
             )
-        self._data = load_DataFrame(self.file_name, skip=skip,
-                                    root_file_name=self.root_file_name)
-        self.log.info("Loaded %d sample points from '%s'", len(self._data),
-                      self.file_name)
+        self._data = load_DataFrame(
+            self.file_name, skip=skip, root_file_name=self.root_file_name
+        )
+        self.log.info(
+            "Loaded %d sample points from '%s'", len(self._data), self.file_name
+        )
 
     def _dump__txt(self):
         self._dump_slice__txt(0, len(self))
@@ -1172,16 +1285,24 @@ class SampleCollection(BaseCollection):
         do_header = not n_min
         if do_header:
             if os.path.exists(self.file_name):
-                raise LoggedError(self.log,
-                                  "Output file %s already exists (report bug)",
-                                  self.file_name)
+                raise LoggedError(
+                    self.log, "Output file %s already exists (report bug)", self.file_name
+                )
             with open(self.file_name, "a", encoding="utf-8") as out:
-                out.write("#" + " ".join(
-                    f(col) for f, col
-                    in zip(self._header_formatter, self.data.columns))[1:] + "\n")
+                out.write(
+                    "#"
+                    + " ".join(
+                        f(col)
+                        for f, col in zip(self._header_formatter, self.data.columns)
+                    )[1:]
+                    + "\n"
+                )
         with open(self.file_name, "a", encoding="utf-8") as out:
-            np.savetxt(out, self.data[n_min:n_max].to_numpy(dtype=np.float64),
-                       fmt=self._numpy_fmts)
+            np.savetxt(
+                out,
+                self.data[n_min:n_max].to_numpy(dtype=np.float64),
+                fmt=self._numpy_fmts,
+            )
 
     def _delete__txt(self):
         try:
@@ -1203,7 +1324,7 @@ class SampleCollection(BaseCollection):
     # (they will be generated next time txt is dumped)
     def __getstate__(self):
         attributes = super().__getstate__()
-        for attr in ['_numpy_fmts', '_header_formatter']:
+        for attr in ["_numpy_fmts", "_header_formatter"]:
             try:
                 del attributes[attr]
             except KeyError:
@@ -1264,7 +1385,8 @@ class OneSamplePoint:
 
     def __str__(self):
         return ", ".join(
-            ['%s:%.7g' % (k, v) for k, v in zip(self.sampled_params, self.values)])
+            ["{}:{:.7g}".format(k, v) for k, v in zip(self.sampled_params, self.values)]
+        )
 
 
 class OnePoint(SampleCollection):
@@ -1277,8 +1399,7 @@ class OnePoint(SampleCollection):
         if isinstance(columns, str):
             return self.data.values[0, self.data.columns.get_loc(columns)]
         try:
-            return self.data.values[0,
-            [self.data.columns.get_loc(c) for c in columns]]
+            return self.data.values[0, [self.data.columns.get_loc(c) for c in columns]]
         except KeyError as excpt:
             raise ValueError("Some of the indices are not valid columns.") from excpt
 

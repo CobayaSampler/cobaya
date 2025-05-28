@@ -22,7 +22,7 @@ Finally, the combined SDSS(eBOSS)+DESI Lya measurement is:
 
 class desi_2024_base(BAO):
     _is_abstract = True
-    bibtex_file = 'desi_2024_bao.bibtex'
+    bibtex_file = "desi_2024_bao.bibtex"
 
 
 class desi_2024_bao_all(desi_2024_base):

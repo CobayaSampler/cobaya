@@ -30,29 +30,41 @@ def test_example():
         info_yaml = yaml_load_file("gaussian.yaml")
         info_yaml.pop("output")
         globals_example = {}
-        exec(open(os.path.join(docs_src_folder, "create_info.py")).read(),
-             globals_example)
+        exec(
+            open(os.path.join(docs_src_folder, "create_info.py")).read(), globals_example
+        )
         assert is_equal_info(info_yaml, globals_example["info"]), (
-            "Inconsistent info between yaml and interactive.")
+            "Inconsistent info between yaml and interactive."
+        )
         exec(open(os.path.join(docs_src_folder, "load_info.py")).read(), globals_example)
         globals_example["info_from_yaml"].pop("output")
         assert is_equal_info(info_yaml, globals_example["info_from_yaml"]), (
-            "Inconsistent info between interactive and *loaded* yaml.")
+            "Inconsistent info between interactive and *loaded* yaml."
+        )
         # Run the chain -- constant seed so results are the same!
         globals_example["info"]["sampler"]["mcmc"] = (
-                globals_example["info"]["sampler"]["mcmc"] or {})
+            globals_example["info"]["sampler"]["mcmc"] or {}
+        )
         exec(open(os.path.join(docs_src_folder, "run.py")).read(), globals_example)
         # Run the minimizer -- output doesn't matter. Just checking that it does not fail
         exec(open(os.path.join(docs_src_folder, "run_min.py")).read(), globals_example)
         # Analyze and plot -- capture print output
         stream = StringIO()
         with stdout_redirector(stream):
-            exec(open(os.path.join(docs_src_folder, "analyze.py")).read(),
-                 globals_example)
+            exec(
+                open(os.path.join(docs_src_folder, "analyze.py")).read(), globals_example
+            )
         # Checking results
-        mean, covmat = [globals_example["info"]["likelihood"]["gaussian_mixture"][x]
-                        for x in ["means", "covs"]]
-        assert (KL_norm(
-            m1=mean, S1=covmat, m2=globals_example["mean"], S2=globals_example["covmat"])
-                <= KL_tolerance), (
-            "Sampling appears not to have worked too well. Run again?")
+        mean, covmat = (
+            globals_example["info"]["likelihood"]["gaussian_mixture"][x]
+            for x in ["means", "covs"]
+        )
+        assert (
+            KL_norm(
+                m1=mean,
+                S1=covmat,
+                m2=globals_example["mean"],
+                S2=globals_example["covmat"],
+            )
+            <= KL_tolerance
+        ), "Sampling appears not to have worked too well. Run again?"
