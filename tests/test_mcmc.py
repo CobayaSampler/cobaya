@@ -61,7 +61,7 @@ def test_mcmc(tmpdir, temperature, do_plots, packages_path=None):
             m2=sampler_instance.collection.mean(first=int(sampler_instance.n() / 2)),
             S2=sampler_instance.collection.cov(first=int(sampler_instance.n() / 2)),
         )
-        print("KL proposer: {:g} ; KL sample: {:g}".format(proposer, sample))
+        print(f"KL proposer: {proposer:g} ; KL sample: {sample:g}")
 
     if mpi.rank() == 0:
         info_sampler["mcmc"].update(

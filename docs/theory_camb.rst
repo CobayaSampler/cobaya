@@ -6,7 +6,6 @@ CAMB
 
 Documentation of the ``camb`` wrapper class
 -------------------------------------------
-   
+
 .. autoclass:: theories.camb.CAMB
    :members:
-

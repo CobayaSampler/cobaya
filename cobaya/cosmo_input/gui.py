@@ -431,7 +431,7 @@ class MainWindow(QWidget):
 class DefaultsDialog(QWidget):
     def __init__(self, kind, component, parent=None):
         super().__init__()
-        self.setWindowTitle("{} : {}".format(kind, component))
+        self.setWindowTitle(f"{kind} : {component}")
         self.setGeometry(0, 0, 500, 500)
         # noinspection PyArgumentList
         self.move(parent.getScreen().center() - self.rect().center())

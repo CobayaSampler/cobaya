@@ -6,7 +6,7 @@ Samplers
 
 Sampler class
 -------------
-   
+
 .. autoclass:: sampler.Sampler
    :members:
 

@@ -183,7 +183,7 @@ def create_base_image(mpi=None, version=None, sub=None):
     if sub:
         sub = "." + sub
     try:
-        tag = "cobaya/base_{}_{}:latest".format(mpi.lower(), version + sub)
+        tag = f"cobaya/base_{mpi.lower()}_{version + sub}:latest"
     except KeyError:
         raise LoggedError(log, "MPI library '%s' not recognized.", mpi)
     URL = MPI_URL[mpi.lower()].replace("_VER_", str(version)).replace("_DOT_SUB_", sub)
@@ -230,13 +230,13 @@ def create_docker_image(filenames, MPI_version=None):
     ).strip()
     echos_reqs = "RUN " + " && \\ \n    ".join(
         [
-            r'echo "{}" >> {}'.format(block, requirements_file_path)
+            rf'echo "{block}" >> {requirements_file_path}'
             for block in components.split("\n")
         ]
     )
     echos_help = "RUN " + " && \\ \n    ".join(
         [
-            r'echo "{}" >> {}'.format(line, help_file_path)
+            rf'echo "{line}" >> {help_file_path}'
             for line in image_help("docker").split("\n")
         ]
     )
@@ -280,7 +280,7 @@ def create_singularity_image(filenames, MPI_version=None):
     echos_reqs = "\n    " + "\n    ".join(
         [""]
         + [
-            'echo "{}" >> {}'.format(block, requirements_file_path)
+            f'echo "{block}" >> {requirements_file_path}'
             for block in components.split("\n")
         ]
     )

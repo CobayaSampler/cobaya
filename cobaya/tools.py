@@ -795,7 +795,7 @@ def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     for n1, n2 in [["A", "B"], ["B", "A"]]:
         missing = sets[n1].difference(sets[n2])
         if missing:
-            result["{}_but_not_{}".format(names[n1], names[n2])] = list(missing)
+            result[f"{names[n1]}_but_not_{names[n2]}"] = list(missing)
     return result
 
 

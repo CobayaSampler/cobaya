@@ -428,7 +428,7 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
                     .strip()
                 )
             except subprocess.CalledProcessError as e:
-                print("Error calling {}: {}".format(j.qsub, e.output.decode().strip()))
+                print(f"Error calling {j.qsub}: {e.output.decode().strip()}")
             else:
                 if not res:
                     print("No qsub output")

@@ -325,30 +325,22 @@ def body_of_test_speeds(
     tolerance = 0.1
     if sampler_name == "polychord":
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
-            "{:g} > {:g}".format(
-                test_func(n_evals, dim0, speed0, dim1, speed1), tolerance
-            )
+            f"{test_func(n_evals, dim0, speed0, dim1, speed1):g} > {tolerance:g}"
         )
     elif sampler_name == "mcmc" and info["sampler"][sampler_name].get("drag"):
         assert test_func(n_evals, dim0, speed0, dim1, 2 * speed1) <= tolerance, (
-            "{:g} > {:g}".format(
-                test_func(n_evals, dim0, speed0, dim1, speed1), tolerance
-            )
+            f"{test_func(n_evals, dim0, speed0, dim1, speed1):g} > {tolerance:g}"
         )
     elif (
         sampler_name == "mcmc"
         and info["sampler"][sampler_name].get("oversample_power", 0) > 0
     ):
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
-            "{:g} > {:g}".format(
-                test_func(n_evals, dim0, speed0, dim1, speed1), tolerance
-            )
+            f"{test_func(n_evals, dim0, speed0, dim1, speed1):g} > {tolerance:g}"
         )
     elif sampler_name == "mcmc":  # just blocking
         assert test_func(n_evals, dim0, speed0, dim1, speed1) <= tolerance, (
-            "{:g} > {:g}".format(
-                test_func(n_evals, dim0, speed0, dim1, speed1), tolerance
-            )
+            f"{test_func(n_evals, dim0, speed0, dim1, speed1):g} > {tolerance:g}"
         )
     else:
         raise ValueError("This should not happen!")

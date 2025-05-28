@@ -60,4 +60,3 @@ Where:
 * ``--exclude``: Comma-separated list of files to exclude (without .md extension)
 * ``--output``: Custom output file path
 * ``--no-install``: Skip installation of dependencies
-

@@ -7,6 +7,13 @@ import numbers
 import numpy as np
 import sys
 
+# Import UnionType for Python 3.10+ compatibility
+try:
+    from types import UnionType
+except ImportError:
+    # Python < 3.10
+    UnionType = None
+
 InfoDict = dict[str, Any]
 InfoDictIn = Mapping[str, Any]
 
@@ -194,7 +201,8 @@ def validate_type(expected_type: type, value: Any, path: str = ""):
     ):
         # complex types like Dict[str, float] etc.
 
-        if origin is Union:
+        # Handle both typing.Union and types.UnionType (Python 3.10+)
+        if origin is Union or (UnionType is not None and origin is UnionType):
             errors = []
             for t in args:
                 try:

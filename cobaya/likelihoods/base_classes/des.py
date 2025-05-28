@@ -765,7 +765,7 @@ class DES(DataSetLikelihood):
             if corrs_p is not None and not diff:
                 ax.semilogx(self.theta_bins, fac * corrs_p[f1, f2], color="C0", ls="--")
                 ax.semilogx(self.theta_bins, facm * corrs_m[f1, f2], color="C1", ls="--")
-            ax.set_title("{}-{}".format(f1 + 1, f2 + 1))
+            ax.set_title(f"{f1 + 1}-{f2 + 1}")
         return axs
 
     def plot_cross(self, corrs_t=None, errors=True, diff=False, axs=None, ls="-"):
@@ -799,7 +799,7 @@ class DES(DataSetLikelihood):
                 if corrs_t is not None and not diff:
                     ax.semilogx(self.theta_bins, fac * corrs_t[f2, f1], ls=ls)
                 ax.axvspan(*self.ranges["gammat"][f2][f1], color="gray", alpha=0.1)
-                ax.set_title("{}-{}".format(f2 + 1, f1 + 1))
+                ax.set_title(f"{f2 + 1}-{f1 + 1}")
         return axs
 
 
@@ -853,7 +853,7 @@ def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
             fmt=["%u", "%u", "%u", "%.8e"],
             header=" ".join(list(hdulist[tp].data.dtype.names)[:-2]),
         )
-        outlines += ["measurements[{}] = {}_{}.dat".format(tp, root, tp)]
+        outlines += [f"measurements[{tp}] = {root}_{tp}.dat"]
     sourcedata = hdulist["NZ_SOURCE"].data
     maxi = sourcedata.shape[0] - 1
     while np.all(np.asarray(sourcedata[maxi][3:]) == 0):

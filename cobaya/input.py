@@ -723,10 +723,10 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     block2[k].pop(j, None)
                 myprint(
                     myname
-                    + ": different content of [{}:{}]".format(block_name, k)
+                    + f": different content of [{block_name}:{k}]"
                     + " -- (re-run with `debug: True` for more info)"
                 )
-                myprint_debug("{!r} (old) vs {!r} (new)".format(block1[k], block2[k]))
+                myprint_debug(f"{block1[k]!r} (old) vs {block2[k]!r} (new)")
                 return False
     return True
 

@@ -55,9 +55,7 @@ def packages_path(request):
 def pytest_collection_modifyitems(config, items):
     skip_keywords = os.environ.get(test_skip_env, "").replace(",", " ").split()
     for k in skip_keywords:
-        skip_mark = pytest.mark.skip(
-            reason="'{}' skipped by envvar '{}'".format(k, test_skip_env)
-        )
+        skip_mark = pytest.mark.skip(reason=f"'{k}' skipped by envvar '{test_skip_env}'")
         for item in items:
             if any((k.lower() in x) for x in [item.name.lower(), item.keywords]):
                 item.add_marker(skip_mark)

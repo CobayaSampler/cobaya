@@ -407,7 +407,7 @@ class ProcessState:
         self.sync(check_error=True)
 
     def fire_error(self, cls=OtherProcessError, msg=_other_process_msg):
-        raise cls("[{}: {}] {}".format(rank(), self.name, msg))
+        raise cls(f"[{rank()}: {self.name}] {msg}")
 
     def wait_all_ended(self, timeout=False):
         """

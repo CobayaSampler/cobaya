@@ -102,7 +102,7 @@ jobs:
         run: |
           pip install ruff
           ruff check cobaya/ tests/ --output-format=github
-          
+
       - name: Install dependencies (pip)
         if: matrix.pydist != 'ANACONDA'
         run: |

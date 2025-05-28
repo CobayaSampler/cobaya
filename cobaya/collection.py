@@ -1385,7 +1385,7 @@ class OneSamplePoint:
 
     def __str__(self):
         return ", ".join(
-            ["{}:{:.7g}".format(k, v) for k, v in zip(self.sampled_params, self.values)]
+            [f"{k}:{v:.7g}" for k, v in zip(self.sampled_params, self.values)]
         )
 
 

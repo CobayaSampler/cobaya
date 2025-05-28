@@ -1256,7 +1256,7 @@ def plot_progress(
             progress.index = np.arange(1, len(progress) + 1)
         except Exception as excpt:
             raise ValueError(
-                "Cannot load progress file {!r}: {}".format(progress, str(excpt))
+                f"Cannot load progress file {progress!r}: {str(excpt)}"
             ) from excpt
     elif hasattr(type(progress), "__iter__"):
         # Assume is a list of progress'es

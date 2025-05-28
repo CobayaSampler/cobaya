@@ -137,7 +137,7 @@ def pretty_repr_bib(descs, bibs):
     for kind in sorted_kinds:
         txt += kind + ":\n\n"
         for component, desc in descs[kind].items():
-            txt += " * [{}] {}\n".format(component, desc)
+            txt += f" * [{component}] {desc}\n"
         txt += "\n"
     txt += (
         "\n"

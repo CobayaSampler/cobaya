@@ -196,7 +196,7 @@ class Parameterization(HasLogger):
                 eg_in = (
                     "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
                 )
-                eg_out = "  p_prime: 'lambda {}: {}'\n".format(p, p)
+                eg_out = f"  p_prime: 'lambda {p}: {p}'\n"
                 raise LoggedError(
                     self.log,
                     "Parameter name '%s' is not a valid Python variable name "

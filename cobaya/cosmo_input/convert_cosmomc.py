@@ -96,9 +96,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                     if "prior" not in info:
                         info["prior"] = {}
                     mean, std = (float(v.strip()) for v in prior.split())
-                    linear = "".join(
-                        "{:+g}*{}".format(_w, _p) for _w, _p in zip(weights, inputs)
-                    )
+                    linear = "".join(f"{_w:+g}*{_p}" for _w, _p in zip(weights, inputs))
                     info["prior"]["SZ"] = (
                         "lambda {}: stats.norm.logpdf({}, loc={:g}, scale={:g})".format(
                             ",".join(inputs), linear, mean, std

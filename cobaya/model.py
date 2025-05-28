@@ -177,7 +177,7 @@ class Requirement(NamedTuple):
         return self.name == other.name and _dict_equal(self.options, other.options)
 
     def __repr__(self):
-        return "{{{!r}:{!r}}}".format(self.name, self.options)
+        return f"{{{self.name!r}:{self.options!r}}}"
 
 
 def as_requirement_list(requirements):
