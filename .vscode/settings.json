@@ -48,6 +48,9 @@
         "**/.pytest_cache": true,
         "**/.coverage": true,
         "**/.mypy_cache": true,
-        "**/.ruff_cache": true
+        "**/.ruff_cache": true,
+        ".idea/": true,
+        "**/chains": true,
+        "**/.ipynb_checkpoints": true
     }
 }
