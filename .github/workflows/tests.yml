@@ -106,6 +106,7 @@ jobs:
       - name: Install dependencies (pip)
         if: matrix.pydist != 'ANACONDA'
         run: |
+          pip install --upgrade pip setuptools>=77 wheel
           pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit numba
 
       - name: Install mpi
@@ -178,7 +179,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U pip
-          python -m pip install -U build twine
+          python -m pip install -U "setuptools>=77" wheel build twine
 
       - name: Build package
         run: python -m build

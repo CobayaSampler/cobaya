@@ -15,6 +15,7 @@ dependencies:
   - mpi4py
   - openmpi
   - pip
+  - setuptools>=77
   - pip:
     - ruff
     - flaky
