@@ -34,7 +34,8 @@
         "**/.mypy_cache": true,
         "**/.ruff_cache": true,
         ".idea/": true,
-        "**/chains": true
+        "**/chains": true,
+        "**/.ipynb_checkpoints": true
     },
     // Search exclude patterns
     "search.exclude": {
