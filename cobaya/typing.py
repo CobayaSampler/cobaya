@@ -1,18 +1,12 @@
-from typing import Dict, Any, Optional, Union, Type, TypedDict, Literal
-from collections.abc import Mapping, Callable, Sequence, Iterable
-from types import MappingProxyType
 import contextlib
-import typing
 import numbers
-import numpy as np
 import sys
+import typing
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from types import MappingProxyType, UnionType
+from typing import Any, Dict, Literal, Optional, Type, TypedDict, Union
 
-# Import UnionType for Python 3.10+ compatibility
-try:
-    from types import UnionType
-except ImportError:
-    # Python < 3.10
-    UnionType = None
+import numpy as np
 
 InfoDict = dict[str, Any]
 InfoDictIn = Mapping[str, Any]
@@ -201,8 +195,7 @@ def validate_type(expected_type: type, value: Any, path: str = ""):
     ):
         # complex types like Dict[str, float] etc.
 
-        # Handle both typing.Union and types.UnionType (Python 3.10+)
-        if origin is Union or (UnionType is not None and origin is UnionType):
+        if origin is Union or origin is UnionType:
             errors = []
             for t in args:
                 try:

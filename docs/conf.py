@@ -15,9 +15,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import ast
 import os
 import sys
-import ast
+
 import yaml
 
 project = "cobaya"
@@ -73,13 +74,17 @@ master_doc = "index"
 
 # General information about the project.
 
-fields = {"__year__": None, "__author__": None, "__version__": None}
+fields = {"__year__": "", "__author__": "", "__version__": ""}
 
 with open(f"../{project}/__init__.py") as f:
     tree = ast.parse(f.read())
 
 for node in ast.walk(tree):
-    if isinstance(node, ast.Assign) and node.targets[0].id in fields:
+    if (
+        isinstance(node, ast.Assign)
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id in fields
+    ):
         fields[node.targets[0].id] = ast.literal_eval(node.value)
 
 copyright = fields["__year__"] + " " + fields["__author__"]
@@ -94,14 +99,13 @@ version = fields["__version__"]
 # The full version, including alpha/beta/rc tags.
 release = version
 
-from cobaya.tools import get_available_internal_classes
-from cobaya.likelihood import Likelihood
-from cobaya.theory import Theory
-from cobaya.sampler import Sampler
-
 # Config of the inheritance diagram
-
 from sphinx.ext import inheritance_diagram
+
+from cobaya.likelihood import Likelihood
+from cobaya.sampler import Sampler
+from cobaya.theory import Theory
+from cobaya.tools import get_available_internal_classes
 
 inheritance_graph_attrs = dict(rankdir="LR", size='""')
 
@@ -119,7 +123,9 @@ def import_classes(name, currmodule):
         return old_import(name, currmodule)
 
 
-def class_name(self, cls, parts, aliases):
+def class_name(
+    self, cls: type, parts: int = 0, aliases: dict[str, str] | None = None
+) -> str:
     if issubclass(cls, bases) and cls not in bases:
         name = cls.get_qualified_class_name()
         if name.startswith("_") or name.startswith(".") or name.startswith("likelihood."):

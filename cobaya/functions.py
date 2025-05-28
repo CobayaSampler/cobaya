@@ -1,5 +1,6 @@
-import numpy as np
 import logging
+
+import numpy as np
 import scipy
 
 try:
@@ -17,7 +18,7 @@ except (ImportError, SystemError):
 else:
     import warnings
 
-    def random_SO_N(dim, random_state):
+    def random_SO_N(dim, *, random_state=None):
         """
         Draw random samples from SO(N).
         Equivalent to scipy function but about 10x faster

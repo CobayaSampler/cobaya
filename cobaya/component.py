@@ -1,26 +1,27 @@
+import inspect
 import os
 import sys
 import time
-import inspect
-from inspect import cleandoc
-from packaging import version
 from importlib import import_module, resources
-from typing import Optional, Union, List, Set, get_type_hints
+from inspect import cleandoc
+from typing import List, Optional, Set, Union, get_type_hints
 
+from packaging import version
+
+import cobaya
+from cobaya.conventions import cobaya_package, kinds, reserved_attributes
 from cobaya.log import HasLogger, LoggedError, get_logger
-from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
+from cobaya.mpi import is_main_process
 from cobaya.tools import (
-    resolve_packages_path,
-    load_module,
+    VersionCheckError,
+    deepcopy_where_possible,
     get_base_classes,
     get_internal_class_component_name,
-    deepcopy_where_possible,
-    VersionCheckError,
+    load_module,
+    resolve_packages_path,
 )
-from cobaya.conventions import kinds, cobaya_package, reserved_attributes
-from cobaya.yaml import yaml_load_file, yaml_dump, yaml_load
-from cobaya.mpi import is_main_process
-import cobaya
+from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
+from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file
 
 
 class Timer:
@@ -249,7 +250,7 @@ class HasDefaults:
     @classmethod
     def get_defaults(
         cls, return_yaml=False, yaml_expand_defaults=True, input_options=empty_dict
-    ):
+    ) -> dict | str:
         """
         Return defaults for this component_or_class, with syntax:
 
@@ -340,15 +341,7 @@ class HasDefaults:
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
                 d.update(base.get_annotations())
-
-            # from Python 10 should use just cls.__annotations__
-            d.update(
-                {
-                    k: v
-                    for k, v in cls.__dict__.get("__annotations__", {}).items()
-                    if not k.startswith("_")
-                }
-            )
+            d.update(cls.__annotations__)
         return d
 
 
