@@ -41,6 +41,18 @@
         "*.yaml": "yaml",
         "*.yml": "yaml"
     },
+    // YAML settings for custom tags
+    "yaml.customTags": [
+        "!defaults sequence",
+        "!defaults mapping",
+        "!defaults scalar",
+        "!path scalar"
+    ],
+    "yaml.validate": true,
+    "yaml.schemaStore.enable": false,
+    "yaml.completion": true,
+    "yaml.hover": true,
+    "yaml.format.enable": true,
     // Files to exclude from explorer
     "files.exclude": {
         "**/__pycache__": true,
