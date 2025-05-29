@@ -10,17 +10,18 @@ Inspired by a similar characteristic of
 """
 
 # Global
-import os
 import argparse
+import os
 from inspect import cleandoc
-from typing import List, Dict, Union
+from typing import Dict, List, Union
+
+from cobaya.component import ComponentNotFoundError, get_component_class
+from cobaya.conventions import Extension, dump_sort_cosmetic
+from cobaya.input import get_used_components, load_input
 
 # Local
-from cobaya.log import logger_setup, get_logger
-from cobaya.conventions import Extension, dump_sort_cosmetic
-from cobaya.tools import create_banner, warn_deprecation, similar_internal_class_names
-from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.input import load_input, get_used_components
+from cobaya.log import get_logger, logger_setup
+from cobaya.tools import create_banner, similar_internal_class_names, warn_deprecation
 from cobaya.typing import InfoDict
 
 # Banner defaults

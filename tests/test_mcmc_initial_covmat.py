@@ -4,14 +4,15 @@ inheritance order.
 """
 
 import os
-import numpy as np
 from itertools import chain
 
+import numpy as np
+
+from cobaya import mpi
 from cobaya.likelihoods.gaussian_mixture import random_cov
-from cobaya.typing import InputDict
 from cobaya.run import run
 from cobaya.sampler import CovmatSampler
-from cobaya import mpi
+from cobaya.typing import InputDict
 
 
 def test_mcmc_initial_covmat_interactive():

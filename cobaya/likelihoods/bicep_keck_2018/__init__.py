@@ -69,12 +69,14 @@ After this, mention the path to this likelihood when you include it in an input 
 
 """
 
-import numpy as np
 from typing import Any
+
+import numpy as np
+
+from cobaya.conventions import Const
 
 # Local
 from cobaya.likelihoods.base_classes import CMBlikes
-from cobaya.conventions import Const
 
 # Physical constants
 Ghz_Kelvin = Const.h_J_s / Const.kB_J_K * 1e9

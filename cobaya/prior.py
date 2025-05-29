@@ -398,17 +398,23 @@ Just give it a try and it should work fine, but, in case you need the details:
 
 # Global
 import numbers
-from typing import NamedTuple, Optional, List, Any
-from collections.abc import Sequence, Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, List, NamedTuple, Optional
+
 import numpy as np
 
 # Local
 from cobaya.conventions import prior_1d_name
-from cobaya.typing import PriorsDict
-from cobaya.tools import get_external_function, get_scipy_1d_pdf, read_dnumber
-from cobaya.tools import _fast_norm_logpdf, getfullargspec
-from cobaya.log import LoggedError, HasLogger
+from cobaya.log import HasLogger, LoggedError
 from cobaya.parameterization import Parameterization
+from cobaya.tools import (
+    _fast_norm_logpdf,
+    get_external_function,
+    get_scipy_1d_pdf,
+    getfullargspec,
+    read_dnumber,
+)
+from cobaya.typing import PriorsDict
 
 
 class ExternalPrior(NamedTuple):

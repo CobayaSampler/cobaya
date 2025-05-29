@@ -17,11 +17,12 @@ See https://arxiv.org/abs/1304.4473
 """
 
 from itertools import chain
+
 import numpy as np
 
-from cobaya.log import LoggedError, HasLogger
-from cobaya.tools import choleskyL_corr
 from cobaya.functions import random_SO_N
+from cobaya.log import HasLogger, LoggedError
+from cobaya.tools import choleskyL_corr
 
 
 class IndexCycler:

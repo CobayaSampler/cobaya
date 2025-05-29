@@ -2,6 +2,7 @@
 # build grid with "cobaya-grid-create grid_dir simple_grid.py"
 
 import numpy as np
+
 from cobaya import InputDict
 from cobaya.grid_tools.batchjob import DataSet
 

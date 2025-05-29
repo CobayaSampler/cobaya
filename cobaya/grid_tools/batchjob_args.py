@@ -1,5 +1,5 @@
-import fnmatch
 import argparse
+import fnmatch
 
 from cobaya.grid_tools import batchjob
 

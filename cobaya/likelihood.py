@@ -23,19 +23,19 @@ class can be used as and when needed.
 """
 
 # Global
-from time import sleep
-from typing import Optional, Union, Dict
+import numbers
 from collections.abc import Mapping
 from itertools import chain
-import numbers
+from time import sleep
+from typing import Dict, Optional, Union
+
 import numpy as np
 
-# Local
-from cobaya.typing import LikesDict, LikeDictIn, ParamValuesDict, empty_dict
-from cobaya.tools import get_external_function, getfullargspec, str_to_list
-from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection, get_component_class
+from cobaya.log import LoggedError
 from cobaya.theory import Theory
+from cobaya.tools import get_external_function, getfullargspec, str_to_list
+from cobaya.typing import LikeDictIn, LikesDict, ParamValuesDict, empty_dict
 
 
 class LikelihoodInterface:
@@ -307,13 +307,14 @@ class LikelihoodCollection(ComponentCollection):
                     )
             else:
                 assert isinstance(info, Mapping)
-                like_class: type = get_component_class(
+                like_class = get_component_class(
                     name,
                     kind="likelihood",
                     component_path=info.get("python_path"),
                     class_name=info.get("class"),
                     logger=self.log,
                 )
+                assert like_class is not None
                 self.add_instance(
                     name,
                     like_class(

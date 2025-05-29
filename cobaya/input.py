@@ -7,48 +7,49 @@
 """
 
 # Global
-import os
 import inspect
+import os
 import platform
-from copy import deepcopy
-from itertools import chain
-from functools import reduce
-from typing import Union, Optional, TypeVar, Dict, List
-from collections.abc import Mapping, MutableMapping, Callable
 from collections import defaultdict
+from collections.abc import Callable, Mapping, MutableMapping
+from copy import deepcopy
+from functools import reduce
+from itertools import chain
+from typing import Dict, List, Optional, TypeVar, Union
+
+import cobaya.typing
+from cobaya import mpi
+from cobaya.component import ComponentNotFoundError, get_component_class
 
 # Local
 from cobaya.conventions import (
-    products_path,
-    kinds,
-    separator_files,
-    get_chi2_name,
-    get_chi2_label,
     Extension,
     FileSuffix,
+    get_chi2_label,
+    get_chi2_name,
+    kinds,
     packages_path_input,
+    products_path,
+    separator_files,
 )
-from cobaya.typing import (
-    InputDict,
-    InfoDict,
-    ModelDict,
-    ExpandedParamsDict,
-    LikesDict,
-    empty_dict,
-)
-from cobaya.tools import (
-    recursive_update,
-    str_to_list,
-    get_base_classes,
-    fuzzy_match,
-    deepcopy_where_possible,
-)
-from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.yaml import yaml_load_file, yaml_load
 from cobaya.log import LoggedError, get_logger
 from cobaya.parameterization import expand_info_param
-from cobaya import mpi
-import cobaya.typing
+from cobaya.tools import (
+    deepcopy_where_possible,
+    fuzzy_match,
+    get_base_classes,
+    recursive_update,
+    str_to_list,
+)
+from cobaya.typing import (
+    ExpandedParamsDict,
+    InfoDict,
+    InputDict,
+    LikesDict,
+    ModelDict,
+    empty_dict,
+)
+from cobaya.yaml import yaml_load, yaml_load_file
 
 # Logger
 logger = get_logger(__name__)

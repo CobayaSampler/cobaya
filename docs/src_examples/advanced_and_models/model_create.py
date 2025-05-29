@@ -27,8 +27,8 @@ posterior_dict = model.logposterior(random_point_dict, as_dict=True)
 for k, v in posterior_dict.items():
     print(k, ":", v)
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 rs = np.linspace(0.75, 1.25, 200)
 loglikes = [model.loglike({"r": r, "theta": np.pi / 4}, return_derived=False) for r in rs]

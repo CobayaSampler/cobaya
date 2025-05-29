@@ -1,8 +1,10 @@
 import warnings
-from flaky import flaky
+
 import numpy as np
+from flaky import flaky
 
 from cobaya.run import run
+
 from .common_sampler import body_of_sampler_test, body_of_test_speeds
 from .conftest import install_test_wrapper
 

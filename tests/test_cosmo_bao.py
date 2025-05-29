@@ -2,8 +2,8 @@ from copy import deepcopy
 
 from cobaya.component import get_component_class
 
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE, derived_lowTEB_highTTTEEE
 from .common_cosmo import body_of_test
+from .test_cosmo_planck_2015 import derived_lowTEB_highTTTEEE, params_lowTEB_highTTTEEE
 
 
 # Tests both the bao.generic class, and class renaming for multiple instances

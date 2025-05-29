@@ -8,19 +8,20 @@
 
 # Global
 import argparse
-from pprint import pformat
 from inspect import cleandoc
+from pprint import pformat
+
+from cobaya.component import ComponentNotFoundError, get_component_class
+from cobaya.conventions import kinds, subfolders
+from cobaya.input import get_default_info
+from cobaya.log import NoLogging, get_logger, logger_setup
 
 # Local
 from cobaya.tools import (
-    warn_deprecation,
     get_available_internal_class_names,
     similar_internal_class_names,
+    warn_deprecation,
 )
-from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.conventions import subfolders, kinds
-from cobaya.input import get_default_info
-from cobaya.log import logger_setup, get_logger, NoLogging
 
 _indent = 2 * " "
 

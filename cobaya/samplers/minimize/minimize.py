@@ -100,20 +100,21 @@ import os
 import re
 from itertools import chain
 from typing import Optional, Union
+
 import numpy as np
-from scipy import optimize
 import pybobyqa
 from pybobyqa import controller
+from scipy import optimize
+
+from cobaya import mpi
+from cobaya.collection import OnePoint, SampleCollection
+from cobaya.component import ComponentNotInstalledError
+from cobaya.conventions import undo_chi2_name
+from cobaya.log import LoggedError
 
 # Local
-from cobaya.sampler import Minimizer
-from cobaya.conventions import undo_chi2_name
-from cobaya.collection import OnePoint, SampleCollection
-from cobaya.log import LoggedError
+from cobaya.sampler import CovmatSampler, Minimizer
 from cobaya.tools import read_dnumber, recursive_update
-from cobaya.sampler import CovmatSampler
-from cobaya.component import ComponentNotInstalledError
-from cobaya import mpi
 
 # Handling scipy vs BOBYQA vs iMinuit
 evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}

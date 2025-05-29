@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 from cobaya.likelihoods.base_classes import SN
 
 

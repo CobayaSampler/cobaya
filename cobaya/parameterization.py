@@ -8,33 +8,35 @@
 """
 
 # Global
-import numpy as np
-from numbers import Real
-from itertools import chain
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
-from typing import Dict, Set, List, Tuple, Any, Union
-from collections.abc import Mapping, Sequence, Callable
+from itertools import chain
+from numbers import Real
+from typing import Any, Dict, List, Set, Tuple, Union
+
+import numpy as np
+
+from cobaya.log import HasLogger, LoggedError
+from cobaya.tools import (
+    deepcopy_where_possible,
+    ensure_nolatex,
+    get_external_function,
+    get_scipy_1d_pdf,
+    getfullargspec,
+    invert_dict,
+    is_valid_variable_name,
+    str_to_list,
+)
 
 # Local
 from cobaya.typing import (
-    ParamsDict,
+    ExpandedParamsDict,
     ParamDict,
     ParamInput,
-    ExpandedParamsDict,
+    ParamsDict,
     ParamValuesDict,
     partags,
 )
-from cobaya.tools import (
-    get_external_function,
-    ensure_nolatex,
-    is_valid_variable_name,
-    getfullargspec,
-    deepcopy_where_possible,
-    invert_dict,
-    str_to_list,
-    get_scipy_1d_pdf,
-)
-from cobaya.log import LoggedError, HasLogger
 
 
 def is_fixed_or_function_param(info_param: ParamInput) -> bool:

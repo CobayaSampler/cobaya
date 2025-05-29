@@ -1,6 +1,8 @@
 import os
-from cobaya.doc import doc_script
+
 from cobaya.bib import bib_script
+from cobaya.doc import doc_script
+
 from .common import stdout_check
 
 

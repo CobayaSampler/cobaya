@@ -220,26 +220,28 @@ it in the ``classy`` input block (otherwise a system-wide CLASS may be used inst
 """
 
 # Global
-import sys
 import os
 import platform
+import sys
+from collections.abc import Callable, Sequence
 from copy import deepcopy
-from typing import NamedTuple, Union, Optional, Any
-from collections.abc import Sequence, Callable
+from typing import Any, NamedTuple, Optional, Union
+
 import numpy as np
+
+from cobaya.component import ComponentNotInstalledError, load_external_module
+from cobaya.install import check_gcc_version, download_github_release, pip_install
+from cobaya.log import LoggedError, get_logger
 
 # Local
 from cobaya.theories.cosmo import BoltzmannBase
-from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, pip_install, check_gcc_version
-from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.tools import (
     Pool1D,
     Pool2D,
     PoolND,
+    VersionCheckError,
     combine_1d,
     get_compiled_import_path,
-    VersionCheckError,
 )
 
 
@@ -1005,7 +1007,7 @@ class classy(BoltzmannBase):
             )
             return False
         log.info("Compiling classy...")
-        from subprocess import Popen, PIPE
+        from subprocess import PIPE, Popen
 
         env = deepcopy(os.environ)
         env.update({"PYTHON": sys.executable})

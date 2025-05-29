@@ -3,8 +3,8 @@ Tests for the PoolXD classes, which are used to assist caching of computed quant
 which are a function of a finite set of fixed values.
 """
 
-import pytest
 import numpy as np
+import pytest
 from flaky import flaky
 
 from cobaya.tools import Pool1D, Pool2D

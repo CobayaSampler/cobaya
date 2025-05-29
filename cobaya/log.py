@@ -7,14 +7,15 @@
 """
 
 # Global
-import os
-import sys
-import logging
-import platform
-import traceback
 import functools
+import logging
+import os
+import platform
+import sys
+import traceback
+from random import choice, shuffle
+
 import numpy as np
-from random import shuffle, choice
 
 # Local
 from cobaya import mpi

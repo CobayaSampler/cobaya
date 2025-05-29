@@ -1,14 +1,16 @@
-import numpy as np
-from typing import Any
 from copy import deepcopy
+from typing import Any
+
+import numpy as np
+
+from cobaya.likelihood import Likelihood, LikelihoodInterface
 from cobaya.model import get_model
 from cobaya.theory import Theory
-from cobaya.likelihood import LikelihoodInterface, Likelihood
-from cobaya.typing import InputDict, empty_dict, ParamDict
+from cobaya.typing import InputDict, ParamDict, empty_dict
+
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 from .test_cosmo_camb import get_camb
-
 
 # Test separating out the BBN consistency constraint into separate theory code,
 # using CAMB's BBN interpolator class. Tests dependencies/multi-theory with one

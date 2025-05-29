@@ -47,17 +47,19 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 """
 
 # Global
-import numpy as np
-from scipy.interpolate import InterpolatedUnivariateSpline
-from scipy import special
 import copy
 from typing import List, Tuple
+
+import numpy as np
+from scipy import special
+from scipy.interpolate import InterpolatedUnivariateSpline
+
+from cobaya.conventions import Const
+from cobaya.functions import numba
 
 # Local
 from cobaya.likelihoods.base_classes import DataSetLikelihood
 from cobaya.log import LoggedError
-from cobaya.conventions import Const
-from cobaya.functions import numba
 
 # DES data types
 def_DES_types = ["xip", "xim", "gammat", "wtheta"]

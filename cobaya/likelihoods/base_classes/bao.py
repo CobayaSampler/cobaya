@@ -73,20 +73,22 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 """
 
 import os
+from collections.abc import Sequence
+from typing import Optional
+
 import numpy as np
+import pandas as pd
 from scipy.interpolate import (
-    UnivariateSpline,
     RectBivariateSpline,
     RegularGridInterpolator,
+    UnivariateSpline,
 )
-import pandas as pd
-from typing import Optional
-from collections.abc import Sequence
+
+from cobaya.conventions import Const, packages_path_input
+from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.conventions import Const, packages_path_input
-from cobaya.likelihoods.base_classes import InstallableLikelihood
 
 
 class BAO(InstallableLikelihood):

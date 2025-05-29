@@ -8,16 +8,18 @@
 
 # Global
 from typing import Any
+
 import numpy as np
-from scipy.stats import multivariate_normal, uniform, random_correlation
 from scipy.special import logsumexp
+from scipy.stats import multivariate_normal, random_correlation, uniform
+
+from cobaya.functions import inverse_cholesky
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
-from cobaya.mpi import share_mpi, is_main_process
-from cobaya.typing import InputDict, Union, Sequence
-from cobaya.functions import inverse_cholesky
+from cobaya.mpi import is_main_process, share_mpi
+from cobaya.typing import InputDict, Sequence, Union
 
 derived_suffix = "_derived"
 

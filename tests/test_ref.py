@@ -2,12 +2,12 @@
 Tests the setting and updating of the reference pdf, including re-checking if point-like.
 """
 
-import pytest
 import numpy as np
+import pytest
 
+from cobaya import mpi
 from cobaya.model import get_model
 from cobaya.sampler import get_sampler
-from cobaya import mpi
 
 
 def test_ref():

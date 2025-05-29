@@ -46,33 +46,36 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 
 # Global
 import os
+from collections.abc import Mapping, Sequence
 from itertools import chain
-from typing import Optional, Union, Dict, TYPE_CHECKING
-from collections.abc import Sequence, Mapping
+from typing import TYPE_CHECKING, Dict, Optional, Union
+
 import numpy as np
 from numpy.random import SeedSequence, default_rng
 
+from cobaya import mpi
+from cobaya.component import CobayaComponent, get_component_class
+
 # Local
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.typing import SamplersDict, SamplerDict
+from cobaya.input import get_preferred_old_values, is_equal_info, update_info
+from cobaya.log import LoggedError, get_logger, is_debug
+from cobaya.model import Model
+from cobaya.output import Output, OutputDummy
 from cobaya.tools import (
     deepcopy_where_possible,
     find_with_regexp,
     recursive_update,
     str_to_list,
 )
-from cobaya.model import Model
-from cobaya.log import LoggedError, get_logger, is_debug
-from cobaya.yaml import yaml_load_file, yaml_dump
-from cobaya.component import CobayaComponent, get_component_class
-from cobaya.input import update_info, is_equal_info, get_preferred_old_values
-from cobaya.output import OutputDummy, Output
-from cobaya import mpi
+from cobaya.typing import SamplerDict, SamplersDict
+from cobaya.yaml import yaml_dump, yaml_load_file
 
 # Avoid importing GetDist if not necessary
 if TYPE_CHECKING:
-    from cobaya.collection import SampleCollection
     from getdist import MCSamples
+
+    from cobaya.collection import SampleCollection
 
 
 def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):

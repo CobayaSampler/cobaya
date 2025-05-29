@@ -7,29 +7,31 @@
 """
 
 # Global
-import os
-from io import StringIO
-from tempfile import NamedTemporaryFile
-from subprocess import Popen, PIPE
-import uuid
 import argparse
+import os
+import uuid
+from io import StringIO
+from subprocess import PIPE, Popen
+from tempfile import NamedTemporaryFile
 from textwrap import dedent
+
 from requests import head
 
-# Local
-from cobaya.log import logger_setup, LoggedError, get_logger
-from cobaya.input import get_used_components, load_input
-from cobaya.yaml import yaml_dump
-from cobaya.install import install
 from cobaya.conventions import (
-    products_path,
-    packages_path_env,
-    packages_path_arg,
     code_path,
     data_path,
+    packages_path_arg,
+    packages_path_env,
     packages_path_input,
+    products_path,
 )
+from cobaya.input import get_used_components, load_input
+from cobaya.install import install
+
+# Local
+from cobaya.log import LoggedError, get_logger, logger_setup
 from cobaya.tools import warn_deprecation
+from cobaya.yaml import yaml_dump
 
 log = get_logger(__name__)
 

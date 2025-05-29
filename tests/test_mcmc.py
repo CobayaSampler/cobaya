@@ -1,16 +1,18 @@
-from flaky import flaky
-import numpy as np
-import pytest
+import logging
 import time
 from typing import Type
-import logging
 
-from cobaya import mpi, run, Likelihood, InputDict
-from cobaya.log import NoLogging, LoggedError
+import numpy as np
+import pytest
+from flaky import flaky
+
+from cobaya import InputDict, Likelihood, mpi, run
+from cobaya.log import LoggedError, NoLogging
 from cobaya.tools import KL_norm
-from cobaya.yaml import yaml_load
-from .common_sampler import body_of_sampler_test, body_of_test_speeds
 from cobaya.typing import type_checking
+from cobaya.yaml import yaml_load
+
+from .common_sampler import body_of_sampler_test, body_of_test_speeds
 
 pytestmark = pytest.mark.mpi
 

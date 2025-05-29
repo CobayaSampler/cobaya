@@ -1,11 +1,12 @@
 # Tries to evaluate the likelihood at LCDM's best fit of Planck 2015, with CAMB and CLASS
 from copy import deepcopy
 
-from .common_cosmo import body_of_test
-from cobaya.cosmo_input import planck_precision
-
 # Generating plots in tests
 import matplotlib
+
+from cobaya.cosmo_input import planck_precision
+
+from .common_cosmo import body_of_test
 
 matplotlib.use("agg")
 

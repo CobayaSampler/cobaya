@@ -1,10 +1,12 @@
-from .conftest import install_test_wrapper
-import numpy as np
-from cobaya.model import get_model
-from cobaya.log import LoggedError, NoLogging
-
-import pytest
 import logging
+
+import numpy as np
+import pytest
+
+from cobaya.log import LoggedError, NoLogging
+from cobaya.model import get_model
+
+from .conftest import install_test_wrapper
 
 cosmology_params = {
     "ombh2": 0.022,

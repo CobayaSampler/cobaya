@@ -1,18 +1,20 @@
 import os
-from cobaya.yaml import yaml_load_file
+
 from cobaya import grid_tools
 from cobaya.grid_tools import (
-    grid_create,
-    grid_run,
+    grid_cleanup,
     grid_converge,
-    grid_tables,
-    grid_param_compare,
+    grid_copy,
+    grid_create,
+    grid_extract,
     grid_getdist,
     grid_list,
-    grid_copy,
-    grid_extract,
-    grid_cleanup,
+    grid_param_compare,
+    grid_run,
+    grid_tables,
 )
+from cobaya.yaml import yaml_load_file
+
 from .common import stdout_check
 
 

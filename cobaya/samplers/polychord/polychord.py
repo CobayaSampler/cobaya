@@ -7,34 +7,36 @@
 """
 
 # Global
-import os
-import sys
-import logging
 import inspect
-from itertools import chain
-from typing import Any, Union, Dict, TYPE_CHECKING
-from collections.abc import Callable
-from tempfile import gettempdir
+import logging
+import os
 import re
+import sys
 import warnings
+from collections.abc import Callable
+from itertools import chain
+from tempfile import gettempdir
+from typing import TYPE_CHECKING, Any, Dict, Union
+
 import numpy as np
+
+from cobaya.collection import SampleCollection
+from cobaya.component import ComponentNotInstalledError, load_external_module
+from cobaya.conventions import Extension, derived_par_name_separator
+from cobaya.install import download_github_release
+from cobaya.log import LoggedError, NoLogging, get_logger
+from cobaya.mpi import is_main_process, share_mpi, sync_processes
+from cobaya.sampler import Sampler
 
 # Local
 from cobaya.tools import (
-    read_dnumber,
-    get_external_function,
-    find_with_regexp,
     NumberWithUnits,
+    find_with_regexp,
     get_compiled_import_path,
+    get_external_function,
+    read_dnumber,
 )
-from cobaya.sampler import Sampler
-from cobaya.mpi import is_main_process, share_mpi, sync_processes
-from cobaya.collection import SampleCollection
-from cobaya.log import get_logger, NoLogging, LoggedError
-from cobaya.install import download_github_release
-from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.yaml import yaml_dump_file
-from cobaya.conventions import derived_par_name_separator, Extension
 
 # Avoid importing GetDist if not necessary
 if TYPE_CHECKING:
@@ -737,7 +739,7 @@ class polychord(Sampler):
             log.error("Could not download PolyChord.")
             return False
         log.info("Compiling (Py)PolyChord...")
-        from subprocess import Popen, PIPE  # pylint: disable=import-outside-toplevel
+        from subprocess import PIPE, Popen  # pylint: disable=import-outside-toplevel
 
         # Needs to re-define os' PWD,
         # because MakeFile calls it and is not affected by the cwd of Popen

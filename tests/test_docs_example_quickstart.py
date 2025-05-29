@@ -3,17 +3,19 @@ Automatic tests of the quickstart example in the documentation,
 to make sure it remains up to date.
 """
 
-from flaky import flaky
-from io import StringIO
 import os
-import pytest
+from io import StringIO
 
-from cobaya.yaml import yaml_load_file
+import pytest
+from flaky import flaky
+
+from cobaya import mpi
 from cobaya.input import is_equal_info
 from cobaya.tools import KL_norm, working_directory
-from .common_sampler import KL_tolerance
+from cobaya.yaml import yaml_load_file
+
 from .common import stdout_redirector
-from cobaya import mpi
+from .common_sampler import KL_tolerance
 
 pytestmark = pytest.mark.mpi
 

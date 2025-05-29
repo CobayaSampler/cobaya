@@ -4,10 +4,12 @@ to make sure it remains up to date.
 """
 
 import os
-import numpy as np
 from io import StringIO
 
+import numpy as np
+
 from cobaya.tools import working_directory
+
 from .common import process_packages_path, stdout_redirector
 from .conftest import install_test_wrapper
 

@@ -13,8 +13,13 @@ to `body of test`.
 """
 
 # Local
-from .common_external import info_string, info_callable, info_mixed, info_import
-from .common_external import body_of_test
+from .common_external import (
+    body_of_test,
+    info_callable,
+    info_import,
+    info_mixed,
+    info_string,
+)
 
 
 def test_prior_external_string(tmpdir):

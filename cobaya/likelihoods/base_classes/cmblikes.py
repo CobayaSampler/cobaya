@@ -11,14 +11,16 @@
 
 # Global
 import os
-import numpy as np
 from typing import List
-from getdist import ParamNames, IniFile
+
+import numpy as np
+from getdist import IniFile, ParamNames
 from scipy.linalg import sqrtm
+
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 CMB_keys = ["tt", "te", "ee", "bb"]
 

@@ -1,7 +1,9 @@
 import os
+
 from getdist import IniFile, ParamNames
 from getdist.parampriors import ParamBounds
-from cobaya.typing import InputDict, ParamDict, ParamsDict, LikesDict
+
+from cobaya.typing import InputDict, LikesDict, ParamDict, ParamsDict
 
 
 def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDict:

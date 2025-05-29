@@ -1,13 +1,16 @@
 import logging
 import os
+
 import numpy as np
 import pytest
-from cobaya import mpi, run, Theory, InputDict, PostDict, LoggedError, load_samples
-from cobaya.conventions import Extension
+
+from cobaya import InputDict, LoggedError, PostDict, Theory, load_samples, mpi, run
 from cobaya.component import ComponentNotFoundError
-from cobaya.tools import deepcopy_where_possible
+from cobaya.conventions import Extension
 from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
 from cobaya.log import NoLogging
+from cobaya.tools import deepcopy_where_possible
+
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 

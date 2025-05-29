@@ -8,26 +8,28 @@
 """
 
 # Global
-import os
 import argparse
 import importlib.util
+import os
 from itertools import chain
+
 from getdist.inifile import IniFile
 from getdist.paramnames import makeList as make_list
 
-# Local
-from cobaya.yaml import yaml_load_file, yaml_dump_file
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.input import merge_info, update_info
-from cobaya.install import install as install_reqs
-from cobaya.tools import sort_cosmetic, warn_deprecation, resolve_packages_path
-from cobaya.grid_tools import batchjob
 from cobaya.cosmo_input import (
     create_input,
     get_best_covmat_ext,
     get_covmat_package_folders,
 )
+from cobaya.grid_tools import batchjob
+from cobaya.input import merge_info, update_info
+from cobaya.install import install as install_reqs
 from cobaya.parameterization import is_sampled_param
+from cobaya.tools import resolve_packages_path, sort_cosmetic, warn_deprecation
+
+# Local
+from cobaya.yaml import yaml_dump_file, yaml_load_file
 
 
 def get_args(vals=None):

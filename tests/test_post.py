@@ -1,15 +1,15 @@
 import os
 from copy import deepcopy
 from itertools import chain
-from scipy.stats import multivariate_normal
+
 import numpy as np
 import pytest
+from scipy.stats import multivariate_normal
 
-from cobaya import run, load_samples
-from cobaya.post import post, OutputOptions
-from cobaya.typing import ParamsDict, InputDict
+from cobaya import load_samples, mpi, run
 from cobaya.conventions import separator_files
-from cobaya import mpi
+from cobaya.post import OutputOptions, post
+from cobaya.typing import InputDict, ParamsDict
 
 pytestmark = pytest.mark.mpi
 

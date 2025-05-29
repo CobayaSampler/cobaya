@@ -8,49 +8,51 @@
 """
 
 # Global
-import os
-import sys
-import re
-import subprocess
-import traceback
-import shutil
-import tempfile
-import logging
-from itertools import chain
 import importlib
-from typing import List, Union
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import traceback
 from collections.abc import Mapping
+from itertools import chain
+from typing import List, Union
+
 import requests  # type: ignore
 import tqdm  # type: ignore
 from packaging import version
 
-# Local
-from cobaya.log import logger_setup, LoggedError, NoLogging, get_logger
-from cobaya.component import get_component_class, ComponentNotFoundError
-from cobaya.tools import (
-    create_banner,
-    warn_deprecation,
-    write_packages_path_in_config_file,
-    get_config_path,
-    VersionCheckError,
-    resolve_packages_path,
-    similar_internal_class_names,
-    find_with_regexp,
-)
-from cobaya.input import get_used_components
+from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import (
+    Extension,
     code_path,
     data_path,
-    packages_path_arg,
-    packages_path_env,
-    Extension,
     install_skip_env,
+    packages_path_arg,
     packages_path_arg_posix,
     packages_path_config_file,
+    packages_path_env,
     packages_path_input,
 )
+from cobaya.input import get_used_components
+
+# Local
+from cobaya.log import LoggedError, NoLogging, get_logger, logger_setup
 from cobaya.mpi import set_mpi_disabled
-from cobaya.typing import InputDict, InfoDict
+from cobaya.tools import (
+    VersionCheckError,
+    create_banner,
+    find_with_regexp,
+    get_config_path,
+    resolve_packages_path,
+    similar_internal_class_names,
+    warn_deprecation,
+    write_packages_path_in_config_file,
+)
+from cobaya.typing import InfoDict, InputDict
 from cobaya.yaml import yaml_load_file
 
 _banner_symbol = "="

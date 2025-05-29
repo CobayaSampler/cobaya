@@ -7,32 +7,33 @@
 """
 
 # Global
-import os
 import functools
+import os
 import warnings
-from copy import deepcopy
-from typing import Union, Optional, Tuple, List
 from collections.abc import Sequence
+from copy import deepcopy
 from numbers import Number
+from typing import List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
 from getdist import MCSamples, chains  # type: ignore
-from getdist.chains import WeightedSamples, WeightedSampleError  # type: ignore
+from getdist.chains import WeightedSampleError, WeightedSamples  # type: ignore
 
 # Local
 from cobaya.conventions import (
     OutPar,
-    minuslogprior_names,
+    chi2_labels,
     chi2_names,
     derived_par_name_separator,
-    minuslogprior_labels,
-    chi2_labels,
     minuslogpost_label,
+    minuslogprior_labels,
+    minuslogprior_names,
 )
+from cobaya.log import HasLogger, LoggedError, NoLogging
+from cobaya.model import LogPosterior, Model
 from cobaya.parameterization import get_literal_param_ranges
 from cobaya.tools import load_DataFrame
-from cobaya.log import LoggedError, HasLogger, NoLogging
-from cobaya.model import Model, LogPosterior
 
 # Suppress getdist output
 chains.print_load_details = False

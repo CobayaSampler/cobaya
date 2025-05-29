@@ -9,21 +9,23 @@ r"""
 
 # Global
 import os
+import re
 import sys
+
 import numpy as np
 from packaging import version
-import re
+
+from cobaya.component import ComponentNotInstalledError, load_external_module
+from cobaya.input import get_default_info
+from cobaya.install import download_file, pip_install
 
 # Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
-from cobaya.input import get_default_info
-from cobaya.install import pip_install, download_file
-from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.tools import (
+    VersionCheckError,
     are_different_params_lists,
     create_banner,
-    VersionCheckError,
     working_directory,
 )
 
@@ -408,7 +410,7 @@ def is_installed_clik(path, reload=False):
 
 
 def execute(command):
-    from subprocess import Popen, PIPE, STDOUT
+    from subprocess import PIPE, STDOUT, Popen
 
     if _clik_verbose:
         process = Popen(command, stdout=PIPE, stderr=STDOUT)

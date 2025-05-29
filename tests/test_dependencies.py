@@ -1,9 +1,11 @@
-import pytest
 import logging
-from cobaya.model import get_model
-from cobaya.theory import Theory
+
+import pytest
+
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, NoLogging
+from cobaya.model import get_model
+from cobaya.theory import Theory
 from cobaya.typing import InputDict
 
 debug = False

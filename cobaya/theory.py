@@ -31,23 +31,23 @@ see :doc:`theories_and_dependencies`.
 """
 
 from collections import deque
-from typing import Optional, Union, Tuple, Dict, Set, Any, List
-from collections.abc import Sequence, Iterable
+from collections.abc import Iterable, Sequence
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
+from cobaya.log import LoggedError, always_stop_exceptions
+from cobaya.tools import get_class_methods, str_to_list
 
 # Local
 from cobaya.typing import (
-    TheoryDictIn,
-    TheoriesDict,
     InfoDict,
-    ParamValuesDict,
     ParamsDict,
+    ParamValuesDict,
+    TheoriesDict,
+    TheoryDictIn,
     empty_dict,
     unset_params,
 )
-from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
-from cobaya.tools import str_to_list
-from cobaya.log import LoggedError, always_stop_exceptions
-from cobaya.tools import get_class_methods
 
 
 class Theory(CobayaComponent):
@@ -399,11 +399,10 @@ class TheoryCollection(ComponentCollection):
                 # If it has an "external" key, wrap it up. Else, load it up
                 if isinstance(info, Theory):
                     self.add_instance(name, info)
-                elif isinstance(info.get("external"), Theory):
-                    self.add_instance(name, info["external"])
+                elif isinstance(_ext := info.get("external"), Theory):
+                    self.add_instance(name, _ext)
                 else:
-                    if "external" in info:
-                        theory_class = info["external"]
+                    if theory_class := info.get("external"):
                         if not isinstance(theory_class, type) or not issubclass(
                             theory_class, Theory
                         ):

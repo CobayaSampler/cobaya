@@ -1,7 +1,8 @@
 """General test for types of components."""
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple
 from collections.abc import Mapping
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
+
 import numpy as np
 import pytest
 

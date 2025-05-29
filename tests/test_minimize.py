@@ -2,10 +2,11 @@
 
 import os
 import warnings
+
 import numpy as np
 import pytest
 
-from cobaya import mpi, run, InputDict, Likelihood
+from cobaya import InputDict, Likelihood, mpi, run
 from cobaya.component import ComponentNotInstalledError
 from cobaya.samplers.minimize import valid_methods
 

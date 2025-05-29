@@ -9,42 +9,43 @@
 import os
 import time
 from itertools import chain
-from typing import List, Union, Optional, Tuple, TypedDict, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Tuple, TypedDict, Union
+
 import numpy as np
 
 from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.conventions import (
-    prior_1d_name,
     OutPar,
     get_chi2_name,
-    undo_chi2_name,
     get_minuslogpior_name,
-    separator_files,
     minuslogprior_names,
+    prior_1d_name,
+    separator_files,
+    undo_chi2_name,
 )
-from cobaya.input import update_info, add_aggregated_chi2_params, load_input_dict
-from cobaya.log import logger_setup, get_logger, is_debug, LoggedError
-from cobaya.model import Model, DummyModel
+from cobaya.input import add_aggregated_chi2_params, load_input_dict, update_info
+from cobaya.log import LoggedError, get_logger, is_debug, logger_setup
+from cobaya.model import DummyModel, Model
 from cobaya.output import get_output
-from cobaya.parameterization import Parameterization
 from cobaya.parameterization import (
+    Parameterization,
+    is_derived_param,
     is_fixed_or_function_param,
     is_sampled_param,
-    is_derived_param,
 )
 from cobaya.prior import Prior
 from cobaya.tools import (
+    deepcopy_where_possible,
     progress_bar,
     recursive_update,
-    deepcopy_where_possible,
     str_to_list,
 )
 from cobaya.typing import (
     ExpandedParamsDict,
+    InputDict,
     ModelBlock,
     ParamValuesDict,
-    InputDict,
     PostDict,
 )
 

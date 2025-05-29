@@ -6,39 +6,41 @@
 """
 
 # Global
-import re
 import datetime
+import re
+from collections.abc import Callable, Sequence
 from itertools import chain
-from typing import Optional, Union, TYPE_CHECKING
-from collections.abc import Sequence, Callable
+from typing import TYPE_CHECKING, Optional, Union
+
 import numpy as np
 from pandas import DataFrame
 
-# Local
-from cobaya.sampler import CovmatSampler
+from cobaya import mpi
+from cobaya.collection import (
+    OneSamplePoint,
+    SampleCollection,
+    apply_temperature_cov,
+    remove_temperature,
+    remove_temperature_cov,
+)
+from cobaya.conventions import Extension, OutPar, get_version, line_width
+from cobaya.functions import inverse_cholesky
+from cobaya.log import LoggedError, always_stop_exceptions
+from cobaya.model import LogPosterior
 from cobaya.mpi import (
     get_mpi_size,
-    share_mpi,
-    more_than_one_process,
     is_main_process,
+    more_than_one_process,
+    share_mpi,
     sync_processes,
 )
-from cobaya.collection import (
-    SampleCollection,
-    OneSamplePoint,
-    apply_temperature_cov,
-    remove_temperature_cov,
-    remove_temperature,
-)
-from cobaya.conventions import OutPar, Extension, line_width, get_version
-from cobaya.typing import empty_dict
+
+# Local
+from cobaya.sampler import CovmatSampler
 from cobaya.samplers.mcmc.proposal import BlockedProposer
-from cobaya.log import LoggedError, always_stop_exceptions
-from cobaya.tools import get_external_function, NumberWithUnits, load_DataFrame
-from cobaya.functions import inverse_cholesky
+from cobaya.tools import NumberWithUnits, get_external_function, load_DataFrame
+from cobaya.typing import empty_dict
 from cobaya.yaml import yaml_dump_file
-from cobaya.model import LogPosterior
-from cobaya import mpi
 
 # Avoid importing GetDist if not necessary
 if TYPE_CHECKING:

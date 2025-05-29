@@ -7,40 +7,40 @@
 """
 
 # Global
-import os
-import sys
-import platform
-import warnings
 import inspect
-import re
 import numbers
-import pandas as pd
-import numpy as np
-import scipy.stats as stats
-from itertools import chain
-from importlib import import_module
-from copy import deepcopy
-from packaging import version
-from itertools import permutations
-from typing import Any, List, TypeVar, Optional, Union, Dict
-from collections.abc import Mapping, Sequence, Iterable, Callable
-from types import ModuleType
-from inspect import cleandoc, getfullargspec
-from ast import parse
+import os
+import platform
+import re
+import sys
+import warnings
 from abc import ABC, abstractmethod
+from ast import parse
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import contextmanager
+from copy import deepcopy
+from importlib import import_module
+from inspect import cleandoc, getfullargspec
+from itertools import chain, permutations
+from types import ModuleType
+from typing import Any, Dict, List, Optional, TypeVar, Union
+
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+from packaging import version
 
 # Local
 from cobaya.conventions import (
-    subfolders,
+    dump_sort_cosmetic,
     kinds,
+    packages_path_arg,
     packages_path_config_file,
     packages_path_env,
-    packages_path_arg,
-    dump_sort_cosmetic,
     packages_path_input,
+    subfolders,
 )
-from cobaya.log import LoggedError, HasLogger, get_logger
+from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Kind
 
 # Set up logger
@@ -96,8 +96,8 @@ def get_base_classes() -> dict[Kind, Any]:
     Return the base classes for the different kinds.
     """
     from cobaya.likelihood import Likelihood
-    from cobaya.theory import Theory
     from cobaya.sampler import Sampler
+    from cobaya.theory import Theory
 
     return {
         "sampler": Sampler,
@@ -251,6 +251,7 @@ def import_all_classes(
     path, pkg: str, subclass_of: type, hidden=False, helpers=False, stem: str = None
 ):
     import pkgutil
+
     from cobaya.theory import HelperTheory
 
     result = set()
@@ -547,6 +548,7 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
             # try getdist format chains with .paramnames file
             if root_file_name and os.path.exists(root_file_name + ".paramnames"):
                 from getdist import ParamNames
+
                 from cobaya.conventions import OutPar, derived_par_name_separator
 
                 names = ParamNames(root_file_name + ".paramnames").list()

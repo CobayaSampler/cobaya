@@ -1,4 +1,5 @@
 import numpy as np
+
 from cobaya.likelihoods.base_classes.planck_2018_CamSpec_python import (
     Planck2018CamSpecPython,
 )

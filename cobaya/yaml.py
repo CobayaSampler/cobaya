@@ -14,18 +14,19 @@ Customization of YAML's loaded and dumper:
 # Global
 import os
 import re
-import yaml
-import numpy as np
-from yaml.resolver import BaseResolver
-from yaml.constructor import ConstructorError
-from typing import Optional, Any
 from collections.abc import Mapping
+from typing import Any, Optional
+
+import numpy as np
+import yaml
+from yaml.constructor import ConstructorError
+from yaml.resolver import BaseResolver
+
+from cobaya.conventions import Extension
 
 # Local
 from cobaya.tools import prepare_comment, recursive_update
-from cobaya.conventions import Extension
 from cobaya.typing import InfoDict
-
 
 # Exceptions #############################################################################
 

@@ -1,16 +1,16 @@
 import logging
+import os
 
 import pytest
-import os
-from cobaya.component import ComponentNotInstalledError
-from cobaya.log import LoggedError
+
+import cobaya.typing
 from cobaya import mpi
+from cobaya.component import ComponentNotInstalledError
 
 # Paths ##################################################################################
-
-from cobaya.conventions import packages_path_env, packages_path_arg_posix, test_skip_env
+from cobaya.conventions import packages_path_arg_posix, packages_path_env, test_skip_env
+from cobaya.log import LoggedError
 from cobaya.tools import resolve_packages_path
-import cobaya.typing
 
 cobaya.typing.enforce_type_checking = True
 

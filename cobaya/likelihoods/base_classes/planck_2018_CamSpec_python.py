@@ -19,8 +19,9 @@ It is used by the 2018 and more recent CamSpec Planck likelihoods.
 """
 
 # Global
-import numpy as np
 import os
+
+import numpy as np
 import scipy
 
 # Local

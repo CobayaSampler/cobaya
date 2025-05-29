@@ -9,11 +9,13 @@
 # Global
 import os
 
+from cobaya.component import ComponentNotInstalledError
+from cobaya.conventions import packages_path_input
+
 # Local
 from cobaya.log import LoggedError
-from cobaya.component import ComponentNotInstalledError
 from cobaya.typing import InfoDict
-from cobaya.conventions import packages_path_input
+
 from .InstallableLikelihood import InstallableLikelihood
 
 

@@ -4,17 +4,18 @@ parameter names) gaussian likelihood.
 """
 
 # Global
+import numpy as np
 import pytest
 from scipy.stats import multivariate_normal
-import numpy as np
+
+from cobaya.likelihood import Likelihood
+from cobaya.log import LoggedError
+from cobaya.model import get_model
+from cobaya.run import run
+from cobaya.tools import get_external_function
 
 # Local
 from cobaya.yaml import yaml_load
-from cobaya.run import run
-from cobaya.tools import get_external_function
-from cobaya.likelihood import Likelihood
-from cobaya.model import get_model
-from cobaya.log import LoggedError
 
 x_func = lambda _: _ / 3
 e_func = lambda _: _ + 1

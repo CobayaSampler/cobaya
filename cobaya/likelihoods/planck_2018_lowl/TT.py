@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
+from scipy.interpolate import InterpolatedUnivariateSpline
+
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 from cobaya.log import LoggedError
-from scipy.interpolate import InterpolatedUnivariateSpline
 
 
 class TT(InstallableLikelihood):

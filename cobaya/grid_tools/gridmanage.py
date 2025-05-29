@@ -6,19 +6,20 @@
 
 """
 
-import os
 import fnmatch
+import os
+import shutil
 import subprocess
 import time
-import shutil
 import zipfile
 from datetime import datetime, timedelta
+
 import getdist
 from getdist import IniFile
 
 from cobaya.conventions import Extension
-from .batchjob_args import BatchArgs
 
+from .batchjob_args import BatchArgs
 
 # might be better as cobaya-grid command [options]
 

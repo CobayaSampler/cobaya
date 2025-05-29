@@ -6,14 +6,15 @@
 
 """
 
+import functools
 import os
 import sys
-import functools
-from typing import List, Union, Any, Optional
-from collections.abc import Iterable, Callable
-import numpy as np
 import time
+from collections.abc import Callable, Iterable
 from enum import IntEnum
+from typing import Any
+
+import numpy as np
 
 default_error_timeout_seconds = 5
 
@@ -449,7 +450,7 @@ class ProcessState:
             if not self.wait_all_ended(
                 timeout=not issubclass(exc_type, OtherProcessError)
             ):
-                from cobaya.log import get_traceback_text, LoggedError, get_logger
+                from cobaya.log import LoggedError, get_logger, get_traceback_text
 
                 get_logger(self.name).critical(
                     "Aborting MPI due to error"

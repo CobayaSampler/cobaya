@@ -7,34 +7,36 @@
 """
 
 # Global
-import os
-import sys
 import datetime
+import os
 import re
 import shutil
-from typing import Optional, Any
+import sys
+from typing import Any
+
 from packaging import version
 
-# Local
-from cobaya.yaml import (
-    yaml_dump,
-    yaml_load,
-    yaml_load_file,
-    OutputError,
-    InputImportError,
-)
-from cobaya.conventions import resume_default, Extension, kinds, get_version
-from cobaya.typing import InputDict
-from cobaya.log import LoggedError, HasLogger, get_logger, get_traceback_text
-from cobaya.input import is_equal_info, load_info_dump, split_prefix, get_info_path
+from cobaya import mpi
+from cobaya.component import get_component_class
+from cobaya.conventions import Extension, get_version, kinds, resume_default
+from cobaya.input import get_info_path, is_equal_info, load_info_dump, split_prefix
+from cobaya.log import HasLogger, LoggedError, get_logger, get_traceback_text
 from cobaya.tools import (
     deepcopy_where_possible,
     find_with_regexp,
-    sort_cosmetic,
     has_non_yaml_reproducible,
+    sort_cosmetic,
 )
-from cobaya.component import get_component_class
-from cobaya import mpi
+from cobaya.typing import InputDict
+
+# Local
+from cobaya.yaml import (
+    InputImportError,
+    OutputError,
+    yaml_dump,
+    yaml_load,
+    yaml_load_file,
+)
 
 # Default output type and extension
 _kind = "txt"
@@ -260,7 +262,7 @@ class OutputReadOnly:
                 loaded = yaml_load_file(self.file_updated)  # type: ignore
             if cache:
                 self._old_updated_info = deepcopy_where_possible(loaded)
-            return loaded
+            return loaded  # type: ignore
         except OSError:
             if cache:
                 self._old_updated_info = None

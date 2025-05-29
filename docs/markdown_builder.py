@@ -19,11 +19,11 @@ Options:
     --no-install: Skip installation of dependencies
 """
 
-import os
-import sys
-import subprocess
 import argparse
 import glob
+import os
+import subprocess
+import sys
 import traceback
 
 

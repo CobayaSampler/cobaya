@@ -38,12 +38,14 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 #   PL, May 2021: Included option to use absolute magnitude from local SNe measurements.
 
 # Global
-import numpy as np
 import os
+
+import numpy as np
+
+from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 # Local
 from cobaya.log import LoggedError
-from cobaya.likelihoods.base_classes import DataSetLikelihood
 
 _twopi = 2 * np.pi
 

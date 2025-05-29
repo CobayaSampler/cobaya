@@ -1,10 +1,13 @@
-from .common import process_packages_path
-from .conftest import install_test_wrapper
 import os
+
 import numpy as np
+
+from cobaya.component import ComponentNotInstalledError
 from cobaya.model import get_model
 from cobaya.tools import load_module
-from cobaya.component import ComponentNotInstalledError
+
+from .common import process_packages_path
+from .conftest import install_test_wrapper
 
 params = {
     "ombh2": 0.02242,

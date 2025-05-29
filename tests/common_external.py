@@ -5,20 +5,22 @@ Common tools for testing external priors and likelihoods.
 # Global
 import os
 import shutil
-from random import random
 from collections.abc import Mapping
-import numpy as np
 from copy import deepcopy
+from random import random
+
+import numpy as np
 import scipy.stats as stats
+
+from cobaya import mpi
 
 # Local
 from cobaya.conventions import FileSuffix, get_chi2_name
-from cobaya.run import run
-from cobaya.yaml import yaml_load
-from cobaya.tools import getfullargspec
 from cobaya.likelihood import Likelihood
+from cobaya.run import run
+from cobaya.tools import getfullargspec
 from cobaya.typing import InputDict
-from cobaya import mpi
+from cobaya.yaml import yaml_load
 
 # Definition of external (log)pdfs
 

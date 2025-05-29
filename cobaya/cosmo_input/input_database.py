@@ -9,6 +9,7 @@
 
 # Global
 from copy import deepcopy
+
 from cobaya.typing import InfoDict
 
 none = "(None)"

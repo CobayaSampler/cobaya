@@ -209,34 +209,35 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
 """
 
 # Global
-import sys
-import os
-import numbers
 import ctypes
+import numbers
+import os
 import platform
-from copy import deepcopy
-from typing import NamedTuple, Any, Optional
+import sys
 from collections.abc import Callable
-import numpy as np
+from copy import deepcopy
 from itertools import chain
+from typing import Any, NamedTuple, Optional
+
+import numpy as np
 
 # Local
 from cobaya.component import ComponentNotInstalledError, load_external_module
-from cobaya.theories.cosmo import BoltzmannBase
+from cobaya.install import check_gcc_version, download_github_release, pip_install
 from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, check_gcc_version, pip_install
+from cobaya.theories.cosmo import BoltzmannBase
+from cobaya.theory import HelperTheory
 from cobaya.tools import (
-    getfullargspec,
-    get_class_methods,
-    get_properties,
-    check_module_version,
-    str_to_list,
     Pool1D,
     Pool2D,
     PoolND,
     VersionCheckError,
+    check_module_version,
+    get_class_methods,
+    get_properties,
+    getfullargspec,
+    str_to_list,
 )
-from cobaya.theory import HelperTheory
 from cobaya.typing import InfoDict, empty_dict
 
 
@@ -1122,7 +1123,7 @@ class CAMB(BoltzmannBase):
             return False
         camb_path = cls.get_path(path)
         log.info("Compiling camb...")
-        from subprocess import Popen, PIPE
+        from subprocess import PIPE, Popen
 
         process_make = Popen(
             [sys.executable, "setup.py", "build_cluster"],

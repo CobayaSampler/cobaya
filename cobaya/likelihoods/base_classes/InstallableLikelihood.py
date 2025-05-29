@@ -8,16 +8,18 @@ r"""
 
 # Global
 import os
+
 from packaging import version
+
+from cobaya.component import ComponentNotInstalledError
+from cobaya.functions import chi_squared
+from cobaya.install import _version_filename
 
 # Local
 from cobaya.likelihood import Likelihood
-from cobaya.typing import InfoDict
 from cobaya.log import get_logger
-from cobaya.install import _version_filename
-from cobaya.component import ComponentNotInstalledError
 from cobaya.tools import VersionCheckError, resolve_packages_path
-from cobaya.functions import chi_squared
+from cobaya.typing import InfoDict
 
 
 class InstallableLikelihood(Likelihood):

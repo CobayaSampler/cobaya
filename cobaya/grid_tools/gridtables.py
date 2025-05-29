@@ -6,12 +6,14 @@
 
 """
 
-import os
 import copy
-from cobaya.tools import working_directory
-from cobaya.grid_tools.batchjob_args import BatchArgs
-from getdist import types, paramnames
+import os
+
+from getdist import paramnames, types
 from getdist.mcsamples import loadMCSamples
+
+from cobaya.grid_tools.batchjob_args import BatchArgs
+from cobaya.tools import working_directory
 
 
 def grid_tables(args=None):

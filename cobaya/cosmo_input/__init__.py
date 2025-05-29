@@ -10,10 +10,12 @@ from .autoselect_covmat import (
 )
 from .create_input import create_input
 from .input_database import (
-    planck_base_model,
+    _combo_dict_text,
     base_precision,
-    planck_precision,
-    planck_lss_precision,
     cmb_precision,
+    install_basic,
+    install_tests,
+    planck_base_model,
+    planck_lss_precision,
+    planck_precision,
 )
-from .input_database import install_basic, install_tests, _combo_dict_text

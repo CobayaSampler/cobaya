@@ -1,5 +1,6 @@
-import subprocess
 import shutil
+import subprocess
+
 from . import batchjob_args, jobqueue
 
 

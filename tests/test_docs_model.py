@@ -5,6 +5,7 @@ For not it only checks that it does not fail.
 """
 
 import os
+
 from cobaya.tools import working_directory
 
 tests_folder = os.path.dirname(os.path.realpath(__file__))

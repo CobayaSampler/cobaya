@@ -7,26 +7,27 @@
 """
 
 # Global
-from typing import Union, Optional, Tuple
 import os
+from typing import Optional, Tuple, Union
+
+from cobaya import mpi
 
 # Local
 from cobaya.conventions import (
+    get_version,
     packages_path_arg,
     packages_path_arg_posix,
-    get_version,
     packages_path_input,
 )
-from cobaya.typing import InputDict, LiteralFalse
-from cobaya.output import get_output
+from cobaya.input import load_info_overrides, update_info
+from cobaya.log import LoggedError, get_logger, is_debug, logger_setup
 from cobaya.model import Model
-from cobaya.sampler import get_sampler_name_and_class, check_sampler_info, Sampler
-from cobaya.log import logger_setup, is_debug, get_logger, LoggedError
+from cobaya.output import get_output
+from cobaya.post import PostResult, post
+from cobaya.sampler import Sampler, check_sampler_info, get_sampler_name_and_class
+from cobaya.tools import recursive_update, sort_cosmetic, warn_deprecation
+from cobaya.typing import InputDict, LiteralFalse
 from cobaya.yaml import yaml_dump
-from cobaya.input import update_info, load_info_overrides
-from cobaya.tools import warn_deprecation, recursive_update, sort_cosmetic
-from cobaya.post import post, PostResult
-from cobaya import mpi
 
 
 def run(

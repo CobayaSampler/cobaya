@@ -1,8 +1,10 @@
 # Tries to evaluate the BK18 likelihood at a reference point
 
 from copy import deepcopy
-from .common_cosmo import body_of_test
+
 from cobaya.cosmo_input import planck_precision
+
+from .common_cosmo import body_of_test
 
 camb_extra = deepcopy(planck_precision["camb"])
 camb_extra.update({"halofit_version": "takahashi"})

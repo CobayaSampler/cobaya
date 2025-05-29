@@ -1,17 +1,19 @@
 """General test for samplers. Checks convergence, cluster detection, evidence."""
 
-import numpy as np
-from itertools import chain
 import os
+from itertools import chain
+
+import numpy as np
 from scipy.stats import multivariate_normal
 
-from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
-from cobaya.typing import InputDict, SamplersDict
-from cobaya.tools import KL_norm
-from cobaya.run import run
-from .common import process_packages_path, is_ci_test
-from .conftest import install_test_wrapper
 from cobaya import mpi
+from cobaya.likelihoods.gaussian_mixture import info_random_gaussian_mixture
+from cobaya.run import run
+from cobaya.tools import KL_norm
+from cobaya.typing import InputDict, SamplersDict
+
+from .common import is_ci_test, process_packages_path
+from .conftest import install_test_wrapper
 
 KL_tolerance = 0.07
 logZ_nsigmas = 2

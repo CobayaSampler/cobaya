@@ -6,24 +6,26 @@
 
 """
 
-import os
-import shutil
-import pickle
 import copy
+import os
+import pickle
+import shutil
 import sys
 import time
-from typing import Any
 from collections.abc import Callable
-from getdist import types, IniFile
+from typing import Any
+
+from getdist import IniFile, types
 from getdist.mcsamples import loadMCSamples
 from getdist.paramnames import makeList as make_list
 
-from .conventions import input_folder, script_folder, input_folder_post, yaml_ext
 import cobaya
 from cobaya.conventions import Extension
-from cobaya.yaml import yaml_load_file
 from cobaya.output import use_portalocker
 from cobaya.tools import PythonPath
+from cobaya.yaml import yaml_load_file
+
+from .conventions import input_folder, input_folder_post, script_folder, yaml_ext
 
 
 def grid_cache_file(directory):

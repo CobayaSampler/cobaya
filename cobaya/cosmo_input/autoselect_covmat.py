@@ -2,17 +2,18 @@
 import hashlib
 import os
 import pickle
-from itertools import chain
-import numpy as np
 import re
-from typing import Optional, List, Dict, FrozenSet, NamedTuple
+from itertools import chain
+from typing import Dict, FrozenSet, List, NamedTuple, Optional
+
+import numpy as np
 
 # Local
 from cobaya.conventions import Extension, packages_path_input
-from cobaya.tools import str_to_list, get_translated_params, get_cache_path
-from cobaya.parameterization import is_sampled_param
 from cobaya.input import update_info
 from cobaya.log import LoggedError, get_logger, is_debug
+from cobaya.parameterization import is_sampled_param
+from cobaya.tools import get_cache_path, get_translated_params, str_to_list
 from cobaya.typing import empty_dict
 
 _covmats_file = "covmat_%s.pkl"

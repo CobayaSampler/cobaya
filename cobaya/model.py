@@ -7,53 +7,55 @@
 """
 
 # Global
-import os
 import dataclasses
+import os
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
-from typing import NamedTuple, Optional, Union, List, Any, Dict, Set, Tuple
-from collections.abc import Sequence, Mapping, Iterable
+from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
+
 import numpy as np
+
+from cobaya import mpi
 
 # Local
 from cobaya.conventions import (
-    overhead_time,
     get_chi2_name,
+    overhead_time,
     packages_path_input,
     prior_1d_name,
+)
+from cobaya.input import load_info_overrides, update_info
+from cobaya.likelihood import (
+    AbsorbUnusedParamsLikelihood,
+    LikelihoodCollection,
+    is_LikelihoodInterface,
+)
+from cobaya.log import HasLogger, LoggedError, get_logger, is_debug, logger_setup
+from cobaya.parameterization import Parameterization
+from cobaya.prior import Prior
+from cobaya.theory import Provider, Theory, TheoryCollection
+from cobaya.tools import (
+    are_different_params_lists,
+    deepcopy_where_possible,
+    recursive_update,
+    sort_cosmetic,
+    sort_parameter_blocks,
+    str_to_list,
 )
 from cobaya.typing import (
     InfoDict,
     InputDict,
     LikesDict,
-    TheoriesDict,
     ParamsDict,
-    PriorsDict,
     ParamValuesDict,
+    PriorsDict,
+    TheoriesDict,
     empty_dict,
     unset_params,
 )
-from cobaya.input import update_info, load_info_overrides
-from cobaya.parameterization import Parameterization
-from cobaya.prior import Prior
-from cobaya.likelihood import (
-    LikelihoodCollection,
-    AbsorbUnusedParamsLikelihood,
-    is_LikelihoodInterface,
-)
-from cobaya.theory import TheoryCollection, Theory, Provider
-from cobaya.log import LoggedError, logger_setup, get_logger, is_debug, HasLogger
 from cobaya.yaml import yaml_dump
-from cobaya.tools import (
-    deepcopy_where_possible,
-    are_different_params_lists,
-    str_to_list,
-    sort_parameter_blocks,
-    recursive_update,
-    sort_cosmetic,
-)
-from cobaya import mpi
 
 
 @contextmanager

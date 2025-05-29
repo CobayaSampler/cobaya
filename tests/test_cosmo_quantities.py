@@ -2,17 +2,18 @@
 Testing some quantities not used yet by any internal likelihood.
 """
 
-import pytest
-import numpy as np
 from copy import deepcopy
 
-from cobaya.cosmo_input import planck_lss_precision, planck_base_model, create_input
-from cobaya.model import get_model
-from cobaya.tools import recursive_update, check_2d
+import numpy as np
+import pytest
 
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
-from .conftest import install_test_wrapper
+from cobaya.cosmo_input import create_input, planck_base_model, planck_lss_precision
+from cobaya.model import get_model
+from cobaya.tools import check_2d, recursive_update
+
 from .common import process_packages_path
+from .conftest import install_test_wrapper
+from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 
 fiducial_parameters = deepcopy(params_lowTEB_highTTTEEE)
 redshifts = [100, 10, 1, 0]

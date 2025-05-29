@@ -7,14 +7,16 @@
 """
 
 # Global
-import numpy as np
 from collections.abc import Mapping
+
+import numpy as np
+
+import cobaya.mpi as mpi
+from cobaya.collection import SampleCollection
+from cobaya.log import LoggedError
 
 # Local
 from cobaya.sampler import Sampler
-from cobaya.collection import SampleCollection
-from cobaya.log import LoggedError
-import cobaya.mpi as mpi
 
 
 class Evaluate(Sampler):

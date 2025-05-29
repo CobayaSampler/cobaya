@@ -1,29 +1,31 @@
 # Global
+import io
 import os
-import sys
 import platform
 import signal
+import sys
 from pprint import pformat
-import numpy as np
-import io
 from typing import Optional
+
+import numpy as np
+
+from cobaya.bib import get_bib_component, get_bib_info, pretty_repr_bib
+from cobaya.conventions import kinds, packages_path_env, packages_path_input, subfolders
+from cobaya.cosmo_input import input_database
+from cobaya.cosmo_input.autoselect_covmat import covmat_folders, get_best_covmat
+from cobaya.cosmo_input.create_input import create_input
+from cobaya.cosmo_input.input_database import _combo_dict_text
+from cobaya.input import get_default_info
+from cobaya.tools import (
+    cov_to_std_and_corr,
+    get_available_internal_class_names,
+    resolve_packages_path,
+    sort_cosmetic,
+    warn_deprecation,
+)
 
 # Local
 from cobaya.yaml import yaml_dump
-from cobaya.cosmo_input import input_database
-from cobaya.cosmo_input.input_database import _combo_dict_text
-from cobaya.cosmo_input.autoselect_covmat import get_best_covmat, covmat_folders
-from cobaya.cosmo_input.create_input import create_input
-from cobaya.bib import pretty_repr_bib, get_bib_info, get_bib_component
-from cobaya.tools import (
-    warn_deprecation,
-    get_available_internal_class_names,
-    cov_to_std_and_corr,
-    resolve_packages_path,
-    sort_cosmetic,
-)
-from cobaya.input import get_default_info
-from cobaya.conventions import subfolders, kinds, packages_path_env, packages_path_input
 
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
@@ -36,66 +38,64 @@ else:  # Windows/Mac
 try:
     try:
         # noinspection PyUnresolvedReferences
+        # noinspection PyUnresolvedReferences
+        from PySide6.QtCore import QCoreApplication, QPoint, QSettings, QSize, Qt, Slot
+
+        # noinspection PyUnresolvedReferences
+        from PySide6.QtGui import QAction, QColor
         from PySide6.QtWidgets import (
-            QWidget,
+            QAbstractItemView,
             QApplication,
-            QVBoxLayout,
-            QHBoxLayout,
-            QGroupBox,
-            QScrollArea,
-            QTabWidget,
-            QComboBox,
-            QPushButton,
-            QTextEdit,
-            QFileDialog,
             QCheckBox,
-            QLabel,
-            QMenuBar,
+            QComboBox,
             QDialog,
+            QFileDialog,
+            QGroupBox,
+            QHBoxLayout,
+            QLabel,
+            QMainWindow,
+            QMenuBar,
+            QPushButton,
+            QScrollArea,
             QTableWidget,
             QTableWidgetItem,
-            QAbstractItemView,
-            QMainWindow,
+            QTabWidget,
+            QTextEdit,
+            QVBoxLayout,
+            QWidget,
         )
-
-        # noinspection PyUnresolvedReferences
-        from PySide6.QtGui import QColor, QAction
-
-        # noinspection PyUnresolvedReferences
-        from PySide6.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings, QPoint
 
         set_attributes = []
         exec_method_name = "exec"
     except ImportError:
         # noinspection PyUnresolvedReferences
-        from PySide2.QtWidgets import (
-            QWidget,
-            QApplication,
-            QVBoxLayout,
-            QHBoxLayout,
-            QGroupBox,
-            QScrollArea,
-            QTabWidget,
-            QComboBox,
-            QPushButton,
-            QTextEdit,
-            QFileDialog,
-            QCheckBox,
-            QLabel,
-            QMenuBar,
-            QAction,
-            QDialog,
-            QTableWidget,
-            QTableWidgetItem,
-            QAbstractItemView,
-            QMainWindow,
-        )
+        # noinspection PyUnresolvedReferences
+        from PySide2.QtCore import QCoreApplication, QSettings, QSize, Qt, Slot
 
         # noinspection PyUnresolvedReferences
         from PySide2.QtGui import QColor
-
-        # noinspection PyUnresolvedReferences
-        from PySide2.QtCore import Slot, Qt, QCoreApplication, QSize, QSettings
+        from PySide2.QtWidgets import (
+            QAbstractItemView,
+            QAction,
+            QApplication,
+            QCheckBox,
+            QComboBox,
+            QDialog,
+            QFileDialog,
+            QGroupBox,
+            QHBoxLayout,
+            QLabel,
+            QMainWindow,
+            QMenuBar,
+            QPushButton,
+            QScrollArea,
+            QTableWidget,
+            QTableWidgetItem,
+            QTabWidget,
+            QTextEdit,
+            QVBoxLayout,
+            QWidget,
+        )
 
         os.environ["QT_API"] = "pyside2"
         exec_method_name = "exec_"
@@ -488,7 +488,7 @@ def gui_script():
         app = QApplication(sys.argv)
     except NameError:
         # TODO: fix this long logger setup
-        from cobaya.log import logger_setup, LoggedError
+        from cobaya.log import LoggedError, logger_setup
 
         logger_setup(0, None)
         raise LoggedError(

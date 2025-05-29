@@ -7,16 +7,18 @@
 
 """
 
+from collections.abc import Iterable, Mapping
+
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from collections.abc import Mapping, Iterable
+
+from cobaya.conventions import Const
+from cobaya.log import LoggedError, abstract, get_logger
 
 # Local
 from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible, combine_1d, combine_2d, check_2d
-from cobaya.log import LoggedError, abstract, get_logger
-from cobaya.conventions import Const
-from cobaya.typing import empty_dict, InfoDict
+from cobaya.tools import check_2d, combine_1d, combine_2d, deepcopy_where_possible
+from cobaya.typing import InfoDict, empty_dict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 

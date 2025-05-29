@@ -1,15 +1,17 @@
-import subprocess
-import os
-import numpy as np
-import re
-import pickle
-import time
-import shutil
 import multiprocessing
+import os
+import pickle
+import re
+import shutil
+import subprocess
+import time
 from typing import Any
 
+import numpy as np
+
 from cobaya.conventions import Extension
-from .conventions import script_folder, script_ext, jobid_ext
+
+from .conventions import jobid_ext, script_ext, script_folder
 
 code_prefix = "COBAYA"
 default_program = "cobaya-run -r"
