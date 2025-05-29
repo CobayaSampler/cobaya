@@ -85,7 +85,7 @@ from scipy.interpolate import (
 )
 
 from cobaya.conventions import Const, packages_path_input
-from cobaya.likelihoods.base_classes import InstallableLikelihood
+from cobaya.likelihoods.base_classes.InstallableLikelihood import InstallableLikelihood
 
 # Local
 from cobaya.log import LoggedError

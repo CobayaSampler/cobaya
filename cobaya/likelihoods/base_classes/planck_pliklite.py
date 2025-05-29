@@ -15,7 +15,7 @@ import os
 import numpy as np
 
 # Local
-from cobaya.likelihoods.base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 
 cl_names = ["tt", "te", "ee"]
 

@@ -428,8 +428,7 @@ class ProcessState:
         Test if all processes in READY state (and if they are reset to NONE).
         """
         self.sync(check_error=True)
-        all_ready = np.all(self.states == State.READY)
-        if all_ready:
+        if all_ready := bool(np.all(self.states == State.READY)):
             self.states[:] = State.NONE
         return all_ready
 

@@ -42,7 +42,7 @@ import os
 
 import numpy as np
 
-from cobaya.likelihoods.base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 
 # Local
 from cobaya.log import LoggedError

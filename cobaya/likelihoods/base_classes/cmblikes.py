@@ -17,7 +17,7 @@ import numpy as np
 from getdist import IniFile, ParamNames
 from scipy.linalg import sqrtm
 
-from cobaya.likelihoods.base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 
 # Local
 from cobaya.log import LoggedError

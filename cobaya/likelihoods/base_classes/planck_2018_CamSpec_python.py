@@ -25,7 +25,7 @@ import numpy as np
 import scipy
 
 # Local
-from cobaya.likelihoods.base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 
 use_cache = True
 
@@ -60,7 +60,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
     @classmethod
     def get_bibtex(cls):
         if not (res := super().get_bibtex()):
-            from cobaya.likelihoods.base_classes import Planck2018Clik
+            from cobaya.likelihoods.base_classes.planck_clik import Planck2018Clik
 
             return Planck2018Clik.get_bibtex()
         return res

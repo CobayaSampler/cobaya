@@ -46,7 +46,6 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 
 """
 
-# Global
 import copy
 from typing import List, Tuple
 
@@ -56,9 +55,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 
 from cobaya.conventions import Const
 from cobaya.functions import numba
-
-# Local
-from cobaya.likelihoods.base_classes import DataSetLikelihood
+from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 from cobaya.log import LoggedError
 
 # DES data types
@@ -258,7 +255,7 @@ class DES(DataSetLikelihood):
 
     def load_fits_data(self, filename, ranges=None):  # pragma: no cover
         # noinspection PyUnresolvedReferences
-        import astropy.io.fits as fits
+        import astropy.io.fits as fits  # type: ignore
 
         if ranges is None:
             ranges = get_def_cuts()
@@ -362,7 +359,7 @@ class DES(DataSetLikelihood):
         # At percent level it matters what is assumed
         if self.use_hankel:  # pragma: no cover
             # noinspection PyUnresolvedReferences
-            import hankel
+            import hankel  # type: ignore
 
             maxx = self.theta_bins_radians[-1] * self.l_max
             h = 3.2 * np.pi / maxx
@@ -810,7 +807,7 @@ class DES(DataSetLikelihood):
 
 def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
     # noinspection PyUnresolvedReferences
-    import astropy.io.fits as fits
+    import astropy.io.fits as fits  # type: ignore
 
     if ranges is None:
         ranges = get_def_cuts()

@@ -242,11 +242,11 @@ class LikelihoodExternalFunction(Likelihood):
             raise
         bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
         if hasattr(return_value, "__len__"):
-            logp = return_value[0]
+            logp = return_value[0]  # type: ignore
             if self.output_params:
                 try:
                     if _derived is not None:
-                        _derived.update(return_value[1])
+                        _derived.update(return_value[1])  # type: ignore
                         params_values["_derived"] = _derived
                 except (AttributeError, TypeError, IndexError) as excpt:
                     raise LoggedError(self.log, bad_return_msg) from excpt
