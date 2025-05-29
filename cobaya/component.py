@@ -341,7 +341,7 @@ class HasDefaults:
         for base in cls.__bases__:
             if issubclass(base, HasDefaults) and base is not HasDefaults:
                 d.update(base.get_annotations())
-            d.update(cls.__annotations__)
+        d.update(cls.__annotations__)
         return d
 
 
