@@ -1,1 +1,1 @@
-from .classy import classy
+from .classy import classy as classy

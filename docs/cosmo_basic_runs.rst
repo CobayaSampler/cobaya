@@ -22,11 +22,6 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
 
       $ python -m pip install PySide6
 
-   You can also use PySide2. If installing via pip is problematic, the most reliable solution seems to be to make a clean conda-forge environment and use that, e.g. install Anaconda or Miniconda and use the environment created with
-
-  .. code:: bash
-
-      $ conda create -n py39forge -c conda-forge python=3.9 scipy pandas matplotlib PyYAML PySide2
 
 Start by choosing a preset, maybe modify some aspects using the options provided, and copy or save the generated input to a file, either in ``yaml`` form or as a python dictionary.
 

@@ -99,7 +99,6 @@ When producing text output, the generated files are named ``.bestfit[.txt]`` ins
 import os
 import re
 from itertools import chain
-from typing import Optional, Union
 
 import numpy as np
 import pybobyqa

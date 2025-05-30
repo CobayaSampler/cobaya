@@ -8,6 +8,7 @@
 
 # Global
 import datetime
+import importlib
 import os
 import re
 import shutil
@@ -45,12 +46,10 @@ _ext = "txt"
 
 def use_portalocker():
     if os.getenv("COBAYA_USE_FILE_LOCKING", "t").lower() in ("true", "1", "t"):
-        try:
-            import portalocker  # pylint: disable=import-outside-toplevel
-        except ModuleNotFoundError:
-            return None
-        else:
+        if importlib.util.find_spec("portalocker") is not None:
             return True
+        else:
+            return None
     return False
 
 

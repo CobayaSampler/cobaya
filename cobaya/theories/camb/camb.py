@@ -217,7 +217,7 @@ import sys
 from collections.abc import Callable
 from copy import deepcopy
 from itertools import chain
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 import numpy as np
 

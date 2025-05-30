@@ -8,7 +8,6 @@
 
 # Global
 import os
-from typing import Optional, Tuple, Union
 
 from cobaya import mpi
 

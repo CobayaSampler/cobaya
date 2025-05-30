@@ -27,7 +27,6 @@ import numbers
 from collections.abc import Mapping
 from itertools import chain
 from time import sleep
-from typing import Dict, Optional, Union
 
 import numpy as np
 

@@ -74,7 +74,6 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 
 import os
 from collections.abc import Sequence
-from typing import Optional
 
 import numpy as np
 import pandas as pd

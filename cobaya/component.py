@@ -4,7 +4,7 @@ import sys
 import time
 from importlib import import_module, resources
 from inspect import cleandoc
-from typing import List, Optional, Set, Union, get_type_hints
+from typing import get_type_hints
 
 from packaging import version
 

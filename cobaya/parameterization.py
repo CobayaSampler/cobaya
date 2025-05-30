@@ -12,7 +12,7 @@ from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from itertools import chain
 from numbers import Real
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any
 
 import numpy as np
 

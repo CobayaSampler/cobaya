@@ -1,10 +1,9 @@
 import contextlib
 import numbers
-import sys
 import typing
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from types import MappingProxyType, UnionType
-from typing import Any, Dict, Literal, Optional, Type, TypedDict, Union
+from typing import Any, Literal, TypedDict, Union
 
 import numpy as np
 
@@ -29,7 +28,7 @@ ParamValuesDict = dict[str, float]
 # Do not yet explicitly support passing instances here
 TheoriesDict = dict[str, Union[None, TheoryDict, type]]
 LikesDict = dict[str, Union[None, str, LikeDict, type, Callable]]
-SamplersDict = dict[str, Optional[SamplerDict]]
+SamplersDict = dict[str, SamplerDict | None]
 PriorsDict = dict[str, Union[str, Callable]]
 
 partags = {
@@ -193,7 +192,7 @@ def validate_type(expected_type: type, value: Any, path: str = ""):
     if (origin := typing.get_origin(expected_type)) and (
         args := typing.get_args(expected_type)
     ):
-        # complex types like Dict[str, float] etc.
+        # complex types like dict[str, float] etc.
 
         if origin is Union or origin is UnionType:
             errors = []

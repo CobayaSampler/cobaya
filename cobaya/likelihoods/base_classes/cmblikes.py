@@ -11,7 +11,6 @@
 
 # Global
 import os
-from typing import List
 
 import numpy as np
 from getdist import IniFile, ParamNames

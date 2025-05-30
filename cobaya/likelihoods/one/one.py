@@ -8,7 +8,6 @@ r"""
 
 # Global
 from random import random
-from typing import Optional
 
 # Local
 from cobaya.likelihood import AbsorbUnusedParamsLikelihood

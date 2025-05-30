@@ -13,7 +13,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from copy import deepcopy
 from itertools import chain
-from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import Any, NamedTuple
 
 import numpy as np
 

@@ -15,7 +15,7 @@ Customization of YAML's loaded and dumper:
 import os
 import re
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import yaml

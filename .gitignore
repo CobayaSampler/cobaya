@@ -26,13 +26,12 @@ venv.bak/
 # Documentation
 docs/_*
 !docs/_templates
-docs/.ipynb_checkpoints
 docs/src_examples/*/*.png
-docs/src_examples/advanced_and_models/chains/
+
+**/chains/
 
 # Tests
 .pytest_cache/
-tests/.ipynb_checkpoints
 .coverage*
 .tox/
 .nox/
@@ -52,12 +51,9 @@ coverage.xml
 .mypy_cache/
 
 # IPython
-.ipynb_checkpoints/
+**/.ipynb_checkpoints/
 profile_default/
 ipython_config.py
-
-# Jupyter Notebook
-.ipynb_checkpoints
 
 # pytest
 .cache/

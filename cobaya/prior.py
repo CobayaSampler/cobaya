@@ -399,7 +399,7 @@ Just give it a try and it should work fine, but, in case you need the details:
 # Global
 import numbers
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, List, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 import numpy as np
 

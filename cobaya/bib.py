@@ -13,7 +13,6 @@ Inspired by a similar characteristic of
 import argparse
 import os
 from inspect import cleandoc
-from typing import Dict, List, Union
 
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import Extension, dump_sort_cosmetic

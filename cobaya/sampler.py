@@ -48,7 +48,7 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 import os
 from collections.abc import Mapping, Sequence
 from itertools import chain
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 from numpy.random import SeedSequence, default_rng
@@ -241,6 +241,7 @@ class Sampler(CobayaComponent):
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).
         """
+        return {}
 
     @property
     def random_state(self) -> np.random.Generator:
@@ -252,6 +253,7 @@ class Sampler(CobayaComponent):
 
     @property
     def output(self) -> Output:
+        assert self._output
         return self._output
 
     # Private methods: just ignore them:
@@ -259,7 +261,7 @@ class Sampler(CobayaComponent):
         self,
         info_sampler: SamplerDict,
         model: Model,
-        output=Optional[Output],
+        output: Output | None = None,
         packages_path: str | None = None,
         name: str | None = None,
     ):

@@ -16,7 +16,7 @@ import warnings
 from collections.abc import Callable
 from itertools import chain
 from tempfile import gettempdir
-from typing import TYPE_CHECKING, Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 
@@ -573,7 +573,7 @@ class polychord(Sampler):
 
         Returns
         -------
-        None, Dict[int, Union[SampleCollection, MCSamples, None]]
+        None, dict[int, Union[SampleCollection, MCSamples, None]]
            The cluster posterior samples.
         """
         if not self.pc_settings.do_clustering:

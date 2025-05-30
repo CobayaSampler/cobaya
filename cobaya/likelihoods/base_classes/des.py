@@ -47,7 +47,6 @@ This likelihood can be installed automatically as explained in :doc:`installatio
 """
 
 import copy
-from typing import List, Tuple
 
 import numpy as np
 from scipy import special

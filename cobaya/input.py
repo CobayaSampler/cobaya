@@ -13,9 +13,8 @@ import platform
 from collections import defaultdict
 from collections.abc import Callable, Mapping, MutableMapping
 from copy import deepcopy
-from functools import reduce
 from itertools import chain
-from typing import Dict, List, Optional, TypeVar, Union
+from typing import TypeVar
 
 import cobaya.typing
 from cobaya import mpi
@@ -320,7 +319,7 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
     # Don't modify the original input, and convert all Mapping to consistent dict
     input_info = deepcopy_where_possible(info)
     # Creates an equivalent info using only the defaults
-    updated_info: _Dict = {}
+    updated_info: _Dict = {}  # type: ignore
     default_params_info = {}
     default_prior_info = {}
     from cobaya.component import CobayaComponent
@@ -487,21 +486,18 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
                         )
                     renames_flat = [set([k] + str_to_list(v)) for k, v in renames.items()]
                     for p in param_info:
-                        # Probably could be made faster by inverting
-                        # the renames dicts *once*
-                        renames_pairs = [a for a in renames_flat if p in a]
-                        if renames_pairs:
-                            this_renames = reduce(
-                                lambda x, y: x.union(y),
-                                [a for a in renames_flat if p in a],
+                        # Find all rename sets containing this parameter
+                        if matching_rename_sets := [
+                            rename_set for rename_set in renames_flat if p in rename_set
+                        ]:
+                            # Merge all rename sets containing this parameter
+                            all_names = set().union(*matching_rename_sets)
+                            # Add any existing renames and remove the parameter itself
+                            existing_renames = set(
+                                str_to_list(param_info[p].get("renames", []))
                             )
                             param_info[p]["renames"] = list(
-                                set(
-                                    chain(
-                                        this_renames,
-                                        str_to_list(param_info[p].get("renames", [])),
-                                    )
-                                ).difference({p})
+                                all_names.union(existing_renames) - {p}
                             )
     # Rest of the options
     for k, v in input_info.items():

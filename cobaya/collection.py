@@ -13,7 +13,6 @@ import warnings
 from collections.abc import Sequence
 from copy import deepcopy
 from numbers import Number
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd

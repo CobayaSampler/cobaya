@@ -19,7 +19,6 @@ import tempfile
 import traceback
 from collections.abc import Mapping
 from itertools import chain
-from typing import List, Union
 
 import requests  # type: ignore
 import tqdm  # type: ignore

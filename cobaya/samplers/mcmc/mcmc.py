@@ -10,7 +10,7 @@ import datetime
 import re
 from collections.abc import Callable, Sequence
 from itertools import chain
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 from pandas import DataFrame

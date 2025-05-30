@@ -9,7 +9,7 @@
 import os
 import time
 from itertools import chain
-from typing import TYPE_CHECKING, List, Optional, Tuple, TypedDict, Union
+from typing import TYPE_CHECKING, TypedDict, Union
 
 import numpy as np
 

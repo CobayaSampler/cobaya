@@ -12,9 +12,11 @@ import sys
 import time
 from collections.abc import Callable, Iterable
 from enum import IntEnum
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
+
+T = TypeVar("T")
 
 default_error_timeout_seconds = 5
 
@@ -134,7 +136,7 @@ def sync_processes():
         get_mpi_comm().barrier()
 
 
-def share_mpi(data=None, root=0):
+def share_mpi(data: T = None, root=0) -> T:
     if get_mpi_size() > 1:
         return get_mpi_comm().bcast(data, root=root)
     else:

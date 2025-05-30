@@ -16,10 +16,11 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import ast
+import importlib.util
 import os
 import sys
 
-import yaml
+import yaml  # noqa: F401
 
 project = "cobaya"
 
@@ -48,13 +49,9 @@ extensions = [
     "sphinxcontrib.jquery",
 ]
 
-# Add sphinx_markdown_builder if available (used for LLM context generation)
-try:
-    import sphinx_markdown_builder
 
+if importlib.util.find_spec("sphinx_markdown_builder") is not None:
     extensions.append("sphinx_markdown_builder")
-except ImportError:
-    pass
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates", "theme_customisation"]

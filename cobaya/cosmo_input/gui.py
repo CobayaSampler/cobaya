@@ -5,7 +5,6 @@ import platform
 import signal
 import sys
 from pprint import pformat
-from typing import Optional
 
 import numpy as np
 
@@ -30,78 +29,34 @@ from cobaya.yaml import yaml_dump
 # per-platform settings for correct high-DPI scaling
 if platform.system() == "Linux":
     font_size = "12px"
-    set_attributes = ["AA_EnableHighDpiScaling"]
 else:  # Windows/Mac
     font_size = "9pt"
-    set_attributes = ["AA_EnableHighDpiScaling"]
 
 try:
-    try:
-        # noinspection PyUnresolvedReferences
-        # noinspection PyUnresolvedReferences
-        from PySide6.QtCore import QCoreApplication, QPoint, QSettings, QSize, Qt, Slot
+    # noinspection PyUnresolvedReferences
+    from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Slot
 
-        # noinspection PyUnresolvedReferences
-        from PySide6.QtGui import QAction, QColor
-        from PySide6.QtWidgets import (
-            QAbstractItemView,
-            QApplication,
-            QCheckBox,
-            QComboBox,
-            QDialog,
-            QFileDialog,
-            QGroupBox,
-            QHBoxLayout,
-            QLabel,
-            QMainWindow,
-            QMenuBar,
-            QPushButton,
-            QScrollArea,
-            QTableWidget,
-            QTableWidgetItem,
-            QTabWidget,
-            QTextEdit,
-            QVBoxLayout,
-            QWidget,
-        )
+    # noinspection PyUnresolvedReferences
+    from PySide6.QtGui import QAction, QColor
+    from PySide6.QtWidgets import (
+        QAbstractItemView,
+        QApplication,
+        QComboBox,
+        QFileDialog,
+        QGroupBox,
+        QHBoxLayout,
+        QLabel,
+        QMenuBar,
+        QPushButton,
+        QScrollArea,
+        QTableWidget,
+        QTableWidgetItem,
+        QTabWidget,
+        QTextEdit,
+        QVBoxLayout,
+        QWidget,
+    )
 
-        set_attributes = []
-        exec_method_name = "exec"
-    except ImportError:
-        # noinspection PyUnresolvedReferences
-        # noinspection PyUnresolvedReferences
-        from PySide2.QtCore import QCoreApplication, QSettings, QSize, Qt, Slot
-
-        # noinspection PyUnresolvedReferences
-        from PySide2.QtGui import QColor
-        from PySide2.QtWidgets import (
-            QAbstractItemView,
-            QAction,
-            QApplication,
-            QCheckBox,
-            QComboBox,
-            QDialog,
-            QFileDialog,
-            QGroupBox,
-            QHBoxLayout,
-            QLabel,
-            QMainWindow,
-            QMenuBar,
-            QPushButton,
-            QScrollArea,
-            QTableWidget,
-            QTableWidgetItem,
-            QTabWidget,
-            QTextEdit,
-            QVBoxLayout,
-            QWidget,
-        )
-
-        os.environ["QT_API"] = "pyside2"
-        exec_method_name = "exec_"
-    for attribute in set_attributes:
-        # noinspection PyArgumentList
-        QApplication.setAttribute(getattr(Qt, attribute))
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
 
@@ -235,7 +190,7 @@ class MainWindow(QWidget):
         screen = self.getScreen()
         h = min(screen.height() * 5 / 6.0, 900)
         size = QSize(min(screen.width() * 5 / 6.0, 1200), h)
-        pos: QPoint | None = settings.value("pos", None)
+        pos = settings.value("pos", None)
         savesize = settings.value("size", size)
         if savesize.width() > screen.width():
             savesize.setWidth(size.width())
@@ -502,7 +457,7 @@ def gui_script():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     window = MainWindow()
     window.show()
-    sys.exit(getattr(app, exec_method_name)())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

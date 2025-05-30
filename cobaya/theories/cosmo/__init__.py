@@ -1,1 +1,2 @@
-from .boltzmannbase import BoltzmannBase, PowerSpectrumInterpolator
+from .boltzmannbase import BoltzmannBase as BoltzmannBase
+from .boltzmannbase import PowerSpectrumInterpolator as PowerSpectrumInterpolator

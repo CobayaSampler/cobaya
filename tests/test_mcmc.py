@@ -1,6 +1,5 @@
 import logging
 import time
-from typing import Type
 
 import numpy as np
 import pytest
@@ -131,7 +130,7 @@ class GaussLike2(Likelihood):
 @mpi.sync_errors
 @pytest.mark.parametrize("temperature", (1, 2))
 def test_mcmc_drag_results(temperature):
-    info: InputDict = yaml_load(yaml_drag)
+    info: InputDict = yaml_load(yaml_drag)  # type: ignore
     info["likelihood"] = {"g1": {"external": GaussLike}, "g2": {"external": GaussLike2}}
     info["sampler"]["mcmc"]["temperature"] = temperature
     updated_info, sampler = run(info)
@@ -274,8 +273,9 @@ def _test_overhead_timing(dim=15):
     from cProfile import Profile
     from io import StringIO
 
+    # one-time numba compile out of profiling
     # noinspection PyUnresolvedReferences
-    from cobaya.functions import random_SO_N  # one-time numba compile out of profiling
+    from cobaya.functions import random_SO_N  # noqa: F401
 
     like_test = _make_gaussian_like(dim)
     info: InputDict = {

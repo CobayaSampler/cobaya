@@ -225,7 +225,7 @@ import platform
 import sys
 from collections.abc import Callable, Sequence
 from copy import deepcopy
-from typing import Any, NamedTuple, Optional, Union
+from typing import Any, NamedTuple
 
 import numpy as np
 

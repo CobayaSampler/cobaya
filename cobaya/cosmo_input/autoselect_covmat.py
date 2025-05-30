@@ -4,7 +4,7 @@ import os
 import pickle
 import re
 from itertools import chain
-from typing import Dict, FrozenSet, List, NamedTuple, Optional
+from typing import NamedTuple
 
 import numpy as np
 

@@ -32,7 +32,7 @@ see :doc:`theories_and_dependencies`.
 
 from collections import deque
 from collections.abc import Iterable, Sequence
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 
 from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
 from cobaya.log import LoggedError, always_stop_exceptions
@@ -85,7 +85,7 @@ class Theory(CobayaComponent):
         )
 
         # set to Provider instance before calculations
-        self.provider: Optional["Provider"] = None
+        self.provider: "Provider" | None = None
         # Generate cache states, to avoid recomputing.
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
