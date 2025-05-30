@@ -1,9 +1,11 @@
-import pytest
 import logging
-from cobaya.model import get_model
-from cobaya.theory import Theory
+
+import pytest
+
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, NoLogging
+from cobaya.model import get_model
+from cobaya.theory import Theory
 from cobaya.typing import InputDict
 
 debug = False
@@ -16,159 +18,172 @@ debug = False
 # Bderived = 10
 # Cout = Bout
 
+
 class A(Theory):
     def get_requirements(self):
-        return {'Ain'}
+        return {"Ain"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['Aout'] = [self.provider.get_param('Ain')]
+        state["Aout"] = [self.provider.get_param("Ain")]
         if want_derived:
-            state['derived'] = {'Aderived': 1}
+            state["derived"] = {"Aderived": 1}
 
     def get_Aresult(self):
-        return self.current_state['Aout']
+        return self.current_state["Aout"]
 
     def get_can_provide_params(self):
-        return ['Aderived']
+        return ["Aderived"]
 
 
 class B(Theory):
-    params = {'Bpar': None, 'Bderived': {'derived': True}}
+    params = {"Bpar": None, "Bderived": {"derived": True}}
 
     def get_requirements(self):
-        return {'Aderived', 'Aresult'}
+        return {"Aderived", "Aresult"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['Bout'] = (self.provider.get_param('Aderived') * params_values_dict['Bpar']
-                         , self.provider.get_Aresult())
+        state["Bout"] = (
+            self.provider.get_param("Aderived") * params_values_dict["Bpar"],
+            self.provider.get_Aresult(),
+        )
 
         if want_derived:
-            state['derived'] = {'Bderived': 10}
+            state["derived"] = {"Bderived": 10}
 
     def get_Bout(self):
-        return self.current_state['Bout']
+        return self.current_state["Bout"]
 
 
 class Balt(Theory):
-    params = {'Bpar': None, 'Aderived': None}
+    params = {"Bpar": None, "Aderived": None}
 
     def get_requirements(self):
-        return {'Aresult'}
+        return {"Aresult"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['Bout'] = (params_values_dict['Aderived'] * params_values_dict['Bpar']
-                         , self.provider.get_Aresult())
+        state["Bout"] = (
+            params_values_dict["Aderived"] * params_values_dict["Bpar"],
+            self.provider.get_Aresult(),
+        )
 
     def get_Bout(self):
-        return self.current_state['Bout']
+        return self.current_state["Bout"]
 
 
 class B2(Theory):
-
     def get_requirements(self):
-        return {'Aderived', 'Aresult', 'Bpar'}
+        return {"Aderived", "Aresult", "Bpar"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['Bout'] = (self.provider.get_param('Aderived') * params_values_dict['Bpar'],
-                         self.provider.get_Aresult())
+        state["Bout"] = (
+            self.provider.get_param("Aderived") * params_values_dict["Bpar"],
+            self.provider.get_Aresult(),
+        )
 
         if want_derived:
-            state['derived'] = {'Bderived': 10}
+            state["derived"] = {"Bderived": 10}
 
     def get_Bout(self):
-        return self.current_state['Bout']
+        return self.current_state["Bout"]
 
 
 class A2(Theory):  # circular
     def get_requirements(self):
-        return ('Ain', None), ('Bout', None)
+        return ("Ain", None), ("Bout", None)
 
     def get_can_provide_params(self):
-        return ['Aderived', 'Aresult']
+        return ["Aderived", "Aresult"]
 
 
 class C(Theory):  # ambiguous
-
     def get_requirements(self):
-        return {'Aresult'}
+        return {"Aresult"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['Cout'] = (3, [5])
+        state["Cout"] = (3, [5])
 
     def get_Bout(self):
-        return self.current_state['Cout']
+        return self.current_state["Cout"]
 
 
 class Like(Likelihood):
-
     def get_requirements(self):
-        return {'Bout'}
+        return {"Bout"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         res = self.provider.get_Bout()
         state["logp"] = res[0] + res[1][0]
 
 
-info: InputDict = {'likelihood': {'like': Like},
-                   'params': {'Bpar': 3, 'Ain': 5},
-                   'debug': debug}
+info: InputDict = {
+    "likelihood": {"like": Like},
+    "params": {"Bpar": 3, "Ain": 5},
+    "debug": debug,
+}
 
 
 def _test_loglike(theories):
     for th in theories, theories[::-1]:
-        info['theory'] = dict(th)
+        info["theory"] = dict(th)
         model = get_model(info)
 
         assert model.loglikes({})[0] == 8, "test loglike failed for %s" % th
-        assert model.loglikes({}, return_derived=False,
-                              cached=False) == 8, "non-derived loglike failed for %s" % th
+        assert model.loglikes({}, return_derived=False, cached=False) == 8, (
+            "non-derived loglike failed for %s" % th
+        )
 
 
 def test_dependencies():
-    theories = [('A', A), ('B', B)]
+    theories = [("A", A), ("B", B)]
     _test_loglike(theories)
-    _test_loglike([('A', A), ('B', B2)])
-    _test_loglike([('A', A), ('B', Balt)])
+    _test_loglike([("A", A), ("B", B2)])
+    _test_loglike([("A", A), ("B", Balt)])
 
-    info['params']['Aderived'] = None
-    _test_loglike([('A', A), ('B', Balt)])
-    info['params']['Aderived'] = {'derived': True}
-    _test_loglike([('A', A), ('B', Balt)])
-    del info['params']['Aderived']
+    info["params"]["Aderived"] = None
+    _test_loglike([("A", A), ("B", Balt)])
+    info["params"]["Aderived"] = {"derived": True}
+    _test_loglike([("A", A), ("B", Balt)])
+    del info["params"]["Aderived"]
 
-    info['params']['Bderived'] = {'derived': True}
-    info['theory'] = dict(theories)
+    info["params"]["Bderived"] = {"derived": True}
+    info["theory"] = dict(theories)
     model = get_model(info)
     assert model.loglikes({})[1] == [10], "failed"
-    info['params'].pop('Bderived')
+    info["params"].pop("Bderived")
 
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
-        _test_loglike([('A', A2), ('B', B)])
+        _test_loglike([("A", A2), ("B", B)])
     assert "Circular dependency" in str(e.value)
 
-    _test_loglike([('A', {'external': A}), ('B', B2)])
+    _test_loglike([("A", {"external": A}), ("B", B2)])
 
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
-        _test_loglike([('A', A), ('B', B2), ('C', C)])
+        _test_loglike([("A", A), ("B", B2), ("C", C)])
     assert "Bout is provided by more than one component" in str(e.value)
 
-    _test_loglike([('A', A), ('B', B2), ('C', {'external': C, 'provides': 'Bout'})])
-    _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
-                   ('C', {'external': C})])
+    _test_loglike([("A", A), ("B", B2), ("C", {"external": C, "provides": "Bout"})])
+    _test_loglike(
+        [("A", A), ("B", {"external": B2, "provides": ["Bout"]}), ("C", {"external": C})]
+    )
 
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
-        _test_loglike([('A', A), ('B', {'external': B2, 'provides': ['Bout']}),
-                       ('C', {'external': C, 'provides': ['Bout']})])
+        _test_loglike(
+            [
+                ("A", A),
+                ("B", {"external": B2, "provides": ["Bout"]}),
+                ("C", {"external": C, "provides": ["Bout"]}),
+            ]
+        )
     assert "more than one component provides Bout" in str(e.value)
 
     inf: InputDict = info.copy()
-    inf['params'] = info['params'].copy()
-    inf['params']['notused'] = [1, 10, 2, 5, 1]
-    inf['theory'] = dict(theories)
+    inf["params"] = info["params"].copy()
+    inf["params"]["notused"] = [1, 10, 2, 5, 1]
+    inf["theory"] = dict(theories)
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         get_model(inf)
     assert "Could not find anything to use input parameter" in str(e.value)
-    inf['params']['notused'] = [1, 10, 2]
+    inf["params"]["notused"] = [1, 10, 2]
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         get_model(inf)
     assert "Parameter info length not valid" in str(e.value)
@@ -176,48 +191,44 @@ def test_dependencies():
 
 # test conditional requirements
 class D(Theory):
-
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['D'] = self.provider.get_Aresult()[0] * 2
+        state["D"] = self.provider.get_Aresult()[0] * 2
 
     def get_result(self, result_name, **kwargs):
-        if result_name == 'Dresult':
-            return self.current_state['D']
+        if result_name == "Dresult":
+            return self.current_state["D"]
 
     def get_can_provide(self):
-        return ['Dresult']
+        return ["Dresult"]
 
     def must_provide(self, **must_provide):
-        if 'Dresult' in must_provide:
-            return {'Aresult'}
+        if "Dresult" in must_provide:
+            return {"Aresult"}
 
 
 class E(Theory):
-
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['E'] = self.provider.get_result('Dresult') * 2
+        state["E"] = self.provider.get_result("Dresult") * 2
 
     def get_Eresult(self):
-        return self.current_state['E']
+        return self.current_state["E"]
 
     def must_provide(self, **must_provide):
-        if 'Eresult' in must_provide:
-            return {'Dresult'}
+        if "Eresult" in must_provide:
+            return {"Dresult"}
 
 
 class Like2(Likelihood):
-
     def get_requirements(self):
-        return {'Dresult'}
+        return {"Dresult"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state["logp"] = self.provider.get_result('Dresult') * 2
+        state["logp"] = self.provider.get_result("Dresult") * 2
 
 
 class Like3(Likelihood):
-
     def get_requirements(self):
-        return {'Eresult'}
+        return {"Eresult"}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
         state["logp"] = self.provider.get_Eresult()
@@ -225,51 +236,52 @@ class Like3(Likelihood):
 
 # circular
 class F(Theory):
-
     def get_Fresult(self):
         pass
 
     def must_provide(self, **must_provide):
-        if 'Fresult' in must_provide:
-            return {'LikeDerived'}
+        if "Fresult" in must_provide:
+            return {"LikeDerived"}
 
 
 class Like4(Likelihood):
-
     def get_requirements(self):
-        return {'Fresult'}
+        return {"Fresult"}
 
     def get_LikeDerived(self):
         pass
 
 
-info2: InputDict = {'likelihood': {'like': Like2},
-                    'params': {'Ain': 5},
-                    'debug': debug, 'stop_at_error': True}
+info2: InputDict = {
+    "likelihood": {"like": Like2},
+    "params": {"Ain": 5},
+    "debug": debug,
+    "stop_at_error": True,
+}
 
 
 def _test_loglike2(theories):
     for th in theories, theories[::-1]:
-        info2['theory'] = dict(th)
+        info2["theory"] = dict(th)
         model = get_model(info2)
-        assert model.loglike()[0] == 20., "fail conditional dependency for %s" % th
+        assert model.loglike()[0] == 20.0, "fail conditional dependency for %s" % th
 
 
 def test_conditional_dependencies():
-    theories = [('A', A), ('D', D)]
+    theories = [("A", A), ("D", D)]
     _test_loglike2(theories)
 
-    theories = [('A', A), ('D', D), ('E', E)]
+    theories = [("A", A), ("D", D), ("E", E)]
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike2(theories)
     assert "seems not to depend on any parameters" in str(e.value)
 
-    info2['likelihood']['like'] = Like3
-    theories = [('A', A), ('D', D), ('E', E)]
+    info2["likelihood"]["like"] = Like3
+    theories = [("A", A), ("D", D), ("E", E)]
     _test_loglike2(theories)
 
-    info2['likelihood']['like'] = Like4
-    theories = [('A', A), ('E', E), ('F', F), ('D', D)]
+    info2["likelihood"]["like"] = Like4
+    theories = [("A", A), ("E", E), ("F", F), ("D", D)]
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
         _test_loglike2(theories)
     assert "Circular dependency" in str(e.value)

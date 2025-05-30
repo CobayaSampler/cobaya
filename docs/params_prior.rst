@@ -4,7 +4,7 @@ Parameters and priors
 .. automodule:: cobaya.prior
    :noindex:
 
-      
+
 ``prior`` class
 ---------------
 

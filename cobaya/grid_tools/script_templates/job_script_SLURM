@@ -59,6 +59,3 @@ echo `which python`
 {COMMAND}
 
 wait
-
-
-

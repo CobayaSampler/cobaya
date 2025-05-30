@@ -11,9 +11,9 @@ class DESy5(PantheonPlus):
     """
 
     def configure(self):
-        self.pre_vars = self.mag_err ** 2
+        self.pre_vars = self.mag_err**2
 
     def _read_data_file(self, data_file):
-        file_cols = ['zhd', 'zhel', 'mu', 'muerr_final']
-        self.cols = ['zcmb', 'zhel', 'mag', 'mag_err']
-        self._read_cols(data_file, file_cols, sep=',')
+        file_cols = ["zhd", "zhel", "mu", "muerr_final"]
+        self.cols = ["zcmb", "zhel", "mag", "mag_err"]
+        self._read_cols(data_file, file_cols, sep=",")

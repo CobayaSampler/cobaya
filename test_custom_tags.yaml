@@ -1,0 +1,19 @@
+# Test file for custom YAML tags
+# This file tests that our YAML configuration properly handles Cobaya's custom tags
+
+# Test !defaults tag
+params: !defaults [../base_params.yaml]
+
+# Test !path tag  
+output: !path ${COBAYA_OUTPUT_DIR}/test_chains
+packages_path: !path ${YAML_ROOT}/../packages
+
+# Regular YAML content
+theory:
+  camb:
+    extra_args:
+      accuracy: high
+
+sampler:
+  mcmc:
+    max_samples: 1000

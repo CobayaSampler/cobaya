@@ -265,7 +265,7 @@
 - run settings saved to ".updated.dill_pickle" pickle file in cases where callable/class
   content cannot be preserved in yaml (install "dill")
 - File locks to avoid overwriting results accidentally from multiple non-MPI processes
-- Commonly-used classes can now be loaded simply using "from cobaya import Likelihood, InputDict, Theory, ..." etc., or call e.g. cobaya.run(..) 
+- Commonly-used classes can now be loaded simply using "from cobaya import Likelihood, InputDict, Theory, ..." etc., or call e.g. cobaya.run(..)
 - run and post return NamedTuples (same content as before)
 - Fixed handling of "type" in external likelihood functions
 - bib_script and doc_script can now be called programmatically
@@ -285,7 +285,7 @@
   (note MPI runs generally not reproducible with fixed seed due to thead timing/asynchronous mpi exchanges)
 - Overhead reduced by at least 40%, thanks to caching in Collection
 - Optimization of derived parameter output (for dragging, not computed at each dragging step)
-- Some refactoring/simplification to pass LogPosterior instances more 
+- Some refactoring/simplification to pass LogPosterior instances more
 - Reported acceptance rate is now only over last half chains (for MPI), or skipping first Rminus1_single_split fraction
 - When no covamt or 'prosposal' setting for a parameter, the fallback proposal width is now scaled (narrower) from the ref or prior variance
 
@@ -313,7 +313,7 @@
 - Added CamSpec 2021 Planck high-l likelihoods (based on legacy maps, not NPIPE; thanks Erik Rosenberg)
 - Added Riess et al H0 constraint (H0.riess2020Mb) in terms of magnitude rather than directly on H0
   (use combined with sn.pantheon with use_abs_mag: True; thanks Pablo Lemos)
-- Install updated Planck clik code (3.1) 
+- Install updated Planck clik code (3.1)
 
 ### Tests
 

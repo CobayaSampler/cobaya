@@ -4,10 +4,12 @@ to make sure it remains up to date.
 """
 
 import os
-import numpy as np
 from io import StringIO
 
+import numpy as np
+
 from cobaya.tools import working_directory
+
 from .common import process_packages_path, stdout_redirector
 from .conftest import install_test_wrapper
 
@@ -28,8 +30,11 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
         exec(open(os.path.join(docs_src_folder, "1.py")).read(), globals_example)
         globals_example["info"]["packages_path"] = packages_path
         install_test_wrapper(
-            skip_not_installed, exec,
-            open(os.path.join(docs_src_folder, "2.py")).read(), globals_example)
+            skip_not_installed,
+            exec,
+            open(os.path.join(docs_src_folder, "2.py")).read(),
+            globals_example,
+        )
         stream = StringIO()
         with stdout_redirector(stream):
             exec(open(os.path.join(docs_src_folder, "3.py")).read(), globals_example)
@@ -37,21 +42,27 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
         out_filename = "3.out"
         derived_line_old, derived_line_new = map(
             lambda lines: next(line for line in lines[::-1] if line),
-            [open(os.path.join(docs_src_folder, out_filename)).readlines(),
-             stream.getvalue().split("\n")])
+            [
+                open(os.path.join(docs_src_folder, out_filename)).readlines(),
+                stream.getvalue().split("\n"),
+            ],
+        )
         derived_params_old, derived_params_new = map(
-            lambda x: eval(x[x.find("{"):]), [derived_line_old, derived_line_new])
+            lambda x: eval(x[x.find("{") :]), [derived_line_old, derived_line_new]
+        )
         oldvals = list(derived_params_old.values())
         newvals = [derived_params_new[v] for v in derived_params_old]
         assert np.allclose(oldvals, newvals), (
-                "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s" %
-                (derived_line_old, derived_line_new))
+            "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s"
+            % (derived_line_old, derived_line_new)
+        )
         # Not testing figures for now (not robust)
         # Instead, let's just check that no error is raised
         for filename in ["4.py", "5.py"]:
             try:
-                exec(open(os.path.join(docs_src_folder, filename)).read(),
-                     globals_example)
+                exec(
+                    open(os.path.join(docs_src_folder, filename)).read(), globals_example
+                )
             except:
                 assert False, "File %s failed." % filename
         #        if test_figs:

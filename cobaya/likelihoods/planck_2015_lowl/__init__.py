@@ -6,4 +6,5 @@ class planck_2015_lowl(Planck2015Clik):
     Low-$\ell$ temperature-only likelihood of Planck's 2015 data release
     \cite{Aghanim:2015xee}.
     """
+
     pass
