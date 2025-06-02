@@ -172,7 +172,7 @@ logger = logging.getLogger("test")
 
 @pytest.mark.mpionly
 def test_mcmc_sync():
-    info: InputDict = yaml_load(yaml)
+    info: InputDict = yaml_load(yaml)  # type: ignore
     logger.info("Test end synchronization")
 
     if mpi.rank() == 1:

@@ -252,8 +252,7 @@ class Sampler(CobayaComponent):
         return self._model
 
     @property
-    def output(self) -> Output:
-        assert self._output
+    def output(self) -> Output | None:
         return self._output
 
     # Private methods: just ignore them:

@@ -4,7 +4,6 @@ __obsolete__ = False
 __year__ = "2025"
 __url__ = "https://cobaya.readthedocs.io"
 
-import sys
 
 from cobaya.likelihood import Likelihood as Likelihood
 from cobaya.log import LoggedError as LoggedError

@@ -1,3 +1,9 @@
+## 3.5.8
+
+### General
+
+- Minimum python 3.10; type hints updated accordingly
+- Added standardized formatting with ruff (removing flake8)
 
 ## 3.5.7 - 2025-03-31
 
@@ -14,6 +20,7 @@
 ## 3.5.6 - 2025-03-21
 
 ### Cosmology
+
 - Added DESI DR2 bao likelihoods (thanks @desihub)
 - ACT DR6 added to list of external likelihoods (thanks @ACTCollaboration)
 
@@ -39,6 +46,7 @@
 - Added get_modified_defaults() class method to cobaya components to dynamically set/modify defaults
 
 ### Cosmology
+
 - Option to return lensed scalar Cl's from CAMB (without tensors) (thanks @kimmywu})
 
 ## 3.5.3 – 2024-08-09
@@ -51,7 +59,7 @@
 
 - Updates for numpy 2 and other compatibility fixes
 - Fixes #357, #358, #360, #361, #362, #368
-- Added _fast_chi_squared method to base class InstallableLikelihood
+- Added \_fast_chi_squared method to base class InstallableLikelihood
 
 ## 3.5.1 – 2024-04-25
 
@@ -72,9 +80,11 @@
 - Fixed #345, #346, #347, #348
 
 ### Grid scripts
+
 - Support for running grids of models, including grid getdist, PDF tables, importance sampling, minimization (almost all features of CosmoMC grid now available in Cobaya). See the new doc pages.
 
 ### Minimization
+
 - Support for iminuit minimizer and getting best-fits for all mpi runs (#332, thanks @ggalloni)
 - Support for minimization with an importance-sampled input yaml config
 
@@ -125,7 +135,7 @@
 ### General
 
 - Class instance methods can now be used as external likelihoods.
-- Fix _prior_tries_warning bug
+- Fix \_prior_tries_warning bug
 - Fix over-stringent temperature test reading in chains
 
 ### PolyChord
@@ -179,7 +189,7 @@
 - Environment variables supported in input .yaml files, and {YAML_ROOT} placeholder for paths.
 - Improved error messages for .yaml boolean options and install logs
 - Fixes for max_tries .inf and old version checks
-- fix for 'KeyError: _manual' bug caused by unmet requirements. #275 (thanks @HTJense)
+- fix for 'KeyError: \_manual' bug caused by unmet requirements. #275 (thanks @HTJense)
 
 ### Cosmology
 
@@ -257,8 +267,8 @@
   filename
 - Support resuming of a completed run with changed convergence parameters
 - run has optional arguments to set debug, force, output, etc settings
-- More input and output typing  for easier static error detection; added cobaya.typing for static checking of input dictionaries using TypedDict when available
-- Refactoring of cobaya.conventions to remove most string literals and rename non-private constants starting with _
+- More input and output typing for easier static error detection; added cobaya.typing for static checking of input dictionaries using TypedDict when available
+- Refactoring of cobaya.conventions to remove most string literals and rename non-private constants starting with \_
 - Uses GetDist 1.2.2+ which fixes sign loading the logposterior value from Cobaya
   collection
 - Optimized calculation of Gaussian 1D priors
@@ -439,9 +449,9 @@
   the corresponding python package is available globally.
 - `path=global` available for some components: forces global-scope import, even when
   installed with `cobaya-install`.
-- Added ``--skip-not-installed`` to pytest command, to allow tests of non-installed
+- Added `--skip-not-installed` to pytest command, to allow tests of non-installed
   components to fail.
-- Installable components can define a class method ``is_compatible`` determining OS
+- Installable components can define a class method `is_compatible` determining OS
   compatibility (assumed compatible by default). Installation of OS-incompatible
   components is skipped.
 
@@ -643,8 +653,8 @@
 
 ### I/O
 
-- Naming conventions for output files changed! ``*.updated.yaml`` instead
-  of ``*.full.yaml`` for updated info, `*.[#].txt` instead of ``_[#].txt`` for chains,
+- Naming conventions for output files changed! `*.updated.yaml` instead
+  of `*.full.yaml` for updated info, `*.[#].txt` instead of `_[#].txt` for chains,
   etc (see `Output` section in documentation).
 
 ### Samplers:
