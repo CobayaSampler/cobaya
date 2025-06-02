@@ -1,5 +1,5 @@
 try:
-    from .gui import gui_script
+    from .gui import gui_script as gui_script
 except ImportError:
     # PySide not installed, but pass for now (will fail at GUI initialization)
     pass
