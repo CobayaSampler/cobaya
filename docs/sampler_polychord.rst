@@ -205,4 +205,3 @@ PolyChord class
 
 .. autoclass:: samplers.polychord.polychord
    :members:
-

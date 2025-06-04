@@ -11,10 +11,10 @@ class Union3(PantheonPlus):
     """
 
     def configure(self):
-        self.pre_vars = 0.  # diagonal component
+        self.pre_vars = 0.0  # diagonal component
 
     def _read_data_file(self, data_file):
-        file_cols = ['zcmb', 'mb']
-        self.cols = ['zcmb', 'mag']
+        file_cols = ["zcmb", "mb"]
+        self.cols = ["zcmb", "mag"]
         self._read_cols(data_file, file_cols)
         self.zhel = self.zcmb

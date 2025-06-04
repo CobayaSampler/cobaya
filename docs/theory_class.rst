@@ -6,6 +6,6 @@ CLASS (``classy``)
 
 Documentation of the ``classy`` wrapper class
 ---------------------------------------------
-   
+
 .. autoclass:: theories.classy.classy
    :members:

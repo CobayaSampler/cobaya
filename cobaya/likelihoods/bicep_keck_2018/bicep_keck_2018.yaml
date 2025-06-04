@@ -7,14 +7,14 @@
 #
 # BICEP/Keck likelihood, including external data from Planck and WMAP.
 #
-# Default settings for data selection and foreground nuisance parameters from 
+# Default settings for data selection and foreground nuisance parameters from
 # the baseline analysis described in BICEP/Keck XIII.
 #
 #   * Includes BICEP2+KECK+BICEP3 95, 150, and 220 GHz maps
-#   * Additional maps are: Planck 30, 44, 143, 217, and 353 GHz; 
-#                          WMAP 23 GHz (K-band) and 33 GHz (Ka-band), 
+#   * Additional maps are: Planck 30, 44, 143, 217, and 353 GHz;
+#                          WMAP 23 GHz (K-band) and 33 GHz (Ka-band),
 #                          apodized to BICEP3 map size
-#   * Maps apodized to BICEP3 map size are denoted with letter 'e', 
+#   * Maps apodized to BICEP3 map size are denoted with letter 'e',
 #     otherwise they are apodized to BICEP2/Keck map size instead.
 #   * By default uses B-modes only.
 #   * Uses all nine ell bins.

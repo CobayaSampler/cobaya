@@ -7,4 +7,5 @@ class sdss_dr16_baoplus_lrg(BAO):
     As recommended in the official data release, it combines measurements
     of LRGs from eBOSS DR16 and BOSS DR12.
     """
+
     pass

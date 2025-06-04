@@ -23,7 +23,7 @@ aliases: [DES]
 # Speed in evaluations/second
 speed: 20
 
-  
+
 params:
   # Lensing photo-z errors
   DES_DzL1:
@@ -74,7 +74,7 @@ params:
     prior:
       dist: norm
       loc: 0
-      scale: 0.01 
+      scale: 0.01
     ref:
       dist: norm
       loc: 0
@@ -240,7 +240,7 @@ params:
     ref:
       dist: norm
       loc: 1
-      scale: 0.2 
+      scale: 0.2
     proposal: 0.2
     latex: \alpha_\mathrm{IA,DES}
   DES_z0IA:

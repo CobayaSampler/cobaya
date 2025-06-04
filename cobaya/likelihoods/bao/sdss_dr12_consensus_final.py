@@ -6,4 +6,5 @@ class sdss_dr12_consensus_final(BAO):
     Likelihood of the combined power spectrum BAO and full-shape measurements of
     SDSS DR12 \cite{Alam:2016hwk}.
     """
+
     pass
