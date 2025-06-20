@@ -42,6 +42,8 @@
         "*.yaml": "yaml",
         "*.yml": "yaml"
     },
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
     // YAML settings for custom tags
     "yaml.customTags": [
         "!defaults sequence",
