@@ -47,6 +47,7 @@ my*
 
 # IDE-specific
 .idea/
+.vscode/launch.json
 *.swp
 *.swo
 

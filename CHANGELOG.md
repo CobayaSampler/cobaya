@@ -4,6 +4,8 @@
 
 - Minimum python 3.10; type hints updated accordingly
 - Added standardized formatting with ruff (removing flake8)
+- Added pre-commit hooks for automated code quality checks (trailing whitespace, end-of-file-fixer, pyupgrade, ruff)
+- Documentation can now be built as markdown for LLM context
 
 ## 3.5.7 - 2025-03-31
 
