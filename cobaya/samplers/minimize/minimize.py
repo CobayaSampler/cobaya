@@ -91,7 +91,8 @@ To maximize the likelihood, add ``ignore_prior: True`` in the ``minimize`` input
 
 When producing text output, the generated files are named ``.bestfit[.txt]`` instead of
 ``minimum``, and contain the best-fit (maximum of the likelihood) instead of the MAP
-(maximum of the posterior).
+(maximum of the posterior). Note that ``-log(Like)`` and ``chi-sq`` are still
+based on the log-**posterior**: the option only affects what is minimized.
 
 """
 
