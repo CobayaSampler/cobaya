@@ -10,7 +10,7 @@
 ## In the docs "Bases" (and UML diagram) not hyperlinked correctly (not sure how to fix)
 ## dump log info along with each chain file if saving to file (currently in stdout)
 ## PolyChord: check overhead
-## PolyChord: 
+## PolyChord:
 ## update like/theory dict types to allow for instances (remove log.warning if all OK)
 ## skip measure_and_set_speeds if only one component
 ## maybe re-dump model info with measured speeds (need to allow saving of speeds from helper theories like camb.transfers)

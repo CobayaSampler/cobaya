@@ -133,7 +133,7 @@ params:
     ref:
       dist: norm
       loc: 1
-      scale: 0.2 
+      scale: 0.2
     proposal: 0.2
     latex: \alpha_\mathrm{IA,DES}
   DES_z0IA:

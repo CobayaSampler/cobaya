@@ -5,7 +5,13 @@ Sampling from a cosmological posterior works the same way as the examples at the
 
 You can sample or track any parameter that is understood by the theory code in use (or any dynamical redefinition of those). You **do not need to modify Cobaya's source** to use new parameters that you have created by :ref:`modifying CLASS <classy_modify>` or :ref:`modifying CAMB <camb_modify>`, or to :doc:`create a new cosmological likelihood <cosmo_external_likelihood>` and track its parameters.
 
-Creating *from scratch* the input for a realistic cosmological case is quite a bit of work. But to make it simpler, we have created an automatic **input generator**, that you can run from the shell as:
+Creating *from scratch* the input for a realistic cosmological case is quite a bit of work. But to make it simpler, we have created an automatic **input generator**.
+
+You can use the **web-based Streamlit version** that runs easily online at:
+
+https://cobaya-gui.streamlit.app/
+
+Alternatively, you can run the local desktop version from the shell as:
 
 .. code:: bash
 
@@ -16,17 +22,12 @@ Creating *from scratch* the input for a realistic cosmological case is quite a b
 
 .. note::
 
-   If ``PySide`` is not installed, this will fail. To fix it:
+   The local desktop version requires ``PySide6``. If it's not installed, this will fail. To fix it:
 
    .. code:: bash
 
       $ python -m pip install PySide6
 
-   You can also use PySide2. If installing via pip is problematic, the most reliable solution seems to be to make a clean conda-forge environment and use that, e.g. install Anaconda or Miniconda and use the environment created with
-
-  .. code:: bash
-
-      $ conda create -n py39forge -c conda-forge python=3.9 scipy pandas matplotlib PyYAML PySide2
 
 Start by choosing a preset, maybe modify some aspects using the options provided, and copy or save the generated input to a file, either in ``yaml`` form or as a python dictionary.
 
@@ -175,6 +176,6 @@ You can also do this interactively, by passing your input info, as a python dict
 
 .. note::
 
-   Both defaults and bibliography are available in the **GUI** (menu ``Show defaults and bibliography for a component ...``).
+   Both defaults and bibliography are available in the **web-based Streamlit GUI** at https://cobaya-gui.streamlit.app/ and in the **local desktop GUI** (menu ``Show defaults and bibliography for a component ...``).
 
    Bibliography for *preset* input files is displayed in the ``bibliography`` tab.

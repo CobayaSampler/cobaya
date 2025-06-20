@@ -6,7 +6,7 @@ Theory codes
 
 Theory class
 ------------
-   
+
 .. autoclass:: theory.Theory
    :show-inheritance:
    :members:

@@ -7,4 +7,5 @@ class TT_lite_native(PlanckPlikLite):
     release \cite{Aghanim:2019ame} (Python re-implementation of the official
     \textsc{plik\_lite}, by E.~Calabrese, and A.~Lewis).
     """
+
     pass
