@@ -4,6 +4,10 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      - id: trailing-whitespace
+        exclude: '^(cobaya|tests)/.*\.(py|ipynb)$'
+      - id: end-of-file-fixer
+        exclude: '^(cobaya|tests)/.*\.(py|ipynb)$'
       - id: check-added-large-files
       - id: check-merge-conflict
 
