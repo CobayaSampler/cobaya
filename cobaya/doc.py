@@ -11,12 +11,11 @@ import argparse
 from inspect import cleandoc
 from pprint import pformat
 
+# Local
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import kinds, subfolders
 from cobaya.input import get_default_info
 from cobaya.log import NoLogging, get_logger, logger_setup
-
-# Local
 from cobaya.tools import (
     get_available_internal_class_names,
     similar_internal_class_names,
