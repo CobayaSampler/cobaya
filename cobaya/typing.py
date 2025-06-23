@@ -3,7 +3,7 @@ import numbers
 import typing
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from types import MappingProxyType, UnionType
-from typing import Any, Literal, TypedDict, Union
+from typing import Any, Literal, TypedDict
 
 import numpy as np
 
@@ -26,10 +26,10 @@ SamplerDictIn = InfoDictIn
 
 ParamValuesDict = dict[str, float]
 # Do not yet explicitly support passing instances here
-TheoriesDict = dict[str, Union[None, TheoryDict, type]]
-LikesDict = dict[str, Union[None, str, LikeDict, type, Callable]]
+TheoriesDict = dict[str, None | TheoryDict | type]
+LikesDict = dict[str, None | str | LikeDict | type | Callable]
 SamplersDict = dict[str, SamplerDict | None]
-PriorsDict = dict[str, Union[str, Callable]]
+PriorsDict = dict[str, str | Callable]
 
 partags = {
     "prior",
@@ -82,7 +82,7 @@ class ParamDict(TypedDict, total=False):
 # 5. Sequence specifying uniform prior range [min, max] and optionally
 #    'ref' mean and standard deviation for starting positions, and optionally
 #    proposal width. Allowed lengths, 2, 4, 5
-ParamInput = Union[ParamDict, None, str, float, Sequence[float]]
+ParamInput = ParamDict | None | str | float | Sequence[float]
 ParamsDict = dict[str, ParamInput]
 ExpandedParamsDict = dict[str, ParamDict]
 
@@ -194,7 +194,7 @@ def validate_type(expected_type: type, value: Any, path: str = ""):
     ):
         # complex types like dict[str, float] etc.
 
-        if origin is Union or origin is UnionType:
+        if origin is typing.Union or origin is UnionType:
             errors = []
             for t in args:
                 try:

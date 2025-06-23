@@ -197,7 +197,7 @@ class Minimize(Minimizer, CovmatSampler):
                 else:
                     collection_in = self.output.load_collections(
                         self.model, concatenate=True
-                    )
+                    )  # type: ignore
                 if collection_in:
                     initial_point = (
                         collection_in.bestfit()

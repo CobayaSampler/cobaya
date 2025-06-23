@@ -142,4 +142,4 @@ def create_input(**kwargs) -> InputDict:
         merged["params"] = merged_params_translated
     if get_comments and comments:
         merged["comment"] = comments
-    return merged
+    return merged  # type: ignore

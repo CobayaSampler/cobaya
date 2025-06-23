@@ -345,7 +345,7 @@ def get_clik_source_folder(starting_path):
             raise FileNotFoundError(
                 f"Could not find a clik installation under {starting_path}"
             )
-        source_dir = os.path.join(source_dir, folders[0])
+        source_dir = os.path.join(source_dir, folders[0])  # type: ignore
     return source_dir
 
 

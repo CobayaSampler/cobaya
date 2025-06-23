@@ -527,7 +527,7 @@ class polychord(Sampler):
         combined: bool = False,
         skip_samples: float = 0,
         to_getdist: bool = False,
-    ) -> Union[SampleCollection, "MCSamples"]:
+    ) -> Union[SampleCollection, "MCSamples", None]:
         """
         Returns the sample of the posterior built out of dead points.
 

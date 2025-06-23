@@ -873,7 +873,7 @@ class SampleCollection(BaseCollection):
             last = last or len(self)
             self._check_weights(weights, length=last - first)
             weights /= max(weights)
-            return weights, np.allclose(np.round(weights), weights)
+            return weights, np.allclose(np.round(weights), weights)  # type: ignore
         if self.is_tempered and not tempered:
             # For sure the weights are not integer in this case
             # NB: Index [0] below bc a list is returned, in case of batch processing

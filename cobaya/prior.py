@@ -773,7 +773,7 @@ class Prior(HasLogger):
         :func:`Prior.reference` would always return the same.
         """
         if self._ref_is_pointlike is None:
-            self._set_pointlike()
+            return self._set_pointlike()
         return self._ref_is_pointlike
 
     def _set_pointlike(self):
@@ -782,6 +782,7 @@ class Prior(HasLogger):
             (isinstance(ref, numbers.Number) and not np.isnan(ref))
             for ref in self.ref_pdf
         )
+        return self._ref_is_pointlike
 
     def reference(
         self,

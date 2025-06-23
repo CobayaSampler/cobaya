@@ -96,7 +96,7 @@ class PostResult:
 
         Returns
         -------
-        SampleCollection, List[SampleCollection], getdist.MCSamples
+        SampleCollection, list[SampleCollection], getdist.MCSamples
             The post-processed samples.
         """
         # Difference with MCMC: self.results["sample"] may contain one collection or a
@@ -123,7 +123,7 @@ class PostResult:
                         # noinspection PyProtectedMember
                         all_collections[0]._append(collection)
                 collection = all_collections[0]
-        return mpi.share_mpi(collection)
+        return mpi.share_mpi(collection)  # type: ignore
 
     # For compatibility with Sampler, when returned by run()
     def products(
@@ -286,7 +286,7 @@ def post(
     info = load_input_dict(info_or_yaml_or_file)
     logger_setup(info.get("debug"))
     log = get_logger(__name__)
-    info_post: PostDict = info.get("post")
+    info_post: PostDict | None = info.get("post")
     if not info_post:
         raise LoggedError(log, "No 'post' block given. Nothing to do!")
     if mpi.is_main_process() and info.get("resume"):
@@ -484,12 +484,12 @@ def post(
 
     if "minimize" in (info.get("sampler") or []):
         # actually minimizing with importance-sampled combination of likelihoods
-        out_combined = dict(info, **out_combined)
+        out_combined: InputDict = dict(info, **out_combined)  # type: ignore
         out_combined.pop("post")
         out_combined["output"] = out_prefix
         from cobaya.run import run
 
-        return run(out_combined)
+        return run(out_combined)  # type: ignore
 
     in_collections = get_collections(
         info, output_in, info_post, sample, dummy_model_in, log

@@ -230,7 +230,7 @@ class Sampler(CobayaComponent):
                [update the collection of samples]
         """
 
-    def samples(self, **kwargs) -> Union["SampleCollection", "MCSamples"]:
+    def samples(self, **kwargs) -> Union["SampleCollection", "MCSamples", None]:
         """
         Returns the products expected in a scripted call of cobaya,
         (e.g. a collection of samples or a list of them).

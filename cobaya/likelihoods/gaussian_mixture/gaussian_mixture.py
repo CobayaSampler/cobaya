@@ -19,7 +19,7 @@ from cobaya.functions import inverse_cholesky
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import is_main_process, share_mpi
-from cobaya.typing import InputDict, Sequence, Union
+from cobaya.typing import InputDict, Sequence
 
 derived_suffix = "_derived"
 
@@ -32,9 +32,9 @@ class GaussianMixture(Likelihood):
     file_base_name = "gaussian_mixture"
 
     # yaml variables
-    means: Union[Sequence, np.ndarray]
-    covs: Union[Sequence, np.ndarray]
-    weights: Union[np.ndarray, float]
+    means: Sequence | np.ndarray
+    covs: Sequence | np.ndarray
+    weights: np.ndarray | float
     derived: bool
     input_params_prefix: str
     output_params_prefix: str

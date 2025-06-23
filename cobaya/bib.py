@@ -20,7 +20,7 @@ from cobaya.conventions import Extension, dump_sort_cosmetic
 from cobaya.input import get_used_components, load_input
 from cobaya.log import get_logger, logger_setup
 from cobaya.tools import create_banner, similar_internal_class_names, warn_deprecation
-from cobaya.typing import InfoDict
+from cobaya.typing import InfoDict, InputDict
 
 # Banner defaults
 _default_symbol = "="
@@ -175,7 +175,7 @@ def bib_script(args=None):
     logger_setup()
     logger = get_logger("bib")
     # Gather requests
-    infos: list[dict | str] = []
+    infos: list[InputDict | str] = []
     for f in arguments.files_or_components:
         if os.path.splitext(f)[1].lower() in Extension.yamls:
             infos += [load_input(f)]
