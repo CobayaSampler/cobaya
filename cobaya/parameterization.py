@@ -577,7 +577,10 @@ def get_literal_param_range(param_info, confidence_for_unbounded=1):
     """
     Extracts parameter bounds from a parameter input dict, if present.
     """
-    get_bounds_from_dict = lambda i: [i.get("min", -np.inf), i.get("max", np.inf)]
+
+    def get_bounds_from_dict(i):
+        return [i.get("min", -np.inf), i.get("max", np.inf)]
+
     # Sampled
     if is_sampled_param(param_info):
         pdf_dist = get_scipy_1d_pdf(param_info.get("prior", {}))  # may raise ValueError

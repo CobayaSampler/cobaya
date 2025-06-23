@@ -526,8 +526,8 @@ class DES(DataSetLikelihood):
         else:
             tmp = np.empty((ls_cl.shape[0], chis.shape[0]))
             weight = np.empty(chis.shape)
-            for ix, l in enumerate(ls_cl):
-                k = (l + 0.5) / chis
+            for ix, ell in enumerate(ls_cl):
+                k = (ell + 0.5) / chis
                 weight[:] = dchifac
                 weight[k < 1e-4] = 0
                 weight[k >= PKdelta.kmax] = 0
@@ -539,8 +539,8 @@ class DES(DataSetLikelihood):
                 _limber_PK_terms(tmplens, ks, dchifac, PKWeyl.kmax)
             else:
                 tmplens = np.empty((ls_cl.shape[0], chis.shape[0]))
-                for ix, l in enumerate(ls_cl):
-                    k = (l + 0.5) / chis
+                for ix, ell in enumerate(ls_cl):
+                    k = (ell + 0.5) / chis
                     weight[:] = dchifac
                     weight[k < 1e-4] = 0
                     weight[k >= PKWeyl.kmax] = 0

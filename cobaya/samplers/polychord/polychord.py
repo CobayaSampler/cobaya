@@ -415,10 +415,15 @@ class polychord(Sampler):
         if np.isnan(self._frac_unphysical):
             with open(self.raw_prefix + ".prior_info", encoding="utf-8-sig") as pf:
                 lines = list(pf.readlines())
-            get_value_str = lambda line: line[line.find("=") + 1 :]
-            get_value_str_var = lambda var: get_value_str(
-                next(line for line in lines if line.lstrip().startswith(var))
-            )
+
+            def get_value_str(line):
+                return line[line.find("=") + 1 :]
+
+            def get_value_str_var(var):
+                return get_value_str(
+                    next(line for line in lines if line.lstrip().startswith(var))
+                )
+
             nprior = int(get_value_str_var("nprior"))
             ndiscarded = int(get_value_str_var("ndiscarded"))
             self._frac_unphysical = nprior / ndiscarded

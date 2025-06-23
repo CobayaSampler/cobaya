@@ -17,8 +17,15 @@ from cobaya.tools import get_external_function
 # Local
 from cobaya.yaml import yaml_load
 
-x_func = lambda _: _ / 3
-e_func = lambda _: _ + 1
+
+def x_func(_):
+    return _ / 3
+
+
+def e_func(_):
+    return _ + 1
+
+
 b_func = "lambda a, bprime: a+2*bprime"
 c_func = "lambda a, cprime: a+3*cprime"
 f_func = "lambda b: b**2"

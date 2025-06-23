@@ -122,9 +122,11 @@ valid_methods = tuple(evals_attr)
 
 # Conventions conventions
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
-get_collection_extension = (
-    lambda ignore_prior: getdist_ext_ignore_prior[ignore_prior] + ".txt"
-)
+
+
+def get_collection_extension(ignore_prior):
+    return getdist_ext_ignore_prior[ignore_prior] + ".txt"
+
 
 _bobyqa_errors = {
     controller.EXIT_MAXFUN_WARNING: "Maximum allowed objective evaluations reached. "

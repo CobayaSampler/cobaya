@@ -796,14 +796,14 @@ class MCMC(CovmatSampler):
                 ranges = [(i * cut, (i + 1) * cut - 1) for i in range(1, m)]
                 means = np.array(
                     [
-                        self.collection.mean(first=f, last=l, tempered=True)
-                        for f, l in ranges
+                        self.collection.mean(first=first, last=last, tempered=True)
+                        for first, last in ranges
                     ]
                 )
                 covs = np.array(
                     [
-                        self.collection.cov(first=f, last=l, tempered=True)
-                        for f, l in ranges
+                        self.collection.cov(first=first, last=last, tempered=True)
+                        for first, last in ranges
                     ]
                 )
             except always_stop_exceptions:

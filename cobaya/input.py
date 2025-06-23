@@ -11,7 +11,7 @@ import inspect
 import os
 import platform
 from collections import defaultdict
-from collections.abc import Callable, Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping
 from copy import deepcopy
 from itertools import chain
 from typing import TypeVar
@@ -604,11 +604,11 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     Set ``strict=False`` (default: ``True``) to ignore options that would not affect
     the statistics of a posterior sample, including order of params/priors/likelihoods.
     """
-    myprint: Callable
-    myprint_debug: Callable
     if print_not_log:
         myprint = print
-        myprint_debug = lambda x: x
+
+        def myprint_debug(msg):
+            return msg
     else:
         myprint = logger.info
         myprint_debug = logger.debug

@@ -474,7 +474,7 @@ class NumberWithUnits:
         def cast(x):
             try:
                 val = float(x)
-                if dtype == int and np.isfinite(val):
+                if dtype is int and np.isfinite(val):
                     # in case ints are given in exponential notation, make int(float())
                     if val == 0:
                         return val
@@ -789,10 +789,10 @@ def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     names = {"A": name_A, "B": name_B}
     # Duplicates
     list_A_copy, list_B_copy = list_A[:], list_B[:]
-    for n, l in zip(names, [list_A_copy, list_B_copy]):
-        [l.pop(i) for i in sorted([l.index(x) for x in set(l)])[::-1]]
-        if l:
-            result["duplicate_%s" % n] = list(set(l))
+    for n, lst in zip(names, [list_A_copy, list_B_copy]):
+        [lst.pop(i) for i in sorted([lst.index(x) for x in set(lst)])[::-1]]
+        if lst:
+            result["duplicate_%s" % n] = list(set(lst))
     sets = {"A": set(list_A), "B": set(list_B)}
     for n1, n2 in [["A", "B"], ["B", "A"]]:
         missing = sets[n1].difference(sets[n2])
@@ -1167,17 +1167,17 @@ def write_packages_path_in_config_file(packages_path):
 
 def resolve_packages_path(infos=None):
     # noinspection PyStatementEffect
-    """
+    f"""
     Gets the external packages' installation path given some infos.
     If more than one occurrence of the external packages path in the infos,
     raises an error.
 
     If there is no external packages' path defined in the given infos,
-    defaults to the env variable `%s`, and in its absence to that stored
+    defaults to the env variable `{packages_path_env}`, and in its absence to that stored
     in the config file.
 
     If no path at all could be found, returns `None`.
-    """ % packages_path_env
+    """
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
@@ -1201,11 +1201,10 @@ def resolve_packages_path(infos=None):
 
 
 def sort_cosmetic(info):
-    # noinspection PyStatementEffect
+    f"""
+    Returns a sorted version of the given info dict, re-ordered as {dump_sort_cosmetic!r},
+    and finally the rest of the blocks/options.
     """
-    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-    rest of the blocks/options.
-    """ % dump_sort_cosmetic
     sorted_info = dict()
     for k in dump_sort_cosmetic:
         if k in info:

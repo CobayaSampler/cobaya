@@ -25,7 +25,11 @@ from cobaya.yaml import yaml_load
 # Definition of external (log)pdfs
 
 half_ring_str = "lambda x, y: stats.norm.logpdf(np.sqrt(x**2 + y**2), loc=0.5, scale=0.1)"
-half_ring_func = lambda x, y: eval(half_ring_str)(x, y)
+
+
+def half_ring_func(x, y):
+    return eval(half_ring_str)(x, y)
+
 
 derived_funcs = {
     "r": lambda x, y: np.sqrt(x**2 + y**2),
@@ -39,7 +43,12 @@ def half_ring_func_derived(x, y=0.5):
 
 
 gaussian_str = "lambda y: stats.norm.logpdf(y, loc=0, scale=0.2)"
-gaussian_func = lambda y: eval(gaussian_str)(y)
+
+
+def gaussian_func(y):
+    return eval(gaussian_str)(y)
+
+
 assert gaussian_func(0.1) == stats.norm.logpdf(0.1, loc=0, scale=0.2)
 
 

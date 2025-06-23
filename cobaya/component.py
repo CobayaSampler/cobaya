@@ -70,9 +70,14 @@ class Description:
 
     def __get__(self, instance, cls):
         if instance is None:
-            return_func = lambda info=None: cls._get_desc(info)
+
+            def return_func(info=None):
+                return cls._get_desc(info)
         else:
-            return_func = lambda info=None: cls._get_desc(info=instance.__dict__)
+
+            def return_func(info=None):
+                return cls._get_desc(info=instance.__dict__)
+
         return_func.__doc__ = cleandoc("""
             Returns a short description of the class. By default, returns the class'
             docstring.

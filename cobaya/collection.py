@@ -369,8 +369,11 @@ class SampleCollection(BaseCollection):
         self._cache_reset()
         # Prepare txt formatter
         self.n_float = 8
+
         # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
-        width_col = lambda col: max(7 + self.n_float, len(col))
+        def width_col(col):
+            return max(7 + self.n_float, len(col))
+
         self._numpy_fmts = [
             f"%{width_col(col)}.{self.n_float}" + "g" for col in self.data.columns
         ]
@@ -619,7 +622,9 @@ class SampleCollection(BaseCollection):
         return temperature
 
     def _check_weights(
-        self, weights: np.ndarray | None = None, length: int | list[int] | None = None
+        self,
+        weights=None,
+        length: int | list[int] | None = None,
     ):
         """
         Checks correct length, shape and signs of the ``weights``.
@@ -646,7 +651,7 @@ class SampleCollection(BaseCollection):
                     f"The shape of the weights is wrong. {expected_msg}, "
                     f"but got {weights}.",
                 )
-            if any(len(w) != l for w, l in zip(weights, lengths_array)):
+            if any(len(w) != leng for w, leng in zip(weights, lengths_array)):
                 raise LoggedError(
                     self.log,
                     f"The lengths of the weights vectors are wrong. Expected "

@@ -207,7 +207,7 @@ def as_requirement_list(requirements):
 
 def _dict_equal(d1, d2):
     # dict/None equality test accounting for numpy arrays not supporting standard eq
-    if type(d1) != type(d2):
+    if type(d1) is not type(d2):
         return False
     if isinstance(d1, np.ndarray):
         return np.array_equal(d1, d2)
@@ -407,8 +407,7 @@ class Model(HasLogger):
     ) -> (
         np.ndarray
         | dict[str, float]
-        | tuple[np.ndarray, np.ndarray]
-        | tuple[dict[str, float], dict[str, float]]
+        | tuple[np.ndarray | dict[str, float], list[float] | dict[str, float]]
     ):
         """
         Takes a dict of input parameters, computes the likelihood pipeline, and returns
@@ -503,8 +502,7 @@ class Model(HasLogger):
     ) -> (
         np.ndarray
         | dict[str, float]
-        | tuple[np.ndarray, np.ndarray]
-        | tuple[dict[str, float], dict[str, float]]
+        | tuple[np.ndarray | dict[str, float], list[float] | dict[str, float]]
     ):
         """
         Takes an array or dictionary of sampled parameter values.
@@ -576,7 +574,7 @@ class Model(HasLogger):
             make_finite=make_finite,
         )
         if return_derived:
-            return np.sum(ret_value[0]), ret_value[1]
+            return np.sum(ret_value[0]), ret_value[1]  # type: ignore
         else:
             return np.sum(ret_value)
 
@@ -712,7 +710,7 @@ class Model(HasLogger):
         ignore_fixed_ref: bool = False,
         logposterior_as_dict: bool = False,
         random_state=None,
-    ) -> tuple[np.ndarray, LogPosterior] | tuple[np.ndarray, dict]:
+    ) -> tuple[np.ndarray, LogPosterior | dict]:
         """
         Finds a point with finite posterior, sampled from the reference pdf.
 
@@ -1567,7 +1565,7 @@ class Model(HasLogger):
                     ignore_fixed=True,
                     warn_if_no_ref=False,
                 )
-                if self.loglike(point, cached=False)[0] != -np.inf:
+                if self.loglike(point, cached=False)[0] != -np.inf:  # type: ignore
                     n_done += 1
             self.mpi_debug("Computed %d points to measure speeds.", n_done)
             times = [
