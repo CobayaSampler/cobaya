@@ -16,6 +16,7 @@ from typing import Any
 
 import numpy as np
 
+# Local
 from cobaya.log import HasLogger, LoggedError
 from cobaya.tools import (
     deepcopy_where_possible,
@@ -27,8 +28,6 @@ from cobaya.tools import (
     is_valid_variable_name,
     str_to_list,
 )
-
-# Local
 from cobaya.typing import (
     ExpandedParamsDict,
     ParamDict,

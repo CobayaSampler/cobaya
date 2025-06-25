@@ -12,10 +12,9 @@ from collections.abc import Iterable, Mapping
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
+# Local
 from cobaya.conventions import Const
 from cobaya.log import LoggedError, abstract, get_logger
-
-# Local
 from cobaya.theory import Theory
 from cobaya.tools import check_2d, combine_1d, combine_2d, deepcopy_where_possible
 from cobaya.typing import InfoDict, empty_dict

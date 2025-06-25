@@ -17,6 +17,7 @@ from typing import Any
 
 from packaging import version
 
+# Local
 from cobaya import mpi
 from cobaya.component import get_component_class
 from cobaya.conventions import Extension, get_version, kinds, resume_default
@@ -29,8 +30,6 @@ from cobaya.tools import (
     sort_cosmetic,
 )
 from cobaya.typing import InputDict
-
-# Local
 from cobaya.yaml import (
     InputImportError,
     OutputError,

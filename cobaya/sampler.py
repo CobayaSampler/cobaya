@@ -53,10 +53,9 @@ from typing import TYPE_CHECKING, Union
 import numpy as np
 from numpy.random import SeedSequence, default_rng
 
+# Local
 from cobaya import mpi
 from cobaya.component import CobayaComponent, get_component_class
-
-# Local
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.input import get_preferred_old_values, is_equal_info, update_info
 from cobaya.log import LoggedError, get_logger, is_debug
@@ -529,7 +528,7 @@ class CovmatSampler(Sampler):
             except TypeError as texcpt:
                 raise LoggedError(
                     self.log,
-                    "The property 'covmat' must be a file name,but it's '%s'.",
+                    "The property 'covmat' must be a file name, but it's '%s'.",
                     str(self.covmat),
                 ) from texcpt
             except OSError as ioexcpt:

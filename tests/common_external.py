@@ -12,9 +12,8 @@ from random import random
 import numpy as np
 import scipy.stats as stats
 
-from cobaya import mpi
-
 # Local
+from cobaya import mpi
 from cobaya.conventions import FileSuffix, get_chi2_name
 from cobaya.likelihood import Likelihood
 from cobaya.run import run

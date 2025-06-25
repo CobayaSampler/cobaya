@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 
+# Local
 from cobaya.collection import SampleCollection
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.conventions import Extension, derived_par_name_separator
@@ -27,8 +28,6 @@ from cobaya.install import download_github_release
 from cobaya.log import LoggedError, NoLogging, get_logger
 from cobaya.mpi import is_main_process, share_mpi, sync_processes
 from cobaya.sampler import Sampler
-
-# Local
 from cobaya.tools import (
     NumberWithUnits,
     find_with_regexp,

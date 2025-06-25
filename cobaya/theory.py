@@ -34,11 +34,10 @@ from collections import deque
 from collections.abc import Iterable, Sequence
 from typing import Any
 
+# Local
 from cobaya.component import CobayaComponent, ComponentCollection, get_component_class
 from cobaya.log import LoggedError, always_stop_exceptions
 from cobaya.tools import get_class_methods, str_to_list
-
-# Local
 from cobaya.typing import (
     InfoDict,
     ParamsDict,

@@ -17,6 +17,7 @@ from textwrap import dedent
 
 from requests import head
 
+# Local
 from cobaya.conventions import (
     code_path,
     data_path,
@@ -27,8 +28,6 @@ from cobaya.conventions import (
 )
 from cobaya.input import get_used_components, load_input
 from cobaya.install import install
-
-# Local
 from cobaya.log import LoggedError, get_logger, logger_setup
 from cobaya.tools import warn_deprecation
 from cobaya.yaml import yaml_dump

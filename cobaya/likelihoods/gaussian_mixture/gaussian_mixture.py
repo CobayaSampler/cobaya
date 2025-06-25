@@ -13,9 +13,8 @@ import numpy as np
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, random_correlation, uniform
 
-from cobaya.functions import inverse_cholesky
-
 # Local
+from cobaya.functions import inverse_cholesky
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.mpi import is_main_process, share_mpi

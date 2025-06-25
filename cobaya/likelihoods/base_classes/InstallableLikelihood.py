@@ -11,11 +11,10 @@ import os
 
 from packaging import version
 
+# Local
 from cobaya.component import ComponentNotInstalledError
 from cobaya.functions import chi_squared
 from cobaya.install import _version_filename
-
-# Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import get_logger
 from cobaya.tools import VersionCheckError, resolve_packages_path

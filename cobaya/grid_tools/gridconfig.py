@@ -16,6 +16,7 @@ from itertools import chain
 from getdist.inifile import IniFile
 from getdist.paramnames import makeList as make_list
 
+# Local
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.cosmo_input import (
     create_input,
@@ -27,8 +28,6 @@ from cobaya.input import merge_info, update_info
 from cobaya.install import install as install_reqs
 from cobaya.parameterization import is_sampled_param
 from cobaya.tools import resolve_packages_path, sort_cosmetic, warn_deprecation
-
-# Local
 from cobaya.yaml import yaml_dump_file, yaml_load_file
 
 

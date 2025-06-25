@@ -229,11 +229,10 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
+# Local
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.install import check_gcc_version, download_github_release, pip_install
 from cobaya.log import LoggedError, get_logger
-
-# Local
 from cobaya.theories.cosmo import BoltzmannBase
 from cobaya.tools import (
     Pool1D,

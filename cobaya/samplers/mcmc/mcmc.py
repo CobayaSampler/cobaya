@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Union
 import numpy as np
 from pandas import DataFrame
 
+# Local
 from cobaya import mpi
 from cobaya.collection import (
     OneSamplePoint,
@@ -34,8 +35,6 @@ from cobaya.mpi import (
     share_mpi,
     sync_processes,
 )
-
-# Local
 from cobaya.sampler import CovmatSampler
 from cobaya.samplers.mcmc.proposal import BlockedProposer
 from cobaya.tools import NumberWithUnits, get_external_function, load_DataFrame

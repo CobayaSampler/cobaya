@@ -74,8 +74,6 @@ from typing import Any
 import numpy as np
 
 from cobaya.conventions import Const
-
-# Local
 from cobaya.likelihoods.base_classes import CMBlikes
 
 # Physical constants

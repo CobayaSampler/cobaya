@@ -106,13 +106,12 @@ import pybobyqa
 from pybobyqa import controller
 from scipy import optimize
 
+# Local
 from cobaya import mpi
 from cobaya.collection import OnePoint, SampleCollection
 from cobaya.component import ComponentNotInstalledError
 from cobaya.conventions import undo_chi2_name
 from cobaya.log import LoggedError
-
-# Local
 from cobaya.sampler import CovmatSampler, Minimizer
 from cobaya.tools import read_dnumber, recursive_update
 

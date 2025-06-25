@@ -17,9 +17,8 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
-from cobaya import mpi
-
 # Local
+from cobaya import mpi
 from cobaya.conventions import (
     get_chi2_name,
     overhead_time,

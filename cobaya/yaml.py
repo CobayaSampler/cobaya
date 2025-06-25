@@ -22,9 +22,8 @@ import yaml
 from yaml.constructor import ConstructorError
 from yaml.resolver import BaseResolver
 
-from cobaya.conventions import Extension
-
 # Local
+from cobaya.conventions import Extension
 from cobaya.tools import prepare_comment, recursive_update
 from cobaya.typing import InfoDict
 

@@ -15,11 +15,10 @@ import sys
 import numpy as np
 from packaging import version
 
+# Local
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.input import get_default_info
 from cobaya.install import download_file, pip_install
-
-# Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
 from cobaya.tools import (

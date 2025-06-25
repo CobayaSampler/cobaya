@@ -9,9 +9,8 @@
 # Global
 import os
 
-from cobaya import mpi
-
 # Local
+from cobaya import mpi
 from cobaya.conventions import (
     get_version,
     packages_path_arg,

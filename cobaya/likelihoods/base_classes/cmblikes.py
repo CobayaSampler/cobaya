@@ -16,9 +16,8 @@ import numpy as np
 from getdist import IniFile, ParamNames
 from scipy.linalg import sqrtm
 
-from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
-
 # Local
+from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 from cobaya.log import LoggedError
 
 CMB_keys = ["tt", "te", "ee", "bb"]

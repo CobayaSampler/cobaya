@@ -24,6 +24,7 @@ import requests  # type: ignore
 import tqdm  # type: ignore
 from packaging import version
 
+# Local
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import (
     Extension,
@@ -37,8 +38,6 @@ from cobaya.conventions import (
     packages_path_input,
 )
 from cobaya.input import get_used_components
-
-# Local
 from cobaya.log import LoggedError, NoLogging, get_logger, logger_setup
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import (

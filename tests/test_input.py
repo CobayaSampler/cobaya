@@ -6,11 +6,10 @@ from copy import deepcopy
 
 import pytest
 
+# Local
 from cobaya.input import get_default_info
 from cobaya.log import LoggedError
 from cobaya.run import run, run_script
-
-# Local
 from cobaya.typing import InputDict
 from cobaya.yaml import yaml_dump_file, yaml_load_file
 

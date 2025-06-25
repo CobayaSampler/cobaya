@@ -9,10 +9,9 @@
 # Global
 import os
 
+# Local
 from cobaya.component import ComponentNotInstalledError
 from cobaya.conventions import packages_path_input
-
-# Local
 from cobaya.log import LoggedError
 from cobaya.typing import InfoDict
 
