@@ -96,7 +96,6 @@ based on the log-**posterior**: the option only affects what is minimized.
 
 """
 
-# Global
 import os
 import re
 from itertools import chain
@@ -106,7 +105,6 @@ import pybobyqa
 from pybobyqa import controller
 from scipy import optimize
 
-# Local
 from cobaya import mpi
 from cobaya.collection import OnePoint, SampleCollection
 from cobaya.component import ComponentNotInstalledError

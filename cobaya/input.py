@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import inspect
 import os
 import platform
@@ -16,7 +15,6 @@ from copy import deepcopy
 from itertools import chain
 from typing import TypeVar
 
-# Local
 import cobaya.typing
 from cobaya import mpi
 from cobaya.component import ComponentNotFoundError, get_component_class

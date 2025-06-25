@@ -9,14 +9,12 @@
 
 """
 
-# Global
 import os
 
 import numpy as np
 from getdist import IniFile, ParamNames
 from scipy.linalg import sqrtm
 
-# Local
 from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 from cobaya.log import LoggedError
 

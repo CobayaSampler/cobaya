@@ -7,7 +7,6 @@ r"""
 
 """
 
-# Global
 import os
 import re
 import sys
@@ -15,7 +14,6 @@ import sys
 import numpy as np
 from packaging import version
 
-# Local
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.input import get_default_info
 from cobaya.install import download_file, pip_install

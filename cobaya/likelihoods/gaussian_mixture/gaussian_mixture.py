@@ -6,14 +6,12 @@
 
 """
 
-# Global
 from typing import Any
 
 import numpy as np
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal, random_correlation, uniform
 
-# Local
 from cobaya.functions import inverse_cholesky
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
@@ -294,6 +292,7 @@ def info_random_gaussian_mixture(
     if mpi_aware:
         mean, cov = share_mpi((mean, cov))
     dimension = len(ranges)
+
     info: InputDict = {
         "likelihood": {
             "gaussian_mixture": {
@@ -304,29 +303,25 @@ def info_random_gaussian_mixture(
                 "derived": derived,
             }
         },
-        "params": dict(
-            # sampled
-            tuple(
-                (
-                    input_params_prefix + "_%d" % i,
-                    {
-                        "prior": {"min": ranges[i][0], "max": ranges[i][1]},
-                        "latex": r"\alpha_{%i}" % i,
-                    },
-                )
+        "params": {
+            # Input parameters with priors
+            **{
+                f"{input_params_prefix}_{i}": {
+                    "prior": {"min": ranges[i][0], "max": ranges[i][1]},
+                    "latex": f"\\alpha_{{{i}}}",
+                }
                 for i in range(dimension)
-            )
-            +
-            # derived
-            (
-                tuple(
-                    (output_params_prefix + "_%d" % i, {"latex": r"\beta_{%i}" % i})
+            },
+            # Derived parameters (if requested)
+            **(
+                {
+                    f"{output_params_prefix}_{i}": {"latex": f"\\beta_{{{i}}}"}
                     for i in range(dimension * n_modes)
-                )
+                }
                 if derived
-                else ()
-            )
-        ),
+                else {}
+            ),
+        },
     }
     if add_ref:
         if n_modes > 1:

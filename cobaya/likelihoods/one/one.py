@@ -6,10 +6,8 @@ r"""
 
 """
 
-# Global
 from random import random
 
-# Local
 from cobaya.likelihood import AbsorbUnusedParamsLikelihood
 
 

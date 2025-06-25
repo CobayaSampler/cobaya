@@ -6,12 +6,10 @@
 
 """
 
-# Global
 import argparse
 from inspect import cleandoc
 from pprint import pformat
 
-# Local
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import kinds, subfolders
 from cobaya.input import get_default_info

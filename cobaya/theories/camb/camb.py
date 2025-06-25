@@ -208,7 +208,6 @@ the input block for CAMB (otherwise a system-wide CAMB may be used instead):
    if you indicate the path to your preferred installation as explained above.
 """
 
-# Global
 import ctypes
 import numbers
 import os
@@ -221,7 +220,6 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
-# Local
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.install import check_gcc_version, download_github_release, pip_install
 from cobaya.log import LoggedError, get_logger

@@ -12,7 +12,6 @@ For manual testing, and observing/plotting the density, pass `manual=True`
 to `body of test`.
 """
 
-# Local
 from .common_external import (
     body_of_test,
     info_callable,

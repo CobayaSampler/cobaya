@@ -6,7 +6,6 @@
          Jesus Torrado (for the cobaya wrapper only)
 """
 
-# Global
 import inspect
 import logging
 import os
@@ -20,7 +19,6 @@ from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 
-# Local
 from cobaya.collection import SampleCollection
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.conventions import Extension, derived_par_name_separator

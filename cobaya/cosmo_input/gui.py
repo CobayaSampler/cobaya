@@ -1,4 +1,3 @@
-# Global
 import io
 import os
 import platform
@@ -8,7 +7,6 @@ from pprint import pformat
 
 import numpy as np
 
-# Local
 from cobaya.bib import get_bib_component, get_bib_info, pretty_repr_bib
 from cobaya.conventions import kinds, packages_path_env, packages_path_input, subfolders
 from cobaya.cosmo_input import input_database

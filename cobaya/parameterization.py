@@ -7,7 +7,6 @@
 
 """
 
-# Global
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from itertools import chain
@@ -16,7 +15,6 @@ from typing import Any
 
 import numpy as np
 
-# Local
 from cobaya.log import HasLogger, LoggedError
 from cobaya.tools import (
     deepcopy_where_possible,

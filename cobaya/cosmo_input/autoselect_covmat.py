@@ -1,4 +1,3 @@
-# Global
 import hashlib
 import os
 import pickle
@@ -8,7 +7,6 @@ from typing import NamedTuple
 
 import numpy as np
 
-# Local
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.input import update_info
 from cobaya.log import LoggedError, get_logger, is_debug

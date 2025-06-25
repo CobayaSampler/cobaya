@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import functools
 import os
 import warnings
@@ -19,7 +18,6 @@ import pandas as pd
 from getdist import MCSamples, chains  # type: ignore
 from getdist.chains import WeightedSampleError, WeightedSamples  # type: ignore
 
-# Local
 from cobaya.conventions import (
     OutPar,
     chi2_labels,

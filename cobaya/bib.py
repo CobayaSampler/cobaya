@@ -9,12 +9,10 @@ Inspired by a similar characteristic of
 
 """
 
-# Global
 import argparse
 import os
 from inspect import cleandoc
 
-# Local
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import Extension, dump_sort_cosmetic
 from cobaya.input import get_used_components, load_input

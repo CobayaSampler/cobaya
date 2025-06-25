@@ -1,12 +1,10 @@
 # Tests to check correct input parsing and inheritance of defaults
 
-# Global
 import os
 from copy import deepcopy
 
 import pytest
 
-# Local
 from cobaya.input import get_default_info
 from cobaya.log import LoggedError
 from cobaya.run import run, run_script

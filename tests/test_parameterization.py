@@ -3,12 +3,10 @@ Tests different aspects of the reparameterization layer, using an external (to f
 parameter names) gaussian likelihood.
 """
 
-# Global
 import numpy as np
 import pytest
 from scipy.stats import multivariate_normal
 
-# Local
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 from cobaya.model import get_model

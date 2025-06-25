@@ -7,7 +7,6 @@
 #   is no facility to take the max (or min). Instead, codify precision needs in terms of
 #   requirements in the .must_provide method of the cosmo code.
 
-# Global
 from copy import deepcopy
 
 from cobaya.typing import InfoDict

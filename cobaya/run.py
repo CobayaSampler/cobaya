@@ -6,10 +6,8 @@
 
 """
 
-# Global
 import os
 
-# Local
 from cobaya import mpi
 from cobaya.conventions import (
     get_version,

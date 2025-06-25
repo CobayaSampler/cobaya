@@ -5,7 +5,6 @@
 :Author: Antony Lewis (for the CosmoMC sampler, wrapped for cobaya by Jesus Torrado)
 """
 
-# Global
 import datetime
 import re
 from collections.abc import Callable, Sequence
@@ -15,7 +14,6 @@ from typing import TYPE_CHECKING, Union
 import numpy as np
 from pandas import DataFrame
 
-# Local
 from cobaya import mpi
 from cobaya.collection import (
     OneSamplePoint,

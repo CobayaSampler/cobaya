@@ -1,8 +1,6 @@
-# Global
 from collections.abc import Mapping, MutableMapping
 from copy import deepcopy
 
-# Local
 from cobaya.input import get_default_info, merge_info
 from cobaya.parameterization import reduce_info_param
 from cobaya.typing import InputDict

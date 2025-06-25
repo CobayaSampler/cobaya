@@ -12,7 +12,6 @@ from collections.abc import Iterable, Mapping
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
-# Local
 from cobaya.conventions import Const
 from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.theory import Theory

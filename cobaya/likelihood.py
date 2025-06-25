@@ -22,7 +22,6 @@ class can be used as and when needed.
 
 """
 
-# Global
 import numbers
 from collections.abc import Mapping
 from itertools import chain

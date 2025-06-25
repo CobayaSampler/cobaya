@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import argparse
 import os
 import uuid
@@ -17,7 +16,6 @@ from textwrap import dedent
 
 from requests import head
 
-# Local
 from cobaya.conventions import (
     code_path,
     data_path,

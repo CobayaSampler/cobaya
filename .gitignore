@@ -44,6 +44,7 @@ coverage.xml
 .hypothesis/
 **/chains/
 my*
+scratch/
 
 # IDE-specific
 .idea/

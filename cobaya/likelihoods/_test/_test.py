@@ -1,4 +1,3 @@
-# Local
 from cobaya.likelihood import Likelihood
 
 

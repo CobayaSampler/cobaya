@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import datetime
 import importlib
 import os
@@ -17,7 +16,6 @@ from typing import Any
 
 from packaging import version
 
-# Local
 from cobaya import mpi
 from cobaya.component import get_component_class
 from cobaya.conventions import Extension, get_version, kinds, resume_default

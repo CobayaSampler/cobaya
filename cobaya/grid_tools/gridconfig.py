@@ -7,7 +7,6 @@
 
 """
 
-# Global
 import argparse
 import importlib.util
 import os
@@ -16,7 +15,6 @@ from itertools import chain
 from getdist.inifile import IniFile
 from getdist.paramnames import makeList as make_list
 
-# Local
 from cobaya.conventions import Extension, packages_path_input
 from cobaya.cosmo_input import (
     create_input,

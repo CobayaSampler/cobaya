@@ -7,7 +7,6 @@
 
 """
 
-# Global
 import importlib
 import logging
 import os
@@ -24,7 +23,6 @@ import requests  # type: ignore
 import tqdm  # type: ignore
 from packaging import version
 
-# Local
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import (
     Extension,
@@ -818,7 +816,7 @@ def install_script(args=None):
     logger_setup(arguments.debug)
     logger = get_logger("install")
     # Gather requests
-    infos: list[InputDict | str] = []
+    infos: list[InfoDict | InputDict | str] = []
     for f in arguments.files_or_components:
         if f.lower() == "cosmo":
             logger.info("Installing basic cosmological packages.")

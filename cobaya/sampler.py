@@ -44,7 +44,6 @@ implement only the methods ``initialize``, ``_run``, and ``products``.
 
 """
 
-# Global
 import os
 from collections.abc import Mapping, Sequence
 from itertools import chain
@@ -53,7 +52,6 @@ from typing import TYPE_CHECKING, Union
 import numpy as np
 from numpy.random import SeedSequence, default_rng
 
-# Local
 from cobaya import mpi
 from cobaya.component import CobayaComponent, get_component_class
 from cobaya.conventions import Extension, packages_path_input

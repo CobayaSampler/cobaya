@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import dataclasses
 import os
 from collections.abc import Iterable, Mapping, Sequence
@@ -17,7 +16,6 @@ from typing import Any, NamedTuple
 
 import numpy as np
 
-# Local
 from cobaya import mpi
 from cobaya.conventions import (
     get_chi2_name,

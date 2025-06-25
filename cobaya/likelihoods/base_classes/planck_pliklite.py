@@ -9,12 +9,10 @@ from .dataset file.
 
 """
 
-# Global
 import os
 
 import numpy as np
 
-# Local
 from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 
 cl_names = ["tt", "te", "ee"]

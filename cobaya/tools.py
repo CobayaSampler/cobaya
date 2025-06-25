@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import inspect
 import numbers
 import os
@@ -30,7 +29,6 @@ import pandas as pd
 import scipy.stats as stats
 from packaging import version
 
-# Local
 from cobaya.conventions import (
     dump_sort_cosmetic,
     kinds,

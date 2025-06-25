@@ -18,13 +18,11 @@ It is used by the 2018 and more recent CamSpec Planck likelihoods.
 
 """
 
-# Global
 import os
 
 import numpy as np
 import scipy
 
-# Local
 from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
 
 use_cache = True

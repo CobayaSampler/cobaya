@@ -396,14 +396,12 @@ Just give it a try and it should work fine, but, in case you need the details:
 
 """
 
-# Global
 import numbers
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, NamedTuple
 
 import numpy as np
 
-# Local
 from cobaya.conventions import prior_1d_name
 from cobaya.log import HasLogger, LoggedError
 from cobaya.parameterization import Parameterization

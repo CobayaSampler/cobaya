@@ -6,12 +6,10 @@
 
 """
 
-# Global
 from collections.abc import Mapping
 
 import numpy as np
 
-# Local
 import cobaya.mpi as mpi
 from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError

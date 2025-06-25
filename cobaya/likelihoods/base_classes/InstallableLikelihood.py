@@ -6,12 +6,10 @@ r"""
 
 """
 
-# Global
 import os
 
 from packaging import version
 
-# Local
 from cobaya.component import ComponentNotInstalledError
 from cobaya.functions import chi_squared
 from cobaya.install import _version_filename

@@ -6,7 +6,6 @@
 
 """
 
-# Global
 import functools
 import logging
 import os
@@ -17,7 +16,6 @@ from random import choice, shuffle
 
 import numpy as np
 
-# Local
 from cobaya import mpi
 
 

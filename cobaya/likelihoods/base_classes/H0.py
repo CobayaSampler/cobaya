@@ -30,7 +30,6 @@ standard deviation, simply add the following likelihood, substituting ``mu_H0`` 
 
 """
 
-# Local
 from cobaya.likelihood import Likelihood
 
 
