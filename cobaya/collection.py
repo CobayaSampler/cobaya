@@ -367,22 +367,16 @@ class SampleCollection(BaseCollection):
         self._cache_reset()
         # Prepare txt formatter
         self.n_float = 8
-
-        # Add to this 7 places: sign, leading 0's, exp with sign and 3 figures.
-        def width_col(col):
-            return max(7 + self.n_float, len(col))
-
         self._numpy_fmts = [
-            f"%{width_col(col)}.{self.n_float}" + "g" for col in self.data.columns
+            f"%{self._width_col(col)}.{self.n_float}g" for col in self.data.columns
         ]
-        self._header_formatter = [
-            eval(
-                "lambda s, w=width_col(col): "  # pylint: disable=eval-used
-                '("{:>" + "{}".format(w) + "s}").format(s)',
-                {"width_col": width_col, "col": col},
-            )
-            for col in self.data.columns
-        ]
+
+    def _width_col(self, col):
+        """Calculate the minimum width needed for a column.
+
+        Add 7 places for: sign, leading 0's, exp with sign and 3 figures.
+        """
+        return max(7 + self.n_float, len(col))
 
     def reset(self):
         """Create/reset the DataFrame."""
@@ -1295,8 +1289,7 @@ class SampleCollection(BaseCollection):
                 out.write(
                     "#"
                     + " ".join(
-                        f(col)
-                        for f, col in zip(self._header_formatter, self.data.columns)
+                        f"{col:>{self._width_col(col)}s}" for col in self.data.columns
                     )[1:]
                     + "\n"
                 )
@@ -1322,17 +1315,6 @@ class SampleCollection(BaseCollection):
 
     def _delete__dummy(self):
         pass
-
-    # Make it picklable -- formatters are deleted
-    # (they will be generated next time txt is dumped)
-    def __getstate__(self):
-        attributes = super().__getstate__()
-        for attr in ["_numpy_fmts", "_header_formatter"]:
-            try:
-                del attributes[attr]
-            except KeyError:
-                pass
-        return attributes
 
 
 class OneSamplePoint:
