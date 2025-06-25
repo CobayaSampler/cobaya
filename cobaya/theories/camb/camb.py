@@ -117,38 +117,31 @@ assumed to be zero, and the run is not interrupted.
 Installation
 ------------
 
-Pre-requisites
-^^^^^^^^^^^^^^
+If you are not intending to modify CAMB, you can just use:
+
+.. code:: bash
+
+     $ pip install camb
+
+ (or uv equivalent). This includes pre-built binary wheels for all platforms.
+
+Pre-requisites for source build
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **cobaya** calls CAMB using its Python interface, which requires that you compile CAMB
-using intel's ifort compiler or the GNU gfortran compiler version 6.4 or later.
-To check if you have the latter, type ``gfortran --version`` in the shell,
-and the first line should look like
-
-.. code::
-
-   GNU Fortran ([your OS version]) [gfortran version] [release date]
-
-Check that ``[gfortran's version]`` is at least 6.4. If you get an error instead, you need
-to install gfortran (contact your local IT service).
-
-CAMB comes with binaries pre-built for Windows, so if you don't need to modify the CAMB
-source code, no Fortran compiler is needed.
-
-If you are using Anaconda you can also install a pre-compiled CAMB package from conda
-forge using
-
-.. code::
-
-  conda install -c conda-forge camb
+using intel's ifort compiler or the GNU gfortran compiler.
+To check if you have the latter, type ``gfortran --version`` in the shell.
 
 Automatic installation
 ^^^^^^^^^^^^^^^^^^^^^^
 
-If you do not plan to modify CAMB, the easiest way to install it is using the
-:doc:`automatic installation script <installation_cosmo>`. Just make sure that
+The :doc:`automatic installation script <installation_cosmo>` will download and build
+CAMB for you (which requires a fortran compiler). Just make sure that
 ``theory: camb:`` appears in one of the files passed as arguments to the installation
 script.
+
+This is not neccessary if you have a pip installed camb globally, however
+a source build potentially allows you to optimize it for your specific architecture.
 
 
 Manual installation (or using your own version)
