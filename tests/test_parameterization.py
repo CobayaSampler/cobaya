@@ -14,13 +14,8 @@ from cobaya.run import run
 from cobaya.tools import get_external_function
 from cobaya.yaml import yaml_load
 
-
-def x_func(_):
-    return _ / 3
-
-
-def e_func(_):
-    return _ + 1
+x_func = lambda _: _ / 3
+e_func = lambda _: _ + 1
 
 
 b_func = "lambda a, bprime: a+2*bprime"

@@ -603,12 +603,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     """
     if print_not_log:
         myprint = print
-
-        def myprint_debug(msg):
-            return msg
     else:
         myprint = logger.info
-        myprint_debug = logger.debug
     myname = inspect.stack()[0][3]
     ignorable = {
         "debug",
@@ -720,7 +716,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     + f": different content of [{block_name}:{k}]"
                     + " -- (re-run with `debug: True` for more info)"
                 )
-                myprint_debug(f"{block1[k]!r} (old) vs {block2[k]!r} (new)")
+                if not print_not_log:
+                    logger.debug(f"{block1[k]!r} (old) vs {block2[k]!r} (new)")
                 return False
     return True
 
