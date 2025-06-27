@@ -18,7 +18,7 @@ class Mb(Likelihood):
     Mb_std: float
 
     def initialize(self):
-        self.minus_half_invvar = - 0.5 / self.Mb_std ** 2
+        self.minus_half_invvar = -0.5 / self.Mb_std**2
 
     def get_requirements(self):
         return {}

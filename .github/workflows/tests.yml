@@ -2,7 +2,7 @@ name: Cobaya Tests
 
 # for the moment only runs on "action* branches". Coverage/pypi not yet set up.
 
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 env:
   COBAYA_INSTALL_SKIP_BASE: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
@@ -48,23 +48,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: "Anaconda Python (flake8, no numba)"
+          - name: "Anaconda Python (ruff, no numba)"
             os: ubuntu-latest
             pydist: "ANACONDA"
             cobaya_skip: classy,polychord
           - name: "Latest Python 3.x (with polychord)"
             os: ubuntu-latest
-            python-version: 3.x
+            python-version: "3.x"
             mpi: openmpi
             cobaya_skip: classy, polychord
-          - name: "OS X Python 3.8 (with classy)"
+          - name: "OS X Python 3.10 (with classy)"
             os: macos-latest
-            python-version: 3.8
+            python-version: "3.10"
             mpi: openmpi
             cobaya_skip: polychord
           - name: "Windows Python 3.12"
             os: windows-latest
-            python-version: 3.12
+            python-version: "3.12"
             mpi: intelmpi
             cobaya_skip: classy,polychord
     steps:
@@ -76,7 +76,7 @@ jobs:
         if: matrix.os == 'macos-latest'
 
       - run: |
-           gfortran --version
+          gfortran --version
 
       - uses: actions/checkout@v4
         with:
@@ -96,15 +96,17 @@ jobs:
           activate-environment: tests-environment
           environment-file: tests-environment.yml
 
-      - name: flake8 Lint
+      - name: Ruff Lint
         if: matrix.pydist == 'ANACONDA'
         shell: bash -el {0}
         run: |
-          flake8 cobaya --max-line-length 90 --select=E713,E704,E703,E714,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source --statistics
+          pip install ruff
+          ruff check cobaya/ tests/ --output-format=github
 
       - name: Install dependencies (pip)
         if: matrix.pydist != 'ANACONDA'
         run: |
+          pip install --upgrade pip setuptools>=77 wheel
           pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit numba
 
       - name: Install mpi
@@ -160,9 +162,25 @@ jobs:
   #      with:
   #          token: ${{ secrets.CODECOV_TOKEN }}
 
+  # Summary job that all tests must pass
+  test-summary:
+    name: tests
+    needs: tests
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.tests.result }}" == "success" ]]; then
+            echo "All tests passed!"
+            exit 0
+          else
+            echo "Some tests failed or were cancelled"
+            exit 1
+          fi
 
   deploy:
-    needs: tests
+    needs: test-summary
     runs-on: ubuntu-latest
     if: github.repository_owner == 'CobayaSampler' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -177,10 +195,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U pip
-          python -m pip install -U build twine
+          python -m pip install -U "setuptools>=77" wheel build twine
 
       - name: Build package
-        run: python -m build --sdist
+        run: python -m build
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1

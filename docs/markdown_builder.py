@@ -19,11 +19,11 @@ Options:
     --no-install: Skip installation of dependencies
 """
 
-import os
-import sys
-import subprocess
 import argparse
 import glob
+import os
+import subprocess
+import sys
 import traceback
 
 
@@ -76,34 +76,34 @@ def update_conf_py():
     """Update conf.py to include sphinx_markdown_builder extension and static path."""
     print("Updating conf.py configuration...")
     conf_path = "docs/conf.py"
-    
-    with open(conf_path, "r", encoding="utf-8") as f:
+
+    with open(conf_path, encoding="utf-8") as f:
         content = f.read()
 
     updated = False
-    
+
     # 1. Add sphinx_markdown_builder extension if not already present
     if "sphinx_markdown_builder" not in content:
         print("Adding sphinx_markdown_builder to conf.py...")
-        
+
         # Check if we already have the try-except block
         if "# Add sphinx_markdown_builder if available" not in content:
             # Find the extensions list
             if "extensions = [" in content and "]" in content:
                 extensions_start = content.find("extensions = [")
                 extensions_end = content.find("]", extensions_start)
-                
+
                 if extensions_end > extensions_start:
                     # Insert the try-except block after the extensions list
                     new_content = (
-                        content[:extensions_end + 1] +
-                        "\n\n# Add sphinx_markdown_builder if available (used for LLM context generation)" +
-                        "\ntry:" +
-                        "\n    import sphinx_markdown_builder" +
-                        "\n    extensions.append('sphinx_markdown_builder')" +
-                        "\nexcept ImportError:" +
-                        "\n    pass" +
-                        content[extensions_end + 1:]
+                        content[: extensions_end + 1]
+                        + "\n\n# Add sphinx_markdown_builder if available (used for LLM context generation)"
+                        + "\ntry:"
+                        + "\n    import sphinx_markdown_builder"
+                        + "\n    extensions.append('sphinx_markdown_builder')"
+                        + "\nexcept ImportError:"
+                        + "\n    pass"
+                        + content[extensions_end + 1 :]
                     )
                     content = new_content
                     updated = True
@@ -116,14 +116,14 @@ def update_conf_py():
     else:
         print("sphinx_markdown_builder is already in conf.py")
 
-     # Write the updated content back to the file if changes were made
+    # Write the updated content back to the file if changes were made
     if updated:
         with open(conf_path, "w", encoding="utf-8") as f:
             f.write(content)
         print("conf.py updated successfully.")
     else:
         print("No changes needed in conf.py")
-    
+
     return True
 
 
@@ -164,7 +164,7 @@ def combine_markdown_files(build_dir, exclude_files, output_file):
 
     # Get all markdown files
     md_files = sorted(glob.glob(os.path.join(build_dir, "*.md")))
-    
+
     if not md_files:
         print(f"Error: No markdown files found in {build_dir}")
         return False
@@ -193,18 +193,18 @@ def combine_markdown_files(build_dir, exclude_files, output_file):
     with open(output_file, "w", encoding="utf-8") as outfile:
         # Add a comprehensive header
         outfile.write("# Cobaya Documentation\n\n")
-        outfile.write("---\n\n")     
+        outfile.write("---\n\n")
 
         # Add each file's content
         for file_path in filtered_files:
             file_name = os.path.basename(file_path)
             section_name = os.path.splitext(file_name)[0]
-   
+
             print(f"  Adding {section_name}...")
             outfile.write(f"## {file_name}\n\n")
 
             # Add file content
-            with open(file_path, "r", encoding="utf-8") as infile:
+            with open(file_path, encoding="utf-8") as infile:
                 content = infile.read()
                 outfile.write(content)
                 outfile.write("\n\n")
@@ -220,7 +220,7 @@ def main():
     try:
         # Get the list of files to exclude
         exclude_files = args.exclude.split(",") if args.exclude else []
-        
+
         # Install dependencies if not skipped
         if not args.no_install and not install_dependencies():
             print("Failed to install required dependencies. Exiting.")
@@ -233,7 +233,7 @@ def main():
 
         # Build the documentation
         build_dir = build_markdown_docs()
-        
+
         # Combine the files
         if not combine_markdown_files(build_dir, exclude_files, args.output):
             print("Failed to combine markdown files. Exiting.")
@@ -243,10 +243,10 @@ def main():
         if not os.path.exists(args.output):
             print(f"ERROR: Failed to generate markdown file at {args.output}")
             return 1
-            
+
         file_size = os.path.getsize(args.output)
         print(f"Final markdown file size: {file_size / 1024:.2f} KB")
-        
+
         if file_size == 0:
             print("ERROR: Generated markdown file is empty")
             return 1
@@ -254,7 +254,7 @@ def main():
         print(f"\nSuccess! Documentation has been built and combined into: {args.output}")
         print("This file can now be used as context for Large Language Models.")
         return 0
-        
+
     except Exception as e:
         print(f"ERROR: An exception occurred during the build process: {e}")
         traceback.print_exc()

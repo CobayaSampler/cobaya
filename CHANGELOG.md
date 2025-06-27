@@ -1,3 +1,11 @@
+## 3.5.8 (prerelease)
+
+### General
+
+- Minimum python 3.10; type hints updated accordingly
+- Added standardized formatting with ruff (removing flake8)
+- Added pre-commit hooks for automated code quality checks (trailing whitespace, end-of-file-fixer, pyupgrade, ruff)
+- Documentation can now be built as markdown for LLM context. Flat context file provided.
 
 ## 3.5.7 - 2025-03-31
 
@@ -14,6 +22,7 @@
 ## 3.5.6 - 2025-03-21
 
 ### Cosmology
+
 - Added DESI DR2 bao likelihoods (thanks @desihub)
 - ACT DR6 added to list of external likelihoods (thanks @ACTCollaboration)
 
@@ -39,6 +48,7 @@
 - Added get_modified_defaults() class method to cobaya components to dynamically set/modify defaults
 
 ### Cosmology
+
 - Option to return lensed scalar Cl's from CAMB (without tensors) (thanks @kimmywu})
 
 ## 3.5.3 – 2024-08-09
@@ -51,7 +61,7 @@
 
 - Updates for numpy 2 and other compatibility fixes
 - Fixes #357, #358, #360, #361, #362, #368
-- Added _fast_chi_squared method to base class InstallableLikelihood
+- Added \_fast_chi_squared method to base class InstallableLikelihood
 
 ## 3.5.1 – 2024-04-25
 
@@ -72,9 +82,11 @@
 - Fixed #345, #346, #347, #348
 
 ### Grid scripts
+
 - Support for running grids of models, including grid getdist, PDF tables, importance sampling, minimization (almost all features of CosmoMC grid now available in Cobaya). See the new doc pages.
 
 ### Minimization
+
 - Support for iminuit minimizer and getting best-fits for all mpi runs (#332, thanks @ggalloni)
 - Support for minimization with an importance-sampled input yaml config
 
@@ -125,7 +137,7 @@
 ### General
 
 - Class instance methods can now be used as external likelihoods.
-- Fix _prior_tries_warning bug
+- Fix \_prior_tries_warning bug
 - Fix over-stringent temperature test reading in chains
 
 ### PolyChord
@@ -179,7 +191,7 @@
 - Environment variables supported in input .yaml files, and {YAML_ROOT} placeholder for paths.
 - Improved error messages for .yaml boolean options and install logs
 - Fixes for max_tries .inf and old version checks
-- fix for 'KeyError: _manual' bug caused by unmet requirements. #275 (thanks @HTJense)
+- fix for 'KeyError: \_manual' bug caused by unmet requirements. #275 (thanks @HTJense)
 
 ### Cosmology
 
@@ -257,15 +269,15 @@
   filename
 - Support resuming of a completed run with changed convergence parameters
 - run has optional arguments to set debug, force, output, etc settings
-- More input and output typing  for easier static error detection; added cobaya.typing for static checking of input dictionaries using TypedDict when available
-- Refactoring of cobaya.conventions to remove most string literals and rename non-private constants starting with _
+- More input and output typing for easier static error detection; added cobaya.typing for static checking of input dictionaries using TypedDict when available
+- Refactoring of cobaya.conventions to remove most string literals and rename non-private constants starting with \_
 - Uses GetDist 1.2.2+ which fixes sign loading the logposterior value from Cobaya
   collection
 - Optimized calculation of Gaussian 1D priors
 - run settings saved to ".updated.dill_pickle" pickle file in cases where callable/class
   content cannot be preserved in yaml (install "dill")
 - File locks to avoid overwriting results accidentally from multiple non-MPI processes
-- Commonly-used classes can now be loaded simply using "from cobaya import Likelihood, InputDict, Theory, ..." etc., or call e.g. cobaya.run(..) 
+- Commonly-used classes can now be loaded simply using "from cobaya import Likelihood, InputDict, Theory, ..." etc., or call e.g. cobaya.run(..)
 - run and post return NamedTuples (same content as before)
 - Fixed handling of "type" in external likelihood functions
 - bib_script and doc_script can now be called programmatically
@@ -285,7 +297,7 @@
   (note MPI runs generally not reproducible with fixed seed due to thead timing/asynchronous mpi exchanges)
 - Overhead reduced by at least 40%, thanks to caching in Collection
 - Optimization of derived parameter output (for dragging, not computed at each dragging step)
-- Some refactoring/simplification to pass LogPosterior instances more 
+- Some refactoring/simplification to pass LogPosterior instances more
 - Reported acceptance rate is now only over last half chains (for MPI), or skipping first Rminus1_single_split fraction
 - When no covamt or 'prosposal' setting for a parameter, the fallback proposal width is now scaled (narrower) from the ref or prior variance
 
@@ -313,7 +325,7 @@
 - Added CamSpec 2021 Planck high-l likelihoods (based on legacy maps, not NPIPE; thanks Erik Rosenberg)
 - Added Riess et al H0 constraint (H0.riess2020Mb) in terms of magnitude rather than directly on H0
   (use combined with sn.pantheon with use_abs_mag: True; thanks Pablo Lemos)
-- Install updated Planck clik code (3.1) 
+- Install updated Planck clik code (3.1)
 
 ### Tests
 
@@ -439,9 +451,9 @@
   the corresponding python package is available globally.
 - `path=global` available for some components: forces global-scope import, even when
   installed with `cobaya-install`.
-- Added ``--skip-not-installed`` to pytest command, to allow tests of non-installed
+- Added `--skip-not-installed` to pytest command, to allow tests of non-installed
   components to fail.
-- Installable components can define a class method ``is_compatible`` determining OS
+- Installable components can define a class method `is_compatible` determining OS
   compatibility (assumed compatible by default). Installation of OS-incompatible
   components is skipped.
 
@@ -643,8 +655,8 @@
 
 ### I/O
 
-- Naming conventions for output files changed! ``*.updated.yaml`` instead
-  of ``*.full.yaml`` for updated info, `*.[#].txt` instead of ``_[#].txt`` for chains,
+- Naming conventions for output files changed! `*.updated.yaml` instead
+  of `*.full.yaml` for updated info, `*.[#].txt` instead of `_[#].txt` for chains,
   etc (see `Output` section in documentation).
 
 ### Samplers:

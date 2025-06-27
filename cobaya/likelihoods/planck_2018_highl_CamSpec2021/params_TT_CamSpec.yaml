@@ -1,7 +1,7 @@
   use_fg_residual_model: 0
   cal0: 1
   cal2: 1
-    
+
   amp_100: 0
   amp_143:
     prior:
@@ -36,7 +36,7 @@
       scale: 1
     latex: A^{\rm power}_{143\times217}
     proposal: 1
-      
+
   n_100: 1
   n_143:
     prior:

@@ -1,8 +1,10 @@
 import warnings
-from flaky import flaky
+
 import numpy as np
+from flaky import flaky
 
 from cobaya.run import run
+
 from .common_sampler import body_of_sampler_test, body_of_test_speeds
 from .conftest import install_test_wrapper
 
@@ -12,9 +14,14 @@ def test_polychord(packages_path, skip_not_installed, tmpdir):
     dimension = 3
     n_modes = 1
     info_sampler = {"polychord": {"nlive": 25 * dimension * n_modes}}
-    body_of_sampler_test(info_sampler, dimension=dimension, n_modes=n_modes,
-                         tmpdir=str(tmpdir),
-                         packages_path=packages_path, skip_not_installed=skip_not_installed)
+    body_of_sampler_test(
+        info_sampler,
+        dimension=dimension,
+        n_modes=n_modes,
+        tmpdir=str(tmpdir),
+        packages_path=packages_path,
+        skip_not_installed=skip_not_installed,
+    )
 
 
 def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
@@ -36,18 +43,22 @@ def test_polychord_resume(packages_path, skip_not_installed, tmpdir):
     info = {
         "likelihood": {
             "A": {"external": "lambda a: stats.norm.logpdf(a)", "speed": 1},
-            "B": {"external": "lambda b: stats.norm.logpdf(b)", "speed": 0.01}},
+            "B": {"external": "lambda b: stats.norm.logpdf(b)", "speed": 0.01},
+        },
         "params": {
             "a": {"prior": {"min": 0, "max": 1}},
-            "b": {"prior": {"min": 0, "max": 1}}},
+            "b": {"prior": {"min": 0, "max": 1}},
+        },
         "sampler": {
             "polychord": {
                 "measure_speeds": True,
                 "nlive": nlive,
                 "max_ndead": max_ndead,
                 "callback_function": callback,
-            }},
-        "output": str(tmpdir)}
+            }
+        },
+        "output": str(tmpdir),
+    }
     install_test_wrapper(skip_not_installed, run, info)
     old_dead_points = dead_points.copy()
     info["resume"] = True
@@ -60,24 +71,33 @@ def test_polychord_multimodal(packages_path, skip_not_installed, tmpdir):
     dimension = 2
     n_modes = 2
     info_sampler = {"polychord": {"nlive": 40 * dimension * n_modes}}
-    body_of_sampler_test(info_sampler, dimension=dimension, n_modes=n_modes,
-                         tmpdir=str(tmpdir),
-                         packages_path=packages_path, skip_not_installed=skip_not_installed)
+    body_of_sampler_test(
+        info_sampler,
+        dimension=dimension,
+        n_modes=n_modes,
+        tmpdir=str(tmpdir),
+        packages_path=packages_path,
+        skip_not_installed=skip_not_installed,
+    )
 
 
 @flaky(max_runs=3, min_passes=1)
 def test_polychord_speeds(packages_path, skip_not_installed):
     info_polychord = {"polychord": {"oversample_power": 1}}
-    body_of_test_speeds(info_polychord, packages_path=packages_path,
-                        skip_not_installed=skip_not_installed)
+    body_of_test_speeds(
+        info_polychord, packages_path=packages_path, skip_not_installed=skip_not_installed
+    )
 
 
 @flaky(max_runs=3, min_passes=1)
 def test_polychord_speeds_manual(packages_path, skip_not_installed):
     info_polychord = {"polychord": {"oversample_power": 1}}
-    body_of_test_speeds(info_polychord, manual_blocking=True,
-                        packages_path=packages_path,
-                        skip_not_installed=skip_not_installed)
+    body_of_test_speeds(
+        info_polychord,
+        manual_blocking=True,
+        packages_path=packages_path,
+        skip_not_installed=skip_not_installed,
+    )
 
 
 @flaky(max_runs=3, min_passes=1)
@@ -102,13 +122,15 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     info = {
         "likelihood": {
             "gaussian": "lambda a_0, a_1: "
-                        "stats.multivariate_normal.logpdf([a_0, a_1], mean=[0,0])"},
+            "stats.multivariate_normal.logpdf([a_0, a_1], mean=[0,0])"
+        },
         "prior": {"prior0": "lambda a_0, a_1: np.log(a_0 > a_1)"},
         "params": {
             "a_0": {"prior": {"min": -bound, "max": bound}},
-            "a_1": {"prior": {"min": -bound, "max": bound}}},
-        "sampler": {
-            "polychord": {"nprior": "100nlive", "measure_speeds": False}}}
+            "a_1": {"prior": {"min": -bound, "max": bound}},
+        },
+        "sampler": {"polychord": {"nprior": "100nlive", "measure_speeds": False}},
+    }
     # NB: we increase nprior wrt the default (25d=nlive) to get an accurate estimation
     #     of the unphysical region.
     info_like = info.pop("likelihood")

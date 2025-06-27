@@ -8,25 +8,63 @@
 
 # Python and packaging
 *.pyc
+*.pyo
 *.egg-info/
 build/
 dist/
-__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+uv.lock
+
 
 # Documentation
 docs/_*
 !docs/_templates
-docs/.ipynb_checkpoints
 docs/src_examples/*/*.png
-docs/src_examples/advanced_and_models/chains/
+
 
 # Tests
-.pytest_cache
-tests/.ipynb_checkpoints
+.pytest_cache/
 .coverage*
+.tox/
+.nox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+**/chains/
+my*
+scratch/
 
 # IDE-specific
-.idea
+.idea/
+.vscode/launch.json
+*.swp
+*.swo
 
-# pytest
-.cache
+# Linting and formatting
+.ruff_cache/
+.mypy_cache/
+
+# IPython and Jupyter
+**/.ipynb_checkpoints/
+*.ipynb
+!docs/cobaya-example.ipynb
+!tests/cosmo_timing.ipynb
+profile_default/
+ipython_config.py
+
+# Images (PNG files)
+*.png
+!docs/img/*.png
+!img/*.png

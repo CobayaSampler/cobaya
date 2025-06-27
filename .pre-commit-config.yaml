@@ -1,0 +1,28 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '^(cobaya|tests)/.*\.(py|ipynb)$'
+      - id: end-of-file-fixer
+        exclude: '^(cobaya|tests)/.*\.(py|ipynb)$'
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.20.0
+    hooks:
+      - id: pyupgrade
+        args: [--py310-plus]
+        files: '^(cobaya|tests)/.*\.py$'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.0
+    hooks:
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+        files: '^(cobaya|tests)/.*\.(py|ipynb)$'
+      - id: ruff-format
+        files: '^(cobaya|tests)/.*\.(py|ipynb)$'

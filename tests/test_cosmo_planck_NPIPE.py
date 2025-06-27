@@ -38,7 +38,17 @@ def test_planck_NPIPE_p_CamSpec_camb_install(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
     info = yaml_load(yaml)
     model = install_test_wrapper(
-        skip_not_installed, get_model, info, packages_path=packages_path)
-    pars = (0.99818025, 10.35947284, 18.67072461, 7.54932654, 0.83715482,
-            0.94987418, 1.23385364, 0.98781552, 1.013345)
+        skip_not_installed, get_model, info, packages_path=packages_path
+    )
+    pars = (
+        0.99818025,
+        10.35947284,
+        18.67072461,
+        7.54932654,
+        0.83715482,
+        0.94987418,
+        1.23385364,
+        0.98781552,
+        1.013345,
+    )
     assert np.isclose(model.logposterior(pars).logpost, -5889.873, rtol=1e-4)

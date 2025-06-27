@@ -22,19 +22,18 @@ class can be used as and when needed.
 
 """
 
-# Global
-from time import sleep
-from typing import Mapping, Optional, Union, Dict
-from itertools import chain
 import numbers
+from collections.abc import Mapping
+from itertools import chain
+from time import sleep
+
 import numpy as np
 
-# Local
-from cobaya.typing import LikesDict, LikeDictIn, ParamValuesDict, empty_dict
-from cobaya.tools import get_external_function, getfullargspec, str_to_list
-from cobaya.log import LoggedError
 from cobaya.component import ComponentCollection, get_component_class
+from cobaya.log import LoggedError
 from cobaya.theory import Theory
+from cobaya.tools import get_external_function, getfullargspec, str_to_list
+from cobaya.typing import LikeDictIn, LikesDict, ParamValuesDict, empty_dict
 
 
 class LikelihoodInterface:
@@ -48,7 +47,7 @@ class LikelihoodInterface:
     normally need to be changed.
     """
 
-    current_state: Dict
+    current_state: dict
 
     @property
     def current_logp(self) -> float:
@@ -71,8 +70,7 @@ def is_LikelihoodInterface(class_instance):
     Works for both classes and instances.
     """
     # NB: This is much faster than "<method> in dir(class)"
-    cls = class_instance if class_instance.__class__ is type \
-        else class_instance.__class__
+    cls = class_instance if class_instance.__class__ is type else class_instance.__class__
     return isinstance(getattr(cls, "current_logp", None), property)
 
 
@@ -83,17 +81,26 @@ class Likelihood(Theory, LikelihoodInterface):
     functions (logp function for a given point).
     """
 
-    type: Optional[Union[list, str]] = []
+    type: list | str | None = []
 
-    def __init__(self, info: LikeDictIn = empty_dict,
-                 name: Optional[str] = None,
-                 timing: Optional[bool] = None,
-                 packages_path: Optional[str] = None,
-                 initialize=True, standalone=True):
+    def __init__(
+        self,
+        info: LikeDictIn = empty_dict,
+        name: str | None = None,
+        timing: bool | None = None,
+        packages_path: str | None = None,
+        initialize=True,
+        standalone=True,
+    ):
         self.delay = 0
-        super().__init__(info, name=name, timing=timing,
-                         packages_path=packages_path, initialize=initialize,
-                         standalone=standalone)
+        super().__init__(
+            info,
+            name=name,
+            timing=timing,
+            packages_path=packages_path,
+            initialize=initialize,
+            standalone=standalone,
+        )
 
     def logp(self, **params_values):
         """
@@ -123,7 +130,7 @@ class Likelihood(Theory, LikelihoodInterface):
         Return False is the calculation fails.
 
         """
-        derived: Optional[ParamValuesDict] = {} if want_derived else None
+        derived: ParamValuesDict | None = {} if want_derived else None
         state["logp"] = -np.inf  # in case of exception
         state["logp"] = self.logp(_derived=derived, **params_values_dict)
         self.log.debug("Computed log-likelihood = %s", state["logp"])
@@ -141,18 +148,26 @@ class AbsorbUnusedParamsLikelihood(Likelihood):
 
 
 class LikelihoodExternalFunction(Likelihood):
-    def __init__(self,
-                 info: LikeDictIn,
-                 name: Optional[str] = None,
-                 timing: Optional[bool] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        info: LikeDictIn,
+        name: str | None = None,
+        timing: bool | None = None,
+        **kwargs,
+    ):
         if kwargs:
             self.log.warning(
                 "The following kwargs are ignored for external likelihood functions: %r",
-                kwargs
+                kwargs,
             )
-        super().__init__(info, name=name, timing=timing,
-                         packages_path=None, initialize=True, standalone=False)
+        super().__init__(
+            info,
+            name=name,
+            timing=timing,
+            packages_path=None,
+            initialize=True,
+            standalone=False,
+        )
         self.input_params = str_to_list(self.input_params)
         # Store the external function and assign its arguments
         self.external_function = get_external_function(info["external"], name=name)
@@ -162,10 +177,11 @@ class LikelihoodExternalFunction(Likelihood):
         has_unnamed_args = bool(argspec.varargs)
         if has_unnamed_args:
             raise LoggedError(
-                self.log, "External likelihoods with unnamed args are not supported.")
+                self.log, "External likelihoods with unnamed args are not supported."
+            )
         ignore_args = [self._self_arg]
         if argspec.defaults:
-            required_args = set(argspec.args[:-len(argspec.defaults)])
+            required_args = set(argspec.args[: -len(argspec.defaults)])
         else:
             required_args = set(argspec.args)
         # Allows for passing a class method
@@ -179,16 +195,23 @@ class LikelihoodExternalFunction(Likelihood):
         self._uses_self_arg = self._self_arg in argspec.args
         if info.get("requires") and not self._uses_self_arg:
             raise LoggedError(
-                self.log, "If a likelihood has external requirements, declared under %r, "
-                          "it needs to accept a keyword argument %r.", "requires",
-                self._self_arg)
+                self.log,
+                "If a likelihood has external requirements, declared under %r, "
+                "it needs to accept a keyword argument %r.",
+                "requires",
+                self._self_arg,
+            )
         self._requirements = info.get("requires") or {}
-        self._optional_args = \
-            [p for p, val in chain(zip(argspec.args[-len(argspec.defaults):],
-                                       argspec.defaults) if argspec.defaults else [],
-                                   (argspec.kwonlydefaults or {}).items())
-             if p not in ignore_args and
-             (isinstance(val, numbers.Number) or val is None)]
+        self._optional_args = [
+            p
+            for p, val in chain(
+                zip(argspec.args[-len(argspec.defaults) :], argspec.defaults)
+                if argspec.defaults
+                else [],
+                (argspec.kwonlydefaults or {}).items(),
+            )
+            if p not in ignore_args and (isinstance(val, numbers.Number) or val is None)
+        ]
         self._args = set(chain(self._optional_args, self.params))
         # If has unnamed kwargs, assume these are the ones declared in input_params
         has_unnamed_kwargs = bool(argspec.varkw)
@@ -217,11 +240,11 @@ class LikelihoodExternalFunction(Likelihood):
             raise
         bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
         if hasattr(return_value, "__len__"):
-            logp = return_value[0]
+            logp = return_value[0]  # type: ignore
             if self.output_params:
                 try:
                     if _derived is not None:
-                        _derived.update(return_value[1])
+                        _derived.update(return_value[1])  # type: ignore
                         params_values["_derived"] = _derived
                 except (AttributeError, TypeError, IndexError) as excpt:
                     raise LoggedError(self.log, bad_return_msg) from excpt
@@ -238,8 +261,9 @@ class LikelihoodCollection(ComponentCollection):
     by their names.
     """
 
-    def __init__(self, info_likelihood: LikesDict, packages_path=None, timing=None,
-                 theory=None):
+    def __init__(
+        self, info_likelihood: LikesDict, packages_path=None, timing=None, theory=None
+    ):
         super().__init__()
         self.set_logger("likelihood")
         self.theory = theory
@@ -254,33 +278,59 @@ class LikelihoodCollection(ComponentCollection):
                 if isinstance(external, Theory):
                     self.add_instance(name, external)
                 elif isinstance(external, type):
-                    if not is_LikelihoodInterface(external) or \
-                            not issubclass(external, Theory):
-                        raise LoggedError(self.log, "%s: external class likelihood must "
-                                                    "be a subclass of Theory and have "
-                                                    "logp, current_logp attributes",
-                                          external.__name__)
-                    self.add_instance(name, external(info, packages_path=packages_path,
-                                                     timing=timing, standalone=False,
-                                                     name=name))
+                    if not is_LikelihoodInterface(external) or not issubclass(
+                        external, Theory
+                    ):
+                        raise LoggedError(
+                            self.log,
+                            "%s: external class likelihood must "
+                            "be a subclass of Theory and have "
+                            "logp, current_logp attributes",
+                            external.__name__,
+                        )
+                    self.add_instance(
+                        name,
+                        external(
+                            info,
+                            packages_path=packages_path,
+                            timing=timing,
+                            standalone=False,
+                            name=name,
+                        ),
+                    )
                 else:
                     # If it has an "external" key, wrap it up. Else, load it up
-                    self.add_instance(name, LikelihoodExternalFunction(info, name,
-                                                                       timing=timing))
+                    self.add_instance(
+                        name, LikelihoodExternalFunction(info, name, timing=timing)
+                    )
             else:
                 assert isinstance(info, Mapping)
-                like_class: type = get_component_class(
-                    name, kind="likelihood",
+                like_class = get_component_class(
+                    name,
+                    kind="likelihood",
                     component_path=info.get("python_path"),
-                    class_name=info.get("class"), logger=self.log)
-                self.add_instance(name, like_class(info, packages_path=packages_path,
-                                                   timing=timing, standalone=False,
-                                                   name=name))
+                    class_name=info.get("class"),
+                    logger=self.log,
+                )
+                assert like_class is not None
+                self.add_instance(
+                    name,
+                    like_class(
+                        info,
+                        packages_path=packages_path,
+                        timing=timing,
+                        standalone=False,
+                        name=name,
+                    ),
+                )
 
             if not is_LikelihoodInterface(self[name]):
-                raise LoggedError(self.log, "'Likelihood' %s is not actually a "
-                                            "likelihood (no current_logp attribute)",
-                                  name)
+                raise LoggedError(
+                    self.log,
+                    "'Likelihood' %s is not actually a "
+                    "likelihood (no current_logp attribute)",
+                    name,
+                )
 
     def get_helper_theory_collection(self):
         return self.theory

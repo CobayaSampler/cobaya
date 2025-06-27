@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
+from scipy.interpolate import InterpolatedUnivariateSpline
+
 from cobaya.likelihoods.base_classes import InstallableLikelihood
 from cobaya.log import LoggedError
-from scipy.interpolate import InterpolatedUnivariateSpline
 
 
 class TT(InstallableLikelihood):
@@ -13,10 +15,12 @@ class TT(InstallableLikelihood):
 
     """
 
-    install_options = {"github_repository": "CobayaSampler/planck_native_data",
-                       "github_release": "v1",
-                       "asset": "planck_2018_lowT.zip",
-                       "directory": "planck_2018_lowT_native"}
+    install_options = {
+        "github_repository": "CobayaSampler/planck_native_data",
+        "github_release": "v1",
+        "asset": "planck_2018_lowT.zip",
+        "directory": "planck_2018_lowT_native",
+    }
     lmin: int = 2
     lmax: int = 29
     type = "CMB"
@@ -25,44 +29,52 @@ class TT(InstallableLikelihood):
     @classmethod
     def get_bibtex(cls):
         from cobaya.likelihoods.base_classes import Planck2018Clik
+
         return Planck2018Clik.get_bibtex()
 
     def get_requirements(self):
-        return {'Cl': {'tt': self.lmax}}
+        return {"Cl": {"tt": self.lmax}}
 
     def get_can_support_params(self):
-        return ['A_planck']
+        return ["A_planck"]
 
     def initialize(self):
         if self.get_install_options() and self.packages_path:
             if self.lmin < 2 or self.lmax > 200 or self.lmin >= self.lmax:
                 raise LoggedError(
-                    self.log, "lmin must be >= 2, lmax must be <= 200,\n"
-                              "and lmin must be less than lmax.")
+                    self.log,
+                    "lmin must be >= 2, lmax must be <= 200,\n"
+                    "and lmin must be less than lmax.",
+                )
 
             path = self.get_path(self.packages_path)
 
             # The txt files start at l=2, hence the index gymnastics
-            cov = np.loadtxt(
-                os.path.join(path, 'cov.txt'))[
-                  self.lmin - 2:self.lmax + 1 - 2,
-                  self.lmin - 2:self.lmax + 1 - 2]
+            cov = np.loadtxt(os.path.join(path, "cov.txt"))[
+                self.lmin - 2 : self.lmax + 1 - 2, self.lmin - 2 : self.lmax + 1 - 2
+            ]
             # The inverse covariance matrix for the gaussian likelihood calculation
             self._covinv = np.linalg.inv(cov)
             # The average cl's for the gaussian likelihood calculation
-            self._mu = np.ascontiguousarray(np.loadtxt(
-                os.path.join(path, 'mu.txt'))[self.lmin - 2:self.lmax + 1 - 2])
+            self._mu = np.ascontiguousarray(
+                np.loadtxt(os.path.join(path, "mu.txt"))[
+                    self.lmin - 2 : self.lmax + 1 - 2
+                ]
+            )
             # The cl's used for offset calculation - hence the full range of ells
             mu_sigma = np.zeros(self.lmax + 1)
-            mu_sigma[self.lmin:] = np.loadtxt(
-                os.path.join(path, 'mu_sigma.txt'))[self.lmin - 2:self.lmax + 1 - 2]
+            mu_sigma[self.lmin :] = np.loadtxt(os.path.join(path, "mu_sigma.txt"))[
+                self.lmin - 2 : self.lmax + 1 - 2
+            ]
 
             # Spline info
             nbins = 1000
-            spline_cl = np.loadtxt(
-                os.path.join(path, 'cl2x_1.txt'))[:, self.lmin - 2:self.lmax + 1 - 2]
-            spline_val = np.loadtxt(
-                os.path.join(path, 'cl2x_2.txt'))[:, self.lmin - 2:self.lmax + 1 - 2]
+            spline_cl = np.loadtxt(os.path.join(path, "cl2x_1.txt"))[
+                :, self.lmin - 2 : self.lmax + 1 - 2
+            ]
+            spline_val = np.loadtxt(os.path.join(path, "cl2x_2.txt"))[
+                :, self.lmin - 2 : self.lmax + 1 - 2
+            ]
             self._spline = []
             self._spline_derivative = []
 
@@ -78,7 +90,8 @@ class TT(InstallableLikelihood):
                     j -= 1
                 self._prior_bounds[i, 1] = spline_cl[j - 2, i]
                 self._spline.append(
-                    InterpolatedUnivariateSpline(spline_cl[:, i], spline_val[:, i]))
+                    InterpolatedUnivariateSpline(spline_cl[:, i], spline_val[:, i])
+                )
                 self._spline_derivative.append(self._spline[-1].derivative())
             # initialize offset to normalize like a chi-squared
             self._offset = 0
@@ -93,17 +106,19 @@ class TT(InstallableLikelihood):
         :return: log likelihood
         """
 
-        theory: np.ndarray = cls_TT[self.lmin:self.lmax + 1] / calib ** 2
+        theory: np.ndarray = cls_TT[self.lmin : self.lmax + 1] / calib**2
 
         if any(theory < self._prior_bounds[:, 0]) or any(
-                theory > self._prior_bounds[:, 1]):
-            return - np.inf
+            theory > self._prior_bounds[:, 1]
+        ):
+            return -np.inf
 
-        logl = 0.
+        logl = 0.0
         # Convert the cl's to Gaussianized variables
         x = np.zeros_like(theory)
         for i, (spline, diff_spline, cl) in enumerate(
-                zip(self._spline, self._spline_derivative, theory)):
+            zip(self._spline, self._spline_derivative, theory)
+        ):
             dxdCl = diff_spline(cl)
             if dxdCl < 0:
                 return -np.inf
@@ -117,5 +132,5 @@ class TT(InstallableLikelihood):
         return logl
 
     def logp(self, **params_values):
-        cls = self.provider.get_Cl(ell_factor=True)['tt']
-        return self.log_likelihood(cls, params_values.get('A_planck', 1))
+        cls = self.provider.get_Cl(ell_factor=True)["tt"]
+        return self.log_likelihood(cls, params_values.get("A_planck", 1))

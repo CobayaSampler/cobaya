@@ -3,8 +3,8 @@ Tests for the PoolXD classes, which are used to assist caching of computed quant
 which are a function of a finite set of fixed values.
 """
 
-import pytest
 import numpy as np
+import pytest
 from flaky import flaky
 
 from cobaya.tools import Pool1D, Pool2D
@@ -28,7 +28,7 @@ def test_pool1d():
     # At least a duplicate, for robustness
     test_values[-1] = test_values[0]
     indices = pool.find_indices(test_values)
-    assert(np.all(np.abs(test_values - pool[indices] < a_tol_test)))
+    assert np.all(np.abs(test_values - pool[indices] < a_tol_test))
 
 
 def test_pool1d_fail():
@@ -49,12 +49,13 @@ def test_pool2d(from_list=False):
     else:
         values = np.random.random(2 * n_pool).reshape((n_pool, 2))
     pool = Pool2D(values)
-    test_values = pool.values[np.random.choice(range(len(pool.values)), n_test)] + \
-        r_perturb * np.random.random(2 * n_test).reshape((n_test, 2))
+    test_values = pool.values[
+        np.random.choice(range(len(pool.values)), n_test)
+    ] + r_perturb * np.random.random(2 * n_test).reshape((n_test, 2))
     # At least a duplicate, for robustness
     test_values[-1] = test_values[0]
     indices = pool.find_indices(test_values)
-    assert(np.all(np.abs(test_values - pool[indices]) < a_tol_test))
+    assert np.all(np.abs(test_values - pool[indices]) < a_tol_test)
 
 
 @flaky(max_runs=max_runs, min_passes=1)

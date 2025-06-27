@@ -6,19 +6,18 @@
 
 """
 
-# Global
-import numpy as np
-from typing import Mapping
+from collections.abc import Mapping
 
-# Local
-from cobaya.sampler import Sampler
+import numpy as np
+
+import cobaya.mpi as mpi
 from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError
-import cobaya.mpi as mpi
+from cobaya.sampler import Sampler
 
 
 class Evaluate(Sampler):
-    file_base_name = 'evaluate'
+    file_base_name = "evaluate"
 
     override: Mapping[str, float]
     N: int
@@ -33,7 +32,9 @@ class Evaluate(Sampler):
         except ValueError:
             raise LoggedError(
                 self.log,
-                "Could not convert the number of samples to an integer: %r", self.N)
+                "Could not convert the number of samples to an integer: %r",
+                self.N,
+            )
         self.points = SampleCollection(self.model, self.output, name=str(1 + mpi.rank()))
         self.log.info("Initialized!")
 
@@ -48,44 +49,60 @@ class Evaluate(Sampler):
         """
         for i in range(self.N):
             if self.N > 1:
-                self.log.info("Evaluating sample #%d ------------------------------",
-                              i + 1)
+                self.log.info(
+                    "Evaluating sample #%d ------------------------------", i + 1
+                )
             self.log.info("Looking for a reference point with non-zero prior.")
             reference_values = self.model.prior.reference(random_state=self._rng)
             reference_point = dict(
-                zip(self.model.parameterization.sampled_params(), reference_values))
+                zip(self.model.parameterization.sampled_params(), reference_values)
+            )
             for p, v in (self.override or {}).items():
                 if p not in reference_point:
                     raise LoggedError(
-                        self.log, "Parameter '%s' used in override not known. "
-                                  "Known parameters names are %r.",
-                        p, self.model.parameterization.sampled_params())
+                        self.log,
+                        "Parameter '%s' used in override not known. "
+                        "Known parameters names are %r.",
+                        p,
+                        self.model.parameterization.sampled_params(),
+                    )
                 reference_point[p] = v
-            self.log.info("Reference point:\n   " + "\n   ".join(
-                ["%s = %g" % pv for pv in reference_point.items()]))
+            self.log.info(
+                "Reference point:\n   "
+                + "\n   ".join(["%s = %g" % pv for pv in reference_point.items()])
+            )
             self.log.info("Evaluating prior and likelihoods...")
             self.logposterior = self.model.logposterior(reference_point)
             self.points.add(
-                list(reference_point.values()), derived=self.logposterior.derived,
-                logpost=self.logposterior.logpost, logpriors=self.logposterior.logpriors,
-                loglikes=self.logposterior.loglikes)
+                list(reference_point.values()),
+                derived=self.logposterior.derived,
+                logpost=self.logposterior.logpost,
+                logpriors=self.logposterior.logpriors,
+                loglikes=self.logposterior.loglikes,
+            )
             self.log.info("log-posterior  = %g", self.logposterior.logpost)
             self.log.info("log-prior      = %g", self.logposterior.logprior)
             for j, name in enumerate(self.model.prior):
                 self.log.info(
-                    "   logprior_" + name + " = %g", self.logposterior.logpriors[j])
+                    "   logprior_" + name + " = %g", self.logposterior.logpriors[j]
+                )
             if self.logposterior.logprior > -np.inf:
                 self.log.info("log-likelihood = %g", self.logposterior.loglike)
                 for j, name in enumerate(self.model.likelihood):
                     self.log.info(
-                        "   chi2_" + name + " = %g", (-2 * self.logposterior.loglikes[j]))
+                        "   chi2_" + name + " = %g", (-2 * self.logposterior.loglikes[j])
+                    )
                 self.log.info("Derived params:")
-                for name, value in zip(self.model.parameterization.derived_params(),
-                                       self.logposterior.derived):
+                for name, value in zip(
+                    self.model.parameterization.derived_params(),
+                    self.logposterior.derived,
+                ):
                     self.log.info("   " + name + " = %g", value)
             else:
-                self.log.info("Likelihoods and derived parameters not computed, "
-                              "since the prior is null.")
+                self.log.info(
+                    "Likelihoods and derived parameters not computed, "
+                    "since the prior is null."
+                )
         # Write the output: the point and its prior, posterior and likelihood.
         self.points.out_update()
 

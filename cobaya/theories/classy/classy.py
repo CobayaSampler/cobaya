@@ -219,21 +219,27 @@ it in the ``classy`` input block (otherwise a system-wide CLASS may be used inst
         path: /path/to/cosmo/CLASS
 """
 
-# Global
-import sys
 import os
 import platform
+import sys
+from collections.abc import Callable, Sequence
 from copy import deepcopy
-from typing import NamedTuple, Sequence, Union, Optional, Callable, Any
+from typing import Any, NamedTuple
+
 import numpy as np
 
-# Local
-from cobaya.theories.cosmo import BoltzmannBase
-from cobaya.log import LoggedError, get_logger
-from cobaya.install import download_github_release, pip_install, check_gcc_version
 from cobaya.component import ComponentNotInstalledError, load_external_module
-from cobaya.tools import Pool1D, Pool2D, PoolND, combine_1d, get_compiled_import_path, \
-    VersionCheckError
+from cobaya.install import check_gcc_version, download_github_release, pip_install
+from cobaya.log import LoggedError, get_logger
+from cobaya.theories.cosmo import BoltzmannBase
+from cobaya.tools import (
+    Pool1D,
+    Pool2D,
+    PoolND,
+    VersionCheckError,
+    combine_1d,
+    get_compiled_import_path,
+)
 
 
 # Result collector
@@ -244,9 +250,9 @@ class Collector(NamedTuple):
     args: Sequence = []
     args_names: Sequence = []
     kwargs: dict = {}
-    arg_array: Union[int, Sequence, None] = None
-    z_pool: Optional[PoolND] = None
-    post: Optional[Callable] = None
+    arg_array: int | Sequence | None = None
+    z_pool: PoolND | None = None
+    post: Callable | None = None
 
 
 # default non linear code -- same as CAMB
@@ -263,7 +269,7 @@ class classy(BoltzmannBase):
     _classy_repo_name = "lesgourg/class_public"
     _min_classy_version = "v3.2.1"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
-    _classy_repo_version = os.environ.get('CLASSY_REPO_VERSION', "master")
+    _classy_repo_version = os.environ.get("CLASSY_REPO_VERSION", "master")
 
     classy_module: Any
     ignore_obsolete: bool
@@ -277,16 +283,26 @@ class classy(BoltzmannBase):
         try:
             try:
                 self.classy_module = load_external_module(
-                    "classy", path=self.path, install_path=install_path,
-                    min_version=min_version, get_import_path=self.get_import_path,
-                    logger=self.log, not_installed_level="debug")
+                    "classy",
+                    path=self.path,
+                    install_path=install_path,
+                    min_version=min_version,
+                    get_import_path=self.get_import_path,
+                    logger=self.log,
+                    not_installed_level="debug",
+                )
             # Regression introduced by CLASS v3.3 -- Deprecate CLASS <v3.3 eventually
             except (VersionCheckError, ComponentNotInstalledError) as ni_internal_excpt:
                 try:
                     self.classy_module = load_external_module(
-                        "classy", path=self.path, install_path=install_path,
-                        min_version=min_version, get_import_path=self.get_import_path_old,
-                        logger=self.log, not_installed_level="debug")
+                        "classy",
+                        path=self.path,
+                        install_path=install_path,
+                        min_version=min_version,
+                        get_import_path=self.get_import_path_old,
+                        logger=self.log,
+                        not_installed_level="debug",
+                    )
                     # Only runs if passed:
                     self.log.warning(
                         "Detected an old CLASS version (<3.3). "
@@ -297,33 +313,42 @@ class classy(BoltzmannBase):
         except VersionCheckError as vc_excpt:
             raise VersionCheckError(
                 str(vc_excpt) + " If you are using CLASS unmodified, upgrade with"
-                                "`cobaya-install classy --upgrade`. If you are using a modified CLASS, "
-                                "set the option `ignore_obsolete: True` for CLASS.") from vc_excpt
+                "`cobaya-install classy --upgrade`. If you are using a modified CLASS, "
+                "set the option `ignore_obsolete: True` for CLASS."
+            ) from vc_excpt
         except ComponentNotInstalledError as ni_excpt:
             raise ComponentNotInstalledError(
-                self.log, (f"Could not find CLASS: {ni_excpt}. "
-                           "To install it, run `cobaya-install classy`")) from ni_excpt
+                self.log,
+                (
+                    f"Could not find CLASS: {ni_excpt}. "
+                    "To install it, run `cobaya-install classy`"
+                ),
+            ) from ni_excpt
         self.classy = self.classy_module.Class()
         super().initialize()
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
-            self.extra_args["sBBN file"] = (
-                self.extra_args["sBBN file"].format(classy=self.path))
+            self.extra_args["sBBN file"] = self.extra_args["sBBN file"].format(
+                classy=self.path
+            )
         # Normalize `non_linear` vs `non linear`: prefer underscore
         # Keep this convention throughout the rest of this module!
         if "non linear" in self.extra_args:
             if "non_linear" in self.extra_args:
                 raise LoggedError(
-                    self.log, ("In `extra_args`, only one of `non_linear` or `non linear`"
-                               " should be defined."))
+                    self.log,
+                    (
+                        "In `extra_args`, only one of `non_linear` or `non linear`"
+                        " should be defined."
+                    ),
+                )
             self.extra_args["non_linear"] = self.extra_args.pop("non linear")
         # Normalize non_linear None|False --> "none"
         # Use default one if not specified
         if self.extra_args.get("non_linear", "dummy_string") in (None, False):
             self.extra_args["non_linear"] = non_linear_null_value
-        elif ("non_linear" not in self.extra_args or
-              self.extra_args["non_linear"] is True):
+        elif "non_linear" not in self.extra_args or self.extra_args["non_linear"] is True:
             self.extra_args["non_linear"] = non_linear_default_code
         # Derived parameters that may not have been requested, but will be necessary later
         self.derived_extra = []
@@ -337,10 +362,11 @@ class classy(BoltzmannBase):
         if any((("e" in cl.lower()) or ("b" in cl.lower())) for cl in reqs):
             self.extra_args["output"] += " pCl"
         # For l_max_scalars, remember previous entries.
-        self.extra_args["l_max_scalars"] = \
-            max(self.extra_args.get("l_max_scalars", 0), max(reqs.values()))
-        if 'T_cmb' not in self.derived_extra:
-            self.derived_extra += ['T_cmb']
+        self.extra_args["l_max_scalars"] = max(
+            self.extra_args.get("l_max_scalars", 0), max(reqs.values())
+        )
+        if "T_cmb" not in self.derived_extra:
+            self.derived_extra += ["T_cmb"]
 
     def must_provide(self, **requirements):
         # Computed quantities required by the likelihood
@@ -353,30 +379,48 @@ class classy(BoltzmannBase):
                 self.extra_args["output"] += " lCl"
                 self.extra_args["lensing"] = "yes"
                 self.collectors[k] = Collector(
-                    method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
+                    method="lensed_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]}
+                )
             elif k == "unlensed_Cl":
                 self.set_cl_reqs(v)
                 self.collectors[k] = Collector(
-                    method="raw_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]})
+                    method="raw_cl", kwargs={"lmax": self.extra_args["l_max_scalars"]}
+                )
             elif k == "Hubble":
                 self.set_collector_with_z_pool(
-                    k, v["z"], "Hubble", args_names=["z"], arg_array=0)
+                    k, v["z"], "Hubble", args_names=["z"], arg_array=0
+                )
             elif k in ["Omega_b", "Omega_cdm", "Omega_nu_massive"]:
-                func_name = {"Omega_b": "Om_b", "Omega_cdm": "Om_cdm",
-                             "Omega_nu_massive": "Om_ncdm"}[k]
+                func_name = {
+                    "Omega_b": "Om_b",
+                    "Omega_cdm": "Om_cdm",
+                    "Omega_nu_massive": "Om_ncdm",
+                }[k]
                 self.set_collector_with_z_pool(
-                    k, v["z"], func_name, args_names=["z"], arg_array=0)
+                    k, v["z"], func_name, args_names=["z"], arg_array=0
+                )
             elif k == "angular_diameter_distance":
                 self.set_collector_with_z_pool(
-                    k, v["z"], "angular_distance", args_names=["z"], arg_array=0)
+                    k, v["z"], "angular_distance", args_names=["z"], arg_array=0
+                )
             elif k == "comoving_radial_distance":
-                self.set_collector_with_z_pool(k, v["z"], "z_of_r", args_names=["z"],
-                                               # returns r and dzdr!
-                                               post=(lambda r, dzdr: r))
+                self.set_collector_with_z_pool(
+                    k,
+                    v["z"],
+                    "z_of_r",
+                    args_names=["z"],
+                    # returns r and dzdr!
+                    post=(lambda r, dzdr: r),
+                )
             elif k == "angular_diameter_distance_2":
                 self.set_collector_with_z_pool(
-                    k, v["z_pairs"], "angular_distance_from_to",
-                    args_names=["z1", "z2"], arg_array=[0, 1], d=2)
+                    k,
+                    v["z_pairs"],
+                    "angular_distance_from_to",
+                    args_names=["z1", "z2"],
+                    arg_array=[0, 1],
+                    d=2,
+                )
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 self.extra_args["output"] += " mPk"
                 v = deepcopy(v)
@@ -392,39 +436,59 @@ class classy(BoltzmannBase):
                         self.extra_args["non_linear"] = non_linear_default_code
                     elif self.extra_args["non_linear"] == non_linear_null_value:
                         raise LoggedError(
-                            self.log, ("Non-linear Pk requested, but `non_linear: "
-                                       f"{non_linear_null_value}` imposed in "
-                                       "`extra_args`"))
+                            self.log,
+                            (
+                                "Non-linear Pk requested, but `non_linear: "
+                                f"{non_linear_null_value}` imposed in "
+                                "`extra_args`"
+                            ),
+                        )
                 pair = k[2:]
                 if pair == ("delta_tot", "delta_tot"):
                     v["only_clustering_species"] = False
                     self.collectors[k] = Collector(
                         method="get_pk_and_k_and_z",
                         kwargs=v,
-                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)),
+                    )
                 elif pair == ("delta_nonu", "delta_nonu"):
                     v["only_clustering_species"] = True
                     self.collectors[k] = Collector(
-                        method="get_pk_and_k_and_z", kwargs=v,
-                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+                        method="get_pk_and_k_and_z",
+                        kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)),
+                    )
                 elif pair == ("Weyl", "Weyl"):
                     self.extra_args["output"] += " mTk"
                     self.collectors[k] = Collector(
-                        method="get_Weyl_pk_and_k_and_z", kwargs=v,
-                        post=(lambda P, kk, z: (kk, z, np.array(P).T)))
+                        method="get_Weyl_pk_and_k_and_z",
+                        kwargs=v,
+                        post=(lambda P, kk, z: (kk, z, np.array(P).T)),
+                    )
                 else:
                     raise LoggedError(self.log, "NotImplemented in CLASS: %r", pair)
             elif k == "sigma8_z":
                 self.add_z_for_matter_power(v["z"])
                 self.set_collector_with_z_pool(
-                    k, v["z"], "sigma", args=[8], args_names=["R", "z"],
-                    kwargs={"h_units": True}, arg_array=1)
+                    k,
+                    v["z"],
+                    "sigma",
+                    args=[8],
+                    args_names=["R", "z"],
+                    kwargs={"h_units": True},
+                    arg_array=1,
+                )
             elif k == "fsigma8":
                 self.add_z_for_matter_power(v["z"])
                 z_step = 0.1  # left to CLASS default; increasing does not appear to help
                 self.set_collector_with_z_pool(
-                    k, v["z"], "effective_f_sigma8", args=[z_step],
-                    args_names=["z", "z_step"], arg_array=0)
+                    k,
+                    v["z"],
+                    "effective_f_sigma8",
+                    args=[z_step],
+                    args_names=["z", "z_step"],
+                    arg_array=0,
+                )
             elif isinstance(k, tuple) and k[0] == "sigma_R":
                 self.extra_args["output"] += " mPk"
                 self.add_P_k_max(v.pop("k_max"), units="1/Mpc")
@@ -432,19 +496,34 @@ class classy(BoltzmannBase):
                 self.add_z_for_matter_power(v["z"])
                 pair = k[1:]
                 try:
-                    method = {("delta_tot", "delta_tot"): "sigma",
-                              ("delta_nonu", "delta_nonu"): "sigma_cb"}[pair]
+                    method = {
+                        ("delta_tot", "delta_tot"): "sigma",
+                        ("delta_nonu", "delta_nonu"): "sigma_cb",
+                    }[pair]
                 except KeyError as excpt:
                     raise LoggedError(
-                        self.log, f"sigma(R,z) not implemented for {pair}") from excpt
+                        self.log, f"sigma(R,z) not implemented for {pair}"
+                    ) from excpt
                 self.collectors[k] = Collector(
-                    method=method, kwargs={"h_units": False}, args=[v["R"], v["z"]],
-                    args_names=["R", "z"], arg_array=[[0], [1]],
-                    post=(lambda R, z, sigma: (z, R, sigma.T)))
-            elif k in [f"CLASS_{q}" for q in ["background", "thermodynamics",
-                                              "primordial", "perturbations", "sources"]]:
+                    method=method,
+                    kwargs={"h_units": False},
+                    args=[v["R"], v["z"]],
+                    args_names=["R", "z"],
+                    arg_array=[[0], [1]],
+                    post=(lambda R, z, sigma: (z, R, sigma.T)),
+                )
+            elif k in [
+                f"CLASS_{q}"
+                for q in [
+                    "background",
+                    "thermodynamics",
+                    "primordial",
+                    "perturbations",
+                    "sources",
+                ]
+            ]:
                 # Get direct CLASS results
-                self.collectors[k] = Collector(method=f"get_{k.lower()[len('CLASS_'):]}")
+                self.collectors[k] = Collector(method=f"get_{k.lower()[len('CLASS_') :]}")
             elif v is None:
                 k_translated = self.translate_param(k)
                 if k_translated not in self.derived_extra:
@@ -460,15 +539,20 @@ class classy(BoltzmannBase):
             self.extra_args["modes"] = "s,t"
         # If B spectrum with l>50, or lensing, recommend using a non-linear code
         cls = self._must_provide.get("Cl", {})
-        has_BB_l_gt_50 = (any(("b" in cl.lower()) for cl in cls) and
-                          max(cls[cl] for cl in cls if "b" in cl.lower()) > 50)
+        has_BB_l_gt_50 = (
+            any(("b" in cl.lower()) for cl in cls)
+            and max(cls[cl] for cl in cls if "b" in cl.lower()) > 50
+        )
         has_lensing = any(("p" in cl.lower()) for cl in cls)
-        if (has_BB_l_gt_50 or has_lensing) and \
-                self.extra_args.get("non_linear") == non_linear_null_value:
-            self.log.warning("Requesting BB for ell>50 or lensing Cl's: "
-                             "using a non-linear code is recommended (and you are not "
-                             "using any). To activate it, set "
-                             "'non_linear: halofit|hmcode|...' in classy's 'extra_args'.")
+        if (has_BB_l_gt_50 or has_lensing) and self.extra_args.get(
+            "non_linear"
+        ) == non_linear_null_value:
+            self.log.warning(
+                "Requesting BB for ell>50 or lensing Cl's: "
+                "using a non-linear code is recommended (and you are not "
+                "using any). To activate it, set "
+                "'non_linear: halofit|hmcode|...' in classy's 'extra_args'."
+            )
         # Cleanup of products string
         self.extra_args["output"] = " ".join(set(self.extra_args["output"].split()))
         self.check_no_repeated_input_extra()
@@ -479,8 +563,18 @@ class classy(BoltzmannBase):
         self.z_for_matter_power = np.flip(combine_1d(z, self.z_for_matter_power))
         self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
 
-    def set_collector_with_z_pool(self, k, zs, method, args=(), args_names=(),
-                                  kwargs=None, arg_array=None, post=None, d=1):
+    def set_collector_with_z_pool(
+        self,
+        k,
+        zs,
+        method,
+        args=(),
+        args_names=(),
+        kwargs=None,
+        arg_array=None,
+        post=None,
+        d=1,
+    ):
         """
         Creates a collector for a z-dependent quantity, keeping track of the pool of z's.
 
@@ -508,16 +602,28 @@ class classy(BoltzmannBase):
             args = deepcopy(args)
             i_z1 = args_names.index("z1")
             i_z2 = args_names.index("z2")
-            args = (list(args[:i_z1]) + [z_pool.values[:, 0]] + list(args[i_z1:i_z2]) +
-                    [z_pool.values[:, 1]] + list(args[i_z2:]))
+            args = (
+                list(args[:i_z1])
+                + [z_pool.values[:, 0]]
+                + list(args[i_z1:i_z2])
+                + [z_pool.values[:, 1]]
+                + list(args[i_z2:])
+            )
         else:
             raise LoggedError(
                 self.log,
                 f"I do not know how to insert the redshift for collector method {method} "
-                f"of requisite {k}")
+                f"of requisite {k}",
+            )
         self.collectors[k] = Collector(
-            method=method, z_pool=z_pool, args=args, args_names=args_names, kwargs=kwargs,
-            arg_array=arg_array, post=post)
+            method=method,
+            z_pool=z_pool,
+            args=args,
+            args_names=args_names,
+            kwargs=kwargs,
+            arg_array=arg_array,
+            post=post,
+        )
 
     def add_P_k_max(self, k_max, units):
         r"""
@@ -532,7 +638,8 @@ class classy(BoltzmannBase):
             k_max *= h_fid
         # Take into account possible manual set of P_k_max_***h/Mpc*** through extra_args
         k_max_old = self.extra_args.pop(
-            "P_k_max_1/Mpc", h_fid * self.extra_args.pop("P_k_max_h/Mpc", 0))
+            "P_k_max_1/Mpc", h_fid * self.extra_args.pop("P_k_max_h/Mpc", 0)
+        )
         self.extra_args["P_k_max_1/Mpc"] = max(k_max, k_max_old)
 
     def set(self, params_values_dict):
@@ -562,19 +669,27 @@ class classy(BoltzmannBase):
                     "Computation error (see traceback below)! "
                     "Parameters sent to CLASS: %r and %r.\n"
                     "To ignore this kind of error, make 'stop_at_error: False'.",
-                    state["params"], dict(self.extra_args))
+                    state["params"],
+                    dict(self.extra_args),
+                )
                 raise
             else:
-                self.log.debug("Computation of cosmological products failed. "
-                               "Assigning 0 likelihood and going on. "
-                               "The output of the CLASS error was %s", e)
+                self.log.debug(
+                    "Computation of cosmological products failed. "
+                    "Assigning 0 likelihood and going on. "
+                    "The output of the CLASS error was %s",
+                    e,
+                )
             return False
         # CLASS not correctly initialized, or input parameters not correct
         except self.classy_module.CosmoSevereError:
-            self.log.error("Serious error setting parameters or computing results. "
-                           "The parameters passed were %r and %r. To see the original "
-                           "CLASS' error traceback, make 'debug: True'.",
-                           state["params"], self.extra_args)
+            self.log.error(
+                "Serious error setting parameters or computing results. "
+                "The parameters passed were %r and %r. To see the original "
+                "CLASS' error traceback, make 'debug: True'.",
+                state["params"],
+                self.extra_args,
+            )
             raise  # No LoggedError, so that CLASS traceback gets printed
         # Gather products
         for product, collector in self.collectors.items():
@@ -587,7 +702,8 @@ class classy(BoltzmannBase):
                 arg_array = np.atleast_1d(arg_array)
             if arg_array is None:
                 state[product] = method(
-                    *self.collectors[product].args, **self.collectors[product].kwargs)
+                    *self.collectors[product].args, **self.collectors[product].kwargs
+                )
             elif isinstance(arg_array, Sequence) or isinstance(arg_array, np.ndarray):
                 arg_array = np.array(arg_array)
                 if len(arg_array.shape) == 1:
@@ -597,17 +713,22 @@ class classy(BoltzmannBase):
                     args = deepcopy(list(self.collectors[product].args))
                     for i in range(n_values):
                         for arg_arr_index in arg_array:
-                            args[arg_arr_index] = \
-                                self.collectors[product].args[arg_arr_index][i]
+                            args[arg_arr_index] = self.collectors[product].args[
+                                arg_arr_index
+                            ][i]
                         state[product][i] = method(
-                            *args, **self.collectors[product].kwargs)
+                            *args, **self.collectors[product].kwargs
+                        )
                 elif len(arg_array.shape) == 2:
                     if len(arg_array) > 2:
                         raise NotImplementedError("Only 2 array expanded vars so far.")
                     # Create outer combinations
-                    x_and_y = np.array(np.meshgrid(
-                        self.collectors[product].args[arg_array[0, 0]],
-                        self.collectors[product].args[arg_array[1, 0]])).T
+                    x_and_y = np.array(
+                        np.meshgrid(
+                            self.collectors[product].args[arg_array[0, 0]],
+                            self.collectors[product].args[arg_array[1, 0]],
+                        )
+                    ).T
                     args = deepcopy(list(self.collectors[product].args))
                     result = np.empty(shape=x_and_y.shape[:2])
                     for i, row in enumerate(x_and_y):
@@ -615,10 +736,13 @@ class classy(BoltzmannBase):
                             args[arg_array[0, 0]] = column_element[0]
                             args[arg_array[1, 0]] = column_element[1]
                             result[i, j] = method(
-                                *args, **self.collectors[product].kwargs)
+                                *args, **self.collectors[product].kwargs
+                            )
                     state[product] = (
                         self.collectors[product].args[arg_array[0, 0]],
-                        self.collectors[product].args[arg_array[1, 0]], result)
+                        self.collectors[product].args[arg_array[1, 0]],
+                        result,
+                    )
                 else:
                     raise ValueError("arg_array not correctly formatted.")
             elif arg_array in self.collectors[product].kwargs:
@@ -627,11 +751,13 @@ class classy(BoltzmannBase):
                 for i, v in enumerate(value):
                     kwargs = deepcopy(self.collectors[product].kwargs)
                     kwargs[arg_array] = v
-                    state[product][i] = method(
-                        *self.collectors[product].args, **kwargs)
+                    state[product][i] = method(*self.collectors[product].args, **kwargs)
             else:
-                raise LoggedError(self.log, "Variable over which to do an array call "
-                                            f"not known: arg_array={arg_array}")
+                raise LoggedError(
+                    self.log,
+                    "Variable over which to do an array call "
+                    f"not known: arg_array={arg_array}",
+                )
             if collector.post:
                 state[product] = collector.post(*state[product])
         # Prepare derived parameters
@@ -653,8 +779,10 @@ class classy(BoltzmannBase):
         """
         # TODO: fails with derived_requested=False
         # Put all parameters in CLASS nomenclature (self.derived_extra already is)
-        requested = [self.translate_param(p) for p in (
-            self.output_params if derived_requested else [])]
+        requested = [
+            self.translate_param(p)
+            for p in (self.output_params if derived_requested else [])
+        ]
         requested_and_extra = dict.fromkeys(set(requested).union(self.derived_extra))
         # Parameters with their own getters or different CLASS internal names
         if "rs_drag" in requested_and_extra:
@@ -669,12 +797,15 @@ class classy(BoltzmannBase):
         # which parameters are not recognized
         requested_and_extra.update(
             self.classy.get_current_derived_parameters(
-                [p for p, v in requested_and_extra.items() if v is None]))
+                [p for p, v in requested_and_extra.items() if v is None]
+            )
+        )
         # Separate the parameters before returning
         # Remember: self.output_params is in sampler nomenclature,
         # but self.derived_extra is in CLASS
         derived = {
-            p: requested_and_extra[self.translate_param(p)] for p in self.output_params}
+            p: requested_and_extra[self.translate_param(p)] for p in self.output_params
+        }
         derived_extra = {p: requested_and_extra[p] for p in self.derived_extra}
         return derived, derived_extra
 
@@ -687,23 +818,25 @@ class classy(BoltzmannBase):
             raise LoggedError(
                 self.log,
                 "No %s Cl's were computed. Are you sure that you have requested them?",
-                which_error
+                which_error,
             ) from excpt
         # unit conversion and ell_factor
-        ells_factor = \
+        ells_factor = (
             ((cls["ell"] + 1) * cls["ell"] / (2 * np.pi))[2:] if ell_factor else 1
+        )
         units_factor = self._cmb_unit_factor(
-            units, self.current_state['derived_extra']['T_cmb'])
+            units, self.current_state["derived_extra"]["T_cmb"]
+        )
         for cl in cls:
             if cl == "ell":
                 continue
             units_power = float(sum(cl.count(p) for p in ["t", "e", "b"]))
-            cls[cl][2:] *= units_factor ** units_power
+            cls[cl][2:] *= units_factor**units_power
             if ell_factor:
                 if "p" not in cl:
                     cls[cl][2:] *= ells_factor
                 elif cl == "pp" and lensed:
-                    cls[cl][2:] *= ells_factor ** 2 * (2 * np.pi)
+                    cls[cl][2:] *= ells_factor**2 * (2 * np.pi)
                 elif "p" in cl and lensed:
                     cls[cl][2:] *= ells_factor ** (3 / 2) * np.sqrt(2 * np.pi)
         return cls
@@ -738,10 +871,28 @@ class classy(BoltzmannBase):
         self.classy.empty()
 
     def get_can_provide_params(self):
-        names = ["h", "H0", "Omega_Lambda", "Omega_cdm", "Omega_b", "Omega_m", "Omega_k",
-                 "rs_drag", "tau_reio", "z_reio", "z_rec", "tau_rec", "m_ncdm_tot",
-                 "Neff", "YHe", "age", "conformal_age", "sigma8", "sigma8_cb",
-                 "theta_s_100"]
+        names = [
+            "h",
+            "H0",
+            "Omega_Lambda",
+            "Omega_cdm",
+            "Omega_b",
+            "Omega_m",
+            "Omega_k",
+            "rs_drag",
+            "tau_reio",
+            "z_reio",
+            "z_rec",
+            "tau_rec",
+            "m_ncdm_tot",
+            "Neff",
+            "YHe",
+            "age",
+            "conformal_age",
+            "sigma8",
+            "sigma8_cb",
+            "theta_s_100",
+        ]
         for name, mapped in self.renames.items():
             if mapped in names:
                 names.append(name)
@@ -750,10 +901,10 @@ class classy(BoltzmannBase):
     def get_can_support_params(self):
         # non-exhaustive list of supported input parameters that will be assigned to
         # classy if they are varied
-        return ['H0']
+        return ["H0"]
 
     def get_version(self):
-        return getattr(self.classy_module, '__version__', None)
+        return getattr(self.classy_module, "__version__", None)
 
     # Installation routines
 
@@ -780,18 +931,31 @@ class classy(BoltzmannBase):
         if not kwargs.get("code", True):
             return True
         try:
-            return bool(load_external_module(
-                "classy", path=kwargs["path"], get_import_path=cls.get_import_path,
-                min_version=cls._min_classy_version, reload=reload,
-                logger=get_logger(cls.__name__), not_installed_level="debug"))
+            return bool(
+                load_external_module(
+                    "classy",
+                    path=kwargs["path"],
+                    get_import_path=cls.get_import_path,
+                    min_version=cls._min_classy_version,
+                    reload=reload,
+                    logger=get_logger(cls.__name__),
+                    not_installed_level="debug",
+                )
+            )
         # Regression introduced by CLASS v3.3 -- Deprecate CLASS <v3.3 eventually
         except ComponentNotInstalledError:
             try:
-                success = bool(load_external_module(
-                    "classy", path=kwargs["path"],
-                    get_import_path=cls.get_import_path_old,
-                    min_version=cls._min_classy_version, reload=reload,
-                    logger=get_logger(cls.__name__), not_installed_level="debug"))
+                success = bool(
+                    load_external_module(
+                        "classy",
+                        path=kwargs["path"],
+                        get_import_path=cls.get_import_path_old,
+                        min_version=cls._min_classy_version,
+                        reload=reload,
+                        logger=get_logger(cls.__name__),
+                        not_installed_level="debug",
+                    )
+                )
                 # Only runs if passed:
                 get_logger(cls.__name__).warning(
                     "Detected an old CLASS version (<3.3). "
@@ -814,8 +978,13 @@ class classy(BoltzmannBase):
             return False
         log.info("Downloading classy...")
         success = download_github_release(
-            os.path.join(path, "code"), cls._classy_repo_name, cls._classy_repo_version,
-            directory=cls.__name__, no_progress_bars=no_progress_bars, logger=log)
+            os.path.join(path, "code"),
+            cls._classy_repo_name,
+            cls._classy_repo_version,
+            directory=cls.__name__,
+            no_progress_bars=no_progress_bars,
+            logger=log,
+        )
         if not success:
             log.error("Could not download classy.")
             return False
@@ -824,15 +993,19 @@ class classy(BoltzmannBase):
         # hand in the Makefile
         classy_path = cls.get_path(path)
         if not check_gcc_version(cls._classy_min_gcc_version, error_returns=False):
-            log.error("Your gcc version is too low! CLASS would probably compile, "
-                      "but it would leak memory when running a chain. Please use a "
-                      "gcc version newer than %s. You can still compile CLASS by hand, "
-                      "maybe changing the compiler in the Makefile. CLASS has been "
-                      "downloaded into %r",
-                      cls._classy_min_gcc_version, classy_path)
+            log.error(
+                "Your gcc version is too low! CLASS would probably compile, "
+                "but it would leak memory when running a chain. Please use a "
+                "gcc version newer than %s. You can still compile CLASS by hand, "
+                "maybe changing the compiler in the Makefile. CLASS has been "
+                "downloaded into %r",
+                cls._classy_min_gcc_version,
+                classy_path,
+            )
             return False
         log.info("Compiling classy...")
-        from subprocess import Popen, PIPE
+        from subprocess import PIPE, Popen
+
         env = deepcopy(os.environ)
         env.update({"PYTHON": sys.executable})
         process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)

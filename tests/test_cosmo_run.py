@@ -1,13 +1,16 @@
 import logging
 import os
+
 import numpy as np
 import pytest
-from cobaya import mpi, run, Theory, InputDict, PostDict, LoggedError, load_samples
-from cobaya.conventions import Extension
+
+from cobaya import InputDict, LoggedError, PostDict, Theory, load_samples, mpi, run
 from cobaya.component import ComponentNotFoundError
-from cobaya.tools import deepcopy_where_possible
+from cobaya.conventions import Extension
 from cobaya.cosmo_input.convert_cosmomc import cosmomc_root_to_cobaya_info_dict
 from cobaya.log import NoLogging
+from cobaya.tools import deepcopy_where_possible
+
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 
@@ -15,57 +18,73 @@ pytestmark = pytest.mark.mpi
 
 
 def likelihood(_self):
-    return -(_self.provider.get_param('sigma8') - 0.7) ** 2 / 0.1 ** 2
+    return -((_self.provider.get_param("sigma8") - 0.7) ** 2) / 0.1**2
 
 
 def likelihood2(sigma8, joint):
-    return -(sigma8 - 0.75) ** 2 / 0.07 ** 2 + joint * 0
+    return -((sigma8 - 0.75) ** 2) / 0.07**2 + joint * 0
 
 
 class ATheory(Theory):
-    params = {'As': None, 'As100': {'derived': True}}
+    params = {"As": None, "As100": {"derived": True}}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['derived']['As100'] = params_values_dict['As'] * 100
+        state["derived"]["As100"] = params_values_dict["As"] * 100
 
 
 class BTheory(Theory):
-    params = {'As100': None, 'As1000': {'derived': True}}
+    params = {"As100": None, "As1000": {"derived": True}}
 
     def calculate(self, state, want_derived=True, **params_values_dict):
-        state['derived']['As1000'] = params_values_dict['As100'] * 10
+        state["derived"]["As1000"] = params_values_dict["As100"] * 10
 
 
 class CTheory(Theory):
-    params = {'AsX': None, 'As1000': {'derived': True}}
+    params = {"AsX": None, "As1000": {"derived": True}}
 
 
-info: InputDict = {"params": {
-    "ombh2": 0.0245,
-    "H0": 70,
-    "ns": 0.965,
-    "logA": {'prior': [1, 4], 'latex': r'\log(10^{10} A_\mathrm{s})', "proposal": 0.1},
-    "As": {'value': lambda logA: 1e-10 * np.exp(logA), 'latex': r'A_\mathrm{s}'},
-    "omegab": {'value': lambda ombh2, H0: ombh2 / (H0 / 100) ** 2,
-               'latex': r'\Omega_\mathrm{b}'},
-    "omegam": {'value': 0.3, 'latex': r'\Omega_\mathrm{m}', 'drop': True},
-    "omch2": {'value': lambda omegam, omegab, mnu, H0: (omegam - omegab) * (
-            H0 / 100) ** 2 - (mnu * (3.044 / 3) ** 0.75) / 94.0708,
-              'latex': r'\Omega_\mathrm{c} h^2'},
-    "tau": 0.05,
-    "mnu": 0.0,
-    "sigma8": None,
-    "sigma82": {"derived": "lambda sigma8, omegam: sigma8 ** 2 * omegam"},
-    "joint": {"derived": "lambda sigma8, omegam, As100: sigma8 ** 2 * omegam*As100"}},
+info: InputDict = {
+    "params": {
+        "ombh2": 0.0245,
+        "H0": 70,
+        "ns": 0.965,
+        "logA": {
+            "prior": [1, 4],
+            "latex": r"\log(10^{10} A_\mathrm{s})",
+            "proposal": 0.1,
+        },
+        "As": {"value": lambda logA: 1e-10 * np.exp(logA), "latex": r"A_\mathrm{s}"},
+        "omegab": {
+            "value": lambda ombh2, H0: ombh2 / (H0 / 100) ** 2,
+            "latex": r"\Omega_\mathrm{b}",
+        },
+        "omegam": {"value": 0.3, "latex": r"\Omega_\mathrm{m}", "drop": True},
+        "omch2": {
+            "value": lambda omegam, omegab, mnu, H0: (omegam - omegab) * (H0 / 100) ** 2
+            - (mnu * (3.044 / 3) ** 0.75) / 94.0708,
+            "latex": r"\Omega_\mathrm{c} h^2",
+        },
+        "tau": 0.05,
+        "mnu": 0.0,
+        "sigma8": None,
+        "sigma82": {"derived": "lambda sigma8, omegam: sigma8 ** 2 * omegam"},
+        "joint": {"derived": "lambda sigma8, omegam, As100: sigma8 ** 2 * omegam*As100"},
+    },
     "likelihood": {
-        "test_likelihood": {'external': likelihood,
-                            'type': 'type1',
-                            'requires': ['As', 'sigma8']}},
-    'theory': {'test_theory': ATheory,
-               'camb': {'stop_at_error': True,
-                        'extra_args': {'num_massive_neutrinos': 1,
-                                       'halofit_version': 'mead'}}},
-    'sampler': {'mcmc': {'Rminus1_stop': 0.3}}
+        "test_likelihood": {
+            "external": likelihood,
+            "type": "type1",
+            "requires": ["As", "sigma8"],
+        }
+    },
+    "theory": {
+        "test_theory": ATheory,
+        "camb": {
+            "stop_at_error": True,
+            "extra_args": {"num_massive_neutrinos": 1, "halofit_version": "mead"},
+        },
+    },
+    "sampler": {"mcmc": {"Rminus1_stop": 0.3}},
 }
 
 
@@ -89,43 +108,53 @@ def test_cosmo_run_not_found():
 @mpi.sync_errors
 def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
     # only vary As, so fast chain. Chain does not need to converge (tested elsewhere).
-    info['output'] = os.path.join(tmpdir, 'testchain')
+    info["output"] = os.path.join(tmpdir, "testchain")
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)
     install_test_wrapper(skip_not_installed, run, info, force=True)
     # note that continuing from files leads to text-file precision at read in, so a mix of
     # precision in the output SampleCollection returned from run
-    run(info, resume=True, override={'sampler': {'mcmc': {'Rminus1_stop': 0.2}}})
-    run(info, resume=True, override={'sampler': {'mcmc': {'Rminus1_stop': 0.15}},
-                                     'theory': {'camb': {'stop_at_error': False}}},
-        allow_changes=True)
+    run(info, resume=True, override={"sampler": {"mcmc": {"Rminus1_stop": 0.2}}})
+    run(
+        info,
+        resume=True,
+        override={
+            "sampler": {"mcmc": {"Rminus1_stop": 0.15}},
+            "theory": {"camb": {"stop_at_error": False}},
+        },
+        allow_changes=True,
+    )
     updated_info, sampler_init = run(
-        info['output'] + '.updated' + Extension.dill, resume=True,
-        override={'sampler': {'mcmc': {'Rminus1_stop': 0.05}}}
+        info["output"] + ".updated" + Extension.dill,
+        resume=True,
+        override={"sampler": {"mcmc": {"Rminus1_stop": 0.05}}},
     )
     samp = sampler_init.samples(skip_samples=0.2, to_getdist=True)
-    assert np.isclose(samp.mean('As100'), 100 * samp.mean('As'))
+    assert np.isclose(samp.mean("As100"), 100 * samp.mean("As"))
 
     # post-processing
-    info_post: PostDict = {'add': {'params': {'h': None},
-                                   "likelihood": {"test_likelihood2": likelihood2}},
-                           'remove': {'likelihood': ["test_likelihood"]},
-                           'suffix': 'testpost',
-                           'skip': 0.2, 'thin': 4
-                           }
+    info_post: PostDict = {
+        "add": {"params": {"h": None}, "likelihood": {"test_likelihood2": likelihood2}},
+        "remove": {"likelihood": ["test_likelihood"]},
+        "suffix": "testpost",
+        "skip": 0.2,
+        "thin": 4,
+    }
 
-    output_info, post_results = run(updated_info, override={'post': info_post},
-                                    force=True)
+    output_info, post_results = run(
+        updated_info, override={"post": info_post}, force=True
+    )
     samp2 = post_results.samples(to_getdist=True)
     samp_test = samp.copy()
     samp_test.weighted_thin(4)
     sigma8 = samp_test.getParams().sigma8
-    samp_test.reweightAddingLogLikes(-(sigma8 - 0.7) ** 2 / 0.1 ** 2
-                                     + (sigma8 - 0.75) ** 2 / 0.07 ** 2)
-    assert np.isclose(samp_test.mean('sigma8'), samp2.mean('sigma8'))
+    samp_test.reweightAddingLogLikes(
+        -((sigma8 - 0.7) ** 2) / 0.1**2 + (sigma8 - 0.75) ** 2 / 0.07**2
+    )
+    assert np.isclose(samp_test.mean("sigma8"), samp2.mean("sigma8"))
 
     # from getdist-format chain files
-    root = os.path.join(tmpdir, 'getdist_format')
+    root = os.path.join(tmpdir, "getdist_format")
     if mpi.is_main_process():
         samp.saveChainsAsText(root)
     mpi.sync_processes()
@@ -133,48 +162,56 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
     from_txt = dict(updated_info, output=root)
     post_from_text = dict(info_post, skip=0)  # getdist already skipped
     output_info, post_results_text = run(
-        from_txt, override={'post': post_from_text}, force=True)
+        from_txt, override={"post": post_from_text}, force=True
+    )
     samp_getdist = post_results_text.samples(to_getdist=True)
     assert not post_results_text["stats"]["points_removed"]
     assert samp2.numrows == samp_getdist.numrows
-    assert np.isclose(samp2.mean('sigma8'), samp_getdist.mean('sigma8'))
+    assert np.isclose(samp2.mean("sigma8"), samp_getdist.mean("sigma8"))
 
     # again with inferred-inputs for params
     info_conv = cosmomc_root_to_cobaya_info_dict(root)
     # have to manually add consistent likelihoods if re-computing
-    info_conv['likelihood'] = info['likelihood']
-    info_conv['theory'] = info['theory']
-    post_from_text = dict(info_post, skip=0, suffix='getdist2')  # getdist already skipped
-    output_info, post_results_text = run(info_conv, override={'post': post_from_text},
-                                         output=False)
+    info_conv["likelihood"] = info["likelihood"]
+    info_conv["theory"] = info["theory"]
+    post_from_text = dict(info_post, skip=0, suffix="getdist2")  # getdist already skipped
+    output_info, post_results_text = run(
+        info_conv, override={"post": post_from_text}, output=False
+    )
     samp_getdist2 = post_results_text.samples(to_getdist=True)
-    assert np.isclose(samp2.mean('sigma8'), samp_getdist2.mean('sigma8'))
+    assert np.isclose(samp2.mean("sigma8"), samp_getdist2.mean("sigma8"))
 
     # from saved info, no output
-    info_post['output'] = None
+    info_post["output"] = None
     output_info, post_results_from_saved = run(
-        {'output': info['output'], 'post': info_post}, force=True)
+        {"output": info["output"], "post": info_post}, force=True
+    )
     samp3 = post_results_from_saved.samples(to_getdist=True)
     assert np.isclose(samp3.mean("sigma8"), samp2.mean("sigma8"))
     assert np.isclose(samp3.mean("joint"), samp2.mean("joint"))
-    samps4 = load_samples(info['output'] + '.post.testpost', to_getdist=True)
+    samps4 = load_samples(info["output"] + ".post.testpost", to_getdist=True)
     assert np.isclose(samp3.mean("joint"), samps4.mean("joint"))
 
     # test recover original answer swapping likelihoods back
-    info_revert = {'add': {'likelihood': info['likelihood']},
-                   'remove': {'likelihood': ["test_likelihood2"]},
-                   'suffix': 'revert',
-                   'skip': 0, 'thin': 1,
-                   'output': None
-                   }
-    output_info, post_products_revert = run({'output': info['output'] + '.post.testpost',
-                                             'post': info_revert}, force=True)
+    info_revert = {
+        "add": {"likelihood": info["likelihood"]},
+        "remove": {"likelihood": ["test_likelihood2"]},
+        "suffix": "revert",
+        "skip": 0,
+        "thin": 1,
+        "output": None,
+    }
+    output_info, post_products_revert = run(
+        {"output": info["output"] + ".post.testpost", "post": info_revert}, force=True
+    )
     samp_revert = post_products_revert.samples(to_getdist=True)
 
     samp_thin = sampler_init.samples(skip_samples=0.2, to_getdist=True)
     samp_thin.weighted_thin(4)
-    assert samp_thin.numrows == samp_revert.numrows + \
-           post_products_revert["stats"]["points_removed"]
+    assert (
+        samp_thin.numrows
+        == samp_revert.numrows + post_products_revert["stats"]["points_removed"]
+    )
     if not post_products_revert["stats"]["points_removed"]:
         assert np.isclose(samp_revert.mean("sigma8"), samp_thin.mean("sigma8"))
     else:
@@ -183,26 +220,31 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
 
     # no remove
     info_post = {
-        'add': {'params': {'h': None}, "likelihood": {"test_likelihood2": likelihood2}},
-        'suffix': 'test2', 'skip': 0.2, 'thin': 4}
+        "add": {"params": {"h": None}, "likelihood": {"test_likelihood2": likelihood2}},
+        "suffix": "test2",
+        "skip": 0.2,
+        "thin": 4,
+    }
     output_info, post_results_no_remove = run(
-        updated_info, override={'post': info_post}, force=True)
+        updated_info, override={"post": info_post}, force=True
+    )
     samp2 = post_results_no_remove.samples(to_getdist=True)
     assert "chi2__type1" in samp2.paramNames.list()
     # check what has been saved to disk is consistent
-    samps4 = load_samples(updated_info['output'] + '.post.test2', to_getdist=True)
+    samps4 = load_samples(updated_info["output"] + ".post.test2", to_getdist=True)
     assert samp2.paramNames.list() == samps4.paramNames.list()
     assert np.isclose(samp2.mean("sigma8"), samps4.mean("sigma8"))
 
     # adding new theory derived
-    info_post['add']['theory'] = {'new_param_theory': BTheory}
+    info_post["add"]["theory"] = {"new_param_theory": BTheory}
     output_info, post_results_derived = run(
-        updated_info, override={'post': info_post}, output=False)
+        updated_info, override={"post": info_post}, output=False
+    )
     samp3 = post_results_derived.samples(to_getdist=True)
     assert np.isclose(samp3.mean("sigma8"), samp2.mean("sigma8"))
     assert np.isclose(samp3.mean("As1000"), samp2.mean("As") * 1000)
 
-    info_post['add']['theory'] = {'new_param_theory': CTheory}
+    info_post["add"]["theory"] = {"new_param_theory": CTheory}
     with pytest.raises(LoggedError) as e, NoLogging(logging.ERROR):
-        run(updated_info, override={'post': info_post}, output=False)
-    assert 'Parameter AsX no known value' in str(e)
+        run(updated_info, override={"post": info_post}, output=False)
+    assert "Parameter AsX no known value" in str(e)

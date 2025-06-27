@@ -50,4 +50,4 @@ from cobaya.yaml import yaml_load
 info = yaml_load(info_txt)
 
 # Add your external packages installation folder
-info['packages_path'] = '/path/to/packages'
+info["packages_path"] = "/path/to/packages"

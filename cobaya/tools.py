@@ -6,41 +6,46 @@
 
 """
 
-# Global
-import os
-import sys
-import platform
-import warnings
 import inspect
-import re
 import numbers
-import pandas as pd
-import numpy as np
-import scipy.stats as stats
-from itertools import chain
-from importlib import import_module
-from copy import deepcopy
-from packaging import version
-from itertools import permutations
-from typing import Mapping, Sequence, Any, List, TypeVar, Optional, Union, Iterable, \
-    Dict, Callable
-from types import ModuleType
-from inspect import cleandoc, getfullargspec
-from ast import parse
+import os
+import platform
+import re
+import sys
+import warnings
 from abc import ABC, abstractmethod
+from ast import parse
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import contextmanager
+from copy import deepcopy
+from importlib import import_module
+from inspect import cleandoc, getfullargspec
+from itertools import chain, permutations
+from types import ModuleType
+from typing import Any, TypeVar
 
-# Local
-from cobaya.conventions import subfolders, kinds, packages_path_config_file, \
-    packages_path_env, packages_path_arg, dump_sort_cosmetic, packages_path_input
-from cobaya.log import LoggedError, HasLogger, get_logger
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+from packaging import version
+
+from cobaya.conventions import (
+    dump_sort_cosmetic,
+    kinds,
+    packages_path_arg,
+    packages_path_config_file,
+    packages_path_env,
+    packages_path_input,
+    subfolders,
+)
+from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.typing import Kind
 
 # Set up logger
 log = get_logger(__name__)
 
 
-def str_to_list(x) -> List:
+def str_to_list(x) -> list:
     """
     Makes sure that the input is a list of strings (could be string).
     """
@@ -81,18 +86,22 @@ def get_internal_class_component_name(name, kind) -> str:
     Gets qualified name of internal component, relative to the package source,
     of a likelihood, theory or sampler.
     """
-    return '.' + subfolders[kind] + '.' + name
+    return "." + subfolders[kind] + "." + name
 
 
-def get_base_classes() -> Dict[Kind, Any]:
+def get_base_classes() -> dict[Kind, Any]:
     """
     Return the base classes for the different kinds.
     """
     from cobaya.likelihood import Likelihood
-    from cobaya.theory import Theory
     from cobaya.sampler import Sampler
-    return {"sampler": Sampler, "likelihood": Likelihood,  # type: ignore
-            "theory": Theory}
+    from cobaya.theory import Theory
+
+    return {
+        "sampler": Sampler,
+        "likelihood": Likelihood,  # type: ignore
+        "theory": Theory,
+    }
 
 
 class PythonPath:
@@ -135,7 +144,8 @@ def check_module_path(module, path):
     if not module_path.startswith(os.path.realpath(os.path.abspath(path))):
         raise ModuleNotFoundError(
             f"Module {module.__name__} successfully loaded, but not from requested path:"
-            f" {path}, but instead from {module_path}")
+            f" {path}, but instead from {module_path}"
+        )
 
 
 class VersionCheckError(ValueError):
@@ -152,16 +162,23 @@ def check_module_version(module: Any, min_version):
     Tries to get the module version and raises :class:`tools.VersionCheckError` if not
     found or older than the specified ``min_version``.
     """
-    if not hasattr(module, "__version__") or \
-            version.parse(module.__version__) < version.parse(min_version):
+    if not hasattr(module, "__version__") or version.parse(
+        module.__version__
+    ) < version.parse(min_version):
         raise VersionCheckError(
-            "Module %s at %s is version %s but the minimum required version is %s." %
-            (module.__name__, os.path.dirname(module.__file__),
-             getattr(module, "__version__", "(non-given)"), min_version))
+            "Module %s at %s is version %s but the minimum required version is %s."
+            % (
+                module.__name__,
+                os.path.dirname(module.__file__),
+                getattr(module, "__version__", "(non-given)"),
+                min_version,
+            )
+        )
 
 
-def load_module(name, package=None, path=None, min_version=None,
-                check_path=False, reload=False) -> ModuleType:
+def load_module(
+    name, package=None, path=None, min_version=None, check_path=False, reload=False
+) -> ModuleType:
     """
     Loads and returns the Python module ``name`` from ``path`` (default: ``None``, meaning
     current working directory) and as part of ``package`` (default: ``None``).
@@ -209,12 +226,13 @@ def get_compiled_import_path(source_path):
         raise FileNotFoundError(f"Source path {source_path} not found.")
     build_path = os.path.join(source_path, "build")
     if not os.path.isdir(build_path):
-        raise FileNotFoundError(f"`build` folder not found for source path {source_path}."
-                                f" Maybe compilation failed?")
+        raise FileNotFoundError(
+            f"`build` folder not found for source path {source_path}."
+            f" Maybe compilation failed?"
+        )
     # Folder starts with `lib.` and ends with either MAJOR.MINOR (standard) or
     # MAJORMINOR (some anaconda versions)
-    re_lib = re.compile(
-        f"^lib\\..*{sys.version_info.major}\\.*{sys.version_info.minor}$")
+    re_lib = re.compile(f"^lib\\..*{sys.version_info.major}\\.*{sys.version_info.minor}$")
     try:
         post = next(d for d in os.listdir(build_path) if re.fullmatch(re_lib, d))
     except StopIteration:
@@ -222,39 +240,51 @@ def get_compiled_import_path(source_path):
             f"No `lib.[...]` folder found containing compiled products at {source_path}. "
             "This may mean that the compilation process failed, of that it was assuming "
             "the wrong python version (current version: "
-            f"{sys.version_info.major}.{sys.version_info.minor})")
+            f"{sys.version_info.major}.{sys.version_info.minor})"
+        )
     return os.path.join(build_path, post)
 
 
-def import_all_classes(path, pkg: str, subclass_of: type, hidden=False, helpers=False,
-                       stem: str = None):
+def import_all_classes(
+    path, pkg: str, subclass_of: type, hidden=False, helpers=False, stem: str = None
+):
     import pkgutil
+
     from cobaya.theory import HelperTheory
+
     result = set()
     if stem:
         stem_root, stem_rest = stem.split(".", 1) if "." in stem else (stem, "")
-        stem_module = pkg + '.' + stem_root
+        stem_module = pkg + "." + stem_root
     else:
-        stem_module = ''
+        stem_module = ""
         stem_rest = None
-    for (module_loader, name, is_pkg) in pkgutil.iter_modules([path]):
-        if hidden or not name.startswith('_'):
-            module_name = pkg + '.' + name
+    for module_loader, name, is_pkg in pkgutil.iter_modules([path]):
+        if hidden or not name.startswith("_"):
+            module_name = pkg + "." + name
             if stem and module_name != stem_module:
                 continue
             m = load_module(module_name)
-            if hidden or not getattr(m, '_is_abstract', False):
+            if hidden or not getattr(m, "_is_abstract", False):
                 for class_name, cls in inspect.getmembers(m, inspect.isclass):
-                    if issubclass(cls, subclass_of) and \
-                            (helpers or not issubclass(cls, HelperTheory)) and \
-                            cls.__module__ == module_name and \
-                            (hidden or not cls.__dict__.get('_is_abstract')):
+                    if (
+                        issubclass(cls, subclass_of)
+                        and (helpers or not issubclass(cls, HelperTheory))
+                        and cls.__module__ == module_name
+                        and (hidden or not cls.__dict__.get("_is_abstract"))
+                    ):
                         result.add(cls)
                 if is_pkg:
-                    result.update(import_all_classes(os.path.dirname(m.__file__),
-                                                     m.__name__, subclass_of,
-                                                     hidden, helpers,
-                                                     stem_rest))
+                    result.update(
+                        import_all_classes(
+                            os.path.dirname(m.__file__),
+                            m.__name__,
+                            subclass_of,
+                            hidden,
+                            helpers,
+                            stem_rest,
+                        )
+                    )
     return result
 
 
@@ -264,40 +294,53 @@ def get_available_internal_classes(kind, hidden=False, stem=None):
     """
 
     from cobaya.component import CobayaComponent
+
     path = os.path.join(os.path.dirname(__file__), subfolders[kind])
-    return import_all_classes(path, 'cobaya.%s' % subfolders[kind], CobayaComponent,
-                              hidden, stem=stem)
+    return import_all_classes(
+        path, "cobaya.%s" % subfolders[kind], CobayaComponent, hidden, stem=stem
+    )
 
 
 def get_all_available_internal_classes(hidden=False, stem=None):
     return set(chain(*(get_available_internal_classes(k, hidden, stem) for k in kinds)))
 
 
-def get_available_internal_class_names(kind=None, hidden=False,
-                                       stem=None) -> Iterable[str]:
-    return sorted(set(cls.get_qualified_class_name() for cls in
-                      (get_available_internal_classes(kind, hidden, stem) if kind
-                       else get_all_available_internal_classes(hidden, stem))))
+def get_available_internal_class_names(
+    kind=None, hidden=False, stem=None
+) -> Iterable[str]:
+    return sorted(
+        {
+            cls.get_qualified_class_name()
+            for cls in (
+                get_available_internal_classes(kind, hidden, stem)
+                if kind
+                else get_all_available_internal_classes(hidden, stem)
+            )
+        }
+    )
 
 
 def replace_optimizations(function_string: str) -> str:
     # make fast version of stats.norm.logpdf for fixed scale and loc
     # can save quite a lot of time evaluating Gaussian priors
-    if 'stats.norm.logpdf' not in function_string:
+    if "stats.norm.logpdf" not in function_string:
         return function_string
     number = r"[+-]?(\d+([.]\d*)?(e[+-]?\d+)?|[.]\d+(e[+-]?\d+)?)"
-    regex = r"stats\.norm\.logpdf\((?P<arg>[^,\)]+)," \
-            r"\s*loc\s*=\s*(?P<loc>%s)\s*," \
-            r"\s*scale\s*=\s*(?P<scale>%s)\s*\)" % (number, number)
+    regex = (
+        r"stats\.norm\.logpdf\((?P<arg>[^,\)]+),"
+        r"\s*loc\s*=\s*(?P<loc>%s)\s*,"
+        r"\s*scale\s*=\s*(?P<scale>%s)\s*\)" % (number, number)
+    )
     p = re.compile(regex)
     match = p.search(function_string)
     if not match:
         return function_string
     span = match.span()
     loc, scale = float(match.group("loc")), float(match.group("scale"))
-    replacement = "(-(%s %+.16g)**2/%.16g %+.16g)" % (
-        match.group("arg"), -loc, 2 * scale ** 2, -np.log(2 * np.pi * scale ** 2) / 2)
-    return function_string[0:span[0]] + replacement + function_string[span[1]:]
+    replacement = "(-({} {:+.16g})**2/{:.16g} {:+.16g})".format(
+        match.group("arg"), -loc, 2 * scale**2, -np.log(2 * np.pi * scale**2) / 2
+    )
+    return function_string[0 : span[0]] + replacement + function_string[span[1] :]
 
 
 def get_external_function(string_or_function, name=None):
@@ -318,22 +361,28 @@ def get_external_function(string_or_function, name=None):
     if isinstance(string_or_function, str):
         try:
             scope = globals()
-            scope['stats'] = stats
-            scope['np'] = np
+            scope["stats"] = stats
+            scope["np"] = np
             string_or_function = replace_optimizations(string_or_function)
             with PythonPath(os.curdir, when="import_module" in string_or_function):
                 function = eval(string_or_function, scope)
         except Exception as e:
             raise LoggedError(
-                log, "Failed to load external function%s: '%r'",
-                " '%s'" % name if name else "", e)
+                log,
+                "Failed to load external function%s: '%r'",
+                " '%s'" % name if name else "",
+                e,
+            )
     else:
         function = string_or_function
     if not callable(function):
         raise LoggedError(
-            log, "The external function provided " +
-                 ("for '%s' " % name if name else "") +
-                 "is not an actual function. Got: '%r'", function)
+            log,
+            "The external function provided "
+            + ("for '%s' " % name if name else "")
+            + "is not an actual function. Got: '%r'",
+            function,
+        )
     return function
 
 
@@ -348,21 +397,25 @@ def recursive_mappings_to_dict(mapping):
         return mapping
 
 
-_Dict = TypeVar('_Dict', bound=Mapping)
+_Dict = TypeVar("_Dict", bound=Mapping)
 
 
-def recursive_update(base: Optional[_Dict], update: _Dict, copied=True) -> _Dict:
+def recursive_update(base: _Dict | None, update: _Dict, copied=True) -> _Dict:
     """
     Recursive dictionary update, from `this stackoverflow question
     <https://stackoverflow.com/questions/3232943>`_.
     Modified for yaml input, where None and {} are almost equivalent
     """
-    updated: dict = (deepcopy_where_possible(base) if copied and base  # type: ignore
-                     else base or {})
+    updated: dict = (
+        deepcopy_where_possible(base)
+        if copied and base  # type: ignore
+        else base or {}
+    )
     for update_key, update_value in (update or {}).items():
         if isinstance(update_value, Mapping):
-            updated[update_key] = recursive_update(updated.get(update_key, {}),
-                                                   update_value, copied=False)
+            updated[update_key] = recursive_update(
+                updated.get(update_key, {}), update_value, copied=False
+            )
         elif update_value is None:
             if update_key not in updated:
                 updated[update_key] = {}
@@ -401,7 +454,7 @@ def ensure_nolatex(string):
 
 
 class NumberWithUnits:
-    unit: Optional[str]
+    unit: str | None
 
     def __init__(self, n_with_unit: Any, unit: str, dtype=float, scale=None):
         """
@@ -414,12 +467,12 @@ class NumberWithUnits:
         :param dtype: type for number
         :param scale: multiple to apply for the unit
         """
-        self.value: Union[int, float] = np.nan
+        self.value: int | float = np.nan
 
         def cast(x):
             try:
                 val = float(x)
-                if dtype == int and np.isfinite(val):
+                if dtype is int and np.isfinite(val):
                     # in case ints are given in exponential notation, make int(float())
                     if val == 0:
                         return val
@@ -428,9 +481,7 @@ class NumberWithUnits:
                 return val
             except ValueError as excpt:
                 raise LoggedError(
-                    log,
-                    "Could not convert '%r' to a number.",
-                    x
+                    log, "Could not convert '%r' to a number.", x
                 ) from excpt
 
         if isinstance(n_with_unit, str):
@@ -441,10 +492,11 @@ class NumberWithUnits:
                 if n_with_unit == unit:
                     self.unit_value = dtype(1)
                 else:
-                    self.unit_value = cast(n_with_unit[:-len(unit)])
+                    self.unit_value = cast(n_with_unit[: -len(unit)])
             else:
-                raise LoggedError(log, "string '%r' does not have expected unit %s.",
-                                  n_with_unit, unit)
+                raise LoggedError(
+                    log, "string '%r' does not have expected unit %s.", n_with_unit, unit
+                )
         else:
             self.unit = None
             self.unit_value = cast(n_with_unit)
@@ -488,24 +540,29 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
 
     Can skip any number of first lines, and thin with some factor.
     """
-    with open(file_name, "r", encoding="utf-8-sig") as inp:
+    with open(file_name, encoding="utf-8-sig") as inp:
         top_line = inp.readline().strip()
-        if not top_line.startswith('#'):
+        if not top_line.startswith("#"):
             # try getdist format chains with .paramnames file
-            if root_file_name and os.path.exists(root_file_name + '.paramnames'):
+            if root_file_name and os.path.exists(root_file_name + ".paramnames"):
                 from getdist import ParamNames
+
                 from cobaya.conventions import OutPar, derived_par_name_separator
-                names = ParamNames(root_file_name + '.paramnames').list()
+
+                names = ParamNames(root_file_name + ".paramnames").list()
                 for i, name in enumerate(names):
-                    if name.startswith(OutPar.chi2 + '_') and not name.startswith(
-                            OutPar.chi2 + derived_par_name_separator):
-                        names[i] = name.replace(OutPar.chi2 + '_',
-                                                OutPar.chi2 + derived_par_name_separator)
-                cols = ['weight', 'minuslogpost'] + names
+                    if name.startswith(OutPar.chi2 + "_") and not name.startswith(
+                        OutPar.chi2 + derived_par_name_separator
+                    ):
+                        names[i] = name.replace(
+                            OutPar.chi2 + "_", OutPar.chi2 + derived_par_name_separator
+                        )
+                cols = ["weight", "minuslogpost"] + names
                 inp.seek(0)
             else:
-                raise LoggedError(log, "Input sample file does not have header: %s",
-                                  file_name)
+                raise LoggedError(
+                    log, "Input sample file does not have header: %s", file_name
+                )
         else:
             cols = [a.strip() for a in top_line.lstrip("#").split()]
         if 0 < skip < 1:
@@ -514,8 +571,15 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
             skip = int(round(skip * n)) + 1  # match getdist
             inp.seek(0)
         data = pd.read_csv(
-            inp, sep=" ", header=None, names=cols, comment="#", skipinitialspace=True,
-            skiprows=skip, index_col=False)
+            inp,
+            sep=" ",
+            header=None,
+            names=cols,
+            comment="#",
+            skipinitialspace=True,
+            skiprows=skip,
+            index_col=False,
+        )
 
     if not data.empty:
         # Check if the last row contains any NaNs
@@ -532,8 +596,10 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
 
 def prepare_comment(comment):
     """Prepares a string (maybe containing multiple lines) to be written as a comment."""
-    return "\n".join(
-        ["# " + line.lstrip("#") for line in comment.split("\n") if line]) + "\n"
+    return (
+        "\n".join(["# " + line.lstrip("#") for line in comment.split("\n") if line])
+        + "\n"
+    )
 
 
 def is_valid_variable_name(name):
@@ -544,8 +610,9 @@ def is_valid_variable_name(name):
         return False
 
 
-def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
-                     ) -> stats.distributions.rv_frozen:
+def get_scipy_1d_pdf(
+    definition: float | Sequence | dict,
+) -> stats.distributions.rv_frozen:
     """
     Generates a 1d prior from scipy's pdf's using the given arguments.
 
@@ -575,10 +642,13 @@ def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
     # If list of 2 numbers, it's a uniform prior; if a single number, a delta prior
     if isinstance(definition, numbers.Real):
         kwargs = {"dist": "uniform", "loc": definition, "scale": 0}
-    elif isinstance(definition, Sequence) and len(definition) == 2 and \
-            all(isinstance(n, numbers.Real) for n in definition):
+    elif (
+        isinstance(definition, Sequence)
+        and len(definition) == 2
+        and all(isinstance(n, numbers.Real) for n in definition)
+    ):
         kwargs = {"dist": "uniform", "min": definition[0], "max": definition[1]}
-    elif isinstance(definition, Dict):
+    elif isinstance(definition, dict):
         kwargs = deepcopy(definition)
     else:
         raise ValueError(
@@ -605,8 +675,8 @@ def get_scipy_1d_pdf(definition: Union[float, Sequence, Dict]
         kwargs["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
     if kwargs.get("scale", 1) < 0:
         raise ValueError(
-            "Invalid negative range or scale. "
-            f"Prior definition was {definition}.")
+            f"Invalid negative range or scale. Prior definition was {definition}."
+        )
     # Check for improper priors
     if not np.all(np.isfinite([kwargs.get("loc", 0), kwargs.get("scale", 1)])):
         raise ValueError("Improper prior: infinite/undefined range or scale.")
@@ -647,13 +717,18 @@ def _KL_norm(m1, S1, m2, S2):
     """Performs the Gaussian KL computation, without input testing."""
     dim = S1.shape[0]
     S2inv = np.linalg.inv(S2)
-    return 0.5 * (np.trace(S2inv.dot(S1)) + (m1 - m2).dot(S2inv).dot(m1 - m2) -
-                  dim + np.linalg.slogdet(S2)[1] - np.linalg.slogdet(S1)[1])
+    return 0.5 * (
+        np.trace(S2inv.dot(S1))
+        + (m1 - m2).dot(S2inv).dot(m1 - m2)
+        - dim
+        + np.linalg.slogdet(S2)[1]
+        - np.linalg.slogdet(S1)[1]
+    )
 
 
 def KL_norm(m1=None, S1=(), m2=None, S2=(), symmetric=False):
     """Kullback-Leibler divergence between 2 gaussians."""
-    S1, S2 = [np.atleast_2d(S) for S in [S1, S2]]
+    S1, S2 = (np.atleast_2d(S) for S in [S1, S2])
     assert S1.shape[0], "Must give at least S1"
     dim = S1.shape[0]
     if m1 is None:
@@ -712,15 +787,15 @@ def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     names = {"A": name_A, "B": name_B}
     # Duplicates
     list_A_copy, list_B_copy = list_A[:], list_B[:]
-    for n, l in zip(names, [list_A_copy, list_B_copy]):
-        [l.pop(i) for i in sorted([l.index(x) for x in set(l)])[::-1]]
-        if l:
-            result["duplicate_%s" % n] = list(set(l))
+    for n, lst in zip(names, [list_A_copy, list_B_copy]):
+        [lst.pop(i) for i in sorted([lst.index(x) for x in set(lst)])[::-1]]
+        if lst:
+            result["duplicate_%s" % n] = list(set(lst))
     sets = {"A": set(list_A), "B": set(list_B)}
     for n1, n2 in [["A", "B"], ["B", "A"]]:
         missing = sets[n1].difference(sets[n2])
         if missing:
-            result["%s_but_not_%s" % (names[n1], names[n2])] = list(missing)
+            result[f"{names[n1]}_but_not_{names[n2]}"] = list(missing)
     return result
 
 
@@ -744,6 +819,7 @@ def warn_deprecation_version(logger=None):
     (e.g. with ``python -m pip install cobaya --upgrade``).
     """
     from cobaya import __obsolete__
+
     if __obsolete__:
         for line in create_banner(msg).split("\n"):
             getattr(logger, "warning", (lambda x: print("*WARNING*", x)))(line)
@@ -756,8 +832,9 @@ def warn_deprecation(logger=None):
 def progress_bar(logger, percentage, final_text=""):
     """Very simple, multiline, logger-compatible progress bar, with increments of 5%."""
     progress = int(percentage / 5)
-    logger.info(" |%s| %3d%% %s",
-                "@" * progress + "-" * (20 - progress), percentage, final_text)
+    logger.info(
+        " |%s| %3d%% %s", "@" * progress + "-" * (20 - progress), percentage, final_text
+    )
 
 
 def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
@@ -769,8 +846,15 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
         # Suppress message about optional dependency
         from fuzzywuzzy import process as fuzzy_process
     try:
-        return list(zip(*(fuzzy_process.extractBests(
-            input_string, choices, score_cutoff=score_cutoff))))[0][:n]
+        return list(
+            zip(
+                *(
+                    fuzzy_process.extractBests(
+                        input_string, choices, score_cutoff=score_cutoff
+                    )
+                )
+            )
+        )[0][:n]
     except IndexError:
         return []
 
@@ -787,12 +871,15 @@ def similar_internal_class_names(name, kind=None):
     if kind is None:
         suggestions = {
             kind: fuzzy_match(name, get_available_internal_class_names(kind), n=3)
-            for kind in kinds}
+            for kind in kinds
+        }
         # Further trim the set by pooling them all and selecting again.
         all_names = list(chain(*suggestions.values()))
         best_names = fuzzy_match(name, all_names, n=3)
-        suggestions = {kind: [n for n in names if n in best_names]
-                       for kind, names in suggestions.items()}
+        suggestions = {
+            kind: [n for n in names if n in best_names]
+            for kind, names in suggestions.items()
+        }
         return {kind: sugg for kind, sugg in suggestions.items() if sugg}
     else:
         return fuzzy_match(name, get_available_internal_class_names(kind), n=3)
@@ -800,13 +887,16 @@ def similar_internal_class_names(name, kind=None):
 
 def has_non_yaml_reproducible(info):
     for value in info.values():
-        if callable(value) or \
-                isinstance(value, Mapping) and has_non_yaml_reproducible(value):
+        if (
+            callable(value)
+            or isinstance(value, Mapping)
+            and has_non_yaml_reproducible(value)
+        ):
             return True
     return False
 
 
-_R = TypeVar('_R')
+_R = TypeVar("_R")
 
 
 def deepcopy_where_possible(base: _R) -> _R:
@@ -838,14 +928,17 @@ def deepcopy_where_possible(base: _R) -> _R:
             return base
 
 
-def get_class_methods(cls, not_base=None, start='get_', excludes=(), first='self'):
+def get_class_methods(cls, not_base=None, start="get_", excludes=(), first="self"):
     methods = {}
     for k, v in inspect.getmembers(cls):
-        if k.startswith(start) and k not in excludes and \
-                (not_base is None or not hasattr(not_base, k)) and \
-                getfullargspec(v).args[:1] == [first] and \
-                not getattr(v, '_is_abstract', None):
-            methods[k[len(start):]] = v
+        if (
+            k.startswith(start)
+            and k not in excludes
+            and (not_base is None or not hasattr(not_base, k))
+            and getfullargspec(v).args[:1] == [first]
+            and not getattr(v, "_is_abstract", None)
+        ):
+            methods[k[len(start) :]] = v
     return methods
 
 
@@ -853,7 +946,7 @@ def get_properties(cls):
     return [k for k, v in inspect.getmembers(cls) if isinstance(v, property)]
 
 
-def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
+def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.0):
     """
     Find optimal ordering, such that one minimises the time it takes to vary every
     parameter, one by one, in a basis in which they are mixed-down (i.e after a
@@ -878,19 +971,28 @@ def sort_parameter_blocks(blocks, speeds, footprints, oversample_power=0.):
 
     if oversample_power >= 1:
         optimal_ordering, _, _ = sort_parameter_blocks(
-            blocks, speeds, footprints, oversample_power=1 - 1e-3)
+            blocks, speeds, footprints, oversample_power=1 - 1e-3
+        )
         orderings = [optimal_ordering]
     else:
         orderings = list(permutations(np.arange(len(n_params_per_block))))
     permuted_costs_per_param_per_block = np.array(
-        [get_cost_per_param_per_block(list(o)) for o in orderings])
+        [get_cost_per_param_per_block(list(o)) for o in orderings]
+    )
     permuted_oversample_factors = np.array(
-        [((this_cost[0] / this_cost) ** oversample_power)
-         for this_cost in permuted_costs_per_param_per_block])
+        [
+            ((this_cost[0] / this_cost) ** oversample_power)
+            for this_cost in permuted_costs_per_param_per_block
+        ]
+    )
     total_costs = np.array(
-        [(n_params_per_block[list(o)] * permuted_oversample_factors[i])
-         .dot(permuted_costs_per_param_per_block[i])
-         for i, o in enumerate(orderings)])
+        [
+            (n_params_per_block[list(o)] * permuted_oversample_factors[i]).dot(
+                permuted_costs_per_param_per_block[i]
+            )
+            for i, o in enumerate(orderings)
+        ]
+    )
     i_optimal: int = np.argmin(total_costs)  # type: ignore
     optimal_ordering = orderings[i_optimal]
     costs = permuted_costs_per_param_per_block[i_optimal]
@@ -917,8 +1019,11 @@ def find_with_regexp(regexp, root, walk_tree=False):
             files = [(root, f) for f in os.listdir(root)]
     except FileNotFoundError:
         files = []
-    return [os.path.join(path, f2) for path, f2 in files
-            if f2 == getattr(regexp.match(f2), "group", lambda: None)()]
+    return [
+        os.path.join(path, f2)
+        for path, f2 in files
+        if f2 == getattr(regexp.match(f2), "group", lambda: None)()
+    ]
 
 
 def get_translated_params(params_info, params_list):
@@ -950,8 +1055,9 @@ def get_cache_path():
         base = os.environ.get("CSIDL_LOCAL_APPDATA", os.environ.get("TMP")) or ""
         cache_path = os.path.join(base, "cobaya/Cache")
     elif platform.system() == "Linux":
-        base = os.environ.get("XDG_CACHE_HOME",
-                              os.path.join(os.environ["HOME"], ".cache"))
+        base = os.environ.get(
+            "XDG_CACHE_HOME", os.path.join(os.environ["HOME"], ".cache")
+        )
         cache_path = os.path.join(base, "cobaya")
     elif platform.system() == "Darwin":
         base = os.path.join(os.environ["HOME"], "Library/Caches")
@@ -964,7 +1070,8 @@ def get_cache_path():
             os.makedirs(cache_path)
     except Exception as e:
         raise LoggedError(
-            log, "Could not create cache folder %r. Reason: %r", cache_path, str(e))
+            log, "Could not create cache folder %r. Reason: %r", cache_path, str(e)
+        )
     return cache_path
 
 
@@ -980,8 +1087,9 @@ def get_config_path():
                 raise ValueError("Application folder not defined.")
             config_path = os.path.join(base, "cobaya")
         elif platform.system() == "Linux":
-            base = os.environ.get("XDG_CONFIG_HOME",
-                                  os.path.join(os.environ["HOME"], ".config"))
+            base = os.environ.get(
+                "XDG_CONFIG_HOME", os.path.join(os.environ["HOME"], ".config")
+            )
             config_path = os.path.join(base, "cobaya")
         elif platform.system() == "Darwin":
             base = os.path.join(os.environ["HOME"], "Library/Application Support")
@@ -992,7 +1100,8 @@ def get_config_path():
             os.makedirs(config_path)
     except Exception as e:
         raise LoggedError(
-            log, "Could not get config folder %r. Reason: %r", config_path, str(e))
+            log, "Could not get config folder %r. Reason: %r", config_path, str(e)
+        )
     return config_path
 
 
@@ -1002,9 +1111,12 @@ def load_config_file():
     """
     # Just-in-time import to avoid recursion
     from cobaya.yaml import yaml_load_file
+
     try:
-        return yaml_load_file(
-            os.path.join(get_config_path(), packages_path_config_file)) or {}
+        return (
+            yaml_load_file(os.path.join(get_config_path(), packages_path_config_file))
+            or {}
+        )
     except:
         return {}
 
@@ -1015,16 +1127,23 @@ def write_config_file(config_info, append=True):
     """
     # Just-in-time import to avoid recursion
     from cobaya.yaml import yaml_dump_file
+
     try:
         info = {}
         if append:
             info.update(load_config_file())
         info.update(config_info)
-        yaml_dump_file(os.path.join(get_config_path(), packages_path_config_file),
-                       info, error_if_exists=False)
+        yaml_dump_file(
+            os.path.join(get_config_path(), packages_path_config_file),
+            info,
+            error_if_exists=False,
+        )
     except Exception as e:
-        log.error("Could not write the external packages' installation path into the "
-                  "config file. Reason: %r", str(e))
+        log.error(
+            "Could not write the external packages' installation path into the "
+            "config file. Reason: %r",
+            str(e),
+        )
 
 
 def load_packages_path_from_config_file():
@@ -1046,40 +1165,44 @@ def write_packages_path_in_config_file(packages_path):
 
 def resolve_packages_path(infos=None):
     # noinspection PyStatementEffect
-    """
+    f"""
     Gets the external packages' installation path given some infos.
     If more than one occurrence of the external packages path in the infos,
     raises an error.
 
     If there is no external packages' path defined in the given infos,
-    defaults to the env variable `%s`, and in its absence to that stored
+    defaults to the env variable `{packages_path_env}`, and in its absence to that stored
     in the config file.
 
     If no path at all could be found, returns `None`.
-    """ % packages_path_env
+    """
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
         infos = [infos]
-    paths = set(os.path.realpath(p) for p in
-                [info.get(packages_path_input) for info in infos] if p)
+    paths = {
+        os.path.realpath(p)
+        for p in [info.get(packages_path_input) for info in infos]
+        if p
+    }
     if len(paths) == 1:
         return list(paths)[0]
     elif len(paths) > 1:
         raise LoggedError(
-            log, "More than one packages installation path defined in the given infos. "
-                 "Cannot resolve a unique one to use. "
-                 "Maybe specify one via a command line argument '-%s [...]'?",
-            packages_path_arg[0])
+            log,
+            "More than one packages installation path defined in the given infos. "
+            "Cannot resolve a unique one to use. "
+            "Maybe specify one via a command line argument '-%s [...]'?",
+            packages_path_arg[0],
+        )
     return os.environ.get(packages_path_env) or load_packages_path_from_config_file()
 
 
 def sort_cosmetic(info):
-    # noinspection PyStatementEffect
+    f"""
+    Returns a sorted version of the given info dict, re-ordered as {dump_sort_cosmetic!r},
+    and finally the rest of the blocks/options.
     """
-    Returns a sorted version of the given info dict, re-ordered as %r, and finally the
-    rest of the blocks/options.
-    """ % dump_sort_cosmetic
     sorted_info = dict()
     for k in dump_sort_cosmetic:
         if k in info:
@@ -1119,14 +1242,24 @@ class PoolND(ABC):
 
     values: np.ndarray
 
-    def __init__(self, values=(),
-                 rtol_min=1e-5, rtol_max=1e-3, atol_min=1e-8, atol_max=1e-6, logger=None):
-        assert values is not None and len(values) != 0, \
+    def __init__(
+        self,
+        values=(),
+        rtol_min=1e-5,
+        rtol_max=1e-3,
+        atol_min=1e-8,
+        atol_max=1e-6,
+        logger=None,
+    ):
+        assert values is not None and len(values) != 0, (
             "Pool needs to be initialised with at least one value."
-        assert rtol_min <= rtol_max, \
+        )
+        assert rtol_min <= rtol_max, (
             f"rtol_min={rtol_min} must be smaller or equal to rtol_max={rtol_max}"
-        assert atol_min <= atol_max, \
+        )
+        assert atol_min <= atol_max, (
             f"atol_min={atol_min} must be smaller or equal to ato_max={atol_max}"
+        )
         self.atol_min, self.atol_max = atol_min, atol_max
         self.rtol_min, self.rtol_max = rtol_min, rtol_max
         if logger is None:
@@ -1210,12 +1343,14 @@ class PoolND(ABC):
             #       and iterate only over the part of the pool starting where the last
             #       value was found. But since running rapid test first, prob not needed.
             indices_i_prev_not_found = np.concatenate(
-                [self._pick_at_most_one(x, None, None) for x in values[i_not_found]])
+                [self._pick_at_most_one(x, None, None) for x in values[i_not_found]]
+            )
             if len(indices_i_prev_not_found) < len(i_not_found):
                 raise ValueError(
                     f"Could not find some of {list(values)} in pool {list(self.values)}. "
                     "If there appear to be a values close to the values in the pool,"
-                    " increase max tolerances.")
+                    " increase max tolerances."
+                )
             indices[i_not_found] = indices_i_prev_not_found
         return indices
 
@@ -1300,12 +1435,18 @@ class Pool1D(PoolND):
 
     def _fast_find_indices(self, values):
         i_insert_left = np.clip(
-            np.searchsorted(self.values, values), a_min=None, a_max=len(self) - 1)
+            np.searchsorted(self.values, values), a_min=None, a_max=len(self) - 1
+        )
         return np.where(
             self._cond_isclose(
-                self.values[i_insert_left], values, rtol=self._adapt_rtol_min,
-                atol=self._adapt_atol_min),
-            i_insert_left, -1)
+                self.values[i_insert_left],
+                values,
+                rtol=self._adapt_rtol_min,
+                atol=self._adapt_atol_min,
+            ),
+            i_insert_left,
+            -1,
+        )
 
     def _cond_isclose(self, pool, x, rtol, atol):
         return np.isclose(pool, x, rtol=rtol, atol=atol)
@@ -1336,8 +1477,16 @@ def check_2d(pairs, allow_1d=True):
             pairs = np.atleast_2d(pairs)
         elif len(pairs) > 2:  # list -> generate combinations
             if allow_1d:
-                pairs = np.array(list(chain(*[[[x_i, x_j] for x_j in pairs[i + 1:]]
-                                              for i, x_i in enumerate(pairs)])))
+                pairs = np.array(
+                    list(
+                        chain(
+                            *[
+                                [[x_i, x_j] for x_j in pairs[i + 1 :]]
+                                for i, x_i in enumerate(pairs)
+                            ]
+                        )
+                    )
+                )
             else:
                 raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
     elif (len(pairs.shape) == 2 and pairs.shape[1] != 2) or len(pairs.shape) != 2:
@@ -1387,21 +1536,30 @@ class Pool2D(PoolND):
 
     def _fast_find_indices(self, values):
         # first, locate 1st component
-        i_insert_left = np.clip(np.searchsorted(self.values[:, 0], values[:, 0]),
-                                a_min=None, a_max=len(self) - 1)
+        i_insert_left = np.clip(
+            np.searchsorted(self.values[:, 0], values[:, 0]),
+            a_min=None,
+            a_max=len(self) - 1,
+        )
         # we do not need to clip the "right" index, because we will use it as an endpoint
         # for a slice, which is safe
         i_insert_right = np.searchsorted(self.values[:, 0], values[:, 0], side="right")
         slices = np.array([i_insert_left, i_insert_right]).T
         i_maybe_found = [
-            slices[i][0] + np.searchsorted(
-                self.values[slices[i][0]:slices[i][1], 1], values[i][1])
-            for i in range(len(values))]
+            slices[i][0]
+            + np.searchsorted(self.values[slices[i][0] : slices[i][1], 1], values[i][1])
+            for i in range(len(values))
+        ]
         return np.where(
             self._cond_isclose(
-                self.values[i_maybe_found], values, rtol=self._adapt_rtol_min,
-                atol=self._adapt_atol_min),
-            i_maybe_found, -1)
+                self.values[i_maybe_found],
+                values,
+                rtol=self._adapt_rtol_min,
+                atol=self._adapt_atol_min,
+            ),
+            i_maybe_found,
+            -1,
+        )
 
     def _cond_isclose(self, pool, x, rtol, atol):
         return np.all(np.isclose(pool, x, rtol=rtol, atol=atol), axis=-1)

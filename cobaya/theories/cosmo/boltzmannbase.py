@@ -6,16 +6,17 @@
 :Author: Jesus Torrado
 
 """
+
+from collections.abc import Iterable, Mapping
+
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
-from typing import Mapping, Iterable
 
-# Local
-from cobaya.theory import Theory
-from cobaya.tools import deepcopy_where_possible, combine_1d, combine_2d, check_2d
-from cobaya.log import LoggedError, abstract, get_logger
 from cobaya.conventions import Const
-from cobaya.typing import empty_dict, InfoDict
+from cobaya.log import LoggedError, abstract, get_logger
+from cobaya.theory import Theory
+from cobaya.tools import check_2d, combine_1d, combine_2d, deepcopy_where_possible
+from cobaya.typing import InfoDict, empty_dict
 
 H_units_conv_factor = {"1/Mpc": 1, "km/s/Mpc": Const.c_km_s}
 
@@ -28,7 +29,6 @@ class BoltzmannBase(Theory):
     path: str
 
     def initialize(self):
-
         # Dict of named tuples to collect requirements and computation methods
         self.collectors = {}
         # Additional input parameters (e.g. to pass to setter function, to set as attr...)
@@ -57,25 +57,30 @@ class BoltzmannBase(Theory):
         # Empty list: default to *total matter*: CMB + Baryon + MassiveNu
         vars_pairs = vars_pairs or [2 * ["delta_tot"]]
         if not isinstance(vars_pairs, Iterable):
-            raise LoggedError(self.log, "vars_pairs must be an iterable of pairs "
-                                        "of variable names: got '%r' for %s",
-                              vars_pairs, name)
+            raise LoggedError(
+                self.log,
+                "vars_pairs must be an iterable of pairs "
+                "of variable names: got '%r' for %s",
+                vars_pairs,
+                name,
+            )
         if isinstance(list(vars_pairs)[0], str):
             vars_pairs = [vars_pairs]
         pairs = set()
         for pair in vars_pairs:
             if len(list(pair)) != 2 or not all(isinstance(x, str) for x in pair):
-                raise LoggedError(self.log,
-                                  "Cannot understand vars_pairs '%r' for %s",
-                                  vars_pairs, name)
+                raise LoggedError(
+                    self.log, "Cannot understand vars_pairs '%r' for %s", vars_pairs, name
+                )
             pairs.add(tuple(sorted(pair)))
         return pairs
 
     def _check_args(self, req, value, vals):
         for par in vals:
             if par not in value:
-                raise LoggedError(self.log, "%s must specify %s in requirements",
-                                  req, par)
+                raise LoggedError(
+                    self.log, "%s must specify %s in requirements", req, par
+                )
 
     def must_provide(self, **requirements):
         r"""
@@ -165,20 +170,23 @@ class BoltzmannBase(Theory):
                 v = {cl.lower(): v[cl] for cl in v}  # to lowercase
                 self._must_provide[k] = {
                     cl.lower(): max(current.get(cl.lower(), 0), v.get(cl, 0))
-                    for cl in set(current).union(v)}
-            elif k == 'sigma_R':
-                self._check_args(k, v, ('z', 'R'))
+                    for cl in set(current).union(v)
+                }
+            elif k == "sigma_R":
+                self._check_args(k, v, ("z", "R"))
                 for pair in self._norm_vars_pairs(v.pop("vars_pairs", []), k):
                     k = ("sigma_R",) + pair
                     current = self._must_provide.get(k, {})
                     self._must_provide[k] = {
                         "R": combine_1d(v["R"], current.get("R")),
                         "z": combine_1d(v["z"], current.get("z")),
-                        "k_max": max(current.get("k_max", 0),
-                                     v.get("k_max", 2 / np.min(v["R"])))}
+                        "k_max": max(
+                            current.get("k_max", 0), v.get("k_max", 2 / np.min(v["R"]))
+                        ),
+                    }
             elif k in ("Pk_interpolator", "Pk_grid"):
                 # arguments are all identical, collect all in Pk_grid
-                self._check_args(k, v, ('z', 'k_max'))
+                self._check_args(k, v, ("z", "k_max"))
                 redshifts = v.pop("z")
                 k_max = v.pop("k_max")
                 nonlin = v.pop("nonlinear", True)
@@ -191,14 +199,18 @@ class BoltzmannBase(Theory):
                         self._must_provide[k] = dict(
                             nonlinear=nonlinear,
                             z=combine_1d(redshifts, current.get("z")),
-                            k_max=max(current.get("k_max", 0), k_max), **v)
+                            k_max=max(current.get("k_max", 0), k_max),
+                            **v,
+                        )
             elif k == "source_Cl":
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
                 if "sources" not in v:
                     raise LoggedError(
-                        self.log, "Needs a 'sources' key, containing a dict with every "
-                                  "source name and definition")
+                        self.log,
+                        "Needs a 'sources' key, containing a dict with every "
+                        "source name and definition",
+                    )
                 # Check that no two sources with equal name but diff specification
                 # for source, window in v["sources"].items():
                 #     if source in (getattr(self, "sources", {}) or {}):
@@ -210,9 +222,16 @@ class BoltzmannBase(Theory):
                 #                 "Source %r requested twice with different specification"
                 #                 ": %r vs %r.", source, window, self.sources[source])
                 self._must_provide[k].update(v)
-            elif k in {"Hubble", "Omega_b", "Omega_cdm", "Omega_nu_massive",
-                       "angular_diameter_distance", "comoving_radial_distance",
-                       "sigma8_z", "fsigma8"}:
+            elif k in {
+                "Hubble",
+                "Omega_b",
+                "Omega_cdm",
+                "Omega_nu_massive",
+                "angular_diameter_distance",
+                "comoving_radial_distance",
+                "sigma8_z",
+                "fsigma8",
+            }:
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
                 if not isinstance(v, Mapping) or "z" not in v:
@@ -220,10 +239,11 @@ class BoltzmannBase(Theory):
                         self.log,
                         f"The value in the dictionary of requisites {k} must be a "
                         "dictionary containing the key 'z' with a list of redshifts "
-                        f"(got instead {{{k}: {v}}})"
+                        f"(got instead {{{k}: {v}}})",
                     )
                 self._must_provide[k]["z"] = combine_1d(
-                    v["z"], self._must_provide[k].get("z"))
+                    v["z"], self._must_provide[k].get("z")
+                )
             elif k == "angular_diameter_distance_2":
                 if k not in self._must_provide:
                     self._must_provide[k] = {}
@@ -231,12 +251,15 @@ class BoltzmannBase(Theory):
                 # Combine pairs with previous ones and uniquify
                 try:
                     self._must_provide[k]["z_pairs"] = combine_2d(
-                        zs, self._must_provide[k].get("z_pairs"))
+                        zs, self._must_provide[k].get("z_pairs")
+                    )
                 except ValueError:
                     raise LoggedError(
-                        self.log, "For requisite `angular_diameter_distance2`, `z_pairs` "
-                                  "must be a list of pairs (z1, z2), but is "
-                                  f"{v['z_pairs']}")
+                        self.log,
+                        "For requisite `angular_diameter_distance2`, `z_pairs` "
+                        "must be a list of pairs (z1, z2), but is "
+                        f"{v['z_pairs']}",
+                    )
             # Extra derived parameters and other unknown stuff (keep capitalization)
             elif v is None:
                 self._must_provide[k] = None
@@ -257,9 +280,12 @@ class BoltzmannBase(Theory):
         """
         if common := set(self.input_params).intersection(self.extra_args):
             raise LoggedError(
-                self.log, "The following parameters appear both as input parameters and "
-                          "as extra arguments: %s. Please, remove one of the definitions "
-                          "of each.", common)
+                self.log,
+                "The following parameters appear both as input parameters and "
+                "as extra arguments: %s. Please, remove one of the definitions "
+                "of each.",
+                common,
+            )
 
     def _get_z_dependent(self, quantity, z, pool=None):
         if pool is None:
@@ -267,9 +293,12 @@ class BoltzmannBase(Theory):
         try:
             i_kwarg_z = pool.find_indices(z)
         except ValueError:
-            raise LoggedError(self.log, f"{quantity} not computed for all z requested. "
-                                        f"Requested z are {z}, but computed ones are "
-                                        f"{pool.values}.")
+            raise LoggedError(
+                self.log,
+                f"{quantity} not computed for all z requested. "
+                f"Requested z are {z}, but computed ones are "
+                f"{pool.values}.",
+            )
         return np.array(self.current_state[quantity], copy=True)[i_kwarg_z]
 
     def _get_z_pair_dependent(self, quantity, z_pairs, inv_value=0):
@@ -279,35 +308,45 @@ class BoltzmannBase(Theory):
         try:
             check_2d(z_pairs, allow_1d=False)
         except ValueError:
-            raise LoggedError(self.log, f"z_pairs={z_pairs} not correctly formatted for "
-                                        f"{quantity}. It should be a list of pairs.")
+            raise LoggedError(
+                self.log,
+                f"z_pairs={z_pairs} not correctly formatted for "
+                f"{quantity}. It should be a list of pairs.",
+            )
         # Only recover for correctly sorted pairs
         z_pairs_arr = np.array(z_pairs)
-        i_right = (z_pairs_arr[:, 0] <= z_pairs_arr[:, 1])
+        i_right = z_pairs_arr[:, 0] <= z_pairs_arr[:, 1]
         pool = self.collectors[quantity].z_pool
         try:
             i_z_pair = pool.find_indices(z_pairs_arr[i_right])
         except ValueError:
             raise LoggedError(
-                self.log, f"{quantity} not computed for all z pairs requested. "
-                          f"Requested z are {z_pairs}, but computed ones are "
-                          f"{pool.values}.")
+                self.log,
+                f"{quantity} not computed for all z pairs requested. "
+                f"Requested z are {z_pairs}, but computed ones are "
+                f"{pool.values}.",
+            )
         result = np.full(len(z_pairs), inv_value, dtype=float)
         result[i_right] = np.array(self.current_state[quantity], copy=True)[i_z_pair]
         return result
 
     def _cmb_unit_factor(self, units, T_cmb):
-        units_factors = {"1": 1,
-                         "muK2": T_cmb * 1.e6,
-                         "K2": T_cmb,
-                         "FIRASmuK2": 2.7255e6,
-                         "FIRASK2": 2.7255
-                         }
+        units_factors = {
+            "1": 1,
+            "muK2": T_cmb * 1.0e6,
+            "K2": T_cmb,
+            "FIRASmuK2": 2.7255e6,
+            "FIRASK2": 2.7255,
+        }
         try:
             return units_factors[units]
         except KeyError:
-            raise LoggedError(self.log, "Units '%s' not recognized. Use one of %s.",
-                              units, list(units_factors))
+            raise LoggedError(
+                self.log,
+                "Units '%s' not recognized. Use one of %s.",
+                units,
+                list(units_factors),
+            )
 
     @abstract
     def get_Cl(self, ell_factor=False, units="FIRASmuK2"):
@@ -364,8 +403,11 @@ class BoltzmannBase(Theory):
             return self._get_z_dependent("Hubble", z) * H_units_conv_factor[units]
         except KeyError:
             raise LoggedError(
-                self.log, "Units not known for H: '%s'. Try instead one of %r.",
-                units, list(H_units_conv_factor))
+                self.log,
+                "Units not known for H: '%s'. Try instead one of %r.",
+                units,
+                list(H_units_conv_factor),
+            )
 
     def get_Omega_b(self, z):
         r"""
@@ -415,7 +457,8 @@ class BoltzmannBase(Theory):
         Return zero for pairs in which ``z1 > z2``.
         """
         return self._get_z_pair_dependent(
-            "angular_diameter_distance_2", z_pairs, inv_value=0)
+            "angular_diameter_distance_2", z_pairs, inv_value=0
+        )
 
     def get_comoving_radial_distance(self, z):
         r"""
@@ -427,8 +470,13 @@ class BoltzmannBase(Theory):
         """
         return self._get_z_dependent("comoving_radial_distance", z)
 
-    def get_Pk_interpolator(self, var_pair=("delta_tot", "delta_tot"), nonlinear=True,
-                            extrap_kmin=None, extrap_kmax=None):
+    def get_Pk_interpolator(
+        self,
+        var_pair=("delta_tot", "delta_tot"),
+        nonlinear=True,
+        extrap_kmin=None,
+        extrap_kmax=None,
+    ):
         r"""
         Get a :math:`P(z,k)` bicubic interpolation object
         (:class:`PowerSpectrumInterpolator`).
@@ -446,8 +494,9 @@ class BoltzmannBase(Theory):
         :return: :class:`PowerSpectrumInterpolator` instance.
         """
         nonlinear = bool(nonlinear)
-        key = (("Pk_interpolator", nonlinear, extrap_kmin, extrap_kmax) +
-               tuple(sorted(var_pair)))
+        key = ("Pk_interpolator", nonlinear, extrap_kmin, extrap_kmax) + tuple(
+            sorted(var_pair)
+        )
         if key in self.current_state:
             return self.current_state[key]
         k, z, pk = self.get_Pk_grid(var_pair=var_pair, nonlinear=nonlinear)
@@ -458,17 +507,25 @@ class BoltzmannBase(Theory):
                 sign = -1
             else:
                 log_p = False
-        extrapolating = ((extrap_kmax and extrap_kmax > k[-1]) or
-                         (extrap_kmin and extrap_kmin < k[0]))
+        extrapolating = (extrap_kmax and extrap_kmax > k[-1]) or (
+            extrap_kmin and extrap_kmin < k[0]
+        )
         if log_p:
             pk = np.log(sign * pk)
         elif extrapolating:
-            raise LoggedError(self.log,
-                              'Cannot do log extrapolation with zero-crossing pk '
-                              'for %s, %s' % var_pair)
+            raise LoggedError(
+                self.log,
+                "Cannot do log extrapolation with zero-crossing pk for %s, %s" % var_pair,
+            )
         result = PowerSpectrumInterpolator(
-            z, k, pk, logP=log_p, logsign=sign,
-            extrap_kmin=extrap_kmin, extrap_kmax=extrap_kmax)
+            z,
+            k,
+            pk,
+            logP=log_p,
+            logsign=sign,
+            extrap_kmin=extrap_kmin,
+            extrap_kmax=extrap_kmax,
+        )
         self.current_state[key] = result
         return result
 
@@ -491,12 +548,15 @@ class BoltzmannBase(Theory):
         """
         try:
             return self.current_state[
-                ("Pk_grid", bool(nonlinear)) + tuple(sorted(var_pair))]
+                ("Pk_grid", bool(nonlinear)) + tuple(sorted(var_pair))
+            ]
         except KeyError:
             if ("Pk_grid", False) + tuple(sorted(var_pair)) in self.current_state:
-                raise LoggedError(self.log,
-                                  "Getting non-linear matter power but 'nonlinear' "
-                                  "not specified in requirements")
+                raise LoggedError(
+                    self.log,
+                    "Getting non-linear matter power but 'nonlinear' "
+                    "not specified in requirements",
+                )
             raise LoggedError(self.log, "Matter power %s, %s not computed" % var_pair)
 
     def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
@@ -558,8 +618,10 @@ class BoltzmannBase(Theory):
         ``params_info`` should contain preferably the slow parameters only.
         """
         from cobaya.cosmo_input import get_best_covmat_ext, get_covmat_package_folders
-        return get_best_covmat_ext(get_covmat_package_folders(self.packages_path),
-                                   params_info, likes_info)
+
+        return get_best_covmat_ext(
+            get_covmat_package_folders(self.packages_path), params_info, likes_info
+        )
 
 
 class PowerSpectrumInterpolator(RectBivariateSpline):
@@ -580,15 +642,18 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         extrap_kmax; useful for tails of integrals.
     """
 
-    def __init__(self, z, k, P_or_logP, extrap_kmin=None, extrap_kmax=None, logP=False,
-                 logsign=1):
+    def __init__(
+        self, z, k, P_or_logP, extrap_kmin=None, extrap_kmax=None, logP=False, logsign=1
+    ):
         self.islog = logP
         #  Check order
         z, k = (np.atleast_1d(x) for x in [z, k])
         if len(z) < 4:
-            raise ValueError('Require at least four redshifts for Pk interpolation.'
-                             'Consider using Pk_grid if you just need a small number'
-                             'of specific redshifts (doing 1D splines in k yourself).')
+            raise ValueError(
+                "Require at least four redshifts for Pk interpolation."
+                "Consider using Pk_grid if you just need a small number"
+                "of specific redshifts (doing 1D splines in k yourself)."
+            )
         z, k, P_or_logP = np.array(z), np.array(k), np.array(P_or_logP)
         i_z = np.argsort(z)
         i_k = np.argsort(k)
@@ -600,10 +665,14 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         # Start from extrap_kmin using a (log,log)-linear extrapolation
         if extrap_kmin and extrap_kmin < self.input_kmin:
             if not logP:
-                raise ValueError('extrap_kmin must use logP')
+                raise ValueError("extrap_kmin must use logP")
             logk = np.hstack(
-                [np.log(extrap_kmin),
-                 np.log(self.input_kmin) * 0.1 + np.log(extrap_kmin) * 0.9, logk])
+                [
+                    np.log(extrap_kmin),
+                    np.log(self.input_kmin) * 0.1 + np.log(extrap_kmin) * 0.9,
+                    logk,
+                ]
+            )
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 2))
             logPnew[:, 2:] = P_or_logP
             diff = (logPnew[:, 3] - logPnew[:, 2]) / (logk[3] - logk[2])
@@ -614,10 +683,14 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         # Continue until extrap_kmax using a (log,log)-linear extrapolation
         if extrap_kmax and extrap_kmax > self.input_kmax:
             if not logP:
-                raise ValueError('extrap_kmax must use logP')
+                raise ValueError("extrap_kmax must use logP")
             logk = np.hstack(
-                [logk, np.log(self.input_kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
-                 np.log(extrap_kmax)])
+                [
+                    logk,
+                    np.log(self.input_kmax) * 0.1 + np.log(extrap_kmax) * 0.9,
+                    np.log(extrap_kmax),
+                ]
+            )
             logPnew = np.empty((P_or_logP.shape[0], P_or_logP.shape[1] + 2))
             logPnew[:, :-2] = P_or_logP
             diff = (logPnew[:, -3] - logPnew[:, -4]) / (logk[-3] - logk[-4])
@@ -656,23 +729,31 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
         z = np.atleast_1d(z).flatten()
         min_z, max_z = min(z), max(z)
         if min_z < self.zmin and not np.allclose(min_z, self.zmin):
-            raise LoggedError(get_logger(self.__class__.__name__),
-                              f"Not possible to extrapolate to z={min(z)} "
-                              f"(minimum z computed is {self.zmin}).")
+            raise LoggedError(
+                get_logger(self.__class__.__name__),
+                f"Not possible to extrapolate to z={min(z)} "
+                f"(minimum z computed is {self.zmin}).",
+            )
         if max_z > self.zmax and not np.allclose(max_z, self.zmax):
-            raise LoggedError(get_logger(self.__class__.__name__),
-                              f"Not possible to extrapolate to z={max(z)} "
-                              f"(maximum z computed is {self.zmax}).")
+            raise LoggedError(
+                get_logger(self.__class__.__name__),
+                f"Not possible to extrapolate to z={max(z)} "
+                f"(maximum z computed is {self.zmax}).",
+            )
         k = np.atleast_1d(k).flatten()
         min_k, max_k = min(k), max(k)
         if min_k < self.kmin and not np.allclose(min_k, self.kmin):
-            raise LoggedError(get_logger(self.__class__.__name__),
-                              f"Not possible to extrapolate to k={min(k)} 1/Mpc "
-                              f"(minimum k possible is {self.kmin} 1/Mpc).")
+            raise LoggedError(
+                get_logger(self.__class__.__name__),
+                f"Not possible to extrapolate to k={min(k)} 1/Mpc "
+                f"(minimum k possible is {self.kmin} 1/Mpc).",
+            )
         if max_k > self.kmax and not np.allclose(max_k, self.kmax):
-            raise LoggedError(get_logger(self.__class__.__name__),
-                              f"Not possible to extrapolate to k={max(k)} 1/Mpc "
-                              f"(maximum k possible is {self.kmax} 1/Mpc).")
+            raise LoggedError(
+                get_logger(self.__class__.__name__),
+                f"Not possible to extrapolate to k={max(k)} 1/Mpc "
+                f"(maximum k possible is {self.kmax} 1/Mpc).",
+            )
 
     def P(self, z, k, grid=None):
         """
@@ -704,5 +785,6 @@ class PowerSpectrumInterpolator(RectBivariateSpline):
             get_logger(self.__class__.__name__).warning(
                 "Do not call the instance directly. Use instead methods P(z, k) or "
                 "logP(z, k) to get the (log)power spectrum. (If you know what you are "
-                "doing, pass warn=False)")
+                "doing, pass warn=False)"
+            )
         return super().__call__(*args, **kwargs)

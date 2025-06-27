@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,7 +11,8 @@ authors = [
 ]
 description = "Code for Bayesian Analysis"
 readme = "README.rst"
-license = { file = "LICENCE.txt" }
+license = "LicenseRef-LGPLv3-arxiv"
+license-files = ["LICENCE.txt"]
 keywords = ["montecarlo", "sampling", "MCMC", "cosmology"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,15 +20,12 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Astronomy",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13"
 ]
-requires-python = ">=3.8.0"
+requires-python = ">=3.10.0"
 dependencies = [
     "numpy>=1.17.0", "scipy>=1.5", "pandas>=1.0.1",
     "PyYAML>=5.1", "requests>=2.18", "py-bobyqa>=1.4",
@@ -42,6 +40,10 @@ gui = ["pyside6", "matplotlib"]
 docs = [
     "sphinx", "sphinx_rtd_theme>=1.0", "sphinxcontrib-jquery",
     "sphinx-autodoc-typehints", "sphinxcontrib-programoutput",
+]
+devel = [
+    "ruff", "pre-commit", "pyupgrade", "pytest", "pytest-xdist",
+    "pytest-cov", "flaky", "dill", "mpi4py", "iminuit"
 ]
 
 [tool.setuptools.dynamic]
@@ -82,3 +84,18 @@ Documentation = "https://cobaya.readthedocs.io"
 Source = "https://github.com/CobayaSampler/cobaya"
 Tracker = "https://github.com/CobayaSampler/cobaya/issues"
 Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"
+
+[tool.ruff.lint]
+ignore = ["E722", "E731"]
+extend-select = ["I"]
+preview = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"

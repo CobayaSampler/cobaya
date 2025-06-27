@@ -22,7 +22,7 @@ params:
     max: 1
     latex: \beta_1
     derived: True
-      
+
 
 prior:
   first:  "lambda a1: stats.beta.logpdf(a1, a=2, b=2)"

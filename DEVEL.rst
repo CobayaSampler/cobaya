@@ -20,27 +20,40 @@ Development flow for contributors
 
 1. Fork and clone the repo from github.
 2. From its folder, install in editable mode: ``pip install -e .``
-3. Modify stuff.
-4. Test with pytest (first "pip install pytest pytest-xdist pytest-cov flaky dill")
-5. Make a pull requests and check (about about 15 minutes) if the tests have passed.
-6. Iterate until tests pass, then wait for or request feedback/merge
+3. Install development dependencies: ``pip install ruff pre-commit pytest pytest-xdist pytest-cov flaky dill``
+4. Set up pre-commit hooks: ``pre-commit install``
+5. Modify stuff.
+6. Test with pytest
+7. Make a pull requests and check (about about 15 minutes) if the tests have passed.
+8. Iterate until tests pass, then wait for or request feedback/merge
 
 Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
 
-Before committing check code formatting and spacing are consistent, and run a check (in
-`PyCharm <https://www.jetbrains.com/pycharm/>`_  this is automatic, or can be run on
-all files in the main cobaya source using Code -> Inspect; this finds static errors, generally
-anything at Warning and above should be fixed, but strict PEP8 is not required).
+Code formatting and linting
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To set Cobaya's line-length convention in PyCharm set
-Pycharm: File -> Settings -> Editor -> Code Style -> Hard wrap to 90.
-Ctrl+Alt+L will then auto-format code consistently, including wrap and spacing etc, though
-some line wrapping may need manual tweaking for nicer formatting.
+Cobaya uses `ruff <https://docs.astral.sh/ruff/>`_ for code formatting and linting.
+The configuration is in ``pyproject.toml`` with a line length of 90 characters.
 
-Using PyCharm is the easiest way to keep things consistent. If you use another editor you
-can check most formatting and static errors on the command line using::
+After installing the development dependencies and setting up pre-commit hooks,
+formatting and linting will be automatically applied when you commit. You can also
+run them manually:
 
-    flake8 cobaya --select=E713,E704,E703,E714,E741,E10,E11,E20,E22,E23,E25,E27,E301,E302,E304,E9,F405,F406,F5,F6,F7,F8,W1,W2,W3,W6 --show-source
+.. code-block:: bash
+
+    # Check and fix linting issues
+    ruff check --fix cobaya/ tests/
+
+    # Format code
+    ruff format cobaya/ tests/
+
+    # Run pre-commit hooks manually
+    pre-commit run --all-files
+
+For PyCharm users, you can install the ruff plugin and set the line length to 90:
+File -> Settings -> Editor -> Code Style -> Hard wrap to 90.
+
+For VS Code users, see the ``.vscode/settings.json`` file for recommended settings.
 
 Release checklist
 -----------------

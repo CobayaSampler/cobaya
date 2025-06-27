@@ -6,18 +6,17 @@ r"""
 
 """
 
-# Global
 import os
+
 from packaging import version
 
-# Local
-from cobaya.likelihood import Likelihood
-from cobaya.typing import InfoDict
-from cobaya.log import get_logger
-from cobaya.install import _version_filename
 from cobaya.component import ComponentNotInstalledError
-from cobaya.tools import VersionCheckError, resolve_packages_path
 from cobaya.functions import chi_squared
+from cobaya.install import _version_filename
+from cobaya.likelihood import Likelihood
+from cobaya.log import get_logger
+from cobaya.tools import VersionCheckError, resolve_packages_path
+from cobaya.typing import InfoDict
 
 
 class InstallableLikelihood(Likelihood):
@@ -46,11 +45,16 @@ class InstallableLikelihood(Likelihood):
                 old = isinstance(excpt, VersionCheckError)
                 logger.error(f"{type(excpt).__name__}: {excpt}")
             if not installed:
-                not_or_old = ("is not up to date" if old
-                              else "has not been correctly installed")
+                not_or_old = (
+                    "is not up to date" if old else "has not been correctly installed"
+                )
                 raise ComponentNotInstalledError(
-                    logger, (f"The data for this likelihood {not_or_old}. To install it, "
-                             f"run `cobaya-install {name}{' --upgrade' if old else ''}`"))
+                    logger,
+                    (
+                        f"The data for this likelihood {not_or_old}. To install it, "
+                        f"run `cobaya-install {name}{' --upgrade' if old else ''}`"
+                    ),
+                )
         super().__init__(*args, **kwargs)
 
     @classmethod
@@ -71,7 +75,7 @@ class InstallableLikelihood(Likelihood):
         """
         opts = cls.get_install_options()
         if repo := opts.get("directory", opts.get("github_repository")):
-            data_path = repo.split('/')[-1]
+            data_path = repo.split("/")[-1]
         else:
             data_path = opts.get("data_path", cls.__name__)
         install_path = os.path.realpath(os.path.join(path, "data", data_path))
@@ -94,19 +98,22 @@ class InstallableLikelihood(Likelihood):
             elif not os.path.exists(path) or not len(os.listdir(path)):
                 log = get_logger(cls.get_qualified_class_name())
                 (log.error if kwargs.get("show_error") is not False else log.info)(
-                    "The given installation path does not exist: '%s'", path)
+                    "The given installation path does not exist: '%s'", path
+                )
                 return False
             elif release := opts.get("github_release"):
                 try:
-                    with open(os.path.join(path, _version_filename), "r") as f:
+                    with open(os.path.join(path, _version_filename)) as f:
                         ver = f.readlines()[0]
                 except FileNotFoundError:  # old install: no version file
-                    ver = '0.0'
-                if ((installed_version := version.parse(ver)) <
-                        (min_version := version.parse(release))):
+                    ver = "0.0"
+                if (installed_version := version.parse(ver)) < (
+                    min_version := version.parse(release)
+                ):
                     raise VersionCheckError(
                         f"Installed version ({installed_version}) "
-                        f"older than minimum required one ({min_version}).")
+                        f"older than minimum required one ({min_version})."
+                    )
         return True
 
     @classmethod
@@ -122,11 +129,17 @@ class InstallableLikelihood(Likelihood):
             return True
         if repo := opts.get("github_repository"):
             from cobaya.install import download_github_release
+
             log.info("Downloading %s data..." % repo)
             return download_github_release(
-                os.path.join(path, "data"), repo, opts.get("github_release"),
-                asset=opts.get("asset"), directory=opts.get("directory"),
-                no_progress_bars=no_progress_bars, logger=log)
+                os.path.join(path, "data"),
+                repo,
+                opts.get("github_release"),
+                asset=opts.get("asset"),
+                directory=opts.get("directory"),
+                no_progress_bars=no_progress_bars,
+                logger=log,
+            )
         else:
             full_path = cls.get_path(path)
             if not os.path.exists(full_path):
@@ -136,8 +149,10 @@ class InstallableLikelihood(Likelihood):
             url = opts["download_url"]
             log.info("Downloading likelihood data file: %s...", url)
             from cobaya.install import download_file
-            if not download_file(url, full_path, logger=log,
-                                 no_progress_bars=no_progress_bars):
+
+            if not download_file(
+                url, full_path, logger=log, no_progress_bars=no_progress_bars
+            ):
                 return False
             log.info("Likelihood data downloaded and uncompressed correctly.")
             return True
