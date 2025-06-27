@@ -313,13 +313,23 @@ def load_clipy(path=None, install_path=None, logger=None, not_installed_level="e
     Load clipy module and check that it's the correct one.
     """
     try:
-        clipy = load_external_module(
-            module_name="clipy",
-            path=path,
-            install_path=install_path,
-            logger=logger,
-            not_installed_level=not_installed_level,
-        )
+        # If no install_path provided, try global import first
+        if install_path is None:
+            try:
+                import clipy
+            except ImportError:
+                raise ComponentNotInstalledError(
+                    logger,
+                    "clipy not installed. Install with: cobaya-install planck_2018_highl_plik.TTTEEE",
+                )
+        else:
+            clipy = load_external_module(
+                module_name="clipy",
+                path=path,
+                install_path=install_path,
+                logger=logger,
+                not_installed_level=not_installed_level,
+            )
         # Check that it has the expected clipy interface
         if not hasattr(clipy, "clik"):
             raise ComponentNotInstalledError(
@@ -343,20 +353,43 @@ def load_clipy(path=None, install_path=None, logger=None, not_installed_level="e
 
 def is_installed_clipy(path=None, reload=False):
     """
-    Check if clipy is installed and working.
+    Check if clipy is installed and working in the specified path.
     """
-    try:
-        if path:
-            # Check if clipy is installed in the specified path
+    if path is None:
+        # If no path specified, check global installation
+        try:
+            load_clipy(
+                install_path=None, logger=get_logger("clipy"), not_installed_level="debug"
+            )
+            return True
+        except (ComponentNotInstalledError, VersionCheckError):
+            return False
+    else:
+        # Check if clipy exists in the specified path
+        clipy_path = os.path.join(path, "clipy")
+        if not os.path.exists(clipy_path):
+            return False
+
+        # Try to load from the specified path only
+        try:
             import sys
 
-            clipy_path = os.path.join(path, "clipy")
-            if os.path.exists(clipy_path) and clipy_path not in sys.path:
+            if clipy_path not in sys.path:
                 sys.path.insert(0, clipy_path)
-        load_clipy(logger=get_logger("clipy"), not_installed_level="debug")
-        return True
-    except (ComponentNotInstalledError, VersionCheckError):
-        return False
+
+            import clipy
+
+            # Verify it's loaded from the correct path
+            if not clipy.__file__.startswith(clipy_path):
+                return False
+
+            # Check that it has the expected interface
+            if not hasattr(clipy, "clik"):
+                return False
+
+            return True
+        except (ImportError, AttributeError):
+            return False
 
 
 def install_clipy(path, no_progress_bars=False):
@@ -384,8 +417,16 @@ def install_clipy(path, no_progress_bars=False):
     import shutil
     import zipfile
 
-    zip_file = os.path.join(path, "main.zip")
-    if os.path.exists(zip_file):
+    # The download_file function may name the file differently
+    zip_files = [os.path.join(path, "main.zip"), os.path.join(path, "clipy-main.zip")]
+
+    zip_file = None
+    for potential_zip in zip_files:
+        if os.path.exists(potential_zip):
+            zip_file = potential_zip
+            break
+
+    if zip_file:
         with zipfile.ZipFile(zip_file, "r") as zip_ref:
             zip_ref.extractall(path)
         # Move clipy-main to clipy
@@ -397,6 +438,14 @@ def install_clipy(path, no_progress_bars=False):
             shutil.move(clipy_main_path, clipy_path)
         # Clean up zip file
         os.remove(zip_file)
+    else:
+        # If no zip file found, check if clipy-main directory already exists
+        clipy_main_path = os.path.join(path, "clipy-main")
+        clipy_path = os.path.join(path, "clipy")
+        if os.path.exists(clipy_main_path):
+            if os.path.exists(clipy_path):
+                shutil.rmtree(clipy_path)
+            shutil.move(clipy_main_path, clipy_path)
 
     # Verify installation
     if not is_installed_clipy(path):
