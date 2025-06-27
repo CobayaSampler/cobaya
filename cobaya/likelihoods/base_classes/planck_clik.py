@@ -9,8 +9,6 @@ r"""
 """
 
 import os
-import re
-import sys
 
 import numpy as np
 from packaging import version
@@ -18,7 +16,6 @@ from packaging import version
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.input import get_default_info
 from cobaya.install import download_file, pip_install
-from cobaya.component import load_external_module
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
 from cobaya.tools import (
@@ -59,7 +56,7 @@ class PlanckClik(Likelihood):
                 path=self.path,
                 install_path=install_path,
                 logger=self.log,
-                not_installed_level="debug"
+                not_installed_level="debug",
             )
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
@@ -83,7 +80,7 @@ class PlanckClik(Likelihood):
             # Disable JAX to avoid dependency issues
             os.environ["CLIPY_NOJAX"] = "1"
             self.clik = clik.clik(self.clik_file)
-        except Exception as e:
+        except Exception:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
                 raise ComponentNotInstalledError(
@@ -115,7 +112,7 @@ class PlanckClik(Likelihood):
         else:
             self.lensing = False
             # For non-lensing, use get_has_cl if available
-            if hasattr(self.clik, 'get_has_cl'):
+            if hasattr(self.clik, "get_has_cl"):
                 has_cl = self.clik.get_has_cl()
         self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
         self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
@@ -269,6 +266,7 @@ class PlanckClik(Likelihood):
                     "151903": 8160437862,
                 }.get(product_id)
                 from cobaya.install import download_file
+
                 if not download_file(
                     url,
                     paths["data"],
@@ -316,8 +314,11 @@ def load_clipy(path=None, install_path=None, logger=None, not_installed_level="e
     """
     try:
         clipy = load_external_module(
-            module_name="clipy", path=path, install_path=install_path,
-            logger=logger, not_installed_level=not_installed_level
+            module_name="clipy",
+            path=path,
+            install_path=install_path,
+            logger=logger,
+            not_installed_level=not_installed_level,
         )
         # Check that it has the expected clipy interface
         if not hasattr(clipy, "clik"):
@@ -335,7 +336,8 @@ def load_clipy(path=None, install_path=None, logger=None, not_installed_level="e
         return clipy
     except ImportError:
         raise ComponentNotInstalledError(
-            logger, "clipy not installed. Install with: cobaya-install planck_2018_highl_plik.TTTEEE"
+            logger,
+            "clipy not installed. Install with: cobaya-install planck_2018_highl_plik.TTTEEE",
         )
 
 
@@ -347,6 +349,7 @@ def is_installed_clipy(path=None, reload=False):
         if path:
             # Check if clipy is installed in the specified path
             import sys
+
             clipy_path = os.path.join(path, "clipy")
             if os.path.exists(clipy_path) and clipy_path not in sys.path:
                 sys.path.insert(0, clipy_path)
@@ -378,11 +381,12 @@ def install_clipy(path, no_progress_bars=False):
         return False
 
     # Extract and move clipy to the correct location
-    import zipfile
     import shutil
+    import zipfile
+
     zip_file = os.path.join(path, "main.zip")
     if os.path.exists(zip_file):
-        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
             zip_ref.extractall(path)
         # Move clipy-main to clipy
         clipy_main_path = os.path.join(path, "clipy-main")
