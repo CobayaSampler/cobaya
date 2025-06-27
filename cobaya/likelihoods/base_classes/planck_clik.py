@@ -308,28 +308,47 @@ def get_release(name):
     return next(re for re in ["2015", "2018"] if re in name)
 
 
-def load_clipy(path=None, install_path=None, logger=None, not_installed_level="error"):
+def get_clipy_import_path(path):
+    """
+    Starting from the installation folder, returns the subdirectory from which the
+    ``clipy`` module must be imported.
+
+    Raises ``FileNotFoundError`` if no clipy install was found.
+    """
+    clipy_path = os.path.join(path, "clipy")
+    if not os.path.exists(clipy_path):
+        raise FileNotFoundError(f"clipy installation not found at {clipy_path}")
+
+    # Check if it has the proper structure
+    init_file = os.path.join(clipy_path, "clipy", "__init__.py")
+    if not os.path.exists(init_file):
+        raise FileNotFoundError(f"clipy package structure not found at {clipy_path}")
+
+    return clipy_path
+
+
+def load_clipy(
+    path=None,
+    install_path=None,
+    logger=None,
+    not_installed_level="error",
+    reload=False,
+    default_global=True,
+):
     """
     Load clipy module and check that it's the correct one.
     """
     try:
-        # If no install_path provided, try global import first
-        if install_path is None:
-            try:
-                import clipy
-            except ImportError:
-                raise ComponentNotInstalledError(
-                    logger,
-                    "clipy not installed. Install with: cobaya-install planck_2018_highl_plik.TTTEEE",
-                )
-        else:
-            clipy = load_external_module(
-                module_name="clipy",
-                path=path,
-                install_path=install_path,
-                logger=logger,
-                not_installed_level=not_installed_level,
-            )
+        clipy = load_external_module(
+            module_name="clipy",
+            path=path,
+            install_path=install_path,
+            get_import_path=get_clipy_import_path if install_path else None,
+            logger=logger,
+            not_installed_level=not_installed_level,
+            reload=reload,
+            default_global=default_global,
+        )
         # Check that it has the expected clipy interface
         if not hasattr(clipy, "clik"):
             raise ComponentNotInstalledError(
@@ -355,41 +374,19 @@ def is_installed_clipy(path=None, reload=False):
     """
     Check if clipy is installed and working in the specified path.
     """
-    if path is None:
-        # If no path specified, check global installation
-        try:
-            load_clipy(
-                install_path=None, logger=get_logger("clipy"), not_installed_level="debug"
-            )
-            return True
-        except (ComponentNotInstalledError, VersionCheckError):
-            return False
-    else:
-        # Check if clipy exists in the specified path
-        clipy_path = os.path.join(path, "clipy")
-        if not os.path.exists(clipy_path):
-            return False
-
-        # Try to load from the specified path only
-        try:
-            import sys
-
-            if clipy_path not in sys.path:
-                sys.path.insert(0, clipy_path)
-
-            import clipy
-
-            # Verify it's loaded from the correct path
-            if not clipy.__file__.startswith(clipy_path):
-                return False
-
-            # Check that it has the expected interface
-            if not hasattr(clipy, "clik"):
-                return False
-
-            return True
-        except (ImportError, AttributeError):
-            return False
+    try:
+        # If path is specified, don't fall back to global import
+        default_global = path is None
+        load_clipy(
+            install_path=path,
+            logger=get_logger("clipy"),
+            not_installed_level="debug",
+            reload=reload,
+            default_global=default_global,
+        )
+        return True
+    except (ComponentNotInstalledError, VersionCheckError):
+        return False
 
 
 def install_clipy(path, no_progress_bars=False):
