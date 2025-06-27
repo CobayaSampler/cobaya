@@ -192,11 +192,12 @@ class PlanckClik(Likelihood):
         data_path = get_data_path(cls.get_qualified_class_name())
         result = True
         if kwargs.get("code", True):
-            # Check if clipy is installed
-            result &= is_installed_clipy(
-                os.path.realpath(os.path.join(kwargs["path"], "code", code_path)),
-                reload=reload,
+            # Check if clipy is installed in the packages path specifically
+            # Don't fall back to global installation during installation check
+            packages_clipy_path = os.path.realpath(
+                os.path.join(kwargs["path"], "code", code_path)
             )
+            result &= is_installed_clipy(packages_clipy_path, reload=reload)
         if kwargs.get("data", True):
             # NB: will never raise VersionCheckerror, since version number is in the path
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
@@ -242,13 +243,16 @@ class PlanckClik(Likelihood):
                 if not os.path.exists(paths[s]):
                     os.makedirs(paths[s])
         success = True
-        # Install clipy
-        if code and (not is_installed_clipy(paths["code"]) or force):
-            log.info("Installing clipy.")
-            success *= install_clipy(paths["code"], no_progress_bars=no_progress_bars)
-            if not success:
-                log.warning("clipy installation failed!")
-                _clipy_install_failed = True
+        # Install clipy to packages path (don't rely on global installation)
+        if code:
+            # Check if clipy is installed in the packages path specifically
+            clipy_path = os.path.join(paths["code"], "clipy")
+            if not os.path.exists(clipy_path) or force:
+                log.info("Installing clipy.")
+                success *= install_clipy(paths["code"], no_progress_bars=no_progress_bars)
+                if not success:
+                    log.warning("clipy installation failed!")
+                    _clipy_install_failed = True
         if data:
             # 2nd test, in case the code wasn't there but the data is:
             if force or not cls.is_installed(path=path, code=False, data=True):
