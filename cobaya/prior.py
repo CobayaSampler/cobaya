@@ -793,6 +793,7 @@ class Prior(HasLogger):
         ignore_fixed=False,
         warn_if_no_ref=True,
         random_state=None,
+        proposal_scale: dict[str, float | None] | None = None,
     ) -> np.ndarray:
         """
         Returns:
@@ -802,6 +803,12 @@ class Prior(HasLogger):
         If `ignored_fixed=True` (default: `False`), fixed reference values will be ignored
         in favor of the full prior, ensuring some randomness for all parameters (useful
         e.g. to prevent caching when measuring speeds).
+
+        If `proposal_scale` is provided as a dict mapping parameter names to proposal
+        values, and `ignore_fixed=True`, then for parameters with fixed reference values
+        and proposal values, the point will be perturbed from the reference using a
+        Gaussian with the proposal as the standard deviation, rather than sampling from
+        the full prior. This helps avoid extreme values when the prior is very broad.
 
         NB: The way this function works may be a little dangerous:
         if two parameters have an (external)
@@ -823,22 +830,54 @@ class Prior(HasLogger):
             isinstance(r, numbers.Real) and (np.isnan(r) or ignore_fixed)
             for r in self.ref_pdf
         ]
+
+        # Determine which parameters should use proposal-based perturbation
+        # vs sampling from the full prior
+        where_use_proposal = []
+        if proposal_scale and ignore_fixed:
+            for i, (param_name, ref_pdf) in enumerate(zip(self.params, self.ref_pdf)):
+                # Use proposal if: parameter has fixed ref, ignore_fixed=True, and proposal available
+                use_proposal = (
+                    isinstance(ref_pdf, numbers.Real) and not np.isnan(ref_pdf) and
+                    param_name in proposal_scale and proposal_scale[param_name] is not None
+                )
+                where_use_proposal.append(use_proposal)
+        else:
+            where_use_proposal = [False] * len(self.ref_pdf)
+
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
         ref_sample = np.empty(len(self.ref_pdf))
         while tries < max_tries:
             tries += 1
-            if any(where_ignore_ref):
+
+            # Handle parameters that need sampling from prior (not using proposal)
+            where_sample_prior = np.array([
+                where_ignore_ref[i] and not where_use_proposal[i]
+                for i in range(len(self.ref_pdf))
+            ])
+            if np.any(where_sample_prior):
                 prior_sample = self.sample(
                     ignore_external=True, random_state=random_state
                 )[0]
-                ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
+                ref_sample[where_sample_prior] = prior_sample[where_sample_prior]
+
+            # Handle parameters using their reference values or pdfs
             for i, ref_pdf in enumerate(self.ref_pdf):
                 if not where_ignore_ref[i]:
                     if hasattr(ref_pdf, "rvs"):
                         ref_sample[i] = ref_pdf.rvs(random_state=random_state)  # type: ignore
                     else:
                         ref_sample[i] = ref_pdf.real
+                elif where_use_proposal[i]:
+                    # Use proposal-based perturbation from fixed reference
+                    param_name = self.params[i]
+                    ref_value = self.ref_pdf[i].real
+                    proposal_std = proposal_scale[param_name]
+                    if random_state is not None:
+                        ref_sample[i] = random_state.normal(ref_value, proposal_std)
+                    else:
+                        ref_sample[i] = np.random.normal(ref_value, proposal_std)
 
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
