@@ -852,11 +852,11 @@ class Prior(HasLogger):
             tries += 1
 
             # Handle parameters that need sampling from prior (not using proposal)
-            where_sample_prior = np.array([
+            where_sample_prior = [
                 where_ignore_ref[i] and not where_use_proposal[i]
                 for i in range(len(self.ref_pdf))
-            ])
-            if np.any(where_sample_prior):
+            ]
+            if any(where_sample_prior):
                 prior_sample = self.sample(
                     ignore_external=True, random_state=random_state
                 )[0]
