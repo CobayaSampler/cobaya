@@ -1,7 +1,5 @@
 # Incomplete implementations/bigger jobs
 
-## containers
-
 # cosmetic/consistency/speed
 
 ## min/max bounds enforced on derived parameters (more generally, "bounds" as well as priors)

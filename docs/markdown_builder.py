@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument(
         "--exclude",
         type=str,
-        default="cluster_amazon,devel",
+        default="devel",
         help="Comma-separated list of files to exclude (without .md extension)",
     )
     parser.add_argument(
