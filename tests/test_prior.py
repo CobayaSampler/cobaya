@@ -3,6 +3,7 @@ Tests some Prior methods.
 """
 
 import numpy as np
+
 from cobaya.parameterization import Parameterization
 from cobaya.prior import Prior
 
