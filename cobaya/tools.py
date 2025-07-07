@@ -654,25 +654,34 @@ def get_scipy_1d_pdf(
         raise ValueError(
             f"Invalid type {type(definition)} for prior definition: {definition}"
         )
-    # Recover (loc, scale) from (min, max)
-    # For coherence with scipy.stats, defaults are (min, max) = (0, 1)
+    # Get distribution from scipy
+    dist = kwargs.pop("dist", "uniform")
+    if not isinstance(dist, str):
+        raise ValueError(f"If present 'dist' must be a string. Got {type(dist)}.")
     if "min" in kwargs or "max" in kwargs:
-        if "loc" in kwargs or "scale" in kwargs:
-            raise ValueError(
-                "You cannot use the 'loc/scale' convention and the 'min/max' "
-                "convention at the same time. Either use one or the other."
-            )
-        minmaxvalues = {"min": 0.0, "max": 1.0}
-        for bound, default in minmaxvalues.items():
-            value = kwargs.pop(bound, default)
-            try:
-                minmaxvalues[bound] = float(value)
-            except (TypeError, ValueError) as excpt:
+        if dist == "truncnorm":
+            loc, scale = kwargs.get("loc", 0), kwargs.get("scale", 1)
+            kwargs["a"] = (kwargs.pop("min") - loc) / scale
+            kwargs["b"] = (kwargs.pop("max") - loc) / scale
+        else:
+            # Recover (loc, scale) from (min, max)
+            # For coherence with scipy.stats, defaults are (min, max) = (0, 1)
+            if "loc" in kwargs or "scale" in kwargs:
                 raise ValueError(
-                    f"Invalid value {bound}: {value} (must be a number)."
-                ) from excpt
-        kwargs["loc"] = minmaxvalues["min"]
-        kwargs["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
+                    "You cannot use the 'loc/scale' convention and the 'min/max' "
+                    "convention at the same time. Either use one or the other."
+                )
+            minmaxvalues = {"min": 0.0, "max": 1.0}
+            for bound, default in minmaxvalues.items():
+                value = kwargs.pop(bound, default)
+                try:
+                    minmaxvalues[bound] = float(value)
+                except (TypeError, ValueError) as excpt:
+                    raise ValueError(
+                        f"Invalid value {bound}: {value} (must be a number)."
+                    ) from excpt
+            kwargs["loc"] = minmaxvalues["min"]
+            kwargs["scale"] = minmaxvalues["max"] - minmaxvalues["min"]
     if kwargs.get("scale", 1) < 0:
         raise ValueError(
             f"Invalid negative range or scale. Prior definition was {definition}."
@@ -680,10 +689,6 @@ def get_scipy_1d_pdf(
     # Check for improper priors
     if not np.all(np.isfinite([kwargs.get("loc", 0), kwargs.get("scale", 1)])):
         raise ValueError("Improper prior: infinite/undefined range or scale.")
-    # Get distribution from scipy
-    dist = kwargs.pop("dist", "uniform")
-    if not isinstance(dist, str):
-        raise ValueError(f"If present 'dist' must be a string. Got {type(dist)}.")
     try:
         pdf_dist = getattr(import_module("scipy.stats", dist), dist)
     except AttributeError as attr_excpt:
