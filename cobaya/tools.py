@@ -660,6 +660,11 @@ def get_scipy_1d_pdf(
         raise ValueError(f"If present 'dist' must be a string. Got {type(dist)}.")
     if "min" in kwargs or "max" in kwargs:
         if dist == "truncnorm":
+            if "a" in kwargs or "b" in kwargs:
+                raise ValueError(
+                    "You cannot use the 'a/b' convention and the 'min/max' "
+                    "convention at the same time. Either use one or the other."
+                )
             loc, scale = kwargs.get("loc", 0), kwargs.get("scale", 1)
             kwargs["a"] = (kwargs.pop("min") - loc) / scale
             kwargs["b"] = (kwargs.pop("max") - loc) / scale
