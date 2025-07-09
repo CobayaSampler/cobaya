@@ -4,6 +4,8 @@ Body of the best-fit test for cosmological likelihoods
 
 from copy import deepcopy
 
+import numpy as np
+
 from cobaya.cosmo_input import create_input, planck_base_model
 from cobaya.input import update_info
 from cobaya.model import get_model
@@ -61,8 +63,20 @@ def body_of_test(
     # Check value of likelihoods
     for like in info["likelihood"]:
         chi2 = -2 * likes[like]
-        msg = "Testing likelihood '{}': | {:.2f} (now) - {:.2f} (ref) | = {:.2f} >=? {:.2f}".format(
-            like, chi2, ref_chi2[like], abs(chi2 - ref_chi2[like]), ref_chi2["tolerance"]
+        if np.isnan(chi2):
+            try:
+                cl_dict = model.provider.get_Cl()
+            except Exception:
+                assert not np.isnan(chi2), f"Likelihood '{like}' is NaN"
+            else:
+                nan_cls = [key for key, arr in cl_dict.items() if np.isnan(arr).any()]
+                assert not len(nan_cls), (
+                    f"Testing likelihood '{like}': Cl arrays with NaN: {nan_cls}"
+                )
+        msg = (
+            f"Testing likelihood '{like}': "
+            f"| {chi2:.2f} (now) - {ref_chi2[like]:.2f} (ref) | = "
+            f"{abs(chi2 - ref_chi2[like]):.2f} >=? {ref_chi2['tolerance']:.2f}"
         )
         assert abs(chi2 - ref_chi2[like]) < ref_chi2["tolerance"], msg
         print(msg)
