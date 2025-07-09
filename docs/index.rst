@@ -67,7 +67,6 @@ Table of contents
    :maxdepth: 1
 
    run_job
-   cluster_amazon
 
 .. toctree::
    :caption: Grids of runs

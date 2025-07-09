@@ -121,7 +121,6 @@ packages_path_input: Final = "packages_path"
 packages_path_arg_posix: Final = packages_path_arg.replace("_", "-")
 packages_path_env: Final = "COBAYA_PACKAGES_PATH"
 packages_path_config_file = "config.yaml"
-packages_path_containers = "/cobaya_packages"
 
 install_skip_env: Final = "COBAYA_INSTALL_SKIP"
 test_skip_env: Final = "COBAYA_TEST_SKIP"
