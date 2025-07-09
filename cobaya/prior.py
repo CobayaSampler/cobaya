@@ -65,6 +65,10 @@ The syntax for priors and ref's has the following fields:
    intuitive arguments ``min`` and ``max`` (default: 0 and 1 resp.) instead of ``loc`` and
    ``scale`` (NB: unexpected behaviour for an unbounded pdf).
 
+   When using
+   `scipy.stats.truncnorm <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.truncnorm.html>`_,
+   you can also use the more intuitive arguments ``min`` and ``max`` instead of ``a`` and ``b``
+   (the code will take care of properly set ``a`` and ``b`` defined in standard deviation unit).
 
 The order of the parameters is conserved in the table of samples, except that
 derived parameters are always moved to the end.
