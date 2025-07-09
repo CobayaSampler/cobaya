@@ -1553,6 +1553,10 @@ class Model(HasLogger):
         self.mpi_info("Measuring speeds... (this may take a few seconds)")
         if n is None:
             n = 1 if mpi.more_than_one_process() else 3
+
+        # Get proposal values for parameters to enable better perturbation from fixed refs
+        proposal_scale = self.parameterization.get_sampled_params_proposals()
+
         n_done = 0
         with timing_on(self):
             while n_done < int(n) + int(discard):
@@ -1561,6 +1565,7 @@ class Model(HasLogger):
                     max_tries=max_tries,
                     ignore_fixed=True,
                     warn_if_no_ref=False,
+                    proposal_scale=proposal_scale,
                 )
                 if self.loglike(point, cached=False)[0] != -np.inf:  # type: ignore
                     n_done += 1
