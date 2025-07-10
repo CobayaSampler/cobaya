@@ -328,7 +328,7 @@ class Minimize(Minimizer, CovmatSampler):
                         "fun": minuslogp_transf,
                         "x0": initial_point,
                         "bounds": bounds,
-                        "options": {"maxfun": self.max_iter, "disp": self.is_debug()},
+                        "options": {"maxfun": self.max_iter},
                     }
                     self.kwargs = recursive_update(
                         self.kwargs, self.override_iminuit or {}
@@ -347,7 +347,7 @@ class Minimize(Minimizer, CovmatSampler):
                         "fun": minuslogp_transf,
                         "x0": initial_point,
                         "bounds": bounds,
-                        "options": {"maxiter": self.max_iter, "disp": self.is_debug()},
+                        "options": {"maxiter": self.max_iter},
                     }
                     self.kwargs = recursive_update(self.kwargs, self.override_scipy or {})
                     self.log.debug(
