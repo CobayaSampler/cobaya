@@ -1,15 +1,14 @@
 r"""
 .. module:: planck_clik
 
-:Synopsis: Definition of the clik-based likelihoods
+:Synopsis: Definition of the clik-based likelihoods using clipy
 :Author: Jesus Torrado (initially based on MontePython's version
          by Julien Lesgourgues and Benjamin Audren)
+         Updated to use clipy by Antony Lewis
 
 """
 
 import os
-import re
-import sys
 
 import numpy as np
 from packaging import version
@@ -23,7 +22,6 @@ from cobaya.tools import (
     VersionCheckError,
     are_different_params_lists,
     create_banner,
-    working_directory,
 )
 
 _deprecation_msg_2015 = create_banner("""
@@ -31,12 +29,11 @@ The likelihoods from the Planck 2015 data release have been superseded
 by the 2018 ones, and will eventually be deprecated.
 """)
 
-clik_url = "https://github.com/benabed/clik/archive/refs/heads/main.zip"
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
+clipy_url = "https://github.com/benabed/clipy/archive/refs/heads/main.zip"
 
 last_version_supp_data_and_covmats = "v2.1"
-last_version_clik = "16.0"
-min_version_clik = "3.1"
+min_version_clipy = "0.11"
 
 
 class PlanckClik(Likelihood):
@@ -54,26 +51,18 @@ class PlanckClik(Likelihood):
             install_path = (lambda p: self.get_code_path(p) if p else None)(
                 self.packages_path
             )
-            # min_version here is checked inside get_clik_import_path, since it is
-            # displayed in the folder name and cannot be retrieved from the module.
-            clik = load_clik(
-                "clik",
+            # Load clipy instead of clik
+            clik = load_clipy(
                 path=self.path,
                 install_path=install_path,
-                get_import_path=get_clik_import_path,
                 logger=self.log,
                 not_installed_level="debug",
-            )
-        except VersionCheckError as excpt:
-            raise VersionCheckError(
-                str(excpt) + " Upgrade with `cobaya-install "
-                "planck_2018_highl_plik.TTTEEE --upgrade`."
             )
         except ComponentNotInstalledError as excpt:
             raise ComponentNotInstalledError(
                 self.log,
                 (
-                    f"Could not find clik: {excpt}. To install it, "
+                    f"Could not find clipy: {excpt}. To install it, "
                     f"run `cobaya-install planck_2018_highl_plik.TTTEEE`"
                 ),
             )
@@ -86,15 +75,12 @@ class PlanckClik(Likelihood):
                 os.path.join(self.path or self.packages_path, "data", data_path),
             )
             self.clik_file = os.path.join(self.path_data, self.clik_file)
-        # Differences in the wrapper for lensing and non-lensing likes
-        self.lensing = clik.try_lensing(self.clik_file)
+        # clipy handles both lensing and non-lensing likelihoods with single constructor
         try:
-            self.clik = (
-                clik.clik_lensing(self.clik_file)
-                if self.lensing
-                else clik.clik(self.clik_file)
-            )
-        except clik.lkl.CError:
+            # Disable JAX to avoid dependency issues
+            os.environ["CLIPY_NOJAX"] = "1"
+            self.clik = clik.clik(self.clik_file)
+        except Exception:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
                 raise ComponentNotInstalledError(
@@ -105,9 +91,9 @@ class PlanckClik(Likelihood):
                     " the .clik file was searched for is '%s'",
                     self.clik_file,
                 )
-            # Else: unknown clik error
+            # Else: unknown clipy error
             self.log.error(
-                "An unexpected error occurred in clik (possibly related to "
+                "An unexpected error occurred in clipy (possibly related to "
                 "multiple simultaneous initialization, or simultaneous "
                 "initialization of incompatible likelihoods; e.g. polarised "
                 "vs non-polarised 'lite' likelihoods. See error info below:"
@@ -116,16 +102,23 @@ class PlanckClik(Likelihood):
         self.l_maxs = self.clik.get_lmax()
         # calculate requirements here so class can also be separately instantiated
         requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
-        if self.lensing:
-            has_cl = [lmax != -1 for lmax in self.l_maxs]
+        # clipy automatically handles lensing detection, but we need to check the lmax values
+        has_cl = [lmax != -1 for lmax in self.l_maxs]
+        # Check if this is a lensing likelihood by examining the structure
+        if len(self.l_maxs) > 6 and self.l_maxs[0] != -1:
+            # First element is pp for lensing likelihoods
+            self.lensing = True
             requested_cls = ["pp"] + requested_cls
         else:
-            has_cl = self.clik.get_has_cl()
+            self.lensing = False
+            # For non-lensing, use get_has_cl if available
+            if hasattr(self.clik, "get_has_cl"):
+                has_cl = self.clik.get_has_cl()
         self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
         self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
         self.expected_params = list(self.clik.extra_parameter_names)
-        # Placeholder for vector passed to clik
-        length = len(self.l_maxs) if self.lensing else len(self.clik.get_has_cl())
+        # Placeholder for vector passed to clipy
+        length = len(self.l_maxs) if self.lensing else len(has_cl)
         self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
 
     def initialize_with_params(self):
@@ -163,7 +156,7 @@ class PlanckClik(Likelihood):
                 for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)
             ]
         )
-        # check for nan's: mey produce a segfault in clik
+        # check for nan's: may produce issues in clipy
         # dot product is apparently the fastest way in threading-enabled numpy
         if np.isnan(np.dot(self.vector, self.vector)):
             return -np.inf
@@ -171,25 +164,21 @@ class PlanckClik(Likelihood):
         self.vector[-len(self.expected_params) :] = [
             params_values[p] for p in self.expected_params
         ]
-        loglike = self.clik(self.vector)[0]
-        # "zero" of clik, and sometimes nan's returned
+        # clipy returns a scalar, not an array like clik
+        loglike = self.clik(self.vector)
+        # Convert to Python float
+        loglike = float(loglike)
+        # "zero" of clipy, and sometimes nan's returned
         if np.allclose(loglike, -1e30) or np.isnan(loglike):
             loglike = -np.inf
         return loglike
 
     def close(self):
-        del self.clik  # MANDATORY: forces deallocation of the Cython class
-        # Actually, it does not work for low-l likelihoods, which is quite dangerous!
+        del self.clik  # Clean up clipy object
 
     @classmethod
     def get_code_path(cls, path):
         return os.path.realpath(os.path.join(path, "code", common_path))
-
-    @classmethod
-    def is_compatible(cls):
-        import platform
-
-        return platform.system() != "Windows"
 
     @classmethod
     def is_installed(cls, reload=False, **kwargs):
@@ -197,12 +186,12 @@ class PlanckClik(Likelihood):
         data_path = get_data_path(cls.get_qualified_class_name())
         result = True
         if kwargs.get("code", True):
-            result &= bool(
-                is_installed_clik(
-                    os.path.realpath(os.path.join(kwargs["path"], "code", code_path)),
-                    reload=reload,
-                )
+            # Check if clipy is installed in the packages path specifically
+            # Don't fall back to global installation during installation check
+            packages_clipy_path = os.path.realpath(
+                os.path.join(kwargs["path"], "code", code_path)
             )
+            result &= is_installed_clipy(packages_clipy_path, reload=reload)
         if kwargs.get("data", True):
             # NB: will never raise VersionCheckerror, since version number is in the path
             _, filename = get_product_id_and_clik_file(cls.get_qualified_class_name())
@@ -230,14 +219,9 @@ class PlanckClik(Likelihood):
         name = cls.get_qualified_class_name()
         log = get_logger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
-        import platform
-
-        if platform.system() == "Windows":
-            log.error("Not compatible with Windows.")
-            return False
-        global _clik_install_failed
-        if _clik_install_failed:
-            log.info("Previous clik install failed, skipping")
+        global _clipy_install_failed
+        if _clipy_install_failed:
+            log.info("Previous clipy install failed, skipping")
             return False
         # Create common folders: all planck likelihoods share install
         # folder for code and data
@@ -248,16 +232,16 @@ class PlanckClik(Likelihood):
                 if not os.path.exists(paths[s]):
                     os.makedirs(paths[s])
         success = True
-        # Install clik
-        if code and (not is_installed_clik(paths["code"]) or force):
-            log.info("Installing the clik code.")
-            success *= install_clik(paths["code"], no_progress_bars=no_progress_bars)
-            if not success:
-                log.warning(
-                    "clik code installation failed! "
-                    "Try configuring+compiling by hand at " + paths["code"]
-                )
-                _clik_install_failed = True
+        # Install clipy to packages path (don't rely on global installation)
+        if code:
+            # Check if clipy is installed in the packages path specifically
+            clipy_path = os.path.join(paths["code"], "clipy")
+            if not os.path.exists(clipy_path) or force:
+                log.info("Installing clipy.")
+                success *= install_clipy(paths["code"], no_progress_bars=no_progress_bars)
+                if not success:
+                    log.warning("clipy installation failed!")
+                    _clipy_install_failed = True
         if data:
             # 2nd test, in case the code wasn't there but the data is:
             if force or not cls.is_installed(path=path, code=False, data=True):
@@ -274,6 +258,8 @@ class PlanckClik(Likelihood):
                     "151905": 5476083302,
                     "151903": 8160437862,
                 }.get(product_id)
+                from cobaya.install import download_file
+
                 if not download_file(
                     url,
                     paths["data"],
@@ -303,10 +289,8 @@ class PlanckClik(Likelihood):
 # path to be shared by all Planck likelihoods
 common_path = "planck"
 
-# To see full clik build output even if installs OK (e.g. to check warnings)
-_clik_verbose = any((s in os.getenv("COMMIT_MESSAGE", "")) for s in ["clik", "planck"])
-# Don't try again to install clik if it failed for a previous likelihood
-_clik_install_failed = False
+# Don't try again to install clipy if it failed for a previous likelihood
+_clipy_install_failed = False
 
 
 def get_data_path(name):
@@ -317,145 +301,148 @@ def get_release(name):
     return next(re for re in ["2015", "2018"] if re in name)
 
 
-def get_clik_source_folder(starting_path):
+def get_clipy_import_path(path):
     """
     Starting from the installation folder, returns the subdirectory from which the
-    compilation must be run.
+    ``clipy`` module must be imported.
 
-    In practice, crawls inside the install folder ``packages/code/planck``
-    until >1 subfolders.
-
-    Raises ``FileNotFoundError`` if no clik install was found.
+    Raises ``FileNotFoundError`` if no clipy install was found.
     """
-    source_dir = starting_path
-    while (
-        len(
-            folders := [
-                f
-                for f in os.listdir(source_dir)
-                if os.path.isdir(os.path.join(source_dir, f))
-            ]
-        )
-        <= 1
-    ):
-        if len(folders) == 0:
-            raise FileNotFoundError(
-                f"Could not find a clik installation under {starting_path}"
-            )
-        source_dir = os.path.join(source_dir, folders[0])  # type: ignore
-    return source_dir
+    clipy_path = os.path.join(path, "clipy")
+    if not os.path.exists(clipy_path):
+        raise FileNotFoundError(f"clipy installation not found at {clipy_path}")
+
+    # Check if it has the proper structure
+    init_file = os.path.join(clipy_path, "clipy", "__init__.py")
+    if not os.path.exists(init_file):
+        raise FileNotFoundError(f"clipy package structure not found at {clipy_path}")
+
+    return clipy_path
 
 
-def get_clik_import_path(path, min_version=min_version_clik):
+def load_clipy(
+    path=None,
+    install_path=None,
+    logger=None,
+    not_installed_level="error",
+    reload=False,
+    default_global=True,
+):
     """
-    Starting from the installation folder, returns the subdirectory from which the
-    ``clik`` module must be imported.
-
-    Raises ``FileNotFoundError`` if no clik install was found, or
-    :class:`tools.VersionCheckError` if the installed version is too old.
+    Load clipy module and check that it's the correct one.
     """
-    clik_src_path = get_clik_source_folder(path)
-    version_file = os.path.join(clik_src_path, "readme.md")
-    if os.path.exists(version_file):
-        with open(version_file) as f:
-            if version_match := re.search(r"(clik|plc) (\d+\.\d+)", f.read()):
-                installed_version = version_match.group(2)
-            else:
-                installed_version = "16.0"
-    else:
-        installed_version = clik_src_path.rstrip(os.sep).split("-")[-1]
-    installed_version = version.parse(installed_version)
-    if installed_version < version.parse(min_version):
-        raise VersionCheckError(
-            f"Installed version of the Planck likelihood code 'clik' ({installed_version})"
-            f" older than minimum required one ({last_version_clik})."
-        )
-    elif installed_version > version.parse(last_version_clik):
-        raise ValueError("This should not happen: min version needs update.")
-    return os.path.join(clik_src_path, "lib/python/site-packages")
-
-
-def load_clik(*args, **kwargs):
-    """
-    Just a wrapper around :func:`component.load_external_module`, that checks that we are
-    not being fooled by the wrong `clik <https://pypi.org/project/clik/>`_.
-    """
-    clik = load_external_module(*args, **kwargs)
-    if not hasattr(clik, "try_lensing"):
-        raise ComponentNotInstalledError(
-            kwargs.get("logger"), "Loaded wrong clik: `https://pypi.org/project/clik/`"
-        )
-    return clik
-
-
-def is_installed_clik(path, reload=False):
-    # min_version here is checked inside get_clik_import_path, since it is displayed
-    # in the folder name and cannot be retrieved from the module.
     try:
-        return bool(
-            load_clik(
-                "clik",
-                path=path,
-                get_import_path=get_clik_import_path,
-                reload=reload,
-                logger=get_logger("clik"),
-                not_installed_level="debug",
-            )
+        clipy = load_external_module(
+            module_name="clipy",
+            path=path,
+            install_path=install_path,
+            get_import_path=get_clipy_import_path if install_path else None,
+            logger=logger,
+            not_installed_level=not_installed_level,
+            reload=reload,
+            default_global=default_global,
         )
-    except ComponentNotInstalledError:
+        # Check that it has the expected clipy interface
+        if not hasattr(clipy, "clik"):
+            raise ComponentNotInstalledError(
+                logger, "Loaded wrong clipy: missing clik class"
+            )
+        # Check version if possible
+        if hasattr(clipy, "__version__"):
+            installed_version = version.parse(clipy.__version__)
+            if installed_version < version.parse(min_version_clipy):
+                raise VersionCheckError(
+                    f"Installed version of clipy ({installed_version}) "
+                    f"older than minimum required one ({min_version_clipy})."
+                )
+        return clipy
+    except ImportError:
+        raise ComponentNotInstalledError(
+            logger,
+            "clipy not installed. Install with: cobaya-install planck_2018_highl_plik.TTTEEE",
+        )
+
+
+def is_installed_clipy(path=None, reload=False):
+    """
+    Check if clipy is installed and working in the specified path.
+    """
+    try:
+        # If path is specified, don't fall back to global import
+        default_global = path is None
+        load_clipy(
+            install_path=path,
+            logger=get_logger("clipy"),
+            not_installed_level="debug",
+            reload=reload,
+            default_global=default_global,
+        )
+        return True
+    except (ComponentNotInstalledError, VersionCheckError):
         return False
 
 
-def execute(command):
-    from subprocess import PIPE, STDOUT, Popen
+def install_clipy(path, no_progress_bars=False):
+    """
+    Install clipy from GitHub repository to the specified path.
+    """
+    log = get_logger("clipy")
+    log.info("Installing clipy from GitHub repository...")
 
-    if _clik_verbose:
-        process = Popen(command, stdout=PIPE, stderr=STDOUT)
-        out = []
-        assert process.stdout
-        while (nextline := process.stdout.readline()) != b"" or process.poll() is None:
-            sys.stdout.buffer.write(nextline)
-            out.append(nextline)
-            sys.stdout.flush()
-        _, err = process.communicate()
-        return b"finished successfully" in out[-1]
-    else:
-        process = Popen(command, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = process.communicate()
-        OK = b"finished successfully" in stdout.split(b"\n")[-2]
-        if not OK:
-            print(stdout.decode("utf-8"))
-            print(stderr.decode("utf-8"))
-        return OK
-
-
-def install_clik(path, no_progress_bars=False):
-    log = get_logger("clik")
+    # Install pre-requisites
     log.info("Installing pre-requisites...")
-    for req in ("cython", "astropy"):
+    for req in ("numpy", "astropy"):
         exit_status = pip_install(req)
         if exit_status:
-            raise LoggedError(log, "Failed installing '%s'.", req)
-    log.info("Downloading...")
-    if not download_file(clik_url, path, no_progress_bars=no_progress_bars, logger=log):
-        log.error("Not possible to download clik.")
+            log.error("Failed installing '%s'.", req)
+            return False
+
+    # Download clipy from GitHub
+    log.info("Downloading clipy...")
+    if not download_file(clipy_url, path, no_progress_bars=no_progress_bars, logger=log):
+        log.error("Not possible to download clipy.")
         return False
-    source_dir = get_clik_source_folder(path)
-    log.info("Installing from directory %s" % source_dir)
-    with working_directory(source_dir):
-        log.info("Configuring... (and maybe installing dependencies...)")
-        flags = [
-            "--install_all_deps",
-            "--extra_lib=m",
-        ]  # missing for some reason in some systems, but harmless
-        if not execute([sys.executable, "waf", "configure"] + flags):
-            log.error("Configuration failed!")
-            return False
-        log.info("Compiling...")
-        if not execute([sys.executable, "waf", "install"]):
-            log.error("Compilation failed!")
-            return False
-    log.info("Finished!")
+
+    # Extract and move clipy to the correct location
+    import shutil
+    import zipfile
+
+    # The download_file function may name the file differently
+    zip_files = [os.path.join(path, "main.zip"), os.path.join(path, "clipy-main.zip")]
+
+    zip_file = None
+    for potential_zip in zip_files:
+        if os.path.exists(potential_zip):
+            zip_file = potential_zip
+            break
+
+    if zip_file:
+        with zipfile.ZipFile(zip_file, "r") as zip_ref:
+            zip_ref.extractall(path)
+        # Move clipy-main to clipy
+        clipy_main_path = os.path.join(path, "clipy-main")
+        clipy_path = os.path.join(path, "clipy")
+        if os.path.exists(clipy_main_path):
+            if os.path.exists(clipy_path):
+                shutil.rmtree(clipy_path)
+            shutil.move(clipy_main_path, clipy_path)
+        # Clean up zip file
+        os.remove(zip_file)
+    else:
+        # If no zip file found, check if clipy-main directory already exists
+        clipy_main_path = os.path.join(path, "clipy-main")
+        clipy_path = os.path.join(path, "clipy")
+        if os.path.exists(clipy_main_path):
+            if os.path.exists(clipy_path):
+                shutil.rmtree(clipy_path)
+            shutil.move(clipy_main_path, clipy_path)
+
+    # Verify installation
+    if not is_installed_clipy(path):
+        log.error("clipy installation verification failed.")
+        return False
+
+    log.info("clipy installation finished!")
     return True
 
 
