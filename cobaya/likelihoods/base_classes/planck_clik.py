@@ -181,12 +181,6 @@ class PlanckClik(Likelihood):
         return os.path.realpath(os.path.join(path, "code", common_path))
 
     @classmethod
-    def is_compatible(cls):
-        import platform
-
-        return platform.system() != "Windows"
-
-    @classmethod
     def is_installed(cls, reload=False, **kwargs):
         code_path = common_path
         data_path = get_data_path(cls.get_qualified_class_name())
@@ -225,11 +219,6 @@ class PlanckClik(Likelihood):
         name = cls.get_qualified_class_name()
         log = get_logger(name)
         path_names = {"code": common_path, "data": get_data_path(name)}
-        import platform
-
-        if platform.system() == "Windows":
-            log.error("Not compatible with Windows.")
-            return False
         global _clipy_install_failed
         if _clipy_install_failed:
             log.info("Previous clipy install failed, skipping")
