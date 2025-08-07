@@ -443,9 +443,14 @@ class Prior(HasLogger):
         self.params = []
         self.pdf = []
         self._bounds = np.zeros((len(sampled_params_info), 2))
+        self._is_periodic = []
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
             prior = sampled_params_info[p].get("prior")
+            if isinstance(prior, Mapping):
+                self._is_periodic.append(bool(prior.pop("periodic", False)))
+            else:
+                self._is_periodic.append(False)
             try:
                 self.pdf += [get_scipy_1d_pdf(prior)]
             except ValueError as excpt:
@@ -462,6 +467,12 @@ class Prior(HasLogger):
                     "No bounds defined for parameter '%s' (maybe not a scipy 1d pdf).",
                     p,
                 ) from excpt
+            if self._is_periodic[i] and any(np.isinf(self._bounds[i])):
+                raise LoggedError(
+                    self.log,
+                    f"Parameter '{p}' cannot be periodic if it is not bounded.",
+                )
+        self.is_any_periodic = any(self._is_periodic)
         self._uniform_indices = np.array(
             [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == "uniform"], dtype=int
         )
@@ -666,6 +677,13 @@ class Prior(HasLogger):
            of 1d priors specified in the ``params`` block, no external priors
         """
         self.log.debug("Evaluating prior at %r", x)
+        if self.is_any_periodic:
+            # We are going to modify an element, so we need to copy the input just in case
+            x = np.copy(x)
+            for i in range(self.d()):
+                if self._is_periodic[i]:
+                    a, b = self._bounds[i]
+                    x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
             # Apparently faster to sum list than generator (for short enough lists)
             logps = self._uniform_logp + (
