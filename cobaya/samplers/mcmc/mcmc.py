@@ -558,7 +558,8 @@ class MCMC(CovmatSampler):
         """
         trial = self.current_point.values.copy()
         self.proposer.get_proposal(trial)
-        trial_results = self.model.logposterior(trial)
+        trial = self.model.prior.reduce_periodic(trial, copy=False)
+        trial_results = self.model.logposterior(trial, ignore_periodic=True)
         accept = self.metropolis_accept(trial_results.logpost, self.current_point.logpost)
         self.process_accept_or_reject(accept, trial, trial_results)
         return accept
@@ -582,10 +583,13 @@ class MCMC(CovmatSampler):
         current_start_logpost = self.current_point.logpost
         current_end_point = current_start_point.copy()
         self.proposer.get_proposal_slow(current_end_point)
+        current_end_point = self.model.prior.reduce_periodic(
+            current_end_point, copy=False
+        )
         self.log.debug("Proposed slow end-point: %r", current_end_point)
         # Save derived parameters of delta_slow jump, in case I reject all the dragging
         # steps but accept the move in the slow direction only
-        current_end = self.model.logposterior(current_end_point)
+        current_end = self.model.logposterior(current_end_point, ignore_periodic=True)
         if current_end.logpost == -np.inf:
             self.current_point.weight += 1
             return False
@@ -604,6 +608,7 @@ class MCMC(CovmatSampler):
             # take a step in the fast direction in both slow extremes
             delta_fast[:] = 0.0
             self.proposer.get_proposal_fast(delta_fast)
+            delta_fast = self.model.prior.reduce_periodic(delta_fast, copy=False)
             self.log.debug("Proposed fast step delta: %r", delta_fast)
             proposal_start_point = current_start_point + delta_fast
             # get the new extremes for the interpolated probability
@@ -612,12 +617,18 @@ class MCMC(CovmatSampler):
             # point, but discard them, since they contain the starting point's fast ones,
             # not used later -- save the end point's ones.
             proposal_start_logpost = self.model.logposterior(
-                proposal_start_point, return_derived=bool(derived), _no_check=True
+                proposal_start_point,
+                return_derived=bool(derived),
+                _no_check=True,
+                ignore_periodic=True,
             ).logpost
             if proposal_start_logpost != -np.inf:
                 proposal_end_point = current_end_point + delta_fast
                 proposal_end = self.model.logposterior(
-                    proposal_end_point, return_derived=bool(derived), _no_check=True
+                    proposal_end_point,
+                    return_derived=bool(derived),
+                    _no_check=True,
+                    ignore_periodic=True,
                 )
                 if proposal_end.logpost != -np.inf:
                     # create the interpolated probability and do a Metropolis test
@@ -655,7 +666,7 @@ class MCMC(CovmatSampler):
         )
         if accept and not derived:
             # recompute with derived parameters (slow parameter ones should be cached)
-            current_end = self.model.logposterior(current_end_point)
+            current_end = self.model.logposterior(current_end_point, ignore_periodic=True)
 
         self.process_accept_or_reject(accept, current_end_point, current_end)
         self.log.debug("TOTAL step: %s", ("accepted" if accept else "rejected"))
