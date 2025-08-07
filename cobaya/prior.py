@@ -447,10 +447,6 @@ class Prior(HasLogger):
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
             prior = sampled_params_info[p].get("prior")
-            if isinstance(prior, Mapping):
-                self._is_periodic.append(bool(prior.pop("periodic", False)))
-            else:
-                self._is_periodic.append(False)
             try:
                 self.pdf += [get_scipy_1d_pdf(prior)]
             except ValueError as excpt:
@@ -467,6 +463,10 @@ class Prior(HasLogger):
                     "No bounds defined for parameter '%s' (maybe not a scipy 1d pdf).",
                     p,
                 ) from excpt
+            if isinstance(prior, Mapping):
+                self._is_periodic.append(bool(prior.pop("periodic", False)))
+            else:
+                self._is_periodic.append(False)
             if self._is_periodic[i] and any(np.isinf(self._bounds[i])):
                 raise LoggedError(
                     self.log,
@@ -536,7 +536,6 @@ class Prior(HasLogger):
             self.mpi_warning(
                 "External prior '%s' loaded. Mind that it might not be normalized!", name
             )
-
         parameterization.check_dropped(self.external_dependence)
 
     def d(self):
@@ -618,6 +617,27 @@ class Prior(HasLogger):
                     infs,
                 ) from excpt
 
+    def reduce_periodic(self, x: np.ndarray, copy: bool = True):
+        """
+        Reduces the values of the periodic parameters of a point to the prior definition
+        range.
+
+        Args:
+           x (array): Point to be reduced.
+           copy (bool): If True, operates on and returns a copy of the input point..
+
+        Returns:
+           The given point, with periodicity reduced.
+        """
+        if self.is_any_periodic:
+            if copy:
+                x = np.copy(x)
+            for i in range(self.d()):
+                if self._is_periodic[i]:
+                    a, b = self._bounds[i]
+                    x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
+        return x
+
     def sample(self, n=1, ignore_external=False, random_state=None):
         """
         Generates samples from the prior pdf.
@@ -637,9 +657,14 @@ class Prior(HasLogger):
             )
         return np.array([pdf.rvs(n, random_state=random_state) for pdf in self.pdf]).T
 
-    def logps(self, x: np.ndarray) -> list[float]:
+    def logps(self, x: np.ndarray, ignore_periodic: bool = False) -> list[float]:
         """
         Takes a point (sampled parameter values, in the correct order).
+
+        Args:
+           x (array): Point where the log-prior is evaluated.
+           ignore_periodic (bool): If True, ignores the periodicity of the parameters,
+               returning -inf for periodic parameters outside the prior definition range.
 
         Returns:
            An array of the prior log-probability densities of the given point
@@ -648,7 +673,7 @@ class Prior(HasLogger):
            ones (if present) are the priors specified in the ``prior`` block
            in the same order.
         """
-        logps = self.logps_internal(x)
+        logps = self.logps_internal(x, ignore_periodic=ignore_periodic)
         if logps != -np.inf:
             if self.external:
                 input_params = self._parameterization.to_input(x)
@@ -658,18 +683,28 @@ class Prior(HasLogger):
         else:
             return [-np.inf] * (1 + len(self.external))
 
-    def logp(self, x: np.ndarray):
+    def logp(self, x: np.ndarray, ignore_periodic: bool = False):
         """
         Takes a point (sampled parameter values, in the correct order).
+
+        Args:
+           x (array): Point where the log-prior is evaluated.
+           ignore_periodic (bool): If True, ignores the periodicity of the parameters,
+               returning -inf for periodic parameters outside the prior definition range.
 
         Returns:
            The prior log-probability density of the given point or array of points.
         """
-        return np.sum(self.logps(x), axis=0)
+        return np.sum(self.logps(x, ignore_periodic=ignore_periodic), axis=0)
 
-    def logps_internal(self, x: np.ndarray) -> float:
+    def logps_internal(self, x: np.ndarray, ignore_periodic: bool = False) -> float:
         """
         Takes a point (sampled parameter values, in the correct order).
+
+        Args:
+           x (array): Point where the log-prior is evaluated.
+           ignore_periodic (bool): If True, ignores the periodicity of the parameters,
+               returning -inf for periodic parameters outside the prior definition range.
 
         Returns:
            The prior log-probability density of the given point
@@ -677,13 +712,8 @@ class Prior(HasLogger):
            of 1d priors specified in the ``params`` block, no external priors
         """
         self.log.debug("Evaluating prior at %r", x)
-        if self.is_any_periodic:
-            # We are going to modify an element, so we need to copy the input just in case
-            x = np.copy(x)
-            for i in range(self.d()):
-                if self._is_periodic[i]:
-                    a, b = self._bounds[i]
-                    x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
+        if not ignore_periodic:
+            x = self.reduce_periodic(x, copy=True)
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
             # Apparently faster to sum list than generator (for short enough lists)
             logps = self._uniform_logp + (
