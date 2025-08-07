@@ -664,7 +664,8 @@ class Prior(HasLogger):
         Args:
            x (array): Point where the log-prior is evaluated.
            ignore_periodic (bool): If True, ignores the periodicity of the parameters,
-               returning -inf for periodic parameters outside the prior definition range.
+               returning ``-inf`` for periodic parameters outside the prior definition
+               range (faster if the input point can be guaranteed to fall inside it).
 
         Returns:
            An array of the prior log-probability densities of the given point
@@ -690,7 +691,8 @@ class Prior(HasLogger):
         Args:
            x (array): Point where the log-prior is evaluated.
            ignore_periodic (bool): If True, ignores the periodicity of the parameters,
-               returning -inf for periodic parameters outside the prior definition range.
+               returning ``-inf`` for periodic parameters outside the prior definition
+               range (faster if the input point can be guaranteed to fall inside it).
 
         Returns:
            The prior log-probability density of the given point or array of points.
@@ -704,7 +706,8 @@ class Prior(HasLogger):
         Args:
            x (array): Point where the log-prior is evaluated.
            ignore_periodic (bool): If True, ignores the periodicity of the parameters,
-               returning -inf for periodic parameters outside the prior definition range.
+               returning ``-inf`` for periodic parameters outside the prior definition
+               range (faster if the input point can be guaranteed to fall inside it).
 
         Returns:
            The prior log-probability density of the given point
