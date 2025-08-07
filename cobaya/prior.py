@@ -467,11 +467,18 @@ class Prior(HasLogger):
                 self._is_periodic.append(bool(prior.pop("periodic", False)))
             else:
                 self._is_periodic.append(False)
-            if self._is_periodic[i] and any(np.isinf(self._bounds[i])):
-                raise LoggedError(
-                    self.log,
-                    f"Parameter '{p}' cannot be periodic if it is not bounded.",
-                )
+            if self._is_periodic[i]:
+                if any(np.isinf(self._bounds[i])):
+                    raise LoggedError(
+                        self.log,
+                        f"Parameter '{p}' cannot be periodic if it is not bounded.",
+                    )
+                if not np.isclose(*self.pdf[i].logpdf(self._bounds[i])):
+                    raise LoggedError(
+                        self.log,
+                        f"Parameter '{p}' was declared periodic, but logprior at bounds "
+                        "is different."
+                    )
         self.is_any_periodic = any(self._is_periodic)
         self._uniform_indices = np.array(
             [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == "uniform"], dtype=int
