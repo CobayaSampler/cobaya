@@ -580,10 +580,7 @@ def get_literal_param_range(param_info, confidence_for_unbounded=1):
 
     # Sampled
     if is_sampled_param(param_info):
-        prior_info = param_info.get("prior", {})
-        if isinstance(prior_info, Mapping):
-            prior_info.pop("periodic", None)
-        pdf_dist = get_scipy_1d_pdf(prior_info)  # may raise ValueError
+        pdf_dist = get_scipy_1d_pdf(param_info.get("prior", {}))  # may raise ValueError
         lims = pdf_dist.interval(confidence_for_unbounded)
     # Derived
     elif is_derived_param(param_info):
