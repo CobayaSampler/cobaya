@@ -831,19 +831,17 @@ class Prior(HasLogger):
             for r in self.ref_pdf
         ]
 
-        # Determine which parameters should use proposal-based perturbation
-        # vs sampling from the full prior
-        where_use_proposal = []
-        if proposal_scale and ignore_fixed:
-            for i, (param_name, ref_pdf) in enumerate(zip(self.params, self.ref_pdf)):
-                # Use proposal if: parameter has fixed ref, ignore_fixed=True, and proposal available
-                use_proposal = (
-                    isinstance(ref_pdf, numbers.Real) and not np.isnan(ref_pdf) and
-                    param_name in proposal_scale and proposal_scale[param_name] is not None
-                )
-                where_use_proposal.append(use_proposal)
-        else:
-            where_use_proposal = [False] * len(self.ref_pdf)
+        # Determine which parameters should use proposal-based perturbation vs sampling from the full prior
+        where_use_proposal = (
+            [
+                isinstance(ref_pdf, numbers.Real)
+                and not np.isnan(ref_pdf)
+                and proposal_scale.get(param_name) is not None
+                for param_name, ref_pdf in zip(self.params, self.ref_pdf)
+            ]
+            if proposal_scale and ignore_fixed
+            else [False] * len(self.ref_pdf)
+        )
 
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
@@ -874,10 +872,9 @@ class Prior(HasLogger):
                     param_name = self.params[i]
                     ref_value = self.ref_pdf[i].real
                     proposal_std = proposal_scale[param_name]
-                    if random_state is not None:
-                        ref_sample[i] = random_state.normal(ref_value, proposal_std)
-                    else:
-                        ref_sample[i] = np.random.normal(ref_value, proposal_std)
+                    ref_sample[i] = (random_state or np.random.default_rng()).normal(
+                        ref_value, proposal_std
+                    )
 
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
