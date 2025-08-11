@@ -31,7 +31,7 @@ class CMBlikes(DataSetLikelihood):
     def get_requirements(self):
         # State requisites to the theory code
         requested_cls = [
-            self.field_names[i] + self.field_names[j]
+            self.field_names[min(i, j)] + self.field_names[max(i, j)]
             for i, j in zip(*np.where(self.cl_lmax != 0))
         ]
         # l_max has to take into account the window function of the lensing
