@@ -5,7 +5,7 @@ Type Ia Supernovae
    :noindex:
 
 Available internal likelihoods
-==============================
+------------------------------
 
 .. program-output:: cobaya-doc sn
 
