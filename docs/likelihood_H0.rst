@@ -6,7 +6,7 @@ Local measurement of *H*:sub:`0`
 
 
 Available internal likelihoods
-==============================
+------------------------------
 
 .. program-output:: cobaya-doc H0
 

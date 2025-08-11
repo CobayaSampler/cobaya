@@ -5,7 +5,7 @@ Baryonic Acoustic Oscillations & Redshift Distortions
    :noindex:
 
 Available internal likelihoods
-==============================
+------------------------------
 
 .. program-output:: cobaya-doc bao
 
