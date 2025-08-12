@@ -554,7 +554,7 @@ def merge_params_info(params_infos, default_derived=True):
             current_info[p].update(deepcopy(new_info_p))
             # Account for incompatibilities: "prior" and ("value" or "derived"+bounds)
             incompatibilities = {
-                "prior": ["value", "derived", "min", "max"],
+                "prior": ["value", "derived", "min", "max", "periodic"],
                 "value": ["prior", "ref", "proposal"],
                 "derived": ["prior", "drop", "ref", "proposal"],
             }

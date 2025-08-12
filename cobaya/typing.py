@@ -42,6 +42,7 @@ partags = {
     "renames",
     "min",
     "max",
+    "periodic",
 }
 
 LiteralFalse = Literal[False]
