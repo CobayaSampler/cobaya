@@ -170,7 +170,7 @@ class MainWindow(QWidget):
     def getScreen(self):
         try:
             return self.screen().availableGeometry()
-        except:
+        except Exception:
             return QApplication.screenAt(
                 self.mapToGlobal(QPoint(self.width() // 2, 0))
             ).availableGeometry()

@@ -934,7 +934,7 @@ def deepcopy_where_possible(base: _R) -> _R:
             return base
         try:
             return deepcopy(base)
-        except:
+        except Exception:
             return base
 
 
@@ -1127,7 +1127,7 @@ def load_config_file():
             yaml_load_file(os.path.join(get_config_path(), packages_path_config_file))
             or {}
         )
-    except:
+    except Exception:
         return {}
 
 
