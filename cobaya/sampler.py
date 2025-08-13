@@ -199,6 +199,9 @@ class Sampler(CobayaComponent):
 
     seed: None | int | Sequence[int]
     version: dict | str | None = None
+    # Set to True if sampler is guaranteed to never periodic parameter values outside
+    # the prior definition range.
+    supports_periodic_params: bool = False
 
     _rng: np.random.Generator
 
@@ -280,6 +283,12 @@ class Sampler(CobayaComponent):
         if not model.parameterization.sampled_params():
             self.mpi_warning(
                 "No sampled parameters requested! This will fail for non-mock samplers."
+            )
+        if self.model.prior.is_any_periodic and not self.supports_periodic_params:
+            self.log.warning(
+                "There are periodic sampled parameters, but this sampler does not support"
+                " them. Treating their prior definition range as hard boundaries. This "
+                "may have unexpected effects."
             )
         # Load checkpoint info, if resuming
         if self.output.is_resuming() and not isinstance(self, Minimizer):
