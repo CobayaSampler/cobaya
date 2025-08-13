@@ -84,7 +84,7 @@ Tracker = "https://github.com/CobayaSampler/cobaya/issues"
 Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"
 
 [tool.ruff.lint]
-ignore = ["E722", "E731"]
+ignore = ["E731"]
 extend-select = ["I"]
 preview = true
 

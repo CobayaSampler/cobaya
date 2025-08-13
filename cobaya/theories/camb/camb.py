@@ -808,7 +808,7 @@ class CAMB(BoltzmannBase):
             which_result = "total" if lensed else "unlensed_total"
         try:
             cl_camb = self.current_state[which_key][which_result].copy()
-        except:
+        except Exception:
             raise LoggedError(
                 self.log,
                 "No %s Cl's were computed. Are you sure that you have requested them?",
@@ -865,7 +865,7 @@ class CAMB(BoltzmannBase):
         # get C_l^XX from the cosmological code
         try:
             cls = deepcopy(self.current_state["source_Cl"])
-        except:
+        except Exception:
             raise LoggedError(
                 self.log,
                 "No source Cl's were computed. "

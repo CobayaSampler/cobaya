@@ -510,7 +510,7 @@ class JobItem(PropertiesItem):
             if chainR is None:
                 return returnNotExist
             return chainR <= R
-        except:
+        except Exception:
             print("WARNING: Bad .converge for " + self.name)
             return returnNotExist
 

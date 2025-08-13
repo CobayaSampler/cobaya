@@ -387,7 +387,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         else:
             try:
                 CTot[lmin : lmax + 1] = scipy.linalg.solve(pcov, dL, assume_a="pos")
-            except:
+            except Exception:
                 CTot[lmin : lmax + 1] = np.linalg.solve(pcov, dL)
             return CTot
 
