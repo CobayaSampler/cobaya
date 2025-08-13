@@ -63,7 +63,7 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
                 exec(
                     open(os.path.join(docs_src_folder, filename)).read(), globals_example
                 )
-            except:
+            except Exception:
                 assert False, "File %s failed." % filename
         #        if test_figs:
         #            # Compare plots

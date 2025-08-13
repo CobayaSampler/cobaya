@@ -147,7 +147,7 @@ def body_of_sampler_test(
                     to_plot += clusters
                 g.triangle_plot(to_plot, params=sampled_params)
                 g.export(os.path.join(info["output"], "test.png"))
-            except:
+            except Exception:
                 print("Plotting failed!")
         # 1st test: KL divergence
         if n_modes == 1:
