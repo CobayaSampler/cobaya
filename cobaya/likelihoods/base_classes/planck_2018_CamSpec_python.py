@@ -39,7 +39,6 @@ def range_to_ells(use_range):
                 ranges.append(range(mn, mx + 1))
             else:
                 ranges.append(int(ell_range))
-        # noinspection PyTypeChecker
         return np.concatenate(ranges)
     else:
         return use_range
@@ -295,7 +294,6 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         for i, (cal, n) in enumerate(zip(cals, self.used_sizes)):
             if n > 0:
                 if i <= 3:
-                    # noinspection PyUnboundLocalVariable
                     delta_vector[ix : ix + n] -= (
                         CT[self.ell_ranges[i]] + foregrounds[i][self.ell_ranges[i]]
                     ) / cal

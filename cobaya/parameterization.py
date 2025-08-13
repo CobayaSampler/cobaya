@@ -90,7 +90,6 @@ def expand_info_param(info_param: ParamInput, default_derived=True) -> ParamDict
     value = info_param.get("value")
     if isinstance(value, str) or callable(value):
         info_param["derived"] = info_param.get("derived", True)
-    # noinspection PyTypeChecker
     return info_param
 
 
@@ -609,8 +608,7 @@ def get_literal_param_ranges(params_info, confidence_for_unbounded=1):
     bounds from a :class:`~model.Model` instance as :func:`model.Model.prior.bounds`.
     """
     if isinstance(params_info, Parameterization):
-        # noinspection PyProtectedMember
-        params_info = params_info._infos  # pylint: disable=protected-access
+        params_info = params_info._infos
     return {
         p: get_literal_param_range(info, confidence_for_unbounded)
         for p, info in params_info.items()

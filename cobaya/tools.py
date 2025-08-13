@@ -748,7 +748,6 @@ def KL_norm(m1=None, S1=(), m2=None, S2=(), symmetric=False):
     if m2 is None:
         m2 = np.zeros(dim)
     if symmetric:
-        # pylint: disable=arguments-out-of-order
         return _KL_norm(m1, S1, m2, S2) + _KL_norm(m2, S2, m1, S1)
     return _KL_norm(m1, S1, m2, S2)
 
@@ -1174,7 +1173,6 @@ def write_packages_path_in_config_file(packages_path):
 
 
 def resolve_packages_path(infos=None):
-    # noinspection PyStatementEffect
     f"""
     Gets the external packages' installation path given some infos.
     If more than one occurrence of the external packages path in the infos,

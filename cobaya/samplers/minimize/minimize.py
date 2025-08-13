@@ -417,7 +417,6 @@ class Minimize(Minimizer, CovmatSampler):
             self.log.warning("Some minimizations failed!")
         elif len(results) > 1:
             self.log.info("Finished successfully!")
-            # noinspection PyUnboundLocalVariable
             if max(mins) - min(mins) > 1:
                 self.log.warning("Big spread in minima: %r", mins)
             elif max(mins) - min(mins) > 0.2:

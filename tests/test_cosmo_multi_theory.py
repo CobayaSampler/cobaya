@@ -46,7 +46,6 @@ class BBN2(Theory):
             }
 
 
-# noinspection PyDefaultArgument
 def cmb_likelihood(_self):
     results = _self.provider.get_CAMBdata()
     derived = {"check": results.Params.YHe}

@@ -49,7 +49,6 @@ def is_disabled():
     return _mpi is None
 
 
-# noinspection PyUnresolvedReferences
 def get_mpi():
     """
     Import and returns the MPI object, or None if not running with MPI.

@@ -186,7 +186,7 @@ def run(
 def run_script(args=None):
     """Shell script wrapper for :func:`run.run` (including :func:`post.post`)"""
     warn_deprecation()
-    import argparse  # pylint: disable=import-outside-toplevel
+    import argparse
 
     # kwargs for flags that should be True|None, instead of True|False
     # (needed in order not to mistakenly override input file inside the run() function
