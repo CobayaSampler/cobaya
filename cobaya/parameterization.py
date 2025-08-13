@@ -179,6 +179,16 @@ class Parameterization(HasLogger):
                 self._sampled_renames[p] = str_to_list(info.get("renames") or [])
             if is_derived_param(info):
                 self._derived[p] = np.nan
+                # Check for consistency for periodic parameters:
+                if info.get("periodic", False) and None in (
+                    info.get("min", None),
+                    info.get("max", None),
+                ):
+                    raise LoggedError(
+                        self.log,
+                        f"Derived parameter '{p}' defined as periodic, but no range "
+                        "specified with 'min' and 'max'.",
+                    )
                 # Dynamical parameters whose value we want to save
                 if info["derived"] is True and is_fixed_or_function_param(info):
                     # parameters that are already known or computed by input funcs

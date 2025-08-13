@@ -319,6 +319,44 @@ theory code (e.g. CAMB), you can use:
         external: "lambda _self: stats.norm.logpdf(_self.provider.get_param('omegam'), loc=0.334, scale=0.018)"
         requires: omegam
 
+Periodic parameters
+-------------------
+
+Periodic parameters are indicated with a ``peridic=True`` keyword, which should be placed
+inside the prior definition for **sampled** paramters, and inside the bare parameter
+definition for **derived** parameters:
+
+.. code-block :: yaml
+
+     params:
+
+       a: # sampled
+         prior:
+           min: 0
+           max: 1
+           periodic: True
+
+       b: # derived
+         min: 0
+         max: 1
+         periodic: True
+
+Notice that for periodic sampled parameters, the prior must be bounded, and for periodic
+derived parameters both ``min`` and ``max`` must be used to specify a base range.
+
+When calling log-prior or log-posterior methods of a ``Model``, an ``ignore_periodic``
+keyword can be used to control whether a null prior is assigned to values outside the
+prior base range. By default (``ignore_periodic=False``), these methods behave as
+expected, returning the prior of the value reduced to the base range:
+``logp(x) = logp(x + n*period)``.
+
+Samplers will always call these methods with ``ignore_periodic=True``, either because they
+will support periodic parameters directly (i.e. they will not propose values outside the
+prior definition range) or because they will not support them, in which case they will
+have to treat the prior definition range as hard boundaries (in this case, a warning will
+be raised at initialization). At the time of writing, only the ``mcmc`` sampler fully
+supports periodic parameters.
+
 Vector parameters
 -----------------
 
