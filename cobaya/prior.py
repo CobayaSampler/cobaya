@@ -322,9 +322,9 @@ theory code (e.g. CAMB), you can use:
 Periodic parameters
 -------------------
 
-Periodic parameters are indicated with a ``peridic=True`` keyword, which should be placed
-inside the prior definition for **sampled** paramters, and inside the bare parameter
-definition for **derived** parameters:
+Periodic parameters are indicated with a ``periodic=True`` keyword at the parameter level.
+For **sampled** parameters place it alongside the prior definition; for **derived**
+parameters place it in the parameter definition:
 
 .. code-block :: yaml
 
@@ -334,7 +334,7 @@ definition for **derived** parameters:
          prior:
            min: 0
            max: 1
-           periodic: True
+         periodic: True
 
        b: # derived
          min: 0
@@ -344,18 +344,11 @@ definition for **derived** parameters:
 Notice that for periodic sampled parameters, the prior must be bounded, and for periodic
 derived parameters both ``min`` and ``max`` must be used to specify a base range.
 
-When calling log-prior or log-posterior methods of a ``Model``, an ``ignore_periodic``
-keyword can be used to control whether a null prior is assigned to values outside the
-prior base range. By default (``ignore_periodic=False``), these methods behave as
-expected, returning the prior of the value reduced to the base range:
-``logp(x) = logp(x + n*period)``.
-
-Samplers will always call these methods with ``ignore_periodic=True``, either because they
-will support periodic parameters directly (i.e. they will not propose values outside the
-prior definition range) or because they will not support them, in which case they will
-have to treat the prior definition range as hard boundaries (in this case, a warning will
-be raised at initialization). At the time of writing, only the ``mcmc`` sampler fully
-supports periodic parameters.
+The prior itself is a plain (non-periodic) range prior; evaluation does not wrap values.
+Samplers that support periodic parameters should reduce proposed values to the base range
+(e.g. via ``Prior.reduce_periodic``) or ensure proposals remain within bounds. Currently
+only the ``mcmc`` sampler implements parameter wrapping. Other samplers will treat the
+base range as hard boundaries.
 
 Vector parameters
 -----------------
@@ -481,10 +474,11 @@ class Prior(HasLogger):
         self.params = []
         self.pdf = []
         self._bounds = np.zeros((len(sampled_params_info), 2))
-        self._is_periodic = []
+        self._periodic_bounds: list[tuple[int, float, float]] = []
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
-            prior = sampled_params_info[p].get("prior")
+            info = sampled_params_info[p]
+            prior = info.get("prior")
             try:
                 self.pdf += [get_scipy_1d_pdf(prior)]
             except ValueError as excpt:
@@ -501,11 +495,9 @@ class Prior(HasLogger):
                     "No bounds defined for parameter '%s' (maybe not a scipy 1d pdf).",
                     p,
                 ) from excpt
-            if isinstance(prior, Mapping):
-                self._is_periodic.append(bool(prior.pop("periodic", False)))
-            else:
-                self._is_periodic.append(False)
-            if self._is_periodic[i]:
+            # periodic is a parameter-level attribute (not part of the prior)
+            periodic_flag = info.get("periodic", False)
+            if periodic_flag:
                 if any(np.isinf(self._bounds[i])):
                     raise LoggedError(
                         self.log,
@@ -517,7 +509,8 @@ class Prior(HasLogger):
                         f"Parameter '{p}' was declared periodic, but logprior at bounds "
                         "is different."
                     )
-        self.is_any_periodic = any(self._is_periodic)
+                a, b = self._bounds[i]
+                self._periodic_bounds.append((i, a, b))
         self._uniform_indices = np.array(
             [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == "uniform"], dtype=int
         )
@@ -674,13 +667,11 @@ class Prior(HasLogger):
         Returns:
            The given point, with periodicity reduced.
         """
-        if self.is_any_periodic:
+        if self._periodic_bounds:
             if copy:
                 x = np.copy(x)
-            for i in range(self.d()):
-                if self._is_periodic[i]:
-                    a, b = self._bounds[i]
-                    x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
+            for i, a, b in self._periodic_bounds:
+                x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
         return x
 
     def sample(self, n=1, ignore_external=False, random_state=None):
@@ -702,15 +693,12 @@ class Prior(HasLogger):
             )
         return np.array([pdf.rvs(n, random_state=random_state) for pdf in self.pdf]).T
 
-    def logps(self, x: np.ndarray, ignore_periodic: bool = False) -> list[float]:
+    def logps(self, x: np.ndarray) -> list[float]:
         """
         Takes a point (sampled parameter values, in the correct order).
 
         Args:
            x (array): Point where the log-prior is evaluated.
-           ignore_periodic (bool): If True, ignores the periodicity of the parameters,
-               returning ``-inf`` for periodic parameters outside the prior definition
-               range (faster if the input point can be guaranteed to fall inside it).
 
         Returns:
            An array of the prior log-probability densities of the given point
@@ -719,7 +707,7 @@ class Prior(HasLogger):
            ones (if present) are the priors specified in the ``prior`` block
            in the same order.
         """
-        logps = self.logps_internal(x, ignore_periodic=ignore_periodic)
+        logps = self.logps_internal(x)
         if logps != -np.inf:
             if self.external:
                 input_params = self._parameterization.to_input(x)
@@ -729,30 +717,24 @@ class Prior(HasLogger):
         else:
             return [-np.inf] * (1 + len(self.external))
 
-    def logp(self, x: np.ndarray, ignore_periodic: bool = False):
+    def logp(self, x: np.ndarray):
         """
         Takes a point (sampled parameter values, in the correct order).
 
         Args:
            x (array): Point where the log-prior is evaluated.
-           ignore_periodic (bool): If True, ignores the periodicity of the parameters,
-               returning ``-inf`` for periodic parameters outside the prior definition
-               range (faster if the input point can be guaranteed to fall inside it).
 
         Returns:
            The prior log-probability density of the given point or array of points.
         """
-        return np.sum(self.logps(x, ignore_periodic=ignore_periodic), axis=0)
+        return np.sum(self.logps(x), axis=0)
 
-    def logps_internal(self, x: np.ndarray, ignore_periodic: bool = False) -> float:
+    def logps_internal(self, x: np.ndarray) -> float:
         """
         Takes a point (sampled parameter values, in the correct order).
 
         Args:
            x (array): Point where the log-prior is evaluated.
-           ignore_periodic (bool): If True, ignores the periodicity of the parameters,
-               returning ``-inf`` for periodic parameters outside the prior definition
-               range (faster if the input point can be guaranteed to fall inside it).
 
         Returns:
            The prior log-probability density of the given point
@@ -760,8 +742,6 @@ class Prior(HasLogger):
            of 1d priors specified in the ``params`` block, no external priors
         """
         self.log.debug("Evaluating prior at %r", x)
-        if not ignore_periodic:
-            x = self.reduce_periodic(x, copy=True)
         if all(x <= self._upper_limits) and all(x >= self._lower_limits):
             # Apparently faster to sum list than generator (for short enough lists)
             logps = self._uniform_logp + (
