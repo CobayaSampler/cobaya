@@ -13,24 +13,6 @@ The documentation of this program is released under the GNU Free
 Documentation License (see below)
 
 
-Exceptions:
------------
-- The copyright of the logos of the supporting institutions belong
-  to the institutions themselves
-
-
-Re-licensing of specific files:
--------------------------------
-
-The following files have been translated (some with large
-modification) and re-licensed from the more liberally licensed
-CosmoMC (https://github.com/cmbant/CosmoMC):
-
-- mcmc.py and proposal.py
-- sn.py, cmblikes.py in base_classes
-- most of the files under grid_tools/
-
-
 For this code and its documentation (with the exceptions above):
 ----------------------------------------------------------------
 
