@@ -132,7 +132,6 @@ def set_minimize(info, minimize_info=None):
     return result
 
 
-# noinspection PyUnboundLocalVariable
 def makeGrid(
     batchPath,
     settingName=None,

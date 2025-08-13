@@ -59,7 +59,6 @@ def test_sources(packages_path, skip_not_installed):
     results = camb.get_results(pars)
     dic = results.get_source_cls_dict()
 
-    # noinspection PyDefaultArgument
     def test_likelihood(_self):
         assert (
             abs(
@@ -96,7 +95,6 @@ def test_sources(packages_path, skip_not_installed):
 
 
 def test_CAMBdata(packages_path, skip_not_installed):
-    # noinspection PyDefaultArgument
     def test_likelihood(_self):
         return _self.provider.get_CAMBdata().tau0
 
@@ -120,7 +118,6 @@ def test_CAMB_transfer(packages_path, skip_not_installed):
     results = camb.get_results(pars)
     k, z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
 
-    # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(_self):
         _, _, PK = _self.provider.get_Pk_grid()
         assert np.isclose(PK[1, 30], 10294.3285)
@@ -147,7 +144,6 @@ def test_CAMB_sigma_R(packages_path, skip_not_installed):
     R = np.arange(1, 20, 1)
     sigma_R = results.get_sigmaR(R=R, hubble_units=False)[::-1, :]
 
-    # noinspection PyDefaultArgument,PyUnresolvedReferences
     def test_likelihood(_self):
         r_out, z_out, sigma_R_out = _self.provider.get_sigma_R()
         assert np.allclose(z_out, redshifts)

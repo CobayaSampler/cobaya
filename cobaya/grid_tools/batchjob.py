@@ -412,7 +412,7 @@ class JobItem(PropertiesItem):
             if not os.path.exists(lock_file):
                 return True
             h: Any = None
-            import portalocker  # pylint: disable=import-outside-toplevel
+            import portalocker
 
             try:
                 h = open(lock_file, "wb")

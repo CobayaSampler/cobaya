@@ -263,7 +263,6 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
 
     # Dummy representer that prints True for non-representable python objects
     # (prints True instead of nothing because some functions try cast values to bool)
-    # noinspection PyUnusedLocal
     def _null_representer(dumper, data):
         return dumper.represent_scalar("tag:yaml.org,2002:bool", "true")
 

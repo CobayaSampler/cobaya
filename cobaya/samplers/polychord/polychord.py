@@ -40,10 +40,6 @@ if TYPE_CHECKING:
     from getdist import MCSamples
 
 
-# Suppresses warnings about first defining attrs outside __init__
-# pylint: disable=attribute-defined-outside-init
-
-
 class polychord(Sampler):
     r"""
     PolyChord sampler \cite{Handley:2015fda,2015MNRAS.453.4384H}, a nested sampler
@@ -319,7 +315,7 @@ class polychord(Sampler):
         if self.callback_function is not None:
             try:
                 self.callback_function_callable(self)
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 self.log.error("The callback function produced an error: %r", str(e))
             self.last_point_callback = len(self.dead)
 
@@ -463,7 +459,6 @@ class polychord(Sampler):
                     self.output.folder = self.clusters_folder
                 sample = self.save_sample(f, str(i))
                 if self.output:
-                    # noinspection PyUnboundLocalVariable
                     self.output.folder = old_folder
                 self.clusters[i] = {"sample": sample}
         # Prepare the evidence(s) and write to file
@@ -699,7 +694,7 @@ class polychord(Sampler):
 
     @classmethod
     def is_compatible(cls):
-        import platform  # pylint: disable=import-outside-toplevel
+        import platform
 
         if platform.system() == "Windows":
             return False
@@ -741,7 +736,7 @@ class polychord(Sampler):
             log.error("Could not download PolyChord.")
             return False
         log.info("Compiling (Py)PolyChord...")
-        from subprocess import PIPE, Popen  # pylint: disable=import-outside-toplevel
+        from subprocess import PIPE, Popen
 
         # Needs to re-define os' PWD,
         # because MakeFile calls it and is not affected by the cwd of Popen

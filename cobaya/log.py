@@ -268,7 +268,6 @@ def logger_setup(debug=None):
         file_stdout.setFormatter(MyFormatter())
         logging.root.addHandler(file_stdout)
     # Add stdout handler only once!
-    # noinspection PyUnresolvedReferences
     try:
         stdout_handler = next(
             h for h in logging.root.handlers if getattr(h, "stream", None) == sys.stdout

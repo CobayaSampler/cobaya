@@ -30,10 +30,7 @@ else:  # Windows/Mac
     font_size = "9pt"
 
 try:
-    # noinspection PyUnresolvedReferences
     from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Slot
-
-    # noinspection PyUnresolvedReferences
     from PySide6.QtGui import QAction, QColor
     from PySide6.QtWidgets import (
         QAbstractItemView,
@@ -63,14 +60,11 @@ def text(key, contents):
     return desc or key
 
 
-# noinspection PyArgumentList
 def get_settings():
     return QSettings("cobaya", "gui")
 
 
-# noinspection PyArgumentList
 class MainWindow(QWidget):
-    # noinspection PyUnresolvedReferences
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
@@ -183,7 +177,6 @@ class MainWindow(QWidget):
 
     def read_settings(self):
         settings = get_settings()
-        # noinspection PyArgumentList
         screen = self.getScreen()
         h = min(screen.height() * 5 / 6.0, 900)
         size = QSize(min(screen.width() * 5 / 6.0, 1200), h)
@@ -379,13 +372,11 @@ class MainWindow(QWidget):
         self.current_defaults_diag = DefaultsDialog(kind, component, parent=self)
 
 
-# noinspection PyUnresolvedReferences,PyArgumentList
 class DefaultsDialog(QWidget):
     def __init__(self, kind, component, parent=None):
         super().__init__()
         self.setWindowTitle(f"{kind} : {component}")
         self.setGeometry(0, 0, 500, 500)
-        # noinspection PyArgumentList
         self.move(parent.getScreen().center() - self.rect().center())
         self.show()
         # Main layout
@@ -433,7 +424,6 @@ class DefaultsDialog(QWidget):
         QApplication.clipboard().setText(self.display_tabs.currentWidget().toPlainText())
 
 
-# noinspection PyArgumentList
 def gui_script():
     warn_deprecation()
     try:

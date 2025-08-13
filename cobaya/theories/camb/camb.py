@@ -834,7 +834,6 @@ class CAMB(BoltzmannBase):
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
                 if not ell_factor:
-                    # noinspection PyUnboundLocalVariable
                     cls["pp"][1:] /= ells_factor**2 / (2 * np.pi)
                 if self._needs_lensing_cross:
                     for i, cross in enumerate(["pt", "pe"]):
@@ -899,7 +898,6 @@ class CAMB(BoltzmannBase):
         params_derived = list(get_class_methods(self.camb.CAMBparams))
         params_derived.remove("custom_source_names")
         fields = []
-        # noinspection PyProtectedMember
         for f, tp in self.camb.CAMBparams._fields_:
             if (
                 tp is ctypes.c_double

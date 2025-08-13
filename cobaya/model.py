@@ -676,7 +676,6 @@ class Model(HasLogger):
             if self.prior.external:
                 logpriors.extend(self.prior.logps_external(input_params))
         if -np.inf not in logpriors:
-            # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(
                 input_params,
                 return_derived=return_derived,
