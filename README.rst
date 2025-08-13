@@ -104,3 +104,5 @@ Thanks too to `G. Cañas Herrera`_, `A. Finke`_, `X. Garrido`_, `S. Heimersheim`
    :target: https://stfc.ukri.org/
    :height: 150px
    :width: 150px
+
+(Copyright for the logos above belongs to their respective institutions.)
