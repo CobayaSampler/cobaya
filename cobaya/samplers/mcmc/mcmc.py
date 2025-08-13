@@ -54,6 +54,7 @@ class MCMC(CovmatSampler):
     \cite{Lewis:2002ah,Lewis:2013hha}.
     """
 
+    supports_periodic_params = True
     _at_resume_prefer_new = CovmatSampler._at_resume_prefer_new + [
         "burn_in",
         "callback_function",

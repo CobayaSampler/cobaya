@@ -98,6 +98,7 @@ based on the log-**posterior**: the option only affects what is minimized.
 
 import os
 import re
+from functools import partial
 from itertools import chain
 
 import numpy as np
@@ -165,11 +166,14 @@ class Minimize(Minimizer, CovmatSampler):
         self.mpi_info("Initializing")
         self.max_iter = int(read_dnumber(self.max_evals, self.model.prior.d()))
         # Configure target
-        method = self.model.loglike if self.ignore_prior else self.model.logpost
-        kwargs = {"make_finite": True}
         if self.ignore_prior:
-            kwargs["return_derived"] = False
-        self.logp = lambda x: method(x, **kwargs)
+            self.logp = partial(
+                self.model.loglike, make_finite=True, return_derived=False
+            )
+        else:
+            self.logp = partial(
+                self.model.logpost, make_finite=True, ignore_periodic=True
+            )
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
         self.initial_points = []
