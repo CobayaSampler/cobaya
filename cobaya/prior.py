@@ -323,8 +323,7 @@ Periodic parameters
 -------------------
 
 Periodic parameters are indicated with a ``periodic=True`` keyword at the parameter level.
-For **sampled** parameters place it alongside the prior definition; for **derived**
-parameters place it in the parameter definition:
+For **sampled** parameters place it alongside the prior definition.
 
 .. code-block :: yaml
 
@@ -336,13 +335,7 @@ parameters place it in the parameter definition:
            max: 1
          periodic: True
 
-       b: # derived
-         min: 0
-         max: 1
-         periodic: True
-
-Notice that for periodic sampled parameters, the prior must be bounded, and for periodic
-derived parameters both ``min`` and ``max`` must be used to specify a base range.
+Notice that for periodic sampled parameters, the prior must be bounded.
 
 The prior itself is a plain (non-periodic) range prior; evaluation does not wrap values.
 Samplers that support periodic parameters should reduce proposed values to the base range
