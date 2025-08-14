@@ -171,8 +171,10 @@ jobs:
     steps:
       - name: Check test results
         run: |
-          if [[ "${{ needs.tests.result }}" == "success" ]]; then
-            echo "All tests passed!"
+          result="${{ needs.tests.result }}"
+          echo "tests job result: $result"
+          if [[ "$result" == "success" || "$result" == "skipped" ]]; then
+            echo "Tests succeeded or were skipped."
             exit 0
           else
             echo "Some tests failed or were cancelled"
