@@ -468,7 +468,7 @@ def install(*infos, **kwargs):
             bullet + bullet.join(obsolete_components),
         )
     if incompatible_components:
-        logger.info(
+        logger.warning(
             "The following components were skipped because they are not compatible "
             "with your OS: %s",
             bullet + bullet.join(incompatible_components),
