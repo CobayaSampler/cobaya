@@ -650,7 +650,6 @@ def get_scipy_1d_pdf(
         kwargs = {"dist": "uniform", "min": definition[0], "max": definition[1]}
     elif isinstance(definition, dict):
         kwargs = deepcopy(definition)
-        kwargs.pop("periodic", None)  # ignore periodicity silently
     else:
         raise ValueError(
             f"Invalid type {type(definition)} for prior definition: {definition}"
