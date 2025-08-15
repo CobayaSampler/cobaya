@@ -41,7 +41,7 @@ classy_extra_tolerance = 0.45
 def test_planck_2018_t_camb(packages_path, skip_not_installed, clik=False):
     best_fit = deepcopy(params_lowl_highTT_lensing)
     best_fit.pop("H0")
-    info_likelihood = lik_info_lowl_highTT_lensing
+    info_likelihood = lik_info_lowl_highTT_lensing.copy()
     chi2 = chi2_lowl_highTT_lensing.copy()
     if clik:
         info_likelihood["planck_2018_lowl.TT_clik"] = info_likelihood.pop(
@@ -320,7 +320,7 @@ def test_planck_2018_p_CamSpec2021_camb(packages_path, skip_not_installed):
 
 def test_planck_2018_lcmbmarged_camb(packages_path, skip_not_installed):
     best_fit = params_lensing_cmbmarged
-    info_likelihood = lik_info_lensing_cmbmarged
+    info_likelihood = lik_info_lensing_cmbmarged.copy()
     info_theory = {"camb": {"extra_args": planck_precision["camb"]}}
     best_fit_derived = {}
     body_of_test(
@@ -341,7 +341,7 @@ def test_planck_2018_t_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowl_highTT_lensing)
     best_fit.pop("theta_MC_100")
     best_fit = params_lowl_highTT_lensing
-    info_likelihood = lik_info_lowl_highTT_lensing
+    info_likelihood = lik_info_lowl_highTT_lensing.copy()
     info_theory = {"classy": {"extra_args": planck_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowl_highTT_lensing)
     for p in classy_unknown:
@@ -362,7 +362,7 @@ def test_planck_2018_t_classy(packages_path, skip_not_installed):
 def test_planck_2018_p_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
     best_fit.pop("theta_MC_100")
-    info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes
+    info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
     info_theory = {"classy": {"extra_args": planck_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowTE_highTTTEEE_lensingcmblikes)
     for p in classy_unknown:

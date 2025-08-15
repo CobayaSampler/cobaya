@@ -5,7 +5,7 @@ name: Cobaya Tests
 on: [push, pull_request]
 
 env:
-  COBAYA_INSTALL_SKIP_BASE: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
+  COBAYA_INSTALL_SKIP_BASE: CamSpec2021,2018_highl_CamSpec,unbinned,keck
   COBAYA_PACKAGES_PATH: ../packages
 
 jobs:

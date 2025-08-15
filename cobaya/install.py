@@ -198,6 +198,7 @@ def install(*infos, **kwargs):
     unknown_components = []  # could not be identified
     failed_components = []  # general errors
     obsolete_components = []  # older or unknown version already installed
+    incompatible_components = []  # not compatible with current OS
     skip_keywords_arg = set(kwargs.get("skip") or [])
     # NB: if passed with quotes as `--skip "a b"`, it's interpreted as a single key
     skip_keywords_arg = set(chain(*[word.split() for word in skip_keywords_arg]))
@@ -304,10 +305,10 @@ def install(*infos, **kwargs):
                 name_w_kind = imported_class.get_kind() + ":" + component
             is_compatible = getattr(imported_class, "is_compatible", lambda: True)()
             if not is_compatible:
-                logger.error(
+                logger.info(
                     f"Skipping '{name_w_kind}' because it is not compatible with your OS."
                 )
-                failed_components += [name_w_kind]
+                incompatible_components += [name_w_kind]
                 continue
             logger.info("Checking if dependencies have already been installed...")
             is_installed = getattr(imported_class, "is_installed", None)
@@ -465,6 +466,12 @@ def install(*infos, **kwargs):
                 " (not upgrading by default to preserve possible user changes): %s"
             ),
             bullet + bullet.join(obsolete_components),
+        )
+    if incompatible_components:
+        logger.warning(
+            "The following components were skipped because they are not compatible "
+            "with your OS: %s",
+            bullet + bullet.join(incompatible_components),
         )
     if not unknown_components and not failed_components and not obsolete_components:
         logger.info(
