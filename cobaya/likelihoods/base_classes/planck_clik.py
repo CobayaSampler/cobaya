@@ -17,7 +17,7 @@ from cobaya.input import get_default_info
 from cobaya.install import download_file, download_github_release, pip_install
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
-from cobaya.tools import VersionCheckError, are_different_params_lists, create_banner
+from cobaya.tools import VersionCheckError, are_different_params_lists
 
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
@@ -42,7 +42,7 @@ class PlanckClik(Likelihood):
                 self.packages_path
             )
             # Load clipy instead of clik
-            clik = load_clipy(
+            clipy = load_clipy(
                 path=self.path,
                 install_path=install_path,
                 logger=self.log,
@@ -58,6 +58,8 @@ class PlanckClik(Likelihood):
                 self.log,
                 f"{excpt}. To install a new version, {msg_to_install} with `--upgrade`.",
             ) from excpt
+        # Disable JAX to avoid dependency issues
+        os.environ["CLIPY_NOJAX"] = "1"
         # Loading the likelihood data
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         if not os.path.isabs(self.clik_file):
@@ -67,51 +69,46 @@ class PlanckClik(Likelihood):
                 os.path.join(self.path or self.packages_path, "data", data_path),
             )
             self.clik_file = os.path.join(self.path_data, self.clik_file)
-        # clipy handles both lensing and non-lensing likelihoods with single constructor
         try:
-            # Disable JAX to avoid dependency issues
-            os.environ["CLIPY_NOJAX"] = "1"
-            self.clik = clik.clik(self.clik_file)
-        except Exception as excpt:
+            self.commands = None
+
+            self.clik_likelihood = clipy.clik(self.clik_file, **(self.commands or {}))
+        except clipy.clik_emul_error as excpt:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
                 raise ComponentNotInstalledError(
                     self.log,
-                    "The .clik file was not found where specified in the "
-                    "'clik_file' field of the settings of this likelihood. "
-                    "Maybe the 'path' given is not correct? The full path where"
-                    " the .clik file was searched for is '%s'",
-                    self.clik_file,
+                    "The .clik file was not found where specified in the 'clik_file' "
+                    "field of the settings of this likelihood. Install this likelihood "
+                    f"with 'cobaya-install {self.get_qualified_class_name()}'. If this "
+                    "error persists, maybe the 'path' given is not correct? The full path"
+                    " where the .clik file was searched for is '{self.clik_file}'",
                 ) from excpt
             # Else: unknown clipy error
-            self.log.error(
-                "An unexpected error occurred in clipy (possibly related to "
-                "multiple simultaneous initialization, or simultaneous "
-                "initialization of incompatible likelihoods; e.g. polarised "
-                "vs non-polarised 'lite' likelihoods. See error info below:"
-            )
-            raise
-        self.l_maxs = self.clik.get_lmax()
-        # calculate requirements here so class can also be separately instantiated
-        requested_cls = ["tt", "ee", "bb", "te", "tb", "eb"]
-        # clipy automatically handles lensing detection, but we need to check the lmax values
-        has_cl = [lmax != -1 for lmax in self.l_maxs]
-        # Check if this is a lensing likelihood by examining the structure
-        if len(self.l_maxs) > 6 and self.l_maxs[0] != -1:
-            # First element is pp for lensing likelihoods
-            self.lensing = True
-            requested_cls = ["pp"] + requested_cls
-        else:
-            self.lensing = False
-            # For non-lensing, use get_has_cl if available
-            if hasattr(self.clik, "get_has_cl"):
-                has_cl = self.clik.get_has_cl()
-        self.requested_cls = [cl for cl, i in zip(requested_cls, has_cl) if int(i)]
-        self.l_maxs_cls = [lmax for lmax, i in zip(self.l_maxs, has_cl) if int(i)]
-        self.expected_params = list(self.clik.extra_parameter_names)
+            raise LoggedError(
+                self.log,
+                f"An unexpected error occurred in clipy: {excpt}",
+            ) from excpt
+        except Exception as excpt:  # unknown clippy error
+            raise LoggedError(
+                self.log,
+                f"An unmanaged error occurred in clipy: {excpt}. Please report it as a "
+                "GitHub issue in the Cobaya repo.",
+            ) from excpt
+        lmaxs = self.clik_likelihood.lmax
+        cls_sorted = ["tt", "ee", "bb", "te", "tb", "eb"]
+        if len(lmaxs) > 6:  # lensing likelihood!
+            cls_sorted = ["pp"] + cls_sorted
+        self.requested_cls_lmax = {
+            cl: lmax for cl, lmax in zip(cls_sorted, lmaxs) if lmax != -1
+        }
+        self.expected_params = list(self.clik_likelihood.extra_parameter_names)
         # Placeholder for vector passed to clipy
-        length = len(self.l_maxs) if self.lensing else len(has_cl)
-        self.vector = np.zeros(np.sum(self.l_maxs) + length + len(self.expected_params))
+        self.vector = np.zeros(
+            sum(list(self.requested_cls_lmax.values()))
+            + len(self.requested_cls_lmax)  # account for ell=0
+            + len(self.expected_params)
+        )
 
     def initialize_with_params(self):
         # Check that the parameters are the right ones
@@ -129,44 +126,34 @@ class PlanckClik(Likelihood):
 
     def get_requirements(self):
         # State requisites to the theory code
-        return {"Cl": dict(zip(self.requested_cls, self.l_maxs_cls))}
+        return {"Cl": self.requested_cls_lmax}
 
     def logp(self, **params_values):
-        # get Cl's from the theory code
+        # Get Cl's from the theory code
         cl = self.provider.get_Cl(units="FIRASmuK2")
         return self.log_likelihood(cl, **params_values)
 
     def log_likelihood(self, cl, **params_values):
-        # fill with Cl's
+        # Fill with Cl's
         self.vector[: -len(self.expected_params)] = np.concatenate(
             [
-                (
-                    cl[spectrum][: 1 + lmax]
-                    if spectrum not in ["tb", "eb"]
-                    else np.zeros(1 + lmax)
-                )
-                for spectrum, lmax in zip(self.requested_cls, self.l_maxs_cls)
+                cl[spec][: 1 + lmax] if spec not in ["tb", "eb"] else np.zeros(1 + lmax)
+                for spec, lmax in self.requested_cls_lmax.items()
             ]
         )
         # check for nan's: may produce issues in clipy
         # dot product is apparently the fastest way in threading-enabled numpy
         if np.isnan(np.dot(self.vector, self.vector)):
             return -np.inf
-        # fill with likelihood parameters
+        # Fill with likelihood parameters
         self.vector[-len(self.expected_params) :] = [
             params_values[p] for p in self.expected_params
         ]
-        # clipy returns a scalar, not an array like clik
-        loglike = self.clik(self.vector)
-        # Convert to Python float
-        loglike = float(loglike)
+        loglike = self.clik_likelihood(self.vector)
         # "zero" of clipy, and sometimes nan's returned
-        if np.allclose(loglike, -1e30) or np.isnan(loglike):
+        if loglike <= -1e30 or np.isnan(loglike):
             loglike = -np.inf
         return loglike
-
-    def close(self):
-        del self.clik  # Clean up clipy object
 
     @classmethod
     def get_code_path(cls, path):
