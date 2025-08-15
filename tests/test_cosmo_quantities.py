@@ -13,10 +13,50 @@ from cobaya.tools import check_2d, recursive_update
 
 from .common import process_packages_path
 from .conftest import install_test_wrapper
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
 
 fiducial_parameters = deepcopy(params_lowTEB_highTTTEEE)
 redshifts = [100, 10, 1, 0]
+
+# Best fit Planck 2015 as test point
+params_lowTEB_highTTTEEE = {
+    # Sampled
+    "omegabh2": 0.02225203,
+    "omegach2": 0.1198657,
+    # only one of the next two is finally used!
+    "H0": 67.25,  # will be ignored in the CAMB case
+    "theta_MC_100": 1.040778,  # will be ignored in the CLASS case
+    "logA": 3.0929,
+    "ns": 0.9647522,
+    "tau": 0.07888604,
+    # Planck likelihood
+    "A_planck": 1.00029,
+    "A_cib_217": 66.4,
+    "xi_sz_cib": 0.13,
+    "A_sz": 7.17,
+    "ps_A_100_100": 255.0,
+    "ps_A_143_143": 40.1,
+    "ps_A_143_217": 36.4,
+    "ps_A_217_217": 98.7,
+    "ksz_norm": 0.00,
+    "gal545_A_100": 7.34,
+    "gal545_A_143": 8.97,
+    "gal545_A_143_217": 17.56,
+    "gal545_A_217": 81.9,
+    "galf_EE_A_100": 0.0813,
+    "galf_EE_A_100_143": 0.0488,
+    "galf_EE_A_100_217": 0.0995,
+    "galf_EE_A_143": 0.1002,
+    "galf_EE_A_143_217": 0.2236,
+    "galf_EE_A_217": 0.645,
+    "galf_TE_A_100": 0.1417,
+    "galf_TE_A_100_143": 0.1321,
+    "galf_TE_A_100_217": 0.307,
+    "galf_TE_A_143": 0.155,
+    "galf_TE_A_143_217": 0.338,
+    "galf_TE_A_217": 1.667,
+    "calib_100T": 0.99818,
+    "calib_217T": 0.99598,
+}
 
 
 def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_installed):

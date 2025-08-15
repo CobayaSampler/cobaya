@@ -14,15 +14,10 @@ import numpy as np
 
 from cobaya.component import ComponentNotInstalledError, load_external_module
 from cobaya.input import get_default_info
-from cobaya.install import download_github_release, pip_install
+from cobaya.install import download_file, download_github_release, pip_install
 from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError, get_logger
-
-_deprecation_msg_2015 = create_banner("""
-The likelihoods from the Planck 2015 data release have been superseded
-by the 2018 ones, and will eventually be deprecated.
-""")
-from cobaya.tools import VersionCheckError, are_different_params_lists
+from cobaya.tools import VersionCheckError, are_different_params_lists, create_banner
 
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
@@ -41,9 +36,6 @@ class PlanckClik(Likelihood):
     clik_file: str
 
     def initialize(self):
-        if "2015" in self.get_name():
-            for line in _deprecation_msg_2015.split("\n"):
-                self.log.warning(line)
         msg_to_install = "run `cobaya-install planck_2018_highl_plik.TTTEEE`"
         try:
             install_path = (lambda p: self.get_code_path(p) if p else None)(
@@ -257,8 +249,6 @@ class PlanckClik(Likelihood):
                     "151905": 5476083302,
                     "151903": 8160437862,
                 }.get(product_id)
-                from cobaya.install import download_file
-
                 if not download_file(
                     url,
                     paths["data"],
@@ -449,10 +439,6 @@ def get_product_id_and_clik_file(name):
     """Gets the PLA product info from the defaults file."""
     defaults = get_default_info(name, "likelihood")
     return defaults.get("product_id"), defaults.get("clik_file")
-
-
-class Planck2015Clik(PlanckClik):
-    bibtex_file = "planck2015.bibtex"
 
 
 class Planck2018Clik(PlanckClik):
