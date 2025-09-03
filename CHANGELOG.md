@@ -7,6 +7,11 @@
 - Added pre-commit hooks for automated code quality checks (trailing whitespace, end-of-file-fixer, pyupgrade, ruff)
 - Documentation can now be built as markdown for LLM context. Flat context file provided.
 
+### Cosmology
+
+- Planck `clik`-based likelihoods now use the new `clipy` Python implementation
+- Planck 2015 likelihoods deprecated
+
 ## 3.5.7 - 2025-03-31
 
 ### General

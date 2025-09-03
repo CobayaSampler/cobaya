@@ -69,10 +69,11 @@ class PlanckClik(Likelihood):
                 os.path.join(self.path or self.packages_path, "data", data_path),
             )
             self.clik_file = os.path.join(self.path_data, self.clik_file)
+        # Prepare clipy commands
+        if isinstance(self.commands, str):
+            self.commands = [self.commands]
         try:
-            self.commands = None
-
-            self.clik_likelihood = clipy.clik(self.clik_file, **(self.commands or {}))
+            self.clik_likelihood = clipy.clik(self.clik_file, crop=self.commands)
         except clipy.clik_emul_error as excpt:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
@@ -87,14 +88,23 @@ class PlanckClik(Likelihood):
             # Else: unknown clipy error
             raise LoggedError(
                 self.log,
-                f"An unexpected error occurred in clipy: {excpt}",
+                f"An unexpected managed error occurred in clipy: {excpt}",
             ) from excpt
-        except Exception as excpt:  # unknown clippy error
-            raise LoggedError(
-                self.log,
-                f"An unmanaged error occurred in clipy: {excpt}. Please report it as a "
-                "GitHub issue in the Cobaya repo.",
-            ) from excpt
+        except Exception as excpt:
+            if self.commands:  # check if bad command
+                raise LoggedError(
+                    self.log,
+                    f"An unmanaged error occurred in clipy: {excpt}. This may have been "
+                    "caused by a worngly-formatted 'command'. Please check your command "
+                    "syntax, or disable and try again to check that clipy is working as "
+                    f"expected. The list of commands passed were: {self.commands}"
+                ) from excpt
+            else:  # unknown clippy error
+                raise LoggedError(
+                    self.log,
+                    f"An unmanaged error occurred in clipy: {excpt}. Please report it as "
+                    "a GitHub issue in the Cobaya repo.",
+                ) from excpt
         lmaxs = self.clik_likelihood.lmax
         cls_sorted = ["tt", "ee", "bb", "te", "tb", "eb"]
         if len(lmaxs) > 6:  # lensing likelihood!
