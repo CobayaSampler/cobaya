@@ -14,9 +14,6 @@ from cobaya.tools import check_2d, recursive_update
 from .common import process_packages_path
 from .conftest import install_test_wrapper
 
-fiducial_parameters = deepcopy(params_lowTEB_highTTTEEE)
-redshifts = [100, 10, 1, 0]
-
 # Best fit Planck 2015 as test point
 params_lowTEB_highTTTEEE = {
     # Sampled
@@ -57,6 +54,34 @@ params_lowTEB_highTTTEEE = {
     "calib_100T": 0.99818,
     "calib_217T": 0.99598,
 }
+
+derived_lowTEB_highTTTEEE = {
+    # param: [best_fit, sigma]
+    "H0": [params_lowTEB_highTTTEEE["H0"], 0.66],
+    "omegal": [0.6844, 0.0091],
+    "omegam": [0.3156, 0.0091],
+    "sigma8": [0.8310, 0.013],
+    "zrei": [10.07, 1.6],
+    # "YHe": [0.2453409, 0.000072],
+    # "Y_p": [0.2466672, 0.000072],
+    # "DH": [2.6136e-5, 0.030e-5],
+    "age": [13.8133, 0.026],
+    "zstar": [1090.057, 0.30],
+    "rstar": [144.556, 0.32],
+    "thetastar": [1.040967, 0.00032],
+    "DAstar": [13.8867, 0.030],
+    "zdrag": [1059.666, 0.31],
+    "rdrag": [147.257, 0.31],
+    "kd": [0.140600, 0.00032],
+    "thetad": [0.160904, 0.00018],
+    "zeq": [3396.2, 33],
+    "keq": [0.010365, 0.00010],
+    "thetaeq": [0.8139, 0.0063],
+    "thetarseq": [0.44980, 0.0032],
+}
+
+fiducial_parameters = deepcopy(params_lowTEB_highTTTEEE)
+redshifts = [100, 10, 1, 0]
 
 
 def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_installed):

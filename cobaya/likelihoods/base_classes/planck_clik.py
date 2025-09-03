@@ -73,7 +73,7 @@ class PlanckClik(Likelihood):
         if isinstance(self.commands, str):
             self.commands = [self.commands]
         try:
-            self.clik_likelihood = clipy.clik(self.clik_file, crop=self.commands)
+            self.clik_likelihood = clipy.clik(self.clik_file, crop=self.commands or [])
         except clipy.clik_emul_error as excpt:
             # Is it that the file was not found?
             if not os.path.exists(self.clik_file):
