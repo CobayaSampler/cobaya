@@ -329,7 +329,6 @@ class HasDefaults:
         else:
             return defaults
 
-    # noinspection PyUnusedLocal
     @classmethod
     def get_modified_defaults(cls, defaults, input_options=empty_dict):
         """

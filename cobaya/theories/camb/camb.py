@@ -808,7 +808,7 @@ class CAMB(BoltzmannBase):
             which_result = "total" if lensed else "unlensed_total"
         try:
             cl_camb = self.current_state[which_key][which_result].copy()
-        except:
+        except Exception:
             raise LoggedError(
                 self.log,
                 "No %s Cl's were computed. Are you sure that you have requested them?",
@@ -834,7 +834,6 @@ class CAMB(BoltzmannBase):
             if cl_lens is not None:
                 cls["pp"] = cl_lens[:, 0].copy()
                 if not ell_factor:
-                    # noinspection PyUnboundLocalVariable
                     cls["pp"][1:] /= ells_factor**2 / (2 * np.pi)
                 if self._needs_lensing_cross:
                     for i, cross in enumerate(["pt", "pe"]):
@@ -866,7 +865,7 @@ class CAMB(BoltzmannBase):
         # get C_l^XX from the cosmological code
         try:
             cls = deepcopy(self.current_state["source_Cl"])
-        except:
+        except Exception:
             raise LoggedError(
                 self.log,
                 "No source Cl's were computed. "
@@ -899,7 +898,6 @@ class CAMB(BoltzmannBase):
         params_derived = list(get_class_methods(self.camb.CAMBparams))
         params_derived.remove("custom_source_names")
         fields = []
-        # noinspection PyProtectedMember
         for f, tp in self.camb.CAMBparams._fields_:
             if (
                 tp is ctypes.c_double

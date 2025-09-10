@@ -79,7 +79,7 @@ def get_covmat_database(installed_folders, cached=True) -> dict[CovmatFileKey, d
             log.debug("Loaded cached covmats database")
             _loaded_covmats_database[_hash] = covmat_database
             return covmat_database
-        except:
+        except Exception:
             log.info(
                 "No cached covmat database present, not usable or not up-to-date. "
                 "Will be re-created and cached."
@@ -95,7 +95,7 @@ def get_covmat_database(installed_folders, cached=True) -> dict[CovmatFileKey, d
                     header = covmat.readline()
                 assert header.strip().startswith("#")
                 params = header.strip().lstrip("#").split()
-            except:
+            except Exception:
                 continue
             name = os.path.splitext(filename)[0]
             tags = name.replace(".post.", "_").replace("_post", "").split("_")

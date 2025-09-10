@@ -194,7 +194,7 @@ def ensure_cache_dumped(method):
 
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
-        self._cache_dump()  # pylint: disable=protected-access
+        self._cache_dump()
         return method(self, *args, **kwargs)
 
     return wrapper
@@ -668,7 +668,6 @@ class SampleCollection(BaseCollection):
         weights = self[OutPar.weight]
         return np.allclose(np.round(weights), weights)
 
-    # pylint: disable=protected-access
     def _detempered_weights(self, with_batch=None):
         """
         Computes the detempered weights.
@@ -722,7 +721,6 @@ class SampleCollection(BaseCollection):
             -self._data[OutPar.minuslogpost].to_numpy(dtype=np.float64), self.temperature
         )
 
-    # pylint: disable=protected-access
     def reset_temperature(self, with_batch=None):
         """
         Drops the information about sampling temperature: ``weight`` and ``minuslogpost``

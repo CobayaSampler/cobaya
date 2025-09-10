@@ -45,6 +45,7 @@ coverage.xml
 **/chains/
 my*
 scratch/
+*docker*
 
 # IDE-specific
 .idea/

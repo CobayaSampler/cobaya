@@ -112,7 +112,7 @@ class JobSettings:
                     )
                     if "OGS/GE" in help_info:
                         grid_engine = "OGS"  # Open Grid Scheduler, as on StarCluster
-                except:
+                except Exception:
                     pass
         self.job_template = get_defaulted("job_template", "job_script", **kwargs)
         if (
@@ -134,7 +134,7 @@ class JobSettings:
             if cores > 64:
                 # probably shared memory machine, e.g. Cosmos
                 cores = 8
-        except:
+        except Exception:
             cores = 8
         self.cores_per_node = get_defaulted(
             "cores_per_node", cores, tp=int, template=template, **kwargs

@@ -6,6 +6,7 @@
 - Added standardized formatting with ruff (removing flake8)
 - Added pre-commit hooks for automated code quality checks (trailing whitespace, end-of-file-fixer, pyupgrade, ruff)
 - Documentation can now be built as markdown for LLM context. Flat context file provided.
+- Periodic sampled parameters implemented (for now fully supported by MCMC only), as well as tagging of derived parameters as periodic for analysis with GetDist.
 
 ### Cosmology
 

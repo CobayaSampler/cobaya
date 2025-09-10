@@ -10,7 +10,7 @@ try:
     import matplotlib
 
     matplotlib.use("agg")
-except:
+except Exception:
     pass
 
 # Derived parameters not understood by CLASS
