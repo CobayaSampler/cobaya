@@ -3,7 +3,7 @@ from copy import deepcopy
 from cobaya.typing import empty_dict
 
 from .common_cosmo import body_of_test
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
+from .test_cosmo_quantities import params_lowTEB_highTTTEEE
 
 
 def _test_sn(

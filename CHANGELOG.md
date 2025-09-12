@@ -8,6 +8,11 @@
 - Documentation can now be built as markdown for LLM context. Flat context file provided.
 - Periodic sampled parameters implemented (for now fully supported by MCMC only), as well as tagging of derived parameters as periodic for analysis with GetDist.
 
+### Cosmology
+
+- Planck `clik`-based likelihoods now use the new `clipy` Python implementation
+- Planck 2015 likelihoods deprecated
+
 ## 3.5.7 - 2025-03-31
 
 ### General
