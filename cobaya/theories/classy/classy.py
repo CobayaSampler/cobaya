@@ -187,24 +187,13 @@ To download and install CLASS manually in a folder called ``CLASS`` under
    $ cd /path/to/cosmo/
    $ git clone https://github.com/lesgourg/class_public.git CLASS --depth=1
    $ cd CLASS
-   $ make
+   $ python setup.py build
 
 If the **second** line produces an error (because you don't have ``git`` installed),
 download the latest snapshot from `here
 <https://github.com/lesgourg/class_public/archive/master.zip>`_, decompress it, rename the
-resulting ``class_public-master`` folder to ``CLASS`` (optional) and run the ``make``
-command from there.
-
-.. note::
-
-   If CLASS seems to compile and install correctly, but you cannot import it from Python
-   manually, or Cobaya fails to import it, it may be that the CLASS installation script is
-   not using the right Python version. To fix that, if your preferred Python command is
-   e.g. ``python3``, re-do the ``make`` step as
-
-   .. code:: bash
-
-      $ PYTHON=python3 make
+resulting ``class_public-master`` folder to ``CLASS`` (optional) and run the
+``python setup.py build`` command from there.
 
 If the instructions above failed, follow those in the
 `official CLASS web page <https://class-code.net/>`_.
@@ -329,9 +318,11 @@ class classy(BoltzmannBase):
         # Add general CLASS stuff
         self.extra_args["output"] = self.extra_args.get("output", "")
         if "sBBN file" in self.extra_args:
-            self.extra_args["sBBN file"] = self.extra_args["sBBN file"].format(
-                classy=self.path
-            )
+            sbbn_dir, sbbn_file = os.path.split(self.extra_args["sBBN file"])
+            if not os.path.isabs(sbbn_dir):
+                # Discard dir, since it's standardized in the C code anyway.
+                self.extra_args["sBBN file"] = os.path.join("/external/bbn", sbbn_file)
+            # The "else" case (abs path) will fail in CLASS, and should be fixed.
         # Normalize `non_linear` vs `non linear`: prefer underscore
         # Keep this convention throughout the rest of this module!
         if "non linear" in self.extra_args:
@@ -1008,7 +999,13 @@ class classy(BoltzmannBase):
 
         env = deepcopy(os.environ)
         env.update({"PYTHON": sys.executable})
-        process_make = Popen(["make"], cwd=classy_path, stdout=PIPE, stderr=PIPE, env=env)
+        process_make = Popen(
+            [sys.executable, "setup.py", "build"],
+            cwd=classy_path,
+            stdout=PIPE,
+            stderr=PIPE,
+            env=env,
+        )
         out, err = process_make.communicate()
         if process_make.returncode:
             log.info(out.decode("utf-8"))
