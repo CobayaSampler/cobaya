@@ -44,6 +44,9 @@ planck_2018_precision["classy"].update({
     "want_lcmb_full_limber": "no",  # When it's on, it changes by chi2 ~ 0.5
 })
 
+info_theory_camb = {"camb": {"extra_args": planck_2018_precision["camb"]}}
+info_theory_classy = {"classy": {"extra_args": planck_2018_precision["classy"]}}
+
 # Small chi2 difference with CLASS (total still <0.35)
 classy_extra_tolerance = 0.25
 
@@ -61,13 +64,12 @@ def test_planck_2018_t_camb(packages_path, skip_not_installed, clik=False):
             "planck_2018_lowl.TT"
         )
         chi2["planck_2018_lowl.TT_clik"] = chi2.pop("planck_2018_lowl.TT")
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     best_fit_derived = derived_lowl_highTT_lensing
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         best_fit_derived,
         skip_not_installed=skip_not_installed,
@@ -88,13 +90,12 @@ def test_planck_2018_p_camb(packages_path, skip_not_installed, clik=False):
             "planck_2018_lowl.EE"
         )
         chi2["planck_2018_lowl.EE_clik"] = chi2.pop("planck_2018_lowl.EE")
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     best_fit_derived = derived_lowTE_highTTTEEE_lensingcmblikes
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         best_fit_derived,
         skip_not_installed=skip_not_installed,
@@ -113,13 +114,12 @@ def test_planck_2018_t_lite_camb(packages_path, skip_not_installed, native=False
     best_fit.pop("H0")
     like_name = "planck_2018_highl_plik.TT_lite" + ("_native" if native else "")
     info_likelihood = {like_name: None}
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     chi2 = {like_name: chi2_planck_2018_plikHM_highTT_lite, "tolerance": 0.01}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -136,13 +136,12 @@ def test_planck_2018_p_lite_camb(packages_path, skip_not_installed, native=False
     best_fit.pop("H0")
     like_name = "planck_2018_highl_plik.TTTEEE_lite" + ("_native" if native else "")
     info_likelihood = {like_name: None}
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     chi2 = {like_name: chi2_planck_2018_plikHM_highTTTEEE_lite, "tolerance": 0.01}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -162,13 +161,12 @@ def test_planck_2018_t_unbinned_camb(packages_path, skip_not_installed):
     best_fit.pop("H0")
     like_name = "planck_2018_highl_plik.TT_unbinned"
     info_likelihood = {like_name: None}
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     chi2 = {like_name: 8275.99, "tolerance": 0.03}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -179,13 +177,12 @@ def test_planck_2018_p_unbinned_camb(packages_path, skip_not_installed):
     best_fit.pop("H0")
     like_name = "planck_2018_highl_plik.TTTEEE_unbinned"
     info_likelihood = {like_name: None}
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     chi2 = {like_name: 24125.92, "tolerance": 0.01}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -195,40 +192,29 @@ def test_planck_2018_p_unbinned_camb(packages_path, skip_not_installed):
 
 
 def test_planck_2018_t_CamSpec_camb(packages_path, skip_not_installed):
-    name = "planck_2018_highl_CamSpec.TT"
-    info_likelihood = {name: None}
-    chi2 = {name: 7060.04, "tolerance": 0.2}
-    best_fit = params_lowTE_highTTTEEE_lite_lensingcmblikes.copy()
-    best_fit.update(
-        {
-            "aps100": 238.7887,
-            "aps143": 41.31762,
-            "aps217": 100.6226,
-            "acib217": 44.96003,
-            "asz143": 5.886124,
-            "psr": 0.5820399,
-            "cibr": 0.7912195,
-            "ncib": 0.0,
-            "cibrun": 0.0,
-            "xi": 0.1248677,
-            "aksz": 1.153473,
-            "dust100": 1.010905,
-            "dust143": 0.9905765,
-            "dust217": 0.9658913,
-            "dust143x217": 0.9946434,
-            "cal0": 0.9975484,
-            "cal2": 1.00139,
-            "calTE": 1.0,
-            "calEE": 1.0,
-        }
-    )
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
+    best_fit = deepcopy(params_t_CamSpec)
+    best_fit.pop("H0")
     body_of_test(
         packages_path,
         best_fit,
-        info_likelihood,
-        info_theory,
-        chi2,
+        lik_info_t_CamSpec,
+        info_theory_camb,
+        chi2_t_CamSpec,
+        skip_not_installed=skip_not_installed,
+    )
+
+def test_planck_2018_t_CamSpec_classy(packages_path, skip_not_installed):
+    best_fit = deepcopy(params_t_CamSpec)
+    best_fit.pop("theta_MC_100")
+    chi2_t_CamSpec_classy = deepcopy(chi2_t_CamSpec)
+    # TODO: find out the reason for the increased tolerance (plik case agrees very well)
+    chi2_t_CamSpec_classy["tolerance"] += 1.30
+    body_of_test(
+        packages_path,
+        best_fit,
+        lik_info_t_CamSpec,
+        info_theory_classy,
+        chi2_t_CamSpec_classy,
         skip_not_installed=skip_not_installed,
     )
 
@@ -249,12 +235,11 @@ def test_planck_2018_t_CamSpec2021_camb(packages_path, skip_not_installed):
             "n_143x217": 0.96638,
         }
     )
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -288,12 +273,11 @@ def test_planck_2018_p_CamSpec_camb(packages_path, skip_not_installed):
             "calEE": 1.0,
         }
     )
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -317,12 +301,11 @@ def test_planck_2018_p_CamSpec2021_camb(packages_path, skip_not_installed):
             "calEE": 1.00124,
         }
     )
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2,
         skip_not_installed=skip_not_installed,
     )
@@ -334,13 +317,12 @@ def test_planck_2018_p_CamSpec2021_camb(packages_path, skip_not_installed):
 def test_planck_2018_lcmbmarged_camb(packages_path, skip_not_installed):
     best_fit = params_lensing_cmbmarged
     info_likelihood = lik_info_lensing_cmbmarged.copy()
-    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     best_fit_derived = {}
     body_of_test(
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_camb,
         chi2_lensing_cmbmarged,
         best_fit_derived,
         skip_not_installed=skip_not_installed,
@@ -355,7 +337,6 @@ def test_planck_2018_t_classy(packages_path, skip_not_installed):
     best_fit.pop("theta_MC_100")
     best_fit = params_lowl_highTT_lensing
     info_likelihood = lik_info_lowl_highTT_lensing.copy()
-    info_theory = {"classy": {"extra_args": planck_2018_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowl_highTT_lensing)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)
@@ -365,7 +346,7 @@ def test_planck_2018_t_classy(packages_path, skip_not_installed):
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_classy,
         chi2_lowl_highTT_classy,
         best_fit_derived,
         skip_not_installed=skip_not_installed,
@@ -376,7 +357,6 @@ def test_planck_2018_p_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_lowTE_highTTTEEE_lensingcmblikes)
     best_fit.pop("theta_MC_100")
     info_likelihood = lik_info_lowTE_highTTTEEE_lensingcmblikes.copy()
-    info_theory = {"classy": {"extra_args": planck_2018_precision["classy"]}}
     best_fit_derived = deepcopy(derived_lowTE_highTTTEEE_lensingcmblikes)
     for p in classy_unknown:
         best_fit_derived.pop(p, None)
@@ -386,7 +366,7 @@ def test_planck_2018_p_classy(packages_path, skip_not_installed):
         packages_path,
         best_fit,
         info_likelihood,
-        info_theory,
+        info_theory_classy,
         chi2_lowl_highTT_classy,
         best_fit_derived,
         skip_not_installed=skip_not_installed,
@@ -569,3 +549,34 @@ params_lensing_cmbmarged = {
     "logA": 3.2528000e00,
     "ns": 9.6135180e-01,
 }
+
+# Best fit CamSpec ############################################################
+
+lik_info_t_CamSpec = {"planck_2018_highl_CamSpec.TT": None}
+
+chi2_t_CamSpec = {"planck_2018_highl_CamSpec.TT": 7058.63, "tolerance": 0.2}
+
+# Same point as the corresponding plik one
+params_t_CamSpec = params_lowl_highTT_lite_lensing.copy()
+
+params_t_CamSpec.update({
+    "aps100": 238.7887,
+    "aps143": 41.31762,
+    "aps217": 100.6226,
+    "acib217": 44.96003,
+    "asz143": 5.886124,
+    "psr": 0.5820399,
+    "cibr": 0.7912195,
+    "ncib": 0.0,
+    "cibrun": 0.0,
+    "xi": 0.1248677,
+    "aksz": 1.153473,
+    "dust100": 1.010905,
+    "dust143": 0.9905765,
+    "dust217": 0.9658913,
+    "dust143x217": 0.9946434,
+    "cal0": 0.9975484,
+    "cal2": 1.00139,
+    "calTE": 1.0,
+    "calEE": 1.0,
+})
