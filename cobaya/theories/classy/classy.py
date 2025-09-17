@@ -638,7 +638,7 @@ class classy(BoltzmannBase):
         # (e.g. complaints if halofit requested but no Cl's computed.) ?????
         # Needed for facilitating post-processing
         if not self.extra_args["output"]:
-            for k in ["non_linear"]:
+            for k in ["non_linear", "hmcode_version"]:
                 self.extra_args.pop(k, None)
         # Prepare parameters to be passed: this-iteration + extra
         args = {self.translate_param(p): v for p, v in params_values_dict.items()}

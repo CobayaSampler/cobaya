@@ -32,8 +32,8 @@ from .input_database import (
     planck_base_model as planck_base_model,
 )
 from .input_database import (
-    planck_lss_precision as planck_lss_precision,
+    cmb_precision as cmb_precision,
 )
 from .input_database import (
-    planck_precision as planck_precision,
+    cmb_lss_precision as cmb_lss_precision,
 )
