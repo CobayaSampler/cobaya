@@ -83,7 +83,7 @@ def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
         raise
 
 
-# Skip not installed #####################################################################
+# Plots from tests #######################################################################
 
 
 @pytest.fixture

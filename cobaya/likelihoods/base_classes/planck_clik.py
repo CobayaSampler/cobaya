@@ -36,6 +36,8 @@ class PlanckClik(Likelihood):
     clik_file: str
 
     def initialize(self):
+        # Disable JAX to avoid dependency issues
+        os.environ["CLIPY_NOJAX"] = "1"
         msg_to_install = "run `cobaya-install planck_2018_highl_plik.TTTEEE`"
         try:
             install_path = (lambda p: self.get_code_path(p) if p else None)(
@@ -58,8 +60,6 @@ class PlanckClik(Likelihood):
                 self.log,
                 f"{excpt}. To install a new version, {msg_to_install} with `--upgrade`.",
             ) from excpt
-        # Disable JAX to avoid dependency issues
-        os.environ["CLIPY_NOJAX"] = "1"
         # Loading the likelihood data
         data_path = get_data_path(self.__class__.get_qualified_class_name())
         if not os.path.isabs(self.clik_file):

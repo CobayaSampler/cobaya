@@ -1,16 +1,16 @@
 from copy import deepcopy
 from types import MappingProxyType
 
-from cobaya.cosmo_input import planck_lss_precision
+from cobaya.cosmo_input import cmb_lss_precision
 
 from .common_cosmo import body_of_test
-from .test_cosmo_quantities import params_lowTEB_highTTTEEE
+from .test_cosmo_quantities import params_lowTEB_highTTTEEE, lss_tests_precision
+from .test_cosmo_planck_2018 import planck_2018_precision
+
+info_camb = MappingProxyType({"camb": {"extra_args": lss_tests_precision["camb"]}})
+info_classy = MappingProxyType({"classy": {"extra_args": lss_tests_precision["classy"]}})
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
-info_camb = MappingProxyType({"camb": {"extra_args": planck_lss_precision["camb"]}})
-info_classy = MappingProxyType({"classy": {"extra_args": planck_lss_precision["classy"]}})
-# Backport for getting reference test values
-info_classy["classy"]["extra_args"]["hmcode_version"] = 16
 
 
 def test_cosmo_des_y1_shear_camb(

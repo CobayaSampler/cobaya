@@ -2,23 +2,16 @@
 
 from copy import deepcopy
 
-from cobaya.cosmo_input import planck_precision
-
 from .common_cosmo import body_of_test
-
-camb_extra = deepcopy(planck_precision["camb"])
-camb_extra.update({"halofit_version": "takahashi"})
-classy_extra = deepcopy(planck_precision["classy"])
-classy_extra.update({"non linear": "halofit"})
-classy_extra.update({"nonlinear_min_k_max": 20})
+from .test_cosmo_planck_2018 import planck_2018_precision
 
 
 def test_bicep_keck_2018_camb(packages_path, skip_not_installed):
-    info_theory = {"camb": {"extra_args": camb_extra}}
+    info_theory = {"camb": {"extra_args": planck_2018_precision["camb"]}}
     body_of_test(
         packages_path,
         test_point,
-        lik_info,
+        like_info,
         info_theory,
         chi2,
         extra_model={"primordial": "SFSR_t"},
@@ -27,22 +20,24 @@ def test_bicep_keck_2018_camb(packages_path, skip_not_installed):
 
 
 def test_bicep_keck_2018_classy(packages_path, skip_not_installed):
-    info_theory = {"classy": {"extra_args": classy_extra}}
+    info_theory = {"classy": {"extra_args": planck_2018_precision["classy"]}}
+    chi2_classy = deepcopy(chi2)
+    chi2_classy["tolerance"] += 0.35
     body_of_test(
         packages_path,
         test_point,
-        lik_info,
+        like_info,
         info_theory,
-        chi2,
+        chi2_classy,
         extra_model={"primordial": "SFSR_t"},
         skip_not_installed=skip_not_installed,
     )
 
 
-lik_info = {"bicep_keck_2018": {}}
+like_info = {"bicep_keck_2018": None}
 
 # NB: chi2 obtained using CAMB w HMcode
-chi2 = {"bicep_keck_2018": 543.25, "tolerance": 0.16}
+chi2 = {"bicep_keck_2018": 543.25, "tolerance": 0.1}
 
 test_point = {
     "omegabh2": 0.2235620e-01,

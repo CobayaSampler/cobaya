@@ -87,6 +87,7 @@ def body_of_test(
         if best_fit_derived[p][0] is None or p not in best_fit_derived:
             not_tested += [p]
             continue
+        assert best_fit_derived[p][1] > 0, f"Derived parameter {p} error must be >0."
         rel = abs(derived[p] - best_fit_derived[p][0]) / best_fit_derived[p][1]
         if rel > tolerance_derived * (
             2 if p in ("YHe", "Y_p", "DH", "sigma8", "s8omegamp5", "thetastar") else 1
