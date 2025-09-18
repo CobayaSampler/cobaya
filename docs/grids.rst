@@ -29,6 +29,31 @@ After the main samples are generated, if you have ``importance_runs`` set you ca
 
   cobaya-grid-run grid_folder --importance
 
+
+A note on importance_runs format
+--------------------------------
+
+- Define importance_runs as a list of items. Each item is either:
+  [names, info] or [names, info, optional_filter]
+  where:
+  - names: tag (or list of tags) used for the output suffix (e.g. .post.my_tag)
+  - info: input-style dict or YAML file; if it lacks add/remove, it is treated as post.add
+  - optional_filter (Python only): object with bool function want_importance(jobItem) to include conditionally
+- Place importance_runs either at the top level (applies to all groups) or
+  inside a group (applies only to that group).
+
+Minimal example (YAML) that just adds derived parameters:
+
+.. code:: yaml
+
+   importance_runs:
+     - ['derived',
+         {params:
+           {rdrag:   {latex: '\\mathrm{r}_\\mathrm{drag}'},
+            sigma8:  {latex: '\\sigma_8'},
+            thetastar: {latex: '\\theta_\\ast'}}}
+       ]
+
 The grid also generates input files for minimization rather than sampling runs. If you also want best fits, run::
 
  cobaya-grid-run grid_folder --minimize

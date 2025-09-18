@@ -4,7 +4,7 @@ from types import MappingProxyType
 from cobaya.cosmo_input import planck_lss_precision
 
 from .common_cosmo import body_of_test
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
+from .test_cosmo_quantities import params_lowTEB_highTTTEEE
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
 info_camb = MappingProxyType({"camb": {"extra_args": planck_lss_precision["camb"]}})

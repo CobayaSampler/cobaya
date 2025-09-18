@@ -4,6 +4,8 @@
 path:
 clik_file: extended_plik/plc_3.0/hi_l/plik/plik_rd12_HM_v22_TE.clik
 product_id: "151905"
+# Clipy commands -- string or list of strings, e.g. ["no TT", "only EE 217x217 500 800 lax"]
+commands:
 # Aliases for automatic covariance matrix
 aliases: [plikHM_TE]
 # Speed in evaluations/second
