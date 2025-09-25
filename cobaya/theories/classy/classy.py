@@ -256,7 +256,7 @@ class classy(BoltzmannBase):
 
     # Name of the Class repo/folder and version to download
     _classy_repo_name = "lesgourg/class_public"
-    _min_classy_version = "v3.2.1"
+    _min_classy_version = "v3.3.3"
     _classy_min_gcc_version = "6.4"  # Lower ones are possible atm, but leak memory!
     _classy_repo_version = os.environ.get("CLASSY_REPO_VERSION", "master")
 
@@ -528,6 +528,12 @@ class classy(BoltzmannBase):
         # Adding tensor modes if requested
         if self.extra_args.get("r") or "r" in self.input_params:
             self.extra_args["modes"] = "s,t"
+            # TEMPORARY: disable new limber scheme to avoid CLASS error (as of v3.3.3)
+            self.extra_args["want_lcmb_full_limber"] = "no"
+            self.log.warn(
+                "Disabled finer Limber scheme ('want_lcmb_full_limber=no') because it is "
+                "not implemented for tensor modes as of CLASS v3.3.3."
+            )
         # If B spectrum with l>50, or lensing, recommend using a non-linear code
         cls = self._must_provide.get("Cl", {})
         has_BB_l_gt_50 = (
