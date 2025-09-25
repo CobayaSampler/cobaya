@@ -172,7 +172,7 @@ class Minimize(Minimizer, CovmatSampler):
             )
         else:
             self.logp = partial(
-                self.model.logpost, make_finite=True, ignore_periodic=True
+                self.model.logpost, make_finite=True
             )
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
