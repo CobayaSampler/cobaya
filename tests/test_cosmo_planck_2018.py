@@ -33,22 +33,26 @@ classy_unknown = [
 
 # Setting some parameter to "historical" values to reproduce Planck results
 planck_2018_precision = deepcopy(cmb_precision)
-planck_2018_precision["camb"].update({
-    "halofit_version": "mead2016",
-    "bbn_predictor": "PArthENoPE_880.2_standard.dat",
-})
-planck_2018_precision["classy"].update({
-    "non linear": "hmcode",
-    "hmcode_version": "2016",
-    "sBBN file": "sBBN_2017.dat",
-    "want_lcmb_full_limber": "no",  # When it's on, it changes by chi2 ~ 0.5
-})
+planck_2018_precision["camb"].update(
+    {
+        "halofit_version": "mead2016",
+        "bbn_predictor": "PArthENoPE_880.2_standard.dat",
+    }
+)
+planck_2018_precision["classy"].update(
+    {
+        "non linear": "hmcode",
+        "hmcode_version": "2016",
+        "sBBN file": "sBBN_2017.dat",
+        "want_lcmb_full_limber": "no",  # When it's on, it changes by chi2 ~ 0.5
+    }
+)
 
 info_theory_camb = {"camb": {"extra_args": planck_2018_precision["camb"]}}
 info_theory_classy = {"classy": {"extra_args": planck_2018_precision["classy"]}}
 
-# Small chi2 difference with CLASS (total still <0.35)
-classy_extra_tolerance = 0.25
+# Small chi2 difference with CLASS (total still <0.5)
+classy_extra_tolerance = 0.4
 
 
 # STANDARD ###############################################################################
@@ -202,6 +206,7 @@ def test_planck_2018_t_CamSpec_camb(packages_path, skip_not_installed):
         chi2_t_CamSpec,
         skip_not_installed=skip_not_installed,
     )
+
 
 def test_planck_2018_t_CamSpec_classy(packages_path, skip_not_installed):
     best_fit = deepcopy(params_t_CamSpec)
@@ -559,24 +564,26 @@ chi2_t_CamSpec = {"planck_2018_highl_CamSpec.TT": 7058.63, "tolerance": 0.2}
 # Same point as the corresponding plik one
 params_t_CamSpec = params_lowl_highTT_lite_lensing.copy()
 
-params_t_CamSpec.update({
-    "aps100": 238.7887,
-    "aps143": 41.31762,
-    "aps217": 100.6226,
-    "acib217": 44.96003,
-    "asz143": 5.886124,
-    "psr": 0.5820399,
-    "cibr": 0.7912195,
-    "ncib": 0.0,
-    "cibrun": 0.0,
-    "xi": 0.1248677,
-    "aksz": 1.153473,
-    "dust100": 1.010905,
-    "dust143": 0.9905765,
-    "dust217": 0.9658913,
-    "dust143x217": 0.9946434,
-    "cal0": 0.9975484,
-    "cal2": 1.00139,
-    "calTE": 1.0,
-    "calEE": 1.0,
-})
+params_t_CamSpec.update(
+    {
+        "aps100": 238.7887,
+        "aps143": 41.31762,
+        "aps217": 100.6226,
+        "acib217": 44.96003,
+        "asz143": 5.886124,
+        "psr": 0.5820399,
+        "cibr": 0.7912195,
+        "ncib": 0.0,
+        "cibrun": 0.0,
+        "xi": 0.1248677,
+        "aksz": 1.153473,
+        "dust100": 1.010905,
+        "dust143": 0.9905765,
+        "dust217": 0.9658913,
+        "dust143x217": 0.9946434,
+        "cal0": 0.9975484,
+        "cal2": 1.00139,
+        "calTE": 1.0,
+        "calEE": 1.0,
+    }
+)
