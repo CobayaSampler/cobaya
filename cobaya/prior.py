@@ -515,7 +515,7 @@ class Prior(HasLogger):
                     raise LoggedError(
                         self.log,
                         f"Parameter '{p}' was declared periodic, but logprior at bounds "
-                        "is different."
+                        "is different.",
                     )
         self.is_any_periodic = any(self._is_periodic)
         self._uniform_indices = np.array(

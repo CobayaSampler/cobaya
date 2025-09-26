@@ -11,7 +11,8 @@ info_likelihood = {
     "planck_NPIPE_highl_CamSpec.TTTEEE": None,
     "planckpr4lensing": {
         "package_install": {
-            "github_repository": "carronj/planck_PR4_lensing", "min_version": "1.0.2"
+            "github_repository": "carronj/planck_PR4_lensing",
+            "min_version": "1.0.2",
         },
     },
 }
@@ -27,7 +28,7 @@ cosmo_params = {
 }
 
 nuisance_params = {
-    "A_planck": 0.99818025, # calPlanck
+    "A_planck": 0.99818025,  # calPlanck
     "amp_143": 10.35947284,
     "amp_217": 18.67072461,
     "amp_143x217": 7.54932654,

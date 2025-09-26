@@ -2,9 +2,10 @@ import inspect
 import os
 import sys
 import time
+from collections.abc import Mapping
 from importlib import import_module, resources
 from inspect import cleandoc
-from typing import Mapping, get_type_hints
+from typing import get_type_hints
 
 from packaging import version
 

@@ -5,9 +5,8 @@ Testing some quantities not used yet by any internal likelihood.
 from copy import deepcopy
 
 import numpy as np
-import pytest
 
-from cobaya.cosmo_input import create_input, planck_base_model, cmb_lss_precision
+from cobaya.cosmo_input import cmb_lss_precision, create_input, planck_base_model
 from cobaya.model import get_model
 from cobaya.tools import check_2d, recursive_update
 

@@ -97,7 +97,7 @@ class PlanckClik(Likelihood):
                     f"An unmanaged error occurred in clipy: {excpt}. This may have been "
                     "caused by a worngly-formatted 'command'. Please check your command "
                     "syntax, or disable and try again to check that clipy is working as "
-                    f"expected. The list of commands passed were: {self.commands}"
+                    f"expected. The list of commands passed were: {self.commands}",
                 ) from excpt
             else:  # unknown clippy error
                 raise LoggedError(

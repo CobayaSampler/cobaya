@@ -1,11 +1,8 @@
 from copy import deepcopy
 from types import MappingProxyType
 
-from cobaya.cosmo_input import cmb_lss_precision
-
 from .common_cosmo import body_of_test
-from .test_cosmo_quantities import params_lowTEB_highTTTEEE, lss_tests_precision
-from .test_cosmo_planck_2018 import planck_2018_precision
+from .test_cosmo_quantities import lss_tests_precision, params_lowTEB_highTTTEEE
 
 info_camb = MappingProxyType({"camb": {"extra_args": lss_tests_precision["camb"]}})
 info_classy = MappingProxyType({"classy": {"extra_args": lss_tests_precision["classy"]}})
