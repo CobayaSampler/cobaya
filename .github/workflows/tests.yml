@@ -52,7 +52,7 @@ jobs:
             os: ubuntu-latest
             pydist: "ANACONDA"
             cobaya_skip: polychord
-          - name: "Latest Python 3.x (with polychord)"
+          - name: "Latest Python 3.x"
             os: ubuntu-latest
             python-version: "3.x"
             mpi: openmpi
