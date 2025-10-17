@@ -483,7 +483,6 @@ class CovmatSampler(Sampler):
         else:
             return self.initial_proposal_covmat(auto_params=auto_params)
 
-    # noinspection PyUnboundLocalVariable
     def initial_proposal_covmat(self, auto_params=None):
         """
         Build the initial covariance matrix, using the data provided, in descending order

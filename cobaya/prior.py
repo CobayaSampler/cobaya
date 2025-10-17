@@ -500,7 +500,7 @@ class Prior(HasLogger):
                     raise LoggedError(
                         self.log,
                         f"Parameter '{p}' was declared periodic, but logprior at bounds "
-                        "is different."
+                        "is different.",
                     )
                 a, b = self._bounds[i]
                 self._periodic_bounds.append((i, a, b))

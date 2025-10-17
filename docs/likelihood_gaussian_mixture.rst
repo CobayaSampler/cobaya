@@ -3,6 +3,10 @@
 
 A simple (multi-modal if required) Gaussian mixture likelihood. The pdf is normalized to 1 when integrated over an infinite domain, regardless of the number of modes.
 
+.. note::
+
+   For a simple single-mode Gaussian likelihood, you can use the simpler ``gaussian`` likelihood instead, which supports both normalized (default) and unnormalized options via the ``normalized`` parameter. See :doc:`likelihood_gaussian` for details.
+
 Usage
 -----
 

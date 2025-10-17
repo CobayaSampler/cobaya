@@ -20,11 +20,11 @@ Development flow for contributors
 
 1. Fork and clone the repo from github.
 2. From its folder, install in editable mode: ``pip install -e .``
-3. Install development dependencies: ``pip install ruff pre-commit pytest pytest-xdist pytest-cov flaky dill``
+3. Install development dependencies: ``pip install -e .[devel]``
 4. Set up pre-commit hooks: ``pre-commit install``
 5. Modify stuff.
 6. Test with pytest
-7. Make a pull requests and check (about about 15 minutes) if the tests have passed.
+7. Make a pull requests and check (about 15 minutes) if the tests have passed.
 8. Iterate until tests pass, then wait for or request feedback/merge
 
 Contributors must agree to the license (see ``LICENCE.txt`` in the root folder).
@@ -80,7 +80,7 @@ Notes on some design choices
 Generality and modularity
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This code is being developed as a general-purpose sampler, with a Bayesian focus. The different aspects of the sampling, namely prior, likelihood and sampler, are kept as isolated as possible: the prior and sampler know which parameters are sampled and fixed, but not the likelihood, which does not need to know; the sampler does now know which likelihood understands which parameters, since it does not care (just cares about their respective priors, speeds, etc). This designs choices take some compromises, but are a fair price for making the code more easily extendable and maintainable: e.g. adding a new likelihood on the fly, or modify their parameters, needs no modification of the main code.
+This code is being developed as a general-purpose sampler, with a Bayesian focus. The different aspects of the sampling, namely prior, likelihood and sampler, are kept as isolated as possible: the prior and sampler know which parameters are sampled and fixed, but not the likelihood, which does not need to know; the sampler does not know which likelihood understands which parameters, since it does not care (just cares about their respective priors, speeds, etc). These design choices take some compromises, but are a fair price for making the code more easily extendable and maintainable: e.g. adding a new likelihood on the fly, or modifying their parameters, needs no modification of the main code.
 
 The cosmology only enters through particular likelihood and theory modules, and the main source does not contain significant cosmological code or experimental data, just wrappers, so that the general user does not need to download gigabytes of data.
 

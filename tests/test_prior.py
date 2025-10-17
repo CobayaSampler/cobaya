@@ -25,7 +25,9 @@ def test_prior_confidence():
         ]
     )
     assert np.allclose(p.bounds(confidence=0.1), test_confidence_p1)
-    test_bounds_p68 = np.array([[0.0, 1.0], [-0.99445788, 0.99445788], [0.0, 1.0], [2.0, 5.0]])
+    test_bounds_p68 = np.array(
+        [[0.0, 1.0], [-0.99445788, 0.99445788], [0.0, 1.0], [2.0, 5.0]]
+    )
     assert np.allclose(p.bounds(confidence_for_unbounded=0.68), test_bounds_p68)
 
 

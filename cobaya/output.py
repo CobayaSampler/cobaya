@@ -59,7 +59,6 @@ class FileLock:
         if filename:
             self.set_lock(log, filename)
 
-    # pylint: disable=consider-using-with
     def set_lock(self, log, filename, force=False):
         if self.has_lock():
             return
@@ -73,7 +72,7 @@ class FileLock:
         try:
             h: Any = None
             if use_portalocker():
-                import portalocker  # pylint: disable=import-outside-toplevel
+                import portalocker
 
                 try:
                     h = open(self.lock_file, "wb")
@@ -109,7 +108,7 @@ class FileLock:
                 self.lock_file,
             )
         if mpi.get_mpi():
-            import mpi4py  # pylint: disable=import-outside-toplevel
+            import mpi4py
         else:
             mpi4py = None
         if mpi.is_main_process() and use_portalocker() is None:
@@ -363,7 +362,6 @@ class OutputReadOnly:
         function instead to load samples.
         """
         filenames = self.find_collections(name=name, extension=extension)
-        # pylint: disable=import-outside-toplevel
         from cobaya.collection import SampleCollection
 
         collections = [
@@ -391,8 +389,7 @@ class OutputReadOnly:
         if combined and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
-                # noinspection PyProtectedMember
-                collection._append(collection_i)  # pylint: disable=protected-access
+                collection._append(collection_i)
             collection.is_batch = False
             return collection
         return collections
@@ -655,11 +652,11 @@ class Output(HasLogger, OutputReadOnly):
                         raise LoggedError(self.log, str(e)) from e
         if updated_info_trimmed and has_non_yaml_reproducible(updated_info_trimmed):
             try:
-                import dill  # pylint: disable=import-outside-toplevel
+                import dill
             except ImportError:
                 self.mpi_info('Install "dill" to save reproducible options file.')
             else:
-                import pickle  # pylint: disable=import-outside-toplevel
+                import pickle
 
                 try:
                     with open(self.dump_file_updated, "wb") as f:
@@ -764,14 +761,11 @@ class Output(HasLogger, OutputReadOnly):
         self.clear_lock()
 
 
-# noinspection PyMissingConstructor
 class OutputDummy(Output):
     """
     Dummy output class. Does nothing. Evaluates to 'False' as a class.
     """
 
-    # noinspection PyUnusedLocal
-    # pylint: disable=unused-argument,super-init-not-called
     def __init__(self, *args, **kwargs):
         self.set_logger()
         self.log.debug("No output requested. Doing nothing.")
@@ -865,7 +859,7 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
             f"Could not find any sample with prefix '{prefix}' "
             f"(looked for file '{output.file_updated}')."
         )
-    from cobaya.model import DummyModel  # pylint: disable=import-outside-toplevel
+    from cobaya.model import DummyModel
 
     dummy_model = DummyModel(info["params"], info["likelihood"], info.get("prior"))
     if to_getdist:

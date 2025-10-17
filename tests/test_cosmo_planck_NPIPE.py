@@ -1,54 +1,92 @@
-import numpy as np
+from copy import deepcopy
 
-from cobaya.model import get_model
-from cobaya.yaml import yaml_load
+import pytest
 
-from .common import process_packages_path
-from .conftest import install_test_wrapper
+from .common_cosmo import body_of_test
+from .test_cosmo_planck_2018 import planck_2018_precision
 
-yaml = r"""
-theory:
-  camb:
-    extra_args:
-      lens_potential_accuracy: 1
-likelihood:
-  planck_2018_lowl.TT: null
-  planck_2018_lowl.EE: null
-  planck_NPIPE_highl_CamSpec.TTTEEE: null
-  planckpr4lensing:
-    package_install:
-      github_repository: carronj/planck_PR4_lensing
-      min_version: 1.0.2
-params:
-  tau: 0.05
-  logA: 3.04920413
-  As:
-    value: 'lambda logA: 1e-10*np.exp(logA)'
-  ns: 0.96399503
-  theta_MC_100: 1.04240171
-  thetastar:
-    value: 'lambda theta_MC_100: 1.e-2*theta_MC_100'
-    derived: false
-  ombh2: 0.02235048
-  omch2: 0.12121379
-"""
+info_likelihood = {
+    "planck_2018_lowl.TT": None,
+    "planck_2018_lowl.EE": None,
+    "planck_NPIPE_highl_CamSpec.TTTEEE": None,
+    "planckpr4lensing": {
+        "package_install": {
+            "github_repository": "carronj/planck_PR4_lensing",
+            "min_version": "1.0.2",
+        },
+    },
+}
+
+cosmo_params = {
+    "logA": 3.04920413,
+    "ns": 0.96399503,
+    "theta_MC_100": 1.04240171,
+    "H0": 67.39679063149518,
+    "omegabh2": 0.02235048,
+    "omegach2": 0.12121379,
+    "tau": 0.05,
+}
+
+nuisance_params = {
+    "A_planck": 0.99818025,  # calPlanck
+    "amp_143": 10.35947284,
+    "amp_217": 18.67072461,
+    "amp_143x217": 7.54932654,
+    "n_143": 0.83715482,
+    "n_217": 0.94987418,
+    "n_143x217": 1.23385364,
+    "calTE": 0.98781552,
+    "calEE": 1.013345,
+}
+
+chi2_planck_NPIPE = {
+    "planck_2018_lowl.TT": 24.81,
+    "planck_2018_lowl.EE": 395.72,
+    "planck_NPIPE_highl_CamSpec.TTTEEE": 11341.17,
+    "planckpr4lensing": 13.76,
+    "tolerance": 0.10,
+}
+
+# Fixing some precision and modelling parameters to guarantee test is future-proof.
+
+# We keep the 2017 sBBN tables, because is the only one both in CLASS and CAMB atm.
+# But we update HMCode
+
+planck_NPIPE_precision = deepcopy(planck_2018_precision)
+planck_NPIPE_precision["camb"].update({"halofit_version": "mead2020"})
+planck_NPIPE_precision["classy"].update({"hmcode_version": "2020"})
 
 
-def test_planck_NPIPE_p_CamSpec_camb_install(packages_path, skip_not_installed):
-    packages_path = process_packages_path(packages_path)
-    info = yaml_load(yaml)
-    model = install_test_wrapper(
-        skip_not_installed, get_model, info, packages_path=packages_path
+def test_planck_NPIPE_p_CamSpec_camb(packages_path, skip_not_installed):
+    best_fit = deepcopy(cosmo_params)
+    best_fit.pop("H0")
+    best_fit.update(nuisance_params)
+    chi2 = chi2_planck_NPIPE.copy()
+    info_theory = {"camb": {"extra_args": planck_NPIPE_precision["camb"]}}
+    body_of_test(
+        packages_path,
+        best_fit,
+        info_likelihood,
+        info_theory,
+        chi2,
+        skip_not_installed=skip_not_installed,
     )
-    pars = (
-        0.99818025,
-        10.35947284,
-        18.67072461,
-        7.54932654,
-        0.83715482,
-        0.94987418,
-        1.23385364,
-        0.98781552,
-        1.013345,
+
+
+# TODO: Skipped. Same as 2018 CamSpec tests, there is a DeltaChi2 ~ 7 of unknown origin.
+@pytest.mark.skip
+def test_planck_NPIPE_p_CamSpec_classy(packages_path, skip_not_installed):
+    best_fit = deepcopy(cosmo_params)
+    best_fit.pop("theta_MC_100")
+    best_fit.update(nuisance_params)
+    chi2 = chi2_planck_NPIPE.copy()
+    info_theory = {"classy": {"extra_args": planck_NPIPE_precision["classy"]}}
+    body_of_test(
+        packages_path,
+        best_fit,
+        info_likelihood,
+        info_theory,
+        chi2,
+        None,
+        skip_not_installed=skip_not_installed,
     )
-    assert np.isclose(model.logposterior(pars).logpost, -5889.873, rtol=1e-4)

@@ -47,7 +47,6 @@ from cobaya.log import LoggedError
 _twopi = 2 * np.pi
 
 
-# noinspection PyUnresolvedReferences
 class SN(DataSetLikelihood):
     # Data type for aggregated chi2 (case sensitive)
     type = "SN"
@@ -178,7 +177,6 @@ class SN(DataSetLikelihood):
         if self.twoscriptmfit:
             A1 = np.zeros(self.nsn)
             A2 = np.zeros(self.nsn)
-            # noinspection PyUnboundLocalVariable
             A1[self.third_var <= scriptmcut] = 1
             A2[self.third_var > scriptmcut] = 1
             has_A1 = np.any(A1)

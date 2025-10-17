@@ -44,10 +44,6 @@ if TYPE_CHECKING:
     from getdist import MCSamples
 
 
-# Suppresses warnings about first defining attrs outside __init__
-# pylint: disable=attribute-defined-outside-init
-
-
 class MCMC(CovmatSampler):
     r"""
     Adaptive, speed-hierarchy-aware MCMC sampler (adapted from CosmoMC)
@@ -774,7 +770,6 @@ class MCMC(CovmatSampler):
             return True
         return False
 
-    # noinspection PyUnboundLocalVariable
     @np.errstate(all="ignore")
     def check_convergence_and_learn_proposal(self):
         """
@@ -815,7 +810,7 @@ class MCMC(CovmatSampler):
                 )
             except always_stop_exceptions:
                 raise
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 self.log.info(
                     "Not enough points in chain to check convergence. "
                     "Waiting for next checkpoint."
@@ -919,8 +914,6 @@ class MCMC(CovmatSampler):
         # in units of the mean standard deviation of the chains
         if converged_means:
             if more_than_one_process():
-                # pylint: disable=protected-access
-                # noinspection PyProtectedMember
                 mcsamples = self.collection._sampled_to_getdist(
                     first=use_first, tempered=True
                 )
@@ -937,22 +930,21 @@ class MCMC(CovmatSampler):
                         ]
                     ).T
                     success_bounds = True
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     bound = None
                     success_bounds = False
                 bounds = np.array(mpi.gather(bound))
             else:
                 try:
                     mcsamples_list = [
-                        # noinspection PyProtectedMember
                         self.collection._sampled_to_getdist(
                             first=i * cut, last=(i + 1) * cut - 1, tempered=True
-                        )  # pylint: disable=protected-access
+                        )
                         for i in range(1, m)
                     ]
                 except always_stop_exceptions:
                     raise
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     self.log.info(
                         "Not enough points in chain to check c.l. convergence. "
                         "Waiting for next checkpoint."
@@ -976,7 +968,7 @@ class MCMC(CovmatSampler):
                         for mcs in mcsamples_list
                     ]
                     success_bounds = True
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     bounds = None
                     success_bounds = False
             if is_main_process():
@@ -1028,7 +1020,7 @@ class MCMC(CovmatSampler):
                     self.proposer.set_covariance(mean_of_covs)  # is already tempered
                     self.mpi_info(" - Updated covariance matrix of proposal pdf.")
                     self.mpi_debug("%r", mean_of_covs)
-                except Exception:  # pylint: disable=broad-except
+                except Exception:
                     self.mpi_debug(
                         "Updating covariance matrix failed unexpectedly. "
                         "waiting until next covmat learning attempt."
@@ -1149,8 +1141,7 @@ class MCMC(CovmatSampler):
                 collection = collections[0].to_getdist(combine_with=collections[1:])
             else:
                 for collection in collections[1:]:
-                    # noinspection PyProtectedMember
-                    collections[0]._append(collection)  # pylint: disable=protected-access
+                    collections[0]._append(collection)
                 collection = collections[0]
         return mpi.share_mpi(collection)
 
@@ -1250,9 +1241,8 @@ def plot_progress(
 
     """
     if ax is None:
-        import matplotlib.pyplot as plt  # pylint: disable=import-outside-toplevel
+        import matplotlib.pyplot as plt
 
-        # noinspection PyTypeChecker
         fig, ax = plt.subplots(nrows=2, sharex=True, **figure_kwargs)
     if isinstance(progress, DataFrame):
         pass  # go on to plotting

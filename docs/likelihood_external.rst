@@ -29,6 +29,12 @@ List of external packages
  * `Planck NPIPE lensing <https://github.com/carronj/planck_PR4_lensing>`_
  * `Planck NPIPE hillipop and lollipop <https://github.com/planck-npipe>`_
  * `MFLike-plik <https://github.com/simonsobs/LAT_MFLike/tree/mflike-plik>`_
+ * ``candl``: JAX-friendly, differentiable CMB likelihood framework with a straightforward Cobaya interface. Provides access to: SPT-3G D1 T&E, SPT-3G D1 BB, SPT-3G 2018 TT/TE/EE, SPT-3G 2018 lensing, SPTpol BB, ACT DR6 TT/TE/EE, ACT DR6 lensing, ACT DR4 TT/TE/EE, and Planck data.
+    * `GitHub repo <https://github.com/Lbalkenhol/candl>`_ including tutorials demonstrating the interface with Cobaya.
+    * `Documentation <https://candl.readthedocs.io>`_
+    * `Official SPT data <https://github.com/SouthPoleTelescope/spt_candl_data/>`_ with tutorials and example run ``.yaml`` files.
+    * `clipy (Planck) <https://github.com/benabed/clipy>`_
+    * `Other candl data sets <https://github.com/Lbalkenhol/candl_data>`_
  * `ACTPol DR4 <https://github.com/ACTCollaboration/pyactlike>`_
  * `ACT DR6 Lensing <https://github.com/ACTCollaboration/act_dr6_lenslike>`_
  * `ACT DR6 Multi-Frequency Likelihood <https://github.com/ACTCollaboration/act_dr6_mflike>`_
