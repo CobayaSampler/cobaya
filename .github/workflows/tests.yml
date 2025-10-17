@@ -51,12 +51,12 @@ jobs:
           - name: "Anaconda Python (ruff, no numba)"
             os: ubuntu-latest
             pydist: "ANACONDA"
-            cobaya_skip: classy,polychord
-          - name: "Latest Python 3.x (with polychord)"
+            cobaya_skip: polychord
+          - name: "Latest Python 3.x"
             os: ubuntu-latest
             python-version: "3.x"
             mpi: openmpi
-            cobaya_skip: classy, polychord
+            cobaya_skip: polychord
           - name: "OS X Python 3.10 (with classy)"
             os: macos-latest
             python-version: "3.10"
@@ -66,7 +66,7 @@ jobs:
             os: windows-latest
             python-version: "3.12"
             mpi: intelmpi
-            cobaya_skip: classy,polychord
+            cobaya_skip: polychord
     steps:
       - name: Set COBAYA_INSTALL_SKIP
         shell: bash
@@ -78,13 +78,13 @@ jobs:
       - run: |
           gfortran --version
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         if: matrix.pydist != 'ANACONDA'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -189,10 +189,10 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
 
       - name: Install dependencies
         run: |

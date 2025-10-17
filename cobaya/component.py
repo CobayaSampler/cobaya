@@ -2,6 +2,7 @@ import inspect
 import os
 import sys
 import time
+from collections.abc import Mapping
 from importlib import import_module, resources
 from inspect import cleandoc
 from typing import get_type_hints
@@ -73,18 +74,21 @@ class Description:
 
             def return_func(info=None):
                 return cls._get_desc(info)
+
         else:
 
             def return_func(info=None):
                 return cls._get_desc(info=instance.__dict__)
 
-        return_func.__doc__ = cleandoc("""
+        return_func.__doc__ = cleandoc(
+            """
             Returns a short description of the class. By default, returns the class'
             docstring.
 
             You can redefine this method to dynamically generate the description based
             on the class initialisation ``info`` (see e.g. the source code of MCMC's
-            *class method* :meth:`~.mcmc._get_desc`).""")
+            *class method* :meth:`~.mcmc._get_desc`)."""
+        )
         return return_func
 
 
@@ -384,6 +388,9 @@ class CobayaComponent(HasLogger, HasDefaults):
         # set attributes from the info (from yaml file or directly input dictionary)
         annotations = self.get_annotations()
         for k, value in info.items():
+            # Preserve dict type for empty dicts (turned into None by recursive_update)
+            if value is None and isinstance(getattr(self, k, None), Mapping):
+                value = {}
             self.validate_info(k, value, annotations)
             try:
                 setattr(self, k, value)

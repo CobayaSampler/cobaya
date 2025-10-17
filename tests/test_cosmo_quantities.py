@@ -5,14 +5,18 @@ Testing some quantities not used yet by any internal likelihood.
 from copy import deepcopy
 
 import numpy as np
-import pytest
 
-from cobaya.cosmo_input import create_input, planck_base_model, planck_lss_precision
+from cobaya.cosmo_input import cmb_lss_precision, create_input, planck_base_model
 from cobaya.model import get_model
 from cobaya.tools import check_2d, recursive_update
 
 from .common import process_packages_path
 from .conftest import install_test_wrapper
+from .test_cosmo_planck_2018 import planck_2018_precision
+
+lss_tests_precision = deepcopy(cmb_lss_precision)
+lss_tests_precision["camb"].update(planck_2018_precision["camb"])
+lss_tests_precision["classy"].update(planck_2018_precision["classy"])
 
 # Best fit Planck 2015 as test point
 params_lowTEB_highTTTEEE = {
@@ -87,7 +91,7 @@ redshifts = [100, 10, 1, 0]
 def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_installed):
     planck_base_model_prime = deepcopy(planck_base_model)
     planck_base_model_prime["hubble"] = "H"  # intercompatibility CAMB/CLASS
-    info_theory = {theo: {"extra_args": planck_lss_precision[theo]}}
+    info_theory = {theo: {"extra_args": lss_tests_precision[theo]}}
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     info = recursive_update(info, {"theory": info_theory, "likelihood": {"one": None}})
     info["packages_path"] = process_packages_path(packages_path)
@@ -336,7 +340,6 @@ def test_cosmo_omega_camb(packages_path, skip_not_installed):
     _test_cosmo_omega("camb", packages_path, skip_not_installed)
 
 
-@pytest.mark.skip(reason="Failing in GitHub Actions; works locally")
 def test_cosmo_omega_classy(packages_path, skip_not_installed):
     _test_cosmo_omega("classy", packages_path, skip_not_installed)
 
@@ -370,7 +373,6 @@ def test_cosmo_ang_diam_dist_2_camb(packages_path, skip_not_installed):
     _test_cosmo_ang_diam_dist_2("camb", packages_path, skip_not_installed)
 
 
-@pytest.mark.skip(reason="Failing in GitHub Actions; works locally")
 def test_cosmo_ang_diam_dist_2_classy(packages_path, skip_not_installed):
     _test_cosmo_ang_diam_dist_2("classy", packages_path, skip_not_installed)
 
@@ -415,6 +417,5 @@ def test_cosmo_weyl_pkz_camb(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("camb", packages_path, skip_not_installed)
 
 
-@pytest.mark.skip
 def test_cosmo_weyl_pkz_classy(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("classy", packages_path, skip_not_installed)
