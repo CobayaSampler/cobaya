@@ -214,6 +214,9 @@ class SampleCollection(BaseCollection):
     e.g. :func:`~SampleCollection.cov`, will return the statistics of the original
     (untempered) posterior, unless indicated otherwise with a keyword argument.
 
+    If ``check_logp_sums=False`` allows for samples to have individual chi2's and
+    logpriors that do not add up to the total ones, or are undefined.
+
     Note for developers: when expanding this class or inheriting from it, always access
     the underlying DataFrame as ``self.data`` and not ``self._data``, to ensure the cache
     has been dumped. If you really need to access the actual attribute ``self._data`` in a
@@ -235,6 +238,7 @@ class SampleCollection(BaseCollection):
         onload_thin=1,
         sample_type=None,
         is_batch=False,
+        check_logp_sums=True,
     ):
         super().__init__(model, name)
         if sample_type is not None and (
@@ -331,13 +335,14 @@ class SampleCollection(BaseCollection):
         if len(self) > 0:
             try:
                 try:
-                    self.temperature = self._check_logps(extra_tolerance=False)
+                    # This checks logpost=loglike+logprior together with temperature
+                    self.temperature = self._check_temperature(extra_tolerance=False)
                 except LoggedError:
                     self.log.warning(
                         "Needed to relax tolerances when checking consistency of "
                         "log probabilities and temperature (if present)."
                     )
-                    self.temperature = self._check_logps(extra_tolerance=True)
+                    self.temperature = self._check_temperature(extra_tolerance=True)
                 if temperature is not None and not np.isclose(
                     temperature, self.temperature
                 ):
@@ -348,6 +353,15 @@ class SampleCollection(BaseCollection):
                         self.temperature,
                         temperature,
                     )
+                if check_logp_sums:
+                    try:
+                        self._check_logps_sums(extra_tolerance=False)
+                    except LoggedError:
+                        self.log.warning(
+                            "Needed to relax tolerances when checking consistency of "
+                            "sums of log probabilities."
+                        )
+                        self._check_logps_sums(extra_tolerance=True)
                 self._check_weights()
             except LoggedError as excpt:
                 raise LoggedError(
@@ -561,16 +575,15 @@ class SampleCollection(BaseCollection):
         )
         self._cache_reset()
 
-    def _check_logps(self, temperature_only=False, extra_tolerance=False):
+    def _check_temperature(self, extra_tolerance=False):
         """
-        Checks the correct sums for the logpriors and likelihoods' chi-squared's, as well
-        as the posterior temperature, which is returned.
+        Checks the consistency of the posterior w.r.t. prior and likelihood, and its
+        temperature, which is returned.
 
         If ``extra_tolerance=True`` (default: ``False``), lets the tests pass with lower
         precision.
 
-        Raises ``LoggedError`` if the sums or the temperature of the sample are not
-        consistent.
+        Raises ``LoggedError`` if the temperature of the sample is not consistent.
         """
         try:
             temperature = compute_temperature(
@@ -587,31 +600,40 @@ class SampleCollection(BaseCollection):
                 "This could be due to input file truncation on the last line "
                 "due to crash/being killed before complete.",
             ) from excpt
-        if not temperature_only:
-            tols = {
-                "rtol": 1e-4 * (10 if extra_tolerance else 1),
-                "atol": 1e-7 * (10 if extra_tolerance else 1),
-            }
-            minuslogprior = np.sum(
-                np.atleast_2d(self[self.minuslogprior_names].to_numpy(dtype=np.float64)),
-                axis=-1,
-            )
-            if not np.allclose(self[OutPar.minuslogprior], minuslogprior, **tols):
-                raise LoggedError(
-                    self.log, "The sum of logpriors in the sample is not consistent."
-                )
-            chi2 = np.sum(
-                np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)),
-                axis=-1,
-            )
-            if not np.allclose(self[OutPar.chi2], chi2, **tols):
-                raise LoggedError(
-                    self.log,
-                    "The sum of likelihood's chi2's in the sample is not consistent.",
-                )
         if np.isclose(temperature, 1):
             temperature = 1
         return temperature
+
+    def _check_logps_sums(self, extra_tolerance=False):
+        """
+        Checks the correct sums for the logpriors and likelihoods' chi-squared's.
+
+        If ``extra_tolerance=True`` (default: ``False``), lets the tests pass with lower
+        precision.
+
+        Raises ``LoggedError`` if the sums are not consistent.
+        """
+        tols = {
+            "rtol": 1e-4 * (10 if extra_tolerance else 1),
+            "atol": 1e-7 * (10 if extra_tolerance else 1),
+        }
+        minuslogprior = np.sum(
+            np.atleast_2d(self[self.minuslogprior_names].to_numpy(dtype=np.float64)),
+            axis=-1,
+        )
+        if not np.allclose(self[OutPar.minuslogprior], minuslogprior, **tols):
+            raise LoggedError(
+                self.log, "The sum of logpriors in the sample is not consistent."
+            )
+        chi2 = np.sum(
+            np.atleast_2d(self[self.chi2_names].to_numpy(dtype=np.float64)),
+            axis=-1,
+        )
+        if not np.allclose(self[OutPar.chi2], chi2, **tols):
+            raise LoggedError(
+                self.log,
+                "The sum of likelihood's chi2's in the sample is not consistent.",
+            )
 
     def _check_weights(
         self,
