@@ -72,7 +72,7 @@ To run **cobaya** from a Python script or interpreter, simply do
     updated_info, sampler = run(your_input)
 
 where ``your_input`` is a Python dictionary, yaml file name or yaml text (for how to create one, see :ref:`example_quickstart_interactive`).
-For debugging purposes you can also pass in options to override those in the input, e.g. `run(your_input, debug=True, stop_at_error=True)``
+For debugging purposes you can also pass in options to override those in the input, e.g. ``run(your_input, debug=True, stop_at_error=True)``
 
 To run **cobaya** with MPI in this case, save your script to some file and run ``python your_script.py`` with your MPI run script.
 
