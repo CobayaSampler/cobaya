@@ -345,7 +345,6 @@ class Model(HasLogger):
         params_values: dict[str, float] | Sequence[float],
         as_dict: bool = False,
         make_finite: bool = False,
-        ignore_periodic: bool = False,
     ) -> np.ndarray | dict[str, float]:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -363,16 +362,10 @@ class Model(HasLogger):
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
-
-        If ``ignore_periodic=True``, ignores the periodicity of the parameters, returning
-        ``-inf`` for periodic parameters outside the prior definition range (faster if the
-        input point can be guaranteed to fall inside it).
         """
         params_values = self.parameterization.check_sampled(params_values)
         params_values_array = self._to_sampled_array(params_values)
-        logpriors = np.asarray(
-            self.prior.logps(params_values_array, ignore_periodic=ignore_periodic)
-        )
+        logpriors = np.asarray(self.prior.logps(params_values_array))
         if make_finite:
             return np.nan_to_num(logpriors)
         if as_dict:
@@ -384,7 +377,6 @@ class Model(HasLogger):
         self,
         params_values: dict[str, float] | Sequence[float],
         make_finite: bool = False,
-        ignore_periodic: bool = False,
     ) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -397,12 +389,8 @@ class Model(HasLogger):
 
         If ``make_finite=True``, it will try to represent infinities as the largest real
         numbers allowed by machine precision.
-
-        If ``ignore_periodic=True``, ignores the periodicity of the parameters, returning
-        ``-inf`` for periodic parameters outside the prior definition range (faster if the
-        input point can be guaranteed to fall inside it).
         """
-        logprior = np.sum(self.logpriors(params_values, ignore_periodic=ignore_periodic))
+        logprior = np.sum(self.logpriors(params_values))
         if make_finite:
             return np.nan_to_num(logprior)
         return logprior
@@ -597,7 +585,6 @@ class Model(HasLogger):
         return_derived: bool = True,
         cached: bool = True,
         _no_check: bool = False,
-        ignore_periodic: bool = False,
     ) -> LogPosterior | dict:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -632,10 +619,6 @@ class Model(HasLogger):
 
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
-
-        If ``ignore_periodic=True``, ignores the periodicity of the parameters, returning
-        ``-inf`` for periodic parameters outside the prior definition range (faster if the
-        input point can be guaranteed to fall inside it).
         """
         if _no_check:
             params_values_array = params_values
@@ -665,9 +648,7 @@ class Model(HasLogger):
                 )
         # Notice that we don't use the make_finite in the prior call,
         # to correctly check if we have to compute the likelihood
-        logpriors_1d = self.prior.logps_internal(
-            params_values_array, ignore_periodic=ignore_periodic
-        )
+        logpriors_1d = self.prior.logps_internal(params_values_array)
         if logpriors_1d == -np.inf:
             logpriors = [-np.inf] * (1 + len(self.prior.external))
         else:
@@ -702,7 +683,6 @@ class Model(HasLogger):
         params_values: dict[str, float] | Sequence[float],
         make_finite: bool = False,
         cached: bool = True,
-        ignore_periodic: bool = False,
     ) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -717,17 +697,12 @@ class Model(HasLogger):
 
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
-
-        If ``ignore_periodic=True``, ignores the periodicity of the parameters, returning
-        ``-inf`` for periodic parameters outside the prior definition range (faster if the
-        input point can be guaranteed to fall inside it).
         """
         return self.logposterior(
             params_values,
             make_finite=make_finite,
             return_derived=False,
             cached=cached,
-            ignore_periodic=ignore_periodic,
         ).logpost
 
     def get_valid_point(
