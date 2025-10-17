@@ -66,7 +66,6 @@ class PostResult:
 
     # For backwards compatibility
     def __getitem__(self, key):
-        # noinspection PyTypedDict
         return self.results[key]
 
     # For compatibility with Sampler, when returned by run()
@@ -119,8 +118,6 @@ class PostResult:
             else:
                 if len(all_collections) > 1:
                     for collection in all_collections[1:]:
-                        # pylint: disable=protected-access
-                        # noinspection PyProtectedMember
                         all_collections[0]._append(collection)
                 collection = all_collections[0]
         return mpi.share_mpi(collection)  # type: ignore
@@ -683,8 +680,6 @@ def post(
             if -np.inf in logpriors_new:
                 continue
             # Add/remove likelihoods and/or (re-)calculate derived parameters
-            # pylint: disable=protected-access
-            # noinspection PyProtectedMember
             loglikes_add, output_derived = model_add._loglikes_input_params(
                 all_params, return_output_params=True, as_dict=True
             )

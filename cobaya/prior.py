@@ -319,6 +319,30 @@ theory code (e.g. CAMB), you can use:
         external: "lambda _self: stats.norm.logpdf(_self.provider.get_param('omegam'), loc=0.334, scale=0.018)"
         requires: omegam
 
+Periodic parameters
+-------------------
+
+Periodic parameters are indicated with a ``periodic=True`` keyword at the parameter level.
+For **sampled** parameters place it alongside the prior definition.
+
+.. code-block :: yaml
+
+     params:
+
+       a: # sampled
+         prior:
+           min: 0
+           max: 1
+         periodic: True
+
+Notice that for periodic sampled parameters, the prior must be bounded.
+
+The prior itself is a plain (non-periodic) range prior; evaluation does not wrap values.
+Samplers that support periodic parameters should reduce proposed values to the base range
+(e.g. via ``Prior.reduce_periodic``) or ensure proposals remain within bounds. Currently
+only the ``mcmc`` sampler implements parameter wrapping. Other samplers will treat the
+base range as hard boundaries.
+
 Vector parameters
 -----------------
 
@@ -443,9 +467,11 @@ class Prior(HasLogger):
         self.params = []
         self.pdf = []
         self._bounds = np.zeros((len(sampled_params_info), 2))
+        self._periodic_bounds: list[int] = []
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
-            prior = sampled_params_info[p].get("prior")
+            info = sampled_params_info[p]
+            prior = info.get("prior")
             try:
                 self.pdf += [get_scipy_1d_pdf(prior)]
             except ValueError as excpt:
@@ -462,6 +488,21 @@ class Prior(HasLogger):
                     "No bounds defined for parameter '%s' (maybe not a scipy 1d pdf).",
                     p,
                 ) from excpt
+            # periodic is a parameter-level attribute (not part of the prior)
+            periodic_flag = info.get("periodic", False)
+            if periodic_flag:
+                if any(np.isinf(self._bounds[i])):
+                    raise LoggedError(
+                        self.log,
+                        f"Parameter '{p}' cannot be periodic if it is not bounded.",
+                    )
+                if not np.isclose(*self.pdf[i].logpdf(self._bounds[i])):
+                    raise LoggedError(
+                        self.log,
+                        f"Parameter '{p}' was declared periodic, but logprior at bounds "
+                        "is different.",
+                    )
+                self._periodic_bounds.append(i)
         self._uniform_indices = np.array(
             [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == "uniform"], dtype=int
         )
@@ -525,7 +566,6 @@ class Prior(HasLogger):
             self.mpi_warning(
                 "External prior '%s' loaded. Mind that it might not be normalized!", name
             )
-
         parameterization.check_dropped(self.external_dependence)
 
     def d(self):
@@ -607,6 +647,26 @@ class Prior(HasLogger):
                     infs,
                 ) from excpt
 
+    def reduce_periodic(self, x: np.ndarray, copy: bool = True):
+        """
+        Reduces the values of the periodic parameters of a point to the prior definition
+        range.
+
+        Args:
+           x (array): Point to be reduced.
+           copy (bool): If True, operates on and returns a copy of the input point..
+
+        Returns:
+           The given point, with periodicity reduced.
+        """
+        if self._periodic_bounds:
+            if copy:
+                x = np.copy(x)
+            for i in self._periodic_bounds:
+                a, b = self._bounds[i]
+                x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
+        return x
+
     def sample(self, n=1, ignore_external=False, random_state=None):
         """
         Generates samples from the prior pdf.
@@ -630,6 +690,9 @@ class Prior(HasLogger):
         """
         Takes a point (sampled parameter values, in the correct order).
 
+        Args:
+           x (array): Point where the log-prior is evaluated.
+
         Returns:
            An array of the prior log-probability densities of the given point
            or array of points. The first element on the list is the products
@@ -651,6 +714,9 @@ class Prior(HasLogger):
         """
         Takes a point (sampled parameter values, in the correct order).
 
+        Args:
+           x (array): Point where the log-prior is evaluated.
+
         Returns:
            The prior log-probability density of the given point or array of points.
         """
@@ -659,6 +725,9 @@ class Prior(HasLogger):
     def logps_internal(self, x: np.ndarray) -> float:
         """
         Takes a point (sampled parameter values, in the correct order).
+
+        Args:
+           x (array): Point where the log-prior is evaluated.
 
         Returns:
            The prior log-probability density of the given point

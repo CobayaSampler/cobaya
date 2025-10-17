@@ -1,0 +1,10 @@
+# Simple Gaussian likelihood
+
+# Mean vector
+mean:
+# Covariance matrix
+cov:
+# Whether to include normalization constant (default: True)
+normalized: True
+# Prefix of parameter names (if not using explicit input_params)
+input_params_prefix: ""

@@ -5,15 +5,84 @@ Testing some quantities not used yet by any internal likelihood.
 from copy import deepcopy
 
 import numpy as np
-import pytest
 
-from cobaya.cosmo_input import create_input, planck_base_model, planck_lss_precision
+from cobaya.cosmo_input import cmb_lss_precision, create_input, planck_base_model
 from cobaya.model import get_model
 from cobaya.tools import check_2d, recursive_update
 
 from .common import process_packages_path
 from .conftest import install_test_wrapper
-from .test_cosmo_planck_2015 import params_lowTEB_highTTTEEE
+from .test_cosmo_planck_2018 import planck_2018_precision
+
+lss_tests_precision = deepcopy(cmb_lss_precision)
+lss_tests_precision["camb"].update(planck_2018_precision["camb"])
+lss_tests_precision["classy"].update(planck_2018_precision["classy"])
+
+# Best fit Planck 2015 as test point
+params_lowTEB_highTTTEEE = {
+    # Sampled
+    "omegabh2": 0.02225203,
+    "omegach2": 0.1198657,
+    # only one of the next two is finally used!
+    "H0": 67.25,  # will be ignored in the CAMB case
+    "theta_MC_100": 1.040778,  # will be ignored in the CLASS case
+    "logA": 3.0929,
+    "ns": 0.9647522,
+    "tau": 0.07888604,
+    # Planck likelihood
+    "A_planck": 1.00029,
+    "A_cib_217": 66.4,
+    "xi_sz_cib": 0.13,
+    "A_sz": 7.17,
+    "ps_A_100_100": 255.0,
+    "ps_A_143_143": 40.1,
+    "ps_A_143_217": 36.4,
+    "ps_A_217_217": 98.7,
+    "ksz_norm": 0.00,
+    "gal545_A_100": 7.34,
+    "gal545_A_143": 8.97,
+    "gal545_A_143_217": 17.56,
+    "gal545_A_217": 81.9,
+    "galf_EE_A_100": 0.0813,
+    "galf_EE_A_100_143": 0.0488,
+    "galf_EE_A_100_217": 0.0995,
+    "galf_EE_A_143": 0.1002,
+    "galf_EE_A_143_217": 0.2236,
+    "galf_EE_A_217": 0.645,
+    "galf_TE_A_100": 0.1417,
+    "galf_TE_A_100_143": 0.1321,
+    "galf_TE_A_100_217": 0.307,
+    "galf_TE_A_143": 0.155,
+    "galf_TE_A_143_217": 0.338,
+    "galf_TE_A_217": 1.667,
+    "calib_100T": 0.99818,
+    "calib_217T": 0.99598,
+}
+
+derived_lowTEB_highTTTEEE = {
+    # param: [best_fit, sigma]
+    "H0": [params_lowTEB_highTTTEEE["H0"], 0.66],
+    "omegal": [0.6844, 0.0091],
+    "omegam": [0.3156, 0.0091],
+    "sigma8": [0.8310, 0.013],
+    "zrei": [10.07, 1.6],
+    # "YHe": [0.2453409, 0.000072],
+    # "Y_p": [0.2466672, 0.000072],
+    # "DH": [2.6136e-5, 0.030e-5],
+    "age": [13.8133, 0.026],
+    "zstar": [1090.057, 0.30],
+    "rstar": [144.556, 0.32],
+    "thetastar": [1.040967, 0.00032],
+    "DAstar": [13.8867, 0.030],
+    "zdrag": [1059.666, 0.31],
+    "rdrag": [147.257, 0.31],
+    "kd": [0.140600, 0.00032],
+    "thetad": [0.160904, 0.00018],
+    "zeq": [3396.2, 33],
+    "keq": [0.010365, 0.00010],
+    "thetaeq": [0.8139, 0.0063],
+    "thetarseq": [0.44980, 0.0032],
+}
 
 fiducial_parameters = deepcopy(params_lowTEB_highTTTEEE)
 redshifts = [100, 10, 1, 0]
@@ -22,7 +91,7 @@ redshifts = [100, 10, 1, 0]
 def _get_model_with_requirements_and_eval(theo, reqs, packages_path, skip_not_installed):
     planck_base_model_prime = deepcopy(planck_base_model)
     planck_base_model_prime["hubble"] = "H"  # intercompatibility CAMB/CLASS
-    info_theory = {theo: {"extra_args": planck_lss_precision[theo]}}
+    info_theory = {theo: {"extra_args": lss_tests_precision[theo]}}
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     info = recursive_update(info, {"theory": info_theory, "likelihood": {"one": None}})
     info["packages_path"] = process_packages_path(packages_path)
@@ -271,7 +340,6 @@ def test_cosmo_omega_camb(packages_path, skip_not_installed):
     _test_cosmo_omega("camb", packages_path, skip_not_installed)
 
 
-@pytest.mark.skip(reason="Failing in GitHub Actions; works locally")
 def test_cosmo_omega_classy(packages_path, skip_not_installed):
     _test_cosmo_omega("classy", packages_path, skip_not_installed)
 
@@ -305,7 +373,6 @@ def test_cosmo_ang_diam_dist_2_camb(packages_path, skip_not_installed):
     _test_cosmo_ang_diam_dist_2("camb", packages_path, skip_not_installed)
 
 
-@pytest.mark.skip(reason="Failing in GitHub Actions; works locally")
 def test_cosmo_ang_diam_dist_2_classy(packages_path, skip_not_installed):
     _test_cosmo_ang_diam_dist_2("classy", packages_path, skip_not_installed)
 
@@ -350,6 +417,5 @@ def test_cosmo_weyl_pkz_camb(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("camb", packages_path, skip_not_installed)
 
 
-@pytest.mark.skip
 def test_cosmo_weyl_pkz_classy(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("classy", packages_path, skip_not_installed)

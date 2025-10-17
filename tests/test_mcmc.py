@@ -202,7 +202,6 @@ def test_mcmc_sync():
         aborted = True
 
     # test error converted into MPI_ABORT after timeout
-    # noinspection PyTypeChecker
     with pytest.raises((LoggedError, mpi.OtherProcessError)), NoLogging(logging.CRITICAL):
         with mpi.ProcessState(
             "test", time_out_seconds=0.5, timeout_abort_proc=test_abort
@@ -274,7 +273,6 @@ def _test_overhead_timing(dim=15):
     from io import StringIO
 
     # one-time numba compile out of profiling
-    # noinspection PyUnresolvedReferences
     from cobaya.functions import random_SO_N  # noqa: F401
 
     like_test = _make_gaussian_like(dim)

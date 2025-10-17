@@ -597,22 +597,22 @@ reionization = {
 }
 
 # EXPERIMENTS ############################################################################
+
+# Precision for calculations without perturbations
 base_precision: InfoDict = {
-    "camb": None,
-    "classy": {"non linear": "hmcode", "nonlinear_min_k_max": 20},
+    "camb": {},
+    "classy": {},
 }
+
+# Precision for CMB analises
 cmb_precision = deepcopy(base_precision)
-cmb_precision["camb"] = {"lens_potential_accuracy": 1}
+cmb_precision["camb"].update({"lens_potential_accuracy": 1})
+cmb_precision["classy"].update({"non linear": "hmcode"})
 
-planck_lss_precision = deepcopy(base_precision)
-planck_lss_precision["camb"] = {
-    "halofit_version": "mead",
-    "bbn_predictor": "PArthENoPE_880.2_standard.dat",
-}
-planck_lss_precision["classy"] = {"nonlinear_min_k_max": 25}
-
-planck_precision = deepcopy(planck_lss_precision)
-planck_precision["camb"]["lens_potential_accuracy"] = 1
+# Precision for combined CMB + LSS analyses (used for LSS-only too)
+cmb_lss_precision = deepcopy(cmb_precision)
+cmb_lss_precision["camb"].update({})
+cmb_lss_precision["classy"].update({"nonlinear_min_k_max": 20})
 
 default_mcmc_options = {
     "proposal_scale": 1.9,
@@ -676,7 +676,7 @@ like_cmb: InfoDict = {
         "desc": "Planck 2018 (Polarized CMB + lensing)",
         "sampler": cmb_sampler_recommended,
         "theory": {
-            theo: {"extra_args": planck_precision[theo]} for theo in ["camb", "classy"]
+            theo: {"extra_args": cmb_precision[theo]} for theo in ["camb", "classy"]
         },
         "likelihood": {
             "planck_2018_lowl.TT": None,
@@ -689,7 +689,7 @@ like_cmb: InfoDict = {
         "desc": "Planck 2018 (Polarized CMB + lensing) + Bicep/Keck-Array 2018",
         "sampler": cmb_sampler_recommended,
         "theory": {
-            theo: {"extra_args": planck_precision[theo]} for theo in ["camb", "classy"]
+            theo: {"extra_args": cmb_precision[theo]} for theo in ["camb", "classy"]
         },
         "likelihood": {
             "planck_2018_lowl.TT": None,
@@ -703,7 +703,7 @@ like_cmb: InfoDict = {
         "desc": "Planck 2018 CMB-marginalized lensing only",
         "sampler": cmb_sampler_mcmc,
         "theory": {
-            theo: {"extra_args": planck_precision[theo]} for theo in ["camb", "classy"]
+            theo: {"extra_args": cmb_precision[theo]} for theo in ["camb", "classy"]
         },
         "likelihood": {"planck_2018_lensing.CMBMarged": None},
     },
@@ -817,7 +817,7 @@ like_des: InfoDict = {
 for key, value in like_des.items():
     if key is not none:
         value["theory"] = {
-            theo: {"extra_args": base_precision[theo]} for theo in ["camb", "classy"]
+            theo: {"extra_args": cmb_lss_precision[theo]} for theo in ["camb", "classy"]
         }
         value["sampler"] = cmb_sampler_recommended
 
@@ -1148,8 +1148,7 @@ install_basic: InfoDict = {
 install_tests = deepcopy(install_basic)
 install_tests["likelihood"].update(
     {
-        "planck_2015_lowl": None,
-        "planck_2018_highl_plik.TT_unbinned": None,
+        "planck_2018_highl_plik.TT": None,
         "planck_2018_highl_plik.TT_lite_native": None,
         "planck_2018_highl_CamSpec.TT": None,
         "planck_2018_highl_CamSpec2021.TT": None,

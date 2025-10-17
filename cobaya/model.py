@@ -374,7 +374,9 @@ class Model(HasLogger):
             return logpriors
 
     def logprior(
-        self, params_values: dict[str, float] | Sequence[float], make_finite: bool = False
+        self,
+        params_values: dict[str, float] | Sequence[float],
+        make_finite: bool = False,
     ) -> float:
         """
         Takes an array or dictionary of sampled parameter values.
@@ -655,7 +657,6 @@ class Model(HasLogger):
             if self.prior.external:
                 logpriors.extend(self.prior.logps_external(input_params))
         if -np.inf not in logpriors:
-            # noinspection PyUnboundLocalVariable
             like = self._loglikes_input_params(
                 input_params,
                 return_derived=return_derived,
@@ -698,7 +699,10 @@ class Model(HasLogger):
         could be reused.
         """
         return self.logposterior(
-            params_values, make_finite=make_finite, return_derived=False, cached=cached
+            params_values,
+            make_finite=make_finite,
+            return_derived=False,
+            cached=cached,
         ).logpost
 
     def get_valid_point(

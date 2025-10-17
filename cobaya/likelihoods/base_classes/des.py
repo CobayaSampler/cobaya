@@ -253,7 +253,6 @@ class DES(DataSetLikelihood):
         self.k_max = ini.float("kmax", 15)
 
     def load_fits_data(self, filename, ranges=None):  # pragma: no cover
-        # noinspection PyUnresolvedReferences
         import astropy.io.fits as fits  # type: ignore
 
         if ranges is None:
@@ -357,7 +356,6 @@ class DES(DataSetLikelihood):
         # (though could change spline to zero at zero).
         # At percent level it matters what is assumed
         if self.use_hankel:  # pragma: no cover
-            # noinspection PyUnresolvedReferences
             import hankel  # type: ignore
 
             maxx = self.theta_bins_radians[-1] * self.l_max
@@ -442,7 +440,6 @@ class DES(DataSetLikelihood):
             "Hubble": {"z": self.zs},
         }
 
-    # noinspection PyUnboundLocalVariable
     def get_theory(
         self,
         PKdelta,
@@ -805,7 +802,6 @@ class DES(DataSetLikelihood):
 
 
 def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
-    # noinspection PyUnresolvedReferences
     import astropy.io.fits as fits  # type: ignore
 
     if ranges is None:
@@ -844,7 +840,6 @@ def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
         )
         # fix anomaly that z bins are 1 based but theta bins zero based
         dat[:, 2] += 1
-        # noinspection PyTypeChecker
         np.savetxt(
             outdir + root + "_%s.dat" % tp,
             dat,

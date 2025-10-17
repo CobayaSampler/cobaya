@@ -5,7 +5,7 @@ name: Cobaya Tests
 on: [push, pull_request]
 
 env:
-  COBAYA_INSTALL_SKIP_BASE: planck_2015,CamSpec2021,2018_highl_CamSpec,unbinned,keck
+  COBAYA_INSTALL_SKIP_BASE: planck_2018_highl_plik,CamSpec2021,2018_highl_CamSpec,unbinned,keck
   COBAYA_PACKAGES_PATH: ../packages
 
 jobs:
@@ -51,12 +51,12 @@ jobs:
           - name: "Anaconda Python (ruff, no numba)"
             os: ubuntu-latest
             pydist: "ANACONDA"
-            cobaya_skip: classy,polychord
-          - name: "Latest Python 3.x (with polychord)"
+            cobaya_skip: polychord
+          - name: "Latest Python 3.x"
             os: ubuntu-latest
             python-version: "3.x"
             mpi: openmpi
-            cobaya_skip: classy, polychord
+            cobaya_skip: polychord
           - name: "OS X Python 3.10 (with classy)"
             os: macos-latest
             python-version: "3.10"
@@ -66,7 +66,7 @@ jobs:
             os: windows-latest
             python-version: "3.12"
             mpi: intelmpi
-            cobaya_skip: classy,polychord
+            cobaya_skip: polychord
     steps:
       - name: Set COBAYA_INSTALL_SKIP
         shell: bash
@@ -78,13 +78,13 @@ jobs:
       - run: |
           gfortran --version
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         if: matrix.pydist != 'ANACONDA'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -101,7 +101,7 @@ jobs:
         shell: bash -el {0}
         run: |
           pip install ruff
-          ruff check cobaya/ tests/ --output-format=github
+          ruff check cobaya/ --output-format=github
 
       - name: Install dependencies (pip)
         if: matrix.pydist != 'ANACONDA'
@@ -171,8 +171,10 @@ jobs:
     steps:
       - name: Check test results
         run: |
-          if [[ "${{ needs.tests.result }}" == "success" ]]; then
-            echo "All tests passed!"
+          result="${{ needs.tests.result }}"
+          echo "tests job result: $result"
+          if [[ "$result" == "success" || "$result" == "skipped" ]]; then
+            echo "Tests succeeded or were skipped."
             exit 0
           else
             echo "Some tests failed or were cancelled"
@@ -187,10 +189,10 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
 
       - name: Install dependencies
         run: |

@@ -11,7 +11,7 @@ authors = [
 ]
 description = "Code for Bayesian Analysis"
 readme = "README.rst"
-license = "LicenseRef-LGPLv3-arxiv"
+license = "LGPL-3.0-or-later AND LicenseRef-GFDL-1.3-or-later"
 license-files = ["LICENCE.txt"]
 keywords = ["montecarlo", "sampling", "MCMC", "cosmology"]
 classifiers = [
@@ -23,7 +23,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13"
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14"
 ]
 requires-python = ">=3.10.0"
 dependencies = [
@@ -34,7 +35,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-xdist", "flaky", "mpi4py", "iminuit"]
 speed = ["numba", "mpi4py"]
 gui = ["pyside6", "matplotlib"]
 docs = [
@@ -84,7 +84,7 @@ Tracker = "https://github.com/CobayaSampler/cobaya/issues"
 Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"
 
 [tool.ruff.lint]
-ignore = ["E722", "E731"]
+ignore = ["E731"]
 extend-select = ["I"]
 preview = true
 

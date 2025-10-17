@@ -4,6 +4,8 @@
 path:
 clik_file: baseline/plc_3.0/low_l/commander/commander_dx12_v3_2_29.clik
 product_id: "151902"
+# Clipy commands -- string or list of strings, e.g. ["no TT", "only EE 217x217 500 800 lax"]
+commands:
 # Aliases for automatic covariance matrix
 aliases: [lowl]
 # Speed in evaluations/second
