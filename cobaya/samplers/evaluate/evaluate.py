@@ -17,6 +17,8 @@ from cobaya.sampler import Sampler
 
 
 class Evaluate(Sampler):
+
+    sampler_type = "uncorrelated"
     file_base_name = "evaluate"
 
     override: Mapping[str, float]
