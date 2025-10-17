@@ -467,7 +467,7 @@ class Prior(HasLogger):
         self.params = []
         self.pdf = []
         self._bounds = np.zeros((len(sampled_params_info), 2))
-        self._periodic_bounds: list[tuple[int, float, float]] = []
+        self._periodic_bounds: list[int] = []
         for i, p in enumerate(sampled_params_info):
             self.params += [p]
             info = sampled_params_info[p]
@@ -502,8 +502,7 @@ class Prior(HasLogger):
                         f"Parameter '{p}' was declared periodic, but logprior at bounds "
                         "is different.",
                     )
-                a, b = self._bounds[i]
-                self._periodic_bounds.append((i, a, b))
+                self._periodic_bounds.append(i)
         self._uniform_indices = np.array(
             [i for i, pdf in enumerate(self.pdf) if pdf.dist.name == "uniform"], dtype=int
         )
@@ -663,7 +662,8 @@ class Prior(HasLogger):
         if self._periodic_bounds:
             if copy:
                 x = np.copy(x)
-            for i, a, b in self._periodic_bounds:
+            for i in self._periodic_bounds:
+                a, b = self._bounds[i]
                 x[i] = ((x[i] - a) / (b - a)) % 1 * (b - a) + a
         return x
 
