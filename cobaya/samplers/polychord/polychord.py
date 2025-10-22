@@ -331,7 +331,7 @@ class polychord(Sampler):
         # since PolyChord divides by it
 
         def logpost(params_values):
-            result = self.model.logposterior(params_values, ignore_periodic=True)
+            result = self.model.logposterior(params_values)
             loglikes = result.loglikes
             if len(loglikes) != self.n_likes:
                 loglikes = np.full(self.n_likes, np.nan)

@@ -20,11 +20,17 @@ r_perturb = 1e-16
 a_tol_test = 1e-8
 
 
+def _get_rng():
+    seed = round(np.random.random() * 1000000)
+    return seed, np.random.default_rng(seed)
+
+
 @flaky(max_runs=max_runs, min_passes=1)
 def test_pool1d():
-    values = np.random.random(n_pool)
+    seed, rng = _get_rng()
+    values = rng.random(n_pool)
     pool = Pool1D(values)
-    test_values = np.random.choice(values, n_test) + r_perturb * np.random.random(n_test)
+    test_values = rng.choice(values, n_test) + r_perturb * rng.random(n_test)
     # At least a duplicate, for robustness
     test_values[-1] = test_values[0]
     indices = pool.find_indices(test_values)
@@ -32,7 +38,8 @@ def test_pool1d():
 
 
 def test_pool1d_fail():
-    values = np.random.random(1)
+    seed, rng = _get_rng()
+    values = rng.random(1)
     pool = Pool1D(values)
     test_values = [2]  # out of range
     with pytest.raises(ValueError):
@@ -41,17 +48,18 @@ def test_pool1d_fail():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_pool2d(from_list=False):
+    seed, rng = _get_rng()
     if from_list:
         # num of combinations N needs to be ~= n_test
         # if list of length m (large): N = (m**2 - m) / 2 ~= m**2 / 2
         n_list = int(np.ceil(np.sqrt(2 * n_pool)))
-        values = np.random.random(n_list)
+        values = rng.random(n_list)
     else:
-        values = np.random.random(2 * n_pool).reshape((n_pool, 2))
+        values = rng.random(2 * n_pool).reshape((n_pool, 2))
     pool = Pool2D(values)
     test_values = pool.values[
-        np.random.choice(range(len(pool.values)), n_test)
-    ] + r_perturb * np.random.random(2 * n_test).reshape((n_test, 2))
+        rng.choice(range(len(pool.values)), n_test)
+    ] + r_perturb * rng.random(2 * n_test).reshape((n_test, 2))
     # At least a duplicate, for robustness
     test_values[-1] = test_values[0]
     indices = pool.find_indices(test_values)
@@ -64,8 +72,9 @@ def test_pool2d_from_list():
 
 
 def test_pool2d_fail():
-    values = np.random.random(2)
-    pool = Pool1D(values)
+    seed, rng = _get_rng()
+    values = rng.random(2)
+    pool = Pool2D(values)
     test_values = [2, 2]  # out of range
     with pytest.raises(ValueError):
         pool.find_indices(test_values)
