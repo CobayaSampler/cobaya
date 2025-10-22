@@ -132,7 +132,6 @@ def create_input(**kwargs) -> InputDict:
     planck_to_theo = get_default_info(theory_requested, "theory")["renames"]
     if kwargs.get("planck_names", False):
         merged["theory"][theory_requested] = merged["theory"][theory_requested] or {}
-        merged["theory"][theory_requested]["use_renames"] = True
     else:
         merged_params_translated = dict(
             translate(p, info, planck_to_theo) for p, info in merged["params"].items()

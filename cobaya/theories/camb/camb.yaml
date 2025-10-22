@@ -13,13 +13,11 @@ stop_at_error: False
 # Other precision parameters to be passed to CAMB
 # e.g. precision parameters or non-numerical parameters
 extra_args:
+# e.g AccuracyBoost: [larger than 1]
 # If using a custom version based on an outdated CAMB, set to True.
 # Use at your own risk: may produce unexpected behaviour/errors.
 # (Ideally, update the CAMB version on which your modification is based.)
 ignore_obsolete: False
-# e.g AccuracyBoost: [larger than 1]
-# Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
-use_renames: False
 # request primordial P(k) from an external Theory implementation
 external_primordial_pk: False
 # Dictionary of Planck->CAMB names
