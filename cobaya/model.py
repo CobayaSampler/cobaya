@@ -1569,7 +1569,7 @@ class Model(HasLogger):
                     max_tries=max_tries,
                     ignore_fixed=True,
                     warn_if_no_ref=False,
-                    proposal_scale=proposal_scale,
+                    override_std=proposal_scale,
                 )
                 if self.loglike(point, cached=False)[0] != -np.inf:  # type: ignore
                     n_done += 1
