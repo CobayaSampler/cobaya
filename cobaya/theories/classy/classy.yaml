@@ -13,8 +13,6 @@ extra_args:
 # Use at your own risk: may produce unexpected behaviour/errors.
 # (Ideally, update the CLASS version on which your modification is based.)
 ignore_obsolete: False
-# Use Planck parameter names, for fast switching CLASS<-->(Planck+CAMB)
-use_renames: False
 # Dictionary of (Planck+CAMB)->CLASS names
 renames:
   # Inflation
