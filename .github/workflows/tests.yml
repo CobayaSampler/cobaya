@@ -43,6 +43,7 @@ jobs:
   tests:
     needs: should_run
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     if: github.event_name == 'pull_request' || needs.should_run.outputs.run_tests == 'true'
     strategy:
       fail-fast: false

@@ -46,6 +46,8 @@ class polychord(Sampler):
     tailored for high-dimensional parameter spaces with a speed hierarchy.
     """
 
+    sampler_type: str = "nested"
+
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.20.1"
@@ -329,7 +331,7 @@ class polychord(Sampler):
         # since PolyChord divides by it
 
         def logpost(params_values):
-            result = self.model.logposterior(params_values, ignore_periodic=True)
+            result = self.model.logposterior(params_values)
             loglikes = result.loglikes
             if len(loglikes) != self.n_likes:
                 loglikes = np.full(self.n_likes, np.nan)

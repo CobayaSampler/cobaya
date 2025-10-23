@@ -284,7 +284,7 @@ class Sampler(CobayaComponent):
             self.mpi_warning(
                 "No sampled parameters requested! This will fail for non-mock samplers."
             )
-        if self.model.prior.is_any_periodic and not self.supports_periodic_params:
+        if self.model.prior._periodic_bounds and not self.supports_periodic_params:
             self.log.warning(
                 "There are periodic sampled parameters, but this sampler does not support"
                 " them. Treating their prior definition range as hard boundaries. This "
