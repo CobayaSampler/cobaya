@@ -348,6 +348,7 @@ class OutputReadOnly:
         name=None,
         extension=None,
         concatenate=None,
+        check_logp_sums=True,
     ):
         """
         Loads all collection files found which are compatible with this `Output`
@@ -355,6 +356,9 @@ class OutputReadOnly:
 
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.
+
+        If ``check_logp_sums=False`` allows for samples to have individual chi2's and
+        logpriors that do not add up to the total ones, or are undefined.
 
         Notes
         -----
@@ -374,6 +378,7 @@ class OutputReadOnly:
                 onload_skip=skip,
                 onload_thin=thin,
                 is_batch=len(filenames) > 1,
+                check_logp_sums=check_logp_sums,
             )
             for i, filename in enumerate(filenames)
         ]
@@ -801,7 +806,14 @@ def get_output(*args, **kwargs) -> Output:
         return OutputDummy(*args, **kwargs)
 
 
-def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
+def load_samples(
+    prefix,
+    skip=0,
+    thin=1,
+    combined=False,
+    to_getdist=False,
+    check_logp_sums=True,
+):
     """
     Loads all sample collections with a given prefix.
 
@@ -825,6 +837,9 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
     to_getdist: bool (default: False)
         If ``True``, returns a single :class:`getdist.MCSamples` instance, containing all
         samples (``combined`` is ignored).
+    check_logp_sums: bool (default: True)
+        If ``False`` allows for samples to have individual chi2's and logpriors that do not
+        add up to the total ones, or are undefined.
 
     Returns
     -------
@@ -868,11 +883,16 @@ def load_samples(prefix, skip=0, thin=1, combined=False, to_getdist=False):
             skip=skip,
             thin=thin,
             combined=False,
+            check_logp_sums=check_logp_sums,
         )
         if collections:
             collections = collections[0].to_getdist(combine_with=collections[1:])
     else:
         collections = output.load_collections(
-            dummy_model, skip=skip, thin=thin, combined=combined
+            dummy_model,
+            skip=skip,
+            thin=thin,
+            combined=combined,
+            check_logp_sums=check_logp_sums,
         )
     return collections
