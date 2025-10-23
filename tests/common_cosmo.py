@@ -42,7 +42,6 @@ def body_of_test(
     info = create_input(planck_names=True, theory=theo, **planck_base_model_prime)
     # Add specifics for the test: theory, likelihoods and derived parameters
     info = recursive_update(info, {"theory": info_theory})
-    info["theory"][theo]["use_renames"] = True
     info = recursive_update(info, {"likelihood": info_likelihood})
     info["params"].update(dict.fromkeys(best_fit_derived or []))
     # We need UPDATED info, to get the likelihoods' nuisance parameters

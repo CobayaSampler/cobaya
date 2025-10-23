@@ -1356,8 +1356,8 @@ class PoolND(ABC):
             if len(indices_i_prev_not_found) < len(i_not_found):
                 raise ValueError(
                     f"Could not find some of {list(values)} in pool {list(self.values)}. "
-                    "If there appear to be a values close to the values in the pool,"
-                    " increase max tolerances."
+                    "If there appear to be values in the pool close to the requested "
+                    "ones, increase max tolerances."
                 )
             indices[i_not_found] = indices_i_prev_not_found
         return indices
@@ -1498,7 +1498,7 @@ def check_2d(pairs, allow_1d=True):
             else:
                 raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
     elif (len(pairs.shape) == 2 and pairs.shape[1] != 2) or len(pairs.shape) != 2:
-        raise ValueError(f"Not a (list of) pair(s) of values: {list(pairs)}.")
+        raise ValueError(f"Not a (list of) pair(s) of values: {pairs}.")
     return np.sort(pairs, axis=-1)  # internal sorting
 
 
@@ -1553,11 +1553,18 @@ class Pool2D(PoolND):
         # for a slice, which is safe
         i_insert_right = np.searchsorted(self.values[:, 0], values[:, 0], side="right")
         slices = np.array([i_insert_left, i_insert_right]).T
-        i_maybe_found = [
-            slices[i][0]
-            + np.searchsorted(self.values[slices[i][0] : slices[i][1], 1], values[i][1])
-            for i in range(len(values))
-        ]
+        # Now test the resulting slice(s) for a match in the 2nd component
+        i_maybe_found = np.clip(
+            [
+                slices[i][0]
+                + np.searchsorted(
+                    self.values[slices[i][0] : slices[i][1], 1], values[i][1]
+                )
+                for i in range(len(values))
+            ],
+            a_min=None,
+            a_max=len(self) - 1,
+        )
         return np.where(
             self._cond_isclose(
                 self.values[i_maybe_found],

@@ -46,6 +46,8 @@ class polychord(Sampler):
     tailored for high-dimensional parameter spaces with a speed hierarchy.
     """
 
+    sampler_type: str = "nested"
+
     # Name of the PolyChord repo and version to download
     _pc_repo_name = "PolyChord/PolyChordLite"
     _pc_repo_version = "1.20.1"
