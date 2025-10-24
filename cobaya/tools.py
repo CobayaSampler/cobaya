@@ -1014,8 +1014,12 @@ def find_with_regexp(regexp, root, walk_tree=False):
     Returns all files found which are compatible with the given regexp in directory root,
     including their path in their name.
 
+    If regexp is defined as ``None``, it matches all files inside ``root``.
+
     Set walk_tree=True if there is more than one directory level (default: `False`).
     """
+    if regexp is None:
+        regexp = ".*"
     if isinstance(regexp, str):
         regexp = re.compile(regexp)
     try:
