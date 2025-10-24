@@ -389,10 +389,9 @@ class Sampler(CobayaComponent):
     def output_files_regexps(cls, output, info=None, minimal=False):
         """
         Returns a list of tuples ``(regexp, root)`` of output files potentially produced.
-        If ``root`` in the tuple is ``None``, ``output.folder`` is used. The ``regexp``
-        part of the tuple cannot be ``None``;  to match all files inside ``root``, use
-        ``regexp=".*"`` (dangerous! may lead to unwanted deletions when using
-        ``--force``/``force=True``).
+        If ``root`` in the tuple is ``None``, ``output.folder`` is used. If ``regexp``
+        part of the tuple is ``None``, all files inside ``root`` will be considered as
+        output files of the sampler.
 
         If `minimal=True`, returns regexp's for the files that should really not be there
         when we are not resuming.
