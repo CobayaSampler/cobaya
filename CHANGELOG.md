@@ -1,20 +1,30 @@
-## 3.5.8 (prerelease)
+## 3.6 (prerelease)
 
 ### General
 
-- Minimum python 3.10; type hints updated accordingly
-- Added standardized formatting with ruff (removing flake8)
-- Added pre-commit hooks for automated code quality checks (trailing whitespace, end-of-file-fixer, pyupgrade, ruff)
+- Minimum python 3.10; type hints updated accordingly (#419)
+- Added standardized formatting with ruff (removing flake8) (#419, #442)
+- Added pre-commit hooks for automated code quality checks (trailing whitespace, end-of-file-fixer, pyupgrade, ruff) (#419)
 - Documentation can now be built as markdown for LLM context. Flat context file provided.
-- Periodic sampled parameters implemented (for now fully supported by MCMC only), as well as tagging of derived parameters as periodic for analysis with GetDist.
-- Added simple `gaussian` likelihood with optional normalization constant
+- Periodic sampled parameters implemented (for now fully supported by MCMC only), as well as tagging of derived parameters as periodic for analysis with GetDist (#440, #443; fixes #438)
+- Added simple `gaussian` likelihood with optional normalization constant (#433)
+- In `Prior.reference()`, now fixed values can be turned into a norm with given std (#429, #460; fixes #394)
+- In `SampleCollection`, inconsistent sums of individual chi2's and prior's are allowed, for e.g. emulators (#456)
+- `sampler_type` now an explicit parameter, instead of guessed from sampler name (#455)
+- Fixed out-of-bounds bug in `Pool2D` (#457; fixes #454)
+- `use_renames` option of theories deprecated (was not used)
+- Empty dicts in component definitions now preserved (fixes #450; thanks yzhengsong)
+- Improved `truncnorm` prior support (#431; thanks @xgarrido)
 
 ### Cosmology
 
-- Planck `clik`-based likelihoods now use the new `clipy` Python implementation
-- Planck 2015 likelihoods deprecated
+- Planck `clik`-based likelihoods now use the new `clipy` Python implementation (#444, #427)
+- Planck 2015 likelihoods deprecated (#444)
+- `CLASS` updated to 3.3 (#449; fixes #404, #405, #434, #448)
+- Updated `candl` mentions in docs (#453, #447; thanks @Lbalkenhol)
+- Updated DESI BAO DR2 references in docs (#422; thanks @armengau)
 
-## 3.5.7 - 2025-03-31
+## 3.5.7 – 2025-03-31
 
 ### General
 
@@ -26,7 +36,7 @@
 
 - BAO, DESI, and SN likelihood docs now automatically list all available internal likelihoods
 
-## 3.5.6 - 2025-03-21
+## 3.5.6 – 2025-03-21
 
 ### Cosmology
 
