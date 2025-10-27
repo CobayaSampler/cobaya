@@ -35,7 +35,7 @@ The Markdown documentation can be used as context for LLMs in several ways:
 The documentation is structured to maintain the same organization as the HTML version, making it easy to find specific information.
 
 Generating the Markdown Documentation Locally
---------------------------------------------
+----------------------------------------------
 
 If you want to generate the markdown documentation locally, you can use the provided script:
 

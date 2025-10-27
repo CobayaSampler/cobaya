@@ -32,15 +32,15 @@ Samplers can in general be swapped in the input file without needing to modify a
 block of the input.
 
 In the cobaya code tree, each sampler is placed in its own folder, containing a file
-defining the sampler's class, which inherits from the :class:`cobaya.Sampler`, and a
+defining the sampler's class, which inherits from the :class:`cobaya.sampler.Sampler`, and a
 ``[sampler_name].yaml`` file, containing all possible user-specified options for the
 sampler and their default values. Whatever option is defined in this file automatically
 becomes an attribute of the sampler's instance.
 
 To implement your own sampler, or an interface to an external one, simply create a folder
-under the ``cobaya/cobaya/samplers/`` folder and include the two files described above.
-Your class needs to inherit from the :class:`cobaya.Sampler` class below, and needs to
-implement only the methods ``initialize``, ``_run``, and ``products``.
+under the ``cobaya/samplers/`` folder and include the two files described above.
+Your class needs to inherit from the :class:`cobaya.sampler.Sampler` class below, and needs to
+implement only the methods ``initialize``, ``run``, and ``products``.
 
 """
 

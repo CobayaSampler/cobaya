@@ -6,8 +6,8 @@ r"""
 
 This is a **maximizer** for posteriors or likelihoods, based on
 `scipy.optimize.Minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_,
- `Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_, and
- `iminuit <https://iminuit.readthedocs.io/>`_.
+`Py-BOBYQA <https://numericalalgorithmsgroup.github.io/pybobyqa/build/html/index.html>`_, and
+`iminuit <https://iminuit.readthedocs.io/>`_.
 
 The default is BOBYQA, which tends to work better than scipy on Cosmological problems with default
 settings.
@@ -171,9 +171,7 @@ class Minimize(Minimizer, CovmatSampler):
                 self.model.loglike, make_finite=True, return_derived=False
             )
         else:
-            self.logp = partial(
-                self.model.logpost, make_finite=True
-            )
+            self.logp = partial(self.model.logpost, make_finite=True)
         # Try to load info from previous samples.
         # If none, sample from reference (make sure that it has finite like/post)
         self.initial_points = []
