@@ -429,6 +429,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, NamedTuple
 
 import numpy as np
+from scipy.stats import norm  # type: ignore
 
 from cobaya.conventions import prior_1d_name
 from cobaya.log import HasLogger, LoggedError
@@ -862,6 +863,7 @@ class Prior(HasLogger):
         ignore_fixed=False,
         warn_if_no_ref=True,
         random_state=None,
+        override_std: dict[str, float | None] | None = None,
     ) -> np.ndarray:
         """
         Returns:
@@ -871,6 +873,13 @@ class Prior(HasLogger):
         If `ignored_fixed=True` (default: `False`), fixed reference values will be ignored
         in favor of the full prior, ensuring some randomness for all parameters (useful
         e.g. to prevent caching when measuring speeds).
+
+        If `override_std` is provided as a dict mapping parameter names to standard
+        deviation values, and `ignore_fixed=True`, then for parameters with fixed
+        reference values and override values, the point will be perturbed from the
+        reference using a Gaussian with the override value as the standard deviation,
+        rather than sampling from the full prior. This helps avoid extreme values when
+        the prior is very broad.
 
         NB: The way this function works may be a little dangerous:
         if two parameters have an (external)
@@ -885,30 +894,42 @@ class Prior(HasLogger):
                 "Reference values or pdfs for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters."
             )
-        # As a curiosity, `r is np.nan` was returning False after `r = np.nan` if
-        # it had been passed via MPI before the test, since this creates a "new" np.nan
-        # NB: isinstance(np.nan, numbers.Real) --> True
-        where_ignore_ref = [
-            isinstance(r, numbers.Real) and (np.isnan(r) or ignore_fixed)
-            for r in self.ref_pdf
-        ]
+        # Let's create an updated list of pdf|num|None using ignore_fixed and override_std
+        updated_ref_pdfs = []
+        i_sample_from_prior = []
+        for i, (param, ref_pdf) in enumerate(zip(self.params, self.ref_pdf)):
+            overriden_std = (override_std or {}).get(param)
+            if isinstance(ref_pdf, numbers.Real):
+                if np.isnan(ref_pdf):
+                    updated_ref_pdfs.append(None)
+                    i_sample_from_prior.append(i)
+                elif ignore_fixed:
+                    if overriden_std is None:
+                        updated_ref_pdfs.append(None)
+                        i_sample_from_prior.append(i)
+                    else:
+                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=overriden_std))
+                else:  # actual number
+                    updated_ref_pdfs.append(ref_pdf)
+            else:  # pdf is an actual pdf
+                updated_ref_pdfs.append(ref_pdf)
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
         ref_sample = np.empty(len(self.ref_pdf))
         while tries < max_tries:
             tries += 1
-            if any(where_ignore_ref):
+            # Handle parameters using their reference values or pdfs.
+            for i, pdf in enumerate(updated_ref_pdfs):
+                if hasattr(pdf, "rvs"):
+                    ref_sample[i] = pdf.rvs(random_state=random_state)
+                else:
+                    ref_sample[i] = pdf
+            # Handle parameters that need sampling from prior (not using override)
+            if i_sample_from_prior:
                 prior_sample = self.sample(
                     ignore_external=True, random_state=random_state
                 )[0]
-                ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
-            for i, ref_pdf in enumerate(self.ref_pdf):
-                if not where_ignore_ref[i]:
-                    if hasattr(ref_pdf, "rvs"):
-                        ref_sample[i] = ref_pdf.rvs(random_state=random_state)  # type: ignore
-                    else:
-                        ref_sample[i] = ref_pdf.real
-
+                ref_sample[i_sample_from_prior] = prior_sample[i_sample_from_prior]
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
             if tries == warn_if_tries:
