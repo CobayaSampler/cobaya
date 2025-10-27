@@ -862,6 +862,7 @@ class Prior(HasLogger):
         ignore_fixed=False,
         warn_if_no_ref=True,
         random_state=None,
+        override_std: dict[str, float | None] | None = None,
     ) -> np.ndarray:
         """
         Returns:
@@ -871,6 +872,13 @@ class Prior(HasLogger):
         If `ignored_fixed=True` (default: `False`), fixed reference values will be ignored
         in favor of the full prior, ensuring some randomness for all parameters (useful
         e.g. to prevent caching when measuring speeds).
+
+        If `override_std` is provided as a dict mapping parameter names to standard
+        deviation values, and `ignore_fixed=True`, then for parameters with fixed
+        reference values and override values, the point will be perturbed from the
+        reference using a Gaussian with the override value as the standard deviation,
+        rather than sampling from the full prior. This helps avoid extreme values when
+        the prior is very broad.
 
         NB: The way this function works may be a little dangerous:
         if two parameters have an (external)
@@ -892,22 +900,51 @@ class Prior(HasLogger):
             isinstance(r, numbers.Real) and (np.isnan(r) or ignore_fixed)
             for r in self.ref_pdf
         ]
+
+        # Determine which parameters should use override-based perturbation vs sampling from the full prior
+        where_use_override = (
+            [
+                isinstance(ref_pdf, numbers.Real)
+                and not np.isnan(ref_pdf)
+                and override_std.get(param_name) is not None
+                for param_name, ref_pdf in zip(self.params, self.ref_pdf)
+            ]
+            if override_std and ignore_fixed
+            else [False] * len(self.ref_pdf)
+        )
+
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
         ref_sample = np.empty(len(self.ref_pdf))
         while tries < max_tries:
             tries += 1
-            if any(where_ignore_ref):
+
+            # Handle parameters that need sampling from prior (not using override)
+            where_sample_prior = [
+                where_ignore_ref[i] and not where_use_override[i]
+                for i in range(len(self.ref_pdf))
+            ]
+            if any(where_sample_prior):
                 prior_sample = self.sample(
                     ignore_external=True, random_state=random_state
                 )[0]
-                ref_sample[where_ignore_ref] = prior_sample[where_ignore_ref]
+                ref_sample[where_sample_prior] = prior_sample[where_sample_prior]
+
+            # Handle parameters using their reference values or pdfs
             for i, ref_pdf in enumerate(self.ref_pdf):
                 if not where_ignore_ref[i]:
                     if hasattr(ref_pdf, "rvs"):
                         ref_sample[i] = ref_pdf.rvs(random_state=random_state)  # type: ignore
                     else:
                         ref_sample[i] = ref_pdf.real
+                elif where_use_override[i]:
+                    # Use override-based perturbation from fixed reference
+                    param_name = self.params[i]
+                    ref_value = self.ref_pdf[i].real
+                    std = override_std[param_name]
+                    ref_sample[i] = (random_state or np.random.default_rng()).normal(
+                        ref_value, std
+                    )
 
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
