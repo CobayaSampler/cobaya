@@ -908,7 +908,7 @@ class Prior(HasLogger):
                         updated_ref_pdfs.append(None)
                         i_sample_from_prior.append(i)
                     else:
-                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=override_std))
+                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=overriden_std))
                 else:  # actual number
                     updated_ref_pdfs.append(ref_pdf)
             else:  # pdf is an actual pdf
