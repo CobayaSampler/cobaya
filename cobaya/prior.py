@@ -920,7 +920,7 @@ class Prior(HasLogger):
             tries += 1
             # Handle parameters using their reference values or pdfs.
             for i, pdf in enumerate(updated_ref_pdfs):
-                if hasattr(ref_pdf, "rvs"):
+                if hasattr(pdf, "rvs"):
                     ref_sample[i] = pdf.rvs(random_state=random_state)
                 else:
                     ref_sample[i] = pdf
