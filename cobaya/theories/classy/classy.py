@@ -68,7 +68,7 @@ For scalar parameters, you can add them as derived parameters in your input file
 principle, you can add most of the parameters that you can retrieve manually in the CLASS
 Python wrapper (the ones appearing inside the definition of the
 ``get_current_derived_parameters()`` function of the `python CLASS interface
-<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_). If any of
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`__). If any of
 them does not work (usually because it has been added to CLASS since Cobaya was last
 updated), you can still add them as derived parameters in you input as long as you add
 them also to the ``classy`` block as
@@ -82,7 +82,7 @@ them also to the ``classy`` block as
 
 If you would like to access a CLASS result that is not accessible in any of these ways,
 you can access directly the return value of the `python CLASS interface
-<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`_ functions
+<https://github.com/lesgourg/class_public/blob/master/python/classy.pyx>`__ functions
 ``get_background()``, ``get_thermodynamics()``, ``get_primordial()``,
 ``get_perturbations()`` and  ``get_sources()``. To do that add to the requisites
 ``{get_CLASS_[...]: None}`` respectively, and retrieve it with

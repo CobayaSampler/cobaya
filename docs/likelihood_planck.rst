@@ -36,9 +36,9 @@ The Planck 2018 baseline likelihoods defined here are:
 Other more recent Planck likelihoods are:
 
 - ``planck_NPIPE_highl_CamSpec.[TT|TE|EE|TTEE|TTTEEE]``: latest native (bundled) python NPIPE (PR4) CamSpec high-:math:`\ell` likelihoods
-- ``planck_2020_lollipop.[lowlE|lowlB|lowlEB]``: latest python NPIPE (PR4) Lollipop low-:math:`\ell` likelihoods. pip install from `GitHub <https://github.com/planck-npipe/lollipop>`_
-- ``planck_2020_hillipop.[TT|TE|EE|TTTEEE]``: latest python NPIPE (PR4) Hillipop high-:math:`\ell` likelihoods. pip install from `GitHub <https://github.com/planck-npipe/hillipop>`_
-- ``planckpr4lensing.[PlanckPR4Lensing|PlanckPR4LensingMarged]``: NPIPE lensing; pip install from `GitHub <https://github.com/carronj/planck_PR4_lensing>`_
+- ``planck_2020_lollipop.[lowlE|lowlB|lowlEB]``: latest python NPIPE (PR4) Lollipop low-:math:`\ell` likelihoods. pip install from `GitHub <https://github.com/planck-npipe/lollipop>`__
+- ``planck_2020_hillipop.[TT|TE|EE|TTTEEE]``: latest python NPIPE (PR4) Hillipop high-:math:`\ell` likelihoods. pip install from `GitHub <https://github.com/planck-npipe/hillipop>`__
+- ``planckpr4lensing.[PlanckPR4Lensing|PlanckPR4LensingMarged]``: NPIPE lensing; pip install from `GitHub <https://github.com/carronj/planck_PR4_lensing>`__
 - ``planck_2018_highl_CamSpec2021.[TT|TTTEEE]``: native Python versions of high-:math:`\ell` ``CamSpec`` likelihoods (from `arXiv 1910.00483 <https://arxiv.org/abs/1910.00483>`_).
 - ``planck_2018_lowl.EE_sroll2``: low-:math:`\ell` EE polarization from 2019 Sroll2 analysis (native python)
 
@@ -58,7 +58,7 @@ Customization of ``clik``-based likelihoods
 
 Likelihoods based on the official ``clik`` code (``planck_2018_lowl.[TT|EE]_clik``, ``planck_2018_highl_plik.[TT|TE|EE|TTTEEE]][_unbinned|_lite]``, ``planck_2018_highl_plik.[TT|TTTEEE]``, ``planck_2018_lensing.clik``) now use the pure-Python  `clipy implementation <https://github.com/benabed/clipy>`_.
 
-These likelihoods can now take commands at initialization for cropping, notching or spectra from individual frequency maps. The syntax can be found in the ``README`` section of the `Github repo <https://github.com/benabed/clipy>`_.
+These likelihoods can now take commands at initialization for cropping, notching or spectra from individual frequency maps. The syntax can be found in the ``README`` section of the `Github repo <https://github.com/benabed/clipy>`__.
 
 To use any of this commands in Cobaya, simply pass a single one or a list of them, e.g.:
 
@@ -78,7 +78,7 @@ of this section.
 Manual installation of the Planck 2018 likelihoods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you would like to install the Python-native ``clipy`` implementation by hand (e.g. with the purpose of modifying it), you can simply clone its `Github repo <https://github.com/benabed/clipy>`_ anywhere and install this local copy with ``pip install .``. Alternatively, you can automatically install the last release with ``pip install clipy-like`` (NB: ``pip install clipy`` installs a completely different package!). In both cases, make sure that you can ``import clipy`` from anywhere.
+If you would like to install the Python-native ``clipy`` implementation by hand (e.g. with the purpose of modifying it), you can simply clone its `Github repo <https://github.com/benabed/clipy>`__ anywhere and install this local copy with ``pip install .``. Alternatively, you can automatically install the last release with ``pip install clipy-like`` (NB: ``pip install clipy`` installs a completely different package!). In both cases, make sure that you can ``import clipy`` from anywhere.
 
 Now, download the required likelihood files from the `Planck Legacy Archive <https://pla.esac.esa.int/pla/#cosmology>`_. For instance, if you want to reproduce the baseline Planck 2018 results, download the file ``COM_Likelihood_Data-baseline_R3.00.tar.gz`` and decompress it under e.g. ``/your/path/to/planck_2018``.
 

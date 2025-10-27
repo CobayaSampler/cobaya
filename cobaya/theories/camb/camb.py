@@ -67,7 +67,7 @@ The products that you can request and later retrieve are listed in
 
 If you would like to access a CAMB result that is not accessible that way, you can access
 the full CAMB results object
-`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`_
+`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`__
 directly by adding ``{"CAMBdata": None}`` to your requisites, and then retrieving it with
 ``provider.get_CAMBdata()``.
 
@@ -90,7 +90,7 @@ If you follow those instructions you do not need to make any additional modifica
 Cobaya.
 
 If your modification involves new computed quantities, add a retrieving method to
-`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`_,
+`CAMBdata <https://camb.readthedocs.io/en/latest/results.html#camb.results.CAMBdata>`__,
 and see :ref:`camb_access`.
 
 You can use the :doc:`model wrapper <cosmo_model>` to test your modification by

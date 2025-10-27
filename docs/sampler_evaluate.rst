@@ -68,5 +68,5 @@ Evaluate sampler class
 .. automodule:: samplers.evaluate.evaluate
    :noindex:
 
-.. autoclass:: samplers.evaluate.evaluate
+.. autoclass:: samplers.evaluate.evaluate.Evaluate
    :members:
