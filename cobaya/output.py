@@ -347,7 +347,6 @@ class OutputReadOnly:
         combined=False,
         name=None,
         extension=None,
-        concatenate=None,
         check_logp_sums=True,
     ):
         """
@@ -382,15 +381,6 @@ class OutputReadOnly:
             )
             for i, filename in enumerate(filenames)
         ]
-        # MARKED FOR DEPRECATION IN v3.4
-        if concatenate is not None:
-            print(
-                "*WARNING*: Argument 'concatenate' will be deprecated soon. "
-                "Please use 'combined' instead."
-            )
-            # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            combined = concatenate
-        # END OF DEPRECATION BLOCK
         if combined and collections:
             collection = collections[0]
             for collection_i in collections[1:]:
@@ -500,21 +490,7 @@ class Output(HasLogger, OutputReadOnly):
     def set_resuming(self, value):
         self._resuming = value
 
-    # MARKED FOR DEPRECATION IN v3.4
-    @mpi.from_root
-    def load_updated_info(self, cache=False, use_cache=False) -> InputDict | None:
-        """
-        Returns the version of the input file updated with defaults, loading it if
-        necessary.
-
-        *WARNING*: This method has been deprecated in favor of ``get_updated_info`` and
-        ``reaload_update_info``, depending on the use case (see their docstrings).
-        """
-        # BEHAVIOUR TO BE REPLACED BY AN ERROR
-        return self.reload_updated_info(cache=cache, use_cache=use_cache)
-        # END OF DEPRECATION BLOCK
-
-    def reload_updated_info(self, cache=False, **kwargs) -> InputDict | None:
+    def reload_updated_info(self, cache=False) -> InputDict | None:
         """
         Reloads and returns the version of the input file updated with defaults.
 
@@ -522,16 +498,6 @@ class Output(HasLogger, OutputReadOnly):
 
         If ``cache=True``, the loaded input will be cached for future calls.
         """
-        # MARKED FOR DEPRECATION IN v3.4
-        if kwargs.get("use_cache", None):
-            self.log.warning(
-                "The `use_cache` argument will be deprecated soon. If you "
-                "want to ensure that you receive a cached version, call the "
-                "new method ``get_updated_info(use_cache=True)`."
-            )
-            # BEHAVIOUR TO BE REPLACED BY AN ERROR
-            return self.get_updated_info(use_cache=kwargs["use_cache"])
-        # END OF DEPRECATION BLOCK
         loaded = None
         if mpi.is_main_process():
             loaded = super().reload_updated_info(cache=cache)
