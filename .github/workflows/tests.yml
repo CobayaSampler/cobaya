@@ -104,6 +104,16 @@ jobs:
           pip install ruff
           ruff check cobaya/ --output-format=github
 
+      - name: Install dependencies (pip) [no numba on 3.x]
+        if: matrix.pydist != 'ANACONDA' && matrix['python-version'] == '3.x'
+        run: |
+          pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit
+
+      - name: Install dependencies (pip) [with numba]
+        if: matrix.pydist != 'ANACONDA' && matrix['python-version'] != '3.x'
+        run: |
+          pip install -r requirements.txt pytest-xdist pytest-cov flaky matplotlib coverage iminuit numba
+
       - name: Install dependencies (pip)
         if: matrix.pydist != 'ANACONDA'
         run: |
