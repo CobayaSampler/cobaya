@@ -202,7 +202,7 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         else:
             lock = FileLock()
             try:
-                lock.set_lock(self.log, cache_file)
+                lock.set_lock(self.log, cache_file, wait=True)
                 if os.path.exists(cache_file):
                     self.covinv = np.load(cache_file).astype(np.float64)
                 else:
