@@ -159,7 +159,10 @@ class FileLock:
         if self.has_lock():
             self._file_handle.close()
             del self._file_handle
-            os.remove(self.lock_file)
+            try:
+                os.remove(self.lock_file)
+            except OSError:
+                pass
             try:
                 os.remove(self.lock_error_file)
             except OSError:
