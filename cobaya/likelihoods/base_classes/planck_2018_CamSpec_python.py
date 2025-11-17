@@ -197,19 +197,13 @@ class Planck2018CamSpecPython(DataSetLikelihood):
         )
         if not use_cache:
             self.covinv = np.linalg.inv(self.cov)
-        elif os.path.exists(cache_file):
-            self.covinv = np.load(cache_file).astype(np.float64)
         else:
-            lock = FileLock()
-            try:
-                lock.set_lock(self.log, cache_file, wait=True)
+            with FileLock(cache_file, log=self.log, wait=True):
                 if os.path.exists(cache_file):
                     self.covinv = np.load(cache_file).astype(np.float64)
                 else:
                     self.covinv = np.linalg.inv(self.cov)
                     np.save(cache_file, self.covinv.astype(np.float32))
-            finally:
-                lock.clear_lock()
 
     def get_foregrounds(self, data_params):
         sz_bandpass100_nom143 = 2.022

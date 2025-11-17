@@ -54,11 +54,13 @@ def use_portalocker():
 class FileLock:
     _file_handle: Any
 
-    def __init__(self, filename=None, log=None):
+    def __init__(self, filename=None, log=None, **kwargs):
         self.lock_error_file = ""
         self.lock_file = ""
         if filename:
-            self.set_lock(log, filename)
+            self.set_lock(log, filename, **kwargs)
+        else:
+            assert not log and not kwargs
 
     def set_lock(self, log, filename, force=False, wait=False):
         if self.has_lock():
@@ -175,6 +177,14 @@ class FileLock:
 
     def __del__(self):
         self.clear_lock()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        # Always clear any held lock; propagate original exceptions.
+        self.clear_lock()
+        return False
 
 
 class OutputReadOnly:
