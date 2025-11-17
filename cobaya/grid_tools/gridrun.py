@@ -8,6 +8,7 @@
 
 import hashlib
 import os
+import shlex
 
 from cobaya.grid_tools import batchjob_args, jobqueue
 from cobaya.grid_tools.gridmanage import run_and_wait
@@ -137,7 +138,7 @@ def grid_run(args=None):
             print("... " + ini)
         if args.noqueue:
             if not args.dryrun:
-                run_and_wait(processes, program.split(" ") + [ini], args.noqueue)
+                run_and_wait(processes, shlex.split(program) + [ini], args.noqueue)
             return
         yaml_files.append(ini)
         if args.combine_one_job_name:
