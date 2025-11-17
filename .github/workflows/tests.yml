@@ -53,9 +53,9 @@ jobs:
             os: ubuntu-latest
             pydist: "ANACONDA"
             cobaya_skip: polychord
-          - name: "Latest Python 3.x"
+          - name: "Latest Python 3.13"
             os: ubuntu-latest
-            python-version: "3.x"
+            python-version: "3.13"
             mpi: openmpi
             cobaya_skip: polychord
           - name: "OS X Python 3.10 (with classy)"
