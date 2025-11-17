@@ -7,7 +7,7 @@ from .test_cosmo_quantities import params_lowTEB_highTTTEEE
 
 
 def _test_sn(
-    packages_path, skip_not_installed, lik, theory="camb", lik_params=empty_dict
+    packages_path, skip_not_installed, lik, theory="classy", lik_params=empty_dict
 ):
     info_likelihood = {lik: lik_params}
     info_theory = {theory: None}
@@ -115,6 +115,11 @@ def test_sn_desy5_camb(packages_path, skip_not_installed):
     _test_sn(packages_path, skip_not_installed, "sn.desy5")
 
 
+def test_sn_desdovekie_camb(packages_path, skip_not_installed):
+    _test_sn(packages_path, skip_not_installed, "sn.desdovekie")
+
+
+    
 # BEST FIT AND REFERENCE VALUES ##########################################################
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
@@ -130,4 +135,6 @@ chi2_sn = {
     "sn.pantheonplusshoes": 1496.97,
     "sn.union3": 26.31,
     "sn.desy5": 1644.94,
+    "sn.desdovekie":1632.35,
+    
 }
