@@ -193,6 +193,14 @@ class JobSettings:
             self.qsub = get_defaulted(
                 "qsub", engine_default(grid_engine, "qsub"), template=template, **kwargs
             )
+        # Prefer machine-readable job IDs from the scheduler where supported
+        qsub_lower = self.qsub.lower()
+        if grid_engine == "SLURM" or "sbatch" in qsub_lower:
+            if "--parsable" not in self.qsub:
+                self.qsub += " --parsable"
+        elif grid_engine == "OGS":
+            if "-terse" not in self.qsub:
+                self.qsub += " -terse"
         self.qdel = get_defaulted(
             "qdel", engine_default(grid_engine, "qdel"), template=template, **kwargs
         )
@@ -343,6 +351,35 @@ def deleteJobs(
     return jobIds
 
 
+def parse_job_id_from_output(res: str) -> str:
+    """
+    Extract a scheduler-independent job ID from a submission command's output.
+    Handles common formats from SLURM, LSF, SGE/OGS, MOAB, PBS/Torque, and falls
+    back to the first integer found. Returns the original string if no match.
+    """
+    s = res.strip()
+    # Handle SLURM --parsable: JOBID[;CLUSTER]
+    if ";" in s:
+        first = s.split(";", 1)[0].strip()
+        if first.isdigit():
+            return first
+
+    patterns = [
+        r"Submitted batch job (\d+)",  # SLURM
+        r"Job <(\d+)>",  # LSF
+        r"Your job(?:-array)? (\d+)",  # SGE/OGS
+        r"job ['\"]?(\d+)['\"]? submitted",  # MOAB variants
+        r"qsub: job (\d+(?:\.[^\s]+)?)",  # PBS qsub message
+        r"^(\d+(?:\.[^\s]+)?)$",  # plain ID or ID.server
+    ]
+    for pat in patterns:
+        if m := re.search(pat, s, re.IGNORECASE):
+            return m.group(1)
+    if m := re.search(r"(\d+)", s):
+        return m.group(1)
+    return s
+
+
 def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
     """
     Submits a job with name ``jobName`` and input file(s) ``input_files``.
@@ -436,13 +473,10 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
                     print("No qsub output")
                 else:
                     j.inputFiles = input_files
-                    if "Your job " in res:
-                        m = re.search(r"Your job (\d*) ", res)
-                        assert m
-                        res = m.group(1)
-                    j.jobId = res
+                    job_id = parse_job_id_from_output(res)
+                    j.jobId = job_id
                     j.subTime = time.time()
-                    open(scriptRoot + jobid_ext, "w", encoding="utf-8").write(res)
+                    open(scriptRoot + jobid_ext, "w", encoding="utf-8").write(job_id)
                     addJobIndex(kwargs.get("batchPath"), j)
 
 
@@ -539,7 +573,7 @@ def get_defaulted(
     if val is None:
         val = os.environ.get(code_prefix + "_" + key_name, None)
     if val is None and ext_env:
-        val = os.environ.get("ext_env", None)
+        val = os.environ.get(ext_env, None)
     if val is None:
         val = default
     if val is None:
