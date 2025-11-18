@@ -7,7 +7,7 @@ from .test_cosmo_quantities import params_lowTEB_highTTTEEE
 
 
 def _test_sn(
-    packages_path, skip_not_installed, lik, theory="classy", lik_params=empty_dict
+    packages_path, skip_not_installed, lik, theory="camb", lik_params=empty_dict
 ):
     info_likelihood = {lik: lik_params}
     info_theory = {theory: None}
