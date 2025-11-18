@@ -53,7 +53,7 @@ class SN(DataSetLikelihood):
 
     install_options = {
         "github_repository": "CobayaSampler/sn_data",
-        "github_release": "v1.7",
+        "github_release": "v1.8",
     }
 
     use_abs_mag: bool = False

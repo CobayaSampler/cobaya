@@ -1,0 +1,15 @@
+# Settings for the DES-Dovekie SN Ia analysis.
+
+# Path to the data: where the sn_data has been cloned
+path: null
+# .dataset file with settings
+dataset_file: DES-Dovekie/config.dataset
+# Overriding of .dataset parameters
+dataset_params:
+  # field: value
+# Aliases for automatic covariance matrix
+aliases: [DESDovekie]
+# Use absolute magnitude
+use_abs_mag: False
+# Speed in evaluations/second
+speed: 100
