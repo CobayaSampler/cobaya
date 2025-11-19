@@ -53,7 +53,7 @@ class SN(DataSetLikelihood):
 
     install_options = {
         "github_repository": "CobayaSampler/sn_data",
-        "github_release": "v1.6",
+        "github_release": "v1.8",
     }
 
     use_abs_mag: bool = False
@@ -227,6 +227,18 @@ class SN(DataSetLikelihood):
         if self.use_abs_mag:
             reqs["Mb"] = None
         return reqs
+
+    def _read_inv_covmat(self, filename):
+        d = np.load(filename)
+        n = d[d.files[0]][0]
+        inv_cov = np.zeros((n, n))
+        inv_cov[np.triu_indices(n)] = d[d.files[1]]
+
+        # Reflect to lower triangular part to make it symmetric
+        i_lower = np.tril_indices(n, -1)
+        inv_cov[i_lower] = inv_cov.T[i_lower]
+
+        return inv_cov
 
     def _read_covmat(self, filename):
         cov = np.loadtxt(filename)

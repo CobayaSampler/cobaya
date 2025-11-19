@@ -838,6 +838,11 @@ like_sn: InfoDict = {
         "theory": theory,
         "likelihood": {"sn.desy5": None},
     },
+    "DESDovekie": {
+        "desc": "Supernovae data from the updated DES-Dovekie Y5 sample",
+        "theory": theory,
+        "likelihood": {"sn.desdovekie": None},
+    },
     "Pantheon": {
         "desc": "Supernovae data from the Pantheon sample",
         "theory": theory,
