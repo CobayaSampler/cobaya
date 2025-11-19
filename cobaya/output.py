@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from typing import Any
 
 from packaging import version
@@ -53,13 +54,15 @@ def use_portalocker():
 class FileLock:
     _file_handle: Any
 
-    def __init__(self, filename=None, log=None):
+    def __init__(self, filename=None, log=None, **kwargs):
         self.lock_error_file = ""
         self.lock_file = ""
         if filename:
-            self.set_lock(log, filename)
+            self.set_lock(log, filename, **kwargs)
+        else:
+            assert not log and not kwargs
 
-    def set_lock(self, log, filename, force=False):
+    def set_lock(self, log, filename, force=False, wait=False):
         if self.has_lock():
             return
         self.lock_file = filename + ".locked"
@@ -76,7 +79,10 @@ class FileLock:
 
                 try:
                     h = open(self.lock_file, "wb")
-                    portalocker.lock(h, portalocker.LOCK_EX + portalocker.LOCK_NB)
+                    flags = portalocker.LOCK_EX
+                    if not wait:
+                        flags |= portalocker.LOCK_NB
+                    portalocker.lock(h, flags)
                     self._file_handle = h
                 except portalocker.exceptions.BaseLockException:
                     if h:
@@ -84,7 +90,22 @@ class FileLock:
                     self.lock_error()
             else:
                 # will work, but crashes will leave .lock files that will raise error
-                self._file_handle = open(self.lock_file, "wb" if force else "xb")
+                if wait:
+                    while True:
+                        try:
+                            self._file_handle = open(
+                                self.lock_file, "wb" if force else "xb"
+                            )
+                            break
+                        except FileExistsError:
+                            # Wait for other process to clear lock or report error
+                            if os.path.exists(self.lock_error_file):
+                                self.lock_error()
+                            time.sleep(0.1)
+                        except OSError:
+                            self.lock_error()
+                else:
+                    self._file_handle = open(self.lock_file, "wb" if force else "xb")
         except OSError:
             self.lock_error()
 
@@ -140,7 +161,10 @@ class FileLock:
         if self.has_lock():
             self._file_handle.close()
             del self._file_handle
-            os.remove(self.lock_file)
+            try:
+                os.remove(self.lock_file)
+            except OSError:
+                pass
             try:
                 os.remove(self.lock_error_file)
             except OSError:
@@ -153,6 +177,14 @@ class FileLock:
 
     def __del__(self):
         self.clear_lock()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        # Always clear any held lock; propagate original exceptions.
+        self.clear_lock()
+        return False
 
 
 class OutputReadOnly:

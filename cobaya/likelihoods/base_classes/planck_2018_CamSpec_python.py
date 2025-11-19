@@ -18,12 +18,14 @@ It is used by the 2018 and more recent CamSpec Planck likelihoods.
 
 """
 
+import hashlib
 import os
 
 import numpy as np
 import scipy
 
 from cobaya.likelihoods.base_classes.DataSetLikelihood import DataSetLikelihood
+from cobaya.output import FileLock
 
 use_cache = True
 
@@ -189,18 +191,19 @@ class Planck2018CamSpecPython(DataSetLikelihood):
             l_min = np.min(lmin[self.cl_used])
             self.lnrat[l_min:] = np.log(self.ls[l_min:] / np.float64(pivot))
 
-        import hashlib
-
         cache_file = self.dataset_filename.replace(
             ".dataset",
             "_covinv_%s.npy" % hashlib.md5(str(ini.params).encode("utf8")).hexdigest(),
         )
-        if use_cache and os.path.exists(cache_file):
-            self.covinv = np.load(cache_file).astype(np.float64)
-        else:
+        if not use_cache:
             self.covinv = np.linalg.inv(self.cov)
-            if use_cache:
-                np.save(cache_file, self.covinv.astype(np.float32))
+        else:
+            with FileLock(cache_file, log=self.log, wait=True):
+                if os.path.exists(cache_file):
+                    self.covinv = np.load(cache_file).astype(np.float64)
+                else:
+                    self.covinv = np.linalg.inv(self.cov)
+                    np.save(cache_file, self.covinv.astype(np.float32))
 
     def get_foregrounds(self, data_params):
         sz_bandpass100_nom143 = 2.022
