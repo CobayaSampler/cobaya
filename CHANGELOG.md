@@ -1,3 +1,14 @@
+## 3.6.x
+
+### General
+
+- Grid tools fix for more robustly managing running jobs (#464)
+
+### Cosmology
+
+- Add new DES-Dovekie SN release (#465; thanks @bap37)
+- Fixed race condition caching inverse covariance in CamSpec likelihoods (#466)
+
 ## 3.6 – 2025-10-28
 
 ### General

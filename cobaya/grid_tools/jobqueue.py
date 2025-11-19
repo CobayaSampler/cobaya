@@ -8,6 +8,7 @@ import time
 from typing import Any
 
 import numpy as np
+from getdist.types import TextFile
 
 from cobaya.conventions import Extension
 
@@ -450,11 +451,9 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
         script = replace_placeholders(template, vals)
         scriptRoot = os.path.join(script_dir, job_name)
         scriptName = scriptRoot + script_ext
-        open(scriptName, "w", encoding="utf-8").write(script)
+        TextFile(scriptName).write(script)
         if len(input_files) > 1:
-            open(scriptRoot + ".batch", "w", encoding="utf-8").write(
-                "\n".join(input_files)
-            )
+            TextFile(scriptRoot + ".batch").write(input_files)
         if not kwargs.get("no_sub", False):
             try:
                 res = (
@@ -476,7 +475,7 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
                     job_id = parse_job_id_from_output(res)
                     j.jobId = job_id
                     j.subTime = time.time()
-                    open(scriptRoot + jobid_ext, "w", encoding="utf-8").write(job_id)
+                    TextFile(scriptRoot + jobid_ext).write(job_id)
                     addJobIndex(kwargs.get("batchPath"), j)
 
 

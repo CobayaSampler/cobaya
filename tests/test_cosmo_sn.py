@@ -119,7 +119,6 @@ def test_sn_desdovekie_camb(packages_path, skip_not_installed):
     _test_sn(packages_path, skip_not_installed, "sn.desdovekie")
 
 
-    
 # BEST FIT AND REFERENCE VALUES ##########################################################
 
 best_fit = deepcopy(params_lowTEB_highTTTEEE)
@@ -135,6 +134,5 @@ chi2_sn = {
     "sn.pantheonplusshoes": 1496.97,
     "sn.union3": 26.31,
     "sn.desy5": 1644.94,
-    "sn.desdovekie":1632.35,
-    
+    "sn.desdovekie": 1632.35,
 }
