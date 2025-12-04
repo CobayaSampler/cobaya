@@ -47,11 +47,16 @@ from cobaya.typing import (
     unset_params,
 )
 
+import signal
+def handle_timeout(signum, frame):
+    raise TimeoutError()
+
 
 class Theory(CobayaComponent):
     """Base class theory that can calculate something."""
 
     speed: float = -1
+    timeout: int = 0
     stop_at_error: bool = False
     version: dict | str | None = None
     params: ParamsDict
@@ -89,6 +94,7 @@ class Theory(CobayaComponent):
         self.set_cache_size(3)
         self._helpers: dict[str, "Theory"] = {}
         self._input_params_extra: set[str] = set()
+        signal.signal(signal.SIGALRM, handle_timeout)
 
     def get_requirements(
         self,
@@ -278,11 +284,19 @@ class Theory(CobayaComponent):
             }
             if self.timer:
                 self.timer.start()
+            signal.alarm(0)
+            if self.timeout > 0:
+                signal.alarm(self.timeout)
             try:
                 if self.calculate(state, want_derived, **params_values_dict) is False:
+                    signal.alarm(0)
                     return False
             except always_stop_exceptions:
                 raise
+            except TimeoutError:
+                self.log.info("Theory timeout after %f seconds", self.timeout)
+                signal.alarm(0)
+                return False
             except Exception as excpt:
                 if self.stop_at_error:
                     self.log.error("Error at evaluation. See error information below.")
@@ -294,7 +308,9 @@ class Theory(CobayaComponent):
                         "to stop here and print a traceback). Error message: %r",
                         excpt,
                     )
+                    signal.alarm(0)
                     return False
+            signal.alarm(0)
             if self.timer:
                 self.timer.increment(self.log)
         # make this state the current one
