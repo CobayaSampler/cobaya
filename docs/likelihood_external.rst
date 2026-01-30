@@ -45,6 +45,7 @@ List of external packages
  * `Mock CMB-HD <https://github.com/CMB-HD/hdlike>`_
  * `TDCOSMO strong lensing time delays <https://github.com/nataliehogg/tdcosmo_ext>`_
  * `CosmoSIS2cobaya <https://github.com/JiangJQ2000/cosmosis2cobaya>`_
+ * `Lyman alpha P1D likelihood with DESI DR1 results <https://github.com/igmhub/cobaya_lya_p1d>`_
  * `Example - simple demo <https://github.com/CobayaSampler/example_external_likelihood>`_
  * `Example - Planck lensing <https://github.com/CobayaSampler/planck_lensing_external>`_
 
