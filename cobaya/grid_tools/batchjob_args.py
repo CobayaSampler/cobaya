@@ -96,6 +96,12 @@ class BatchArgs:
             help="include only runs that include specific data (data1)",
         )
         self.parser.add_argument(
+            "--musthave-param",
+            nargs="+",
+            default=None,
+            help="include only runs that include specific parameter (paramx)",
+        )
+        self.parser.add_argument(
             "--skip-data",
             nargs="+",
             default=None,
@@ -235,6 +241,10 @@ class BatchArgs:
             return jobItem.datatag in self.args.datatag
 
     def paramsMatch(self, jobItem):
+        if self.args.musthave_param is not None and not jobItem.hasAllParams(
+            self.args.musthave_param
+        ):
+            return False
         if self.args.paramtag is None:
             if self.args.param is None:
                 return not self.args.skip_param or not jobItem.hasParam(

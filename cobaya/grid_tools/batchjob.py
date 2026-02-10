@@ -352,6 +352,12 @@ class JobItem(PropertiesItem):
         else:
             return any(True for i in name if i in self.param_set)
 
+    def hasAllParams(self, name):
+        if isinstance(name, str):
+            return name in self.param_set
+        else:
+            return all((i in self.param_set) for i in name)
+
     def importanceJobs(self):
         return self.importanceItems
 
