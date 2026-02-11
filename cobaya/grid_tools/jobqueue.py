@@ -451,9 +451,9 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
         script = replace_placeholders(template, vals)
         scriptRoot = os.path.join(script_dir, job_name)
         scriptName = scriptRoot + script_ext
-        TextFile(scriptName).write(script)
+        TextFile([script]).write(scriptName)
         if len(input_files) > 1:
-            TextFile(scriptRoot + ".batch").write(input_files)
+            TextFile(input_files).write(scriptRoot + ".batch")
         if not kwargs.get("no_sub", False):
             try:
                 res = (

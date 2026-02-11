@@ -161,8 +161,12 @@ class BAO(InstallableLikelihood):
             self.use_grid_2d = False
             self.use_grid_3d = False
             # Columns: z value [err] [type]
-            self.has_type = self.data.iloc[:, -1].dtype == np.dtype("O")
-            assert self.has_type  # mandatory for now!
+            type_last_col = self.data.iloc[:, -1].dtype
+            self.has_type = (
+                type_last_col == np.dtype("O")  # pandas < v3
+                or type_last_col.__class__ == pd.StringDtype  # pandas >= v3
+            )
+            assert self.has_type, "The data file is not correctly formatted."
             self.has_err = len(self.data.columns) > 2 and self.data[2].dtype == float
             if self.has_err:
                 self.data.columns = ["z", "value", "error", "observable"]

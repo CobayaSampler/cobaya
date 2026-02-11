@@ -1,8 +1,9 @@
-## 3.6.x
+## 3.6.1 – 2026-01-30
 
 ### General
 
 - Grid tools fix for more robustly managing running jobs (#464)
+- Fixed type check error introduced by pandas 3.0 (#475; thanks @cgiovanetti)
 
 ### Cosmology
 

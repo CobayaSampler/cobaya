@@ -1,7 +1,7 @@
 __author__ = "Jesus Torrado and Antony Lewis"
-__version__ = "3.6"
+__version__ = "3.6.1"
 __obsolete__ = False
-__year__ = "2025"
+__year__ = "2026"
 __url__ = "https://cobaya.readthedocs.io"
 
 
