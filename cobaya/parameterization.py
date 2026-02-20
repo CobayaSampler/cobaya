@@ -312,10 +312,7 @@ class Parameterization(HasLogger):
         Returns a dictionary of proposal values for sampled parameters.
         Returns None for parameters without a proposal value defined.
         """
-        return {
-            p: self._infos[p].get("proposal")
-            for p in self._sampled
-        }
+        return {p: self._infos[p].get("proposal") for p in self._sampled}
 
     def sampled_input_dependence(self) -> dict[str, list[str]]:
         return deepcopy(self._sampled_input_dependence)

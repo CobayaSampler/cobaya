@@ -6,5 +6,3 @@ class sdss_dr7_mgs(BAO):
     Likelihood of the BAO scale measurement of SDSS DR7 Main Galaxy Sample
     \cite{Ross:2014qpa}.
     """
-
-    pass

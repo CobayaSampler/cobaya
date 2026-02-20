@@ -8,5 +8,3 @@ class TT(Planck2020CamSpecPython):
     High-$\ell$ temperature-only \textsc{CamSpec} PR4-12.6cl likelihood using \texttt{NPIPE} (Planck PR4) data
     \cite{rosenberg22}.
     """
-
-    pass

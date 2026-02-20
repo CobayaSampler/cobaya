@@ -23,5 +23,3 @@ class CMBMarged(native):
     map-based lensing reconstruction, marginalized over the CMB power spectra
     \cite{Aghanim:2018oex} (native Python re-implementation by A.~Lewis).
     """
-
-    pass

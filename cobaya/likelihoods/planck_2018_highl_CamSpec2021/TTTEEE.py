@@ -8,5 +8,3 @@ class TTTEEE(Planck2018CamSpec2021Python):
     High-$\ell$ temperature and polarization \textsc{CamSpec} 12.6HMcl likelihood Planck 2018 data
     \cite{efstathiou2019}.
     """
-
-    pass

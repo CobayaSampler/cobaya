@@ -530,7 +530,7 @@ class classy(BoltzmannBase):
             self.extra_args["modes"] = "s,t"
             # TEMPORARY: disable new limber scheme to avoid CLASS error (as of v3.3.3)
             self.extra_args["want_lcmb_full_limber"] = "no"
-            self.log.warn(
+            self.log.warning(
                 "Disabled finer Limber scheme ('want_lcmb_full_limber=no') because it is "
                 "not implemented for tensor modes as of CLASS v3.3.3."
             )
@@ -729,7 +729,7 @@ class classy(BoltzmannBase):
                     args = deepcopy(list(self.collectors[product].args))
                     result = np.empty(shape=x_and_y.shape[:2])
                     for i, row in enumerate(x_and_y):
-                        for j, column_element in enumerate(x_and_y[i]):
+                        for j, column_element in enumerate(row):
                             args[arg_array[0, 0]] = column_element[0]
                             args[arg_array[1, 0]] = column_element[1]
                             result[i, j] = method(

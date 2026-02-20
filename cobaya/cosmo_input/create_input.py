@@ -66,9 +66,7 @@ def create_input(**kwargs) -> InputDict:
             )
         except KeyError:
             raise ValueError(
-                "Unknown value '{}' for '{}'".format(
-                    kwargs.get(k, input_database.none), k
-                )
+                f"Unknown value '{kwargs.get(k, input_database.none)}' for '{k}'"
             )
     theory_requested = kwargs.get("theory")
     for i, (field, info) in enumerate(infos.items()):

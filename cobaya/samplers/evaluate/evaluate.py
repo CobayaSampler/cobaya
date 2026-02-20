@@ -10,7 +10,7 @@ from collections.abc import Mapping
 
 import numpy as np
 
-import cobaya.mpi as mpi
+from cobaya import mpi
 from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError
 from cobaya.sampler import Sampler

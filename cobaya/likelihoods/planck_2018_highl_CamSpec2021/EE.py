@@ -8,5 +8,3 @@ class EE(Planck2018CamSpec2021Python):
     High-$\ell$ polarization-only \textsc{CamSpec} 12.6HMcl likelihood using Planck 2018 data
     \cite{efstathiou2019}.
     """
-
-    pass

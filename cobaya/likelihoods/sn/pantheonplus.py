@@ -46,8 +46,7 @@ class PantheonPlus(SN):
         with open(data_file) as f:
             lines = f.readlines()
             line = lines[0]
-            if line.startswith("#"):
-                line = line[1:]
+            line = line.removeprefix("#")
             cols = [col.strip().lower() for col in line.split(sep)]
             assert cols[0].isalpha()
             indices = [cols.index(col) for col in file_cols]
