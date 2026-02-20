@@ -78,7 +78,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                     if not names.parWithName(param).isDerived:
                         info["prior"][param + "_prior"] = (
                             f"lambda {param}: stats.norm.logpdf({param}, "
-                            "loc={mean:g}, scale={std:g})"
+                            f"loc={mean:g}, scale={std:g})"
                         )
 
             if key.startswith("linear_combination["):
