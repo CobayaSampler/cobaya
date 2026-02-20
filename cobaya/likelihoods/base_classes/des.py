@@ -253,7 +253,7 @@ class DES(DataSetLikelihood):
         self.k_max = ini.float("kmax", 15)
 
     def load_fits_data(self, filename, ranges=None):  # pragma: no cover
-        import astropy.io.fits as fits  # type: ignore
+        from astropy.io import fits  # type: ignore
 
         if ranges is None:
             ranges = get_def_cuts()
@@ -802,7 +802,7 @@ class DES(DataSetLikelihood):
 
 
 def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
-    import astropy.io.fits as fits  # type: ignore
+    from astropy.io import fits  # type: ignore
 
     if ranges is None:
         ranges = get_def_cuts()
@@ -830,9 +830,7 @@ def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
                 pairs.append((b1, b2))
         for x, y in pairs:
             out_ranges += [
-                "{} {} {} {} {}".format(
-                    tp, x, y, ranges[tp][x - 1][y - 1][0], ranges[tp][x - 1][y - 1][1]
-                )
+                f"{tp} {x} {y} {ranges[tp][x - 1][y - 1][0]} {ranges[tp][x - 1][y - 1][1]}"
             ]
         # drop theta value, as assuming shared to all data
         dat = np.asarray(

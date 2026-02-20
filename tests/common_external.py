@@ -10,7 +10,7 @@ from copy import deepcopy
 from random import random
 
 import numpy as np
-import scipy.stats as stats
+from scipy import stats
 
 # Local
 from cobaya import mpi

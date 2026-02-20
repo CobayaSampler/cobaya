@@ -60,8 +60,10 @@ info: InputDict = {
         },
         "omegam": {"value": 0.3, "latex": r"\Omega_\mathrm{m}", "drop": True},
         "omch2": {
-            "value": lambda omegam, omegab, mnu, H0: (omegam - omegab) * (H0 / 100) ** 2
-            - (mnu * (3.044 / 3) ** 0.75) / 94.0708,
+            "value": lambda omegam, omegab, mnu, H0: (
+                (omegam - omegab) * (H0 / 100) ** 2
+                - (mnu * (3.044 / 3) ** 0.75) / 94.0708
+            ),
             "latex": r"\Omega_\mathrm{c} h^2",
         },
         "tau": 0.05,

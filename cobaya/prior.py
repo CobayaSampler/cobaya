@@ -478,7 +478,7 @@ class Prior(HasLogger):
             except ValueError as excpt:
                 raise LoggedError(
                     self.log,
-                    f"Error when creating prior for parameter '{p}': {str(excpt)}",
+                    f"Error when creating prior for parameter '{p}': {excpt!s}",
                 ) from excpt
             self._bounds[i] = [-np.inf, np.inf]
             try:
@@ -823,7 +823,7 @@ class Prior(HasLogger):
                     raise LoggedError(
                         self.log,
                         f"Error when creating reference pdf for parameter '{p}': "
-                        f"{str(excpt)}",
+                        f"{excpt!s}",
                     ) from excpt
             elif ref is None:
                 # We only get here if explicit `param: None` mention!

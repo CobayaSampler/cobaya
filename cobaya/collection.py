@@ -844,12 +844,12 @@ class SampleCollection(BaseCollection):
         delattr(self, "_data")
         self_copy = deepcopy(self)  # deletes logger (see HasLogger.__deepcopy___)
         self_copy.set_logger()
-        setattr(self, "_data", current_data)
+        self._data = current_data
         if empty:
             self_copy.reset()
         else:
-            setattr(self_copy, "_data", data.copy())
-            setattr(self_copy, "_n", data.last_valid_index() + 1)
+            self_copy._data = data.copy()
+            self_copy._n = data.last_valid_index() + 1
         return self_copy
 
     # Dummy function to avoid exposing `data` kwarg, since no checks are performed on it.

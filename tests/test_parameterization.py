@@ -38,14 +38,14 @@ info = {
     "likelihood": {"test_lik": {"external": loglike, "output_params": ["x", "e"]}},
     "sampler": {"mcmc": {"burn_in": 0, "max_samples": 10}},
     "params": yaml_load(
-        """
+        f"""
        # Fixed to number
        a: 0.01
        # Fixed to function, non-explicitly requested as derived
-       b: "{}"
+       b: "{b_func}"
        # Fixed to function, explicitly requested as derived
        c:
-         value: "{}"
+         value: "{c_func}"
          derived: True
        # Sampled, dynamically defined from functions
        bprime:
@@ -70,19 +70,19 @@ info = {
        e:
        # Dynamical derived parameter
        f:
-         derived: "{}"
+         derived: "{f_func}"
        # Dynamical derived parameter, needing non-mentioned output parameter (x)
        g:
-         derived: "{}"
+         derived: "{g_func}"
        # Fixing parameter whose only role is being an argument for a different one
-       h: "{}"
+       h: "{h_func}"
        i: 2
        # Multi-layer: input parameter of "2nd order", i.e. dep on another dyn input
-       j: "{}"
+       j: "{j_func}"
        # Multi-layer derived parameter of "2nd order", i.e. depe on another dyn derived
        k:
-         derived: "{}"
-    """.format(b_func, c_func, f_func, g_func, h_func, j_func, k_func)
+         derived: "{k_func}"
+    """
     ),
 }
 

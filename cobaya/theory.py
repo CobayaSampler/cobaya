@@ -83,11 +83,11 @@ class Theory(CobayaComponent):
         )
 
         # set to Provider instance before calculations
-        self.provider: "Provider" | None = None
+        self.provider: Provider | None = None
         # Generate cache states, to avoid recomputing.
         # Default 3, but can be changed by sampler
         self.set_cache_size(3)
-        self._helpers: dict[str, "Theory"] = {}
+        self._helpers: dict[str, Theory] = {}
         self._input_params_extra: set[str] = set()
 
     def get_requirements(
@@ -435,7 +435,6 @@ class TheoryCollection(ComponentCollection):
                     "No attribute %s of TheoryCollection. Use model.provider "
                     "if you want to access computed requests" % name
                 )
-                pass
         return object.__getattribute__(self, name)
 
 

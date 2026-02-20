@@ -229,9 +229,7 @@ class MainWindow(QWidget):
 
     @Slot()
     def refresh_preset(self):
-        preset = list(getattr(input_database, "preset"))[
-            self.combos["preset"].currentIndex()
-        ]
+        preset = list(input_database.preset)[self.combos["preset"].currentIndex()]
         if preset is input_database.none:
             return
         info = create_input(

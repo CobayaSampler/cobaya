@@ -41,7 +41,7 @@ def run_command():
                 print(help_msg)
             else:
                 # no command --> assume run with input file as 1st arg (don't pop!)
-                getattr(import_module("cobaya.run"), "run_script")()
+                import_module("cobaya.run").run_script()
 
 
 if __name__ == "__main__":
