@@ -260,6 +260,7 @@ class CAMB(BoltzmannBase):
 
     file_base_name = "camb"
     external_primordial_pk: bool
+    use_non_linear_ratio: bool
     camb: Any
     ignore_obsolete: bool
 
@@ -327,12 +328,17 @@ class CAMB(BoltzmannBase):
                 power_spectrum.set_params
             )
 
-        nonlin = self.camb.CAMBparams.make_class_named(
-            self.extra_args.get("non_linear_model", self.camb.nonlinear.Halofit),
-            self.camb.nonlinear.NonLinearModel,
-        )
-
-        self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
+        if self.use_non_linear_ratio:
+            self.extra_args["non_linear_model"] = (
+                self.camb.nonlinear.ExternalNonLinearRatio
+            )
+            self.nonlin_args, self.nonlin_params = {}, []
+        else:
+            nonlin = self.camb.CAMBparams.make_class_named(
+                self.extra_args.get("non_linear_model", self.camb.nonlinear.Halofit),
+                self.camb.nonlinear.NonLinearModel,
+            )
+            self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
 
         self.requires = str_to_list(getattr(self, "requires", []))
         self._transfer_requires = [
@@ -627,6 +633,8 @@ class CAMB(BoltzmannBase):
                         "max_l_tensor", self.extra_args.get("lmax")
                     )
                 }
+        if self.use_non_linear_ratio and self.needs_perts:
+            must_provide["non_linear_ratio"] = {}
         return must_provide
 
     def add_to_redshifts(self, z):
@@ -701,13 +709,21 @@ class CAMB(BoltzmannBase):
                     args.update(self.initial_power_args)
                     results.Params.InitPower.set_params(**args)
                 if self.non_linear_sources or self.non_linear_pk:
-                    args = {
-                        self.translate_param(p): v
-                        for p, v in params_values_dict.items()
-                        if p in self.nonlin_params
-                    }
-                    args.update(self.nonlin_args)
-                    results.Params.NonLinearModel.set_params(**args)
+                    if self.use_non_linear_ratio:
+                        non_linear_ratio = self.provider.get_non_linear_ratio(results)
+                        results.Params.NonLinearModel.set_ratio(
+                            non_linear_ratio["k_h"],
+                            non_linear_ratio["z"],
+                            non_linear_ratio["ratio"],
+                        )
+                    else:
+                        args = {
+                            self.translate_param(p): v
+                            for p, v in params_values_dict.items()
+                            if p in self.nonlin_params
+                        }
+                        args.update(self.nonlin_args)
+                        results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
                 if "sigma8" in params_values_dict:
                     sigma8 = results.get_sigma8_0()
