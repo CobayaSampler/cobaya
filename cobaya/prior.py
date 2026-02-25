@@ -864,6 +864,7 @@ class Prior(HasLogger):
         warn_if_no_ref=True,
         random_state=None,
         override_std: dict[str, float | None] | None = None,
+        override_covmat: np.ndarray | None = None,
     ) -> np.ndarray:
         """
         Returns:
@@ -881,6 +882,13 @@ class Prior(HasLogger):
         rather than sampling from the full prior. This helps avoid extreme values when
         the prior is very broad.
 
+        If `override_covmat` is provided as a 2D numpy array (the proposal covariance
+        matrix for all sampled parameters), the reference point will be perturbed by a
+        draw from a multivariate normal with this covariance. This produces correlated
+        initial perturbations that respect the eigendirections of the covmat, which is
+        useful for dispersing initial MCMC chain starting points. Takes precedence over
+        `override_std`.
+
         NB: The way this function works may be a little dangerous:
         if two parameters have an (external)
         joint prior defined and only one of them has a reference pdf, one should
@@ -894,21 +902,28 @@ class Prior(HasLogger):
                 "Reference values or pdfs for some parameters were not provided. "
                 "Sampling from the prior instead for those parameters."
             )
+        if override_covmat is not None:
+            return self._reference_with_covmat(
+                override_covmat,
+                max_tries=max_tries,
+                warn_if_tries=warn_if_tries,
+                random_state=random_state,
+            )
         # Let's create an updated list of pdf|num|None using ignore_fixed and override_std
         updated_ref_pdfs = []
         i_sample_from_prior = []
         for i, (param, ref_pdf) in enumerate(zip(self.params, self.ref_pdf)):
-            overriden_std = (override_std or {}).get(param)
+            overridden_std = (override_std or {}).get(param)
             if isinstance(ref_pdf, numbers.Real):
                 if np.isnan(ref_pdf):
                     updated_ref_pdfs.append(None)
                     i_sample_from_prior.append(i)
                 elif ignore_fixed:
-                    if overriden_std is None:
+                    if overridden_std is None:
                         updated_ref_pdfs.append(None)
                         i_sample_from_prior.append(i)
                     else:
-                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=overriden_std))
+                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=overridden_std))
                 else:  # actual number
                     updated_ref_pdfs.append(ref_pdf)
             else:  # pdf is an actual pdf
@@ -950,6 +965,73 @@ class Prior(HasLogger):
             "null prior density after %d tries. "
             "Maybe your prior is improper of your reference pdf is "
             "null-defined in the domain of the prior.",
+            max_tries,
+        )
+
+    def _reference_with_covmat(
+        self,
+        covmat: np.ndarray,
+        max_tries=np.inf,
+        warn_if_tries="10d",
+        random_state=None,
+    ) -> np.ndarray:
+        """
+        Generate a reference point by perturbing from the center using a correlated
+        multivariate normal draw from the given covariance matrix.
+
+        The center for each parameter is determined as:
+        - Fixed reference value, if available.
+        - Mean of the reference pdf, if available.
+        - Mean of the 1d prior, as a fallback.
+
+        For parameters where no finite center can be determined, their values are
+        sampled independently from the prior.
+        """
+        n = len(self.ref_pdf)
+        center = np.empty(n)
+        i_sample_from_prior = []
+        for i, ref_pdf in enumerate(self.ref_pdf):
+            if isinstance(ref_pdf, numbers.Real):
+                if np.isnan(ref_pdf):
+                    # No reference: try prior mean
+                    prior_mean = self.pdf[i].mean()
+                    if np.isfinite(prior_mean):
+                        center[i] = prior_mean
+                    else:
+                        # Prior has no finite mean (e.g. improper); sample independently
+                        center[i] = 0  # placeholder, will be overwritten
+                        i_sample_from_prior.append(i)
+                else:
+                    center[i] = ref_pdf
+            else:
+                # ref_pdf is a distribution; use its mean
+                center[i] = ref_pdf.mean()
+        tries = 0
+        warn_if_tries = read_dnumber(warn_if_tries, self.d())
+        ref_sample = np.empty(n)
+        while tries < max_tries:
+            tries += 1
+            perturbation = random_state.multivariate_normal(np.zeros(n), covmat)
+            ref_sample[:] = center + perturbation
+            # For params without a finite center, sample from the prior independently
+            if i_sample_from_prior:
+                prior_sample = self.sample(
+                    ignore_external=True, random_state=random_state
+                )[0]
+                ref_sample[i_sample_from_prior] = prior_sample[i_sample_from_prior]
+            if self.logp(ref_sample) > -np.inf:
+                return ref_sample
+            if tries == warn_if_tries:
+                self.log.warning(
+                    "Having trouble finding a valid initial point using covmat "
+                    "dispersion. Check that the covmat is appropriate for the "
+                    "reference point and prior bounds."
+                )
+        raise LoggedError(
+            self.log,
+            "Could not find a reference point with non-null prior density after "
+            "%d tries using covmat dispersion. Check that the covariance matrix "
+            "is compatible with the reference point and prior bounds.",
             max_tries,
         )
 

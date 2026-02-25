@@ -711,6 +711,7 @@ class Model(HasLogger):
         ignore_fixed_ref: bool = False,
         logposterior_as_dict: bool = False,
         random_state=None,
+        override_covmat: np.ndarray | None = None,
     ) -> tuple[np.ndarray, LogPosterior | dict]:
         """
         Finds a point with finite posterior, sampled from the reference pdf.
@@ -720,6 +721,10 @@ class Model(HasLogger):
         If `ignored_fixed_ref=True` (default: `False`), fixed reference values will be
         ignored in favor of the full prior, ensuring some randomness for all parameters
         (useful e.g. to prevent caching when measuring speeds).
+
+        If `override_covmat` is provided (a 2D numpy array), the initial point will be
+        dispersed from the reference center using a correlated multivariate normal draw
+        from this covariance matrix, instead of using independent per-parameter dispersion.
 
         Returns (point, LogPosterior(logpost, logpriors, loglikes, derived))
 
@@ -733,6 +738,7 @@ class Model(HasLogger):
                 ignore_fixed=ignore_fixed_ref,
                 warn_if_no_ref=not loop,
                 random_state=random_state,
+                override_covmat=override_covmat,
             )
             results = self.logposterior(initial_point)
             if results.logpost != -np.inf:
