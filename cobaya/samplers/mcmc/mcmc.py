@@ -99,6 +99,7 @@ class MCMC(CovmatSampler):
     measure_speeds: bool
     oversample_thin: int
     oversample_power: float
+    disperse_initial_with_covmat: bool
 
     def set_instance_defaults(self):
         """Ensure that checkpoint attributes are initialized correctly."""
@@ -216,8 +217,22 @@ class MCMC(CovmatSampler):
             # NB: max_tries adjusted to dim instead of #cycles (blocking not computed yet)
             self.max_tries.set_scale(self.model.prior.d())
             self.log.info("Getting initial point... (this may take a few seconds)")
+            # If disperse_initial_with_covmat is True and a covmat is specified,
+            # load it now and use it to disperse initial points via correlated draws.
+            dispersion_covmat = None
+            if (
+                self.disperse_initial_with_covmat
+                and getattr(self, "covmat", None) is not None
+            ):
+                self._initial_covmat, self._covmat_where_nan = self._load_covmat(
+                    prefer_load_old=False
+                )
+                dispersion_covmat = self._initial_covmat
+                self.log.info("Dispersing initial point using the proposal covmat.")
             initial_point, results = self.model.get_valid_point(
-                max_tries=int(min(self.max_tries.value, 1e7)), random_state=self._rng
+                max_tries=int(min(self.max_tries.value, 1e7)),
+                random_state=self._rng,
+                override_covmat=dispersion_covmat,
             )
         self.current_point.add(initial_point, results)
         self.log.info("Initial point: %s", self.current_point)
@@ -412,10 +427,15 @@ class MCMC(CovmatSampler):
     def set_proposer_initial_covmat(self, load=False):
         """Creates/loads an initial covariance matrix and sets it in the Proposer."""
         if load:
-            # Build the initial covariance matrix of the proposal, or load from checkpoint
-            self._initial_covmat, where_nan = self._load_covmat(
-                prefer_load_old=self.output.is_resuming()
-            )
+            if hasattr(self, "_covmat_where_nan"):
+                # Already loaded (e.g., for initial point covmat dispersion)
+                where_nan = self._covmat_where_nan
+            else:
+                # Build the initial covariance matrix of the proposal,
+                # or load from checkpoint
+                self._initial_covmat, where_nan = self._load_covmat(
+                    prefer_load_old=self.output.is_resuming()
+                )
             if np.any(where_nan) and self.learn_proposal:
                 # We want to start learning the covmat earlier.
                 self.mpi_info(
