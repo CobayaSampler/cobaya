@@ -137,7 +137,7 @@ class SN(DataSetLikelihood):
         self.colour_var = self.dcolor**2
         self.thirdvar_var = self.dthird_var**2
         self.nsn = ix
-        self.log.debug(f"Number of SN read: {self.nsn} ")
+        self.log.debug("Number of SN read: %s", self.nsn)
         if self.twoscriptmfit and not self.has_third_var:
             raise LoggedError(
                 self.log, "twoscriptmfit was set but thirdvar information not present"
@@ -209,7 +209,7 @@ class SN(DataSetLikelihood):
                             + beta_i * self.step_width_beta
                         )
                         _int_points += 1
-            self.log.debug(f"Marignalizing alpha, beta over {_int_points} points")
+            self.log.debug("Marignalizing alpha, beta over %s points", _int_points)
             self.marge_grid = np.empty(_int_points)
             self.int_points = _int_points
             self.alpha_grid = self.alpha_grid[:_int_points]

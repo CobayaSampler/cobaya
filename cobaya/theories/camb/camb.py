@@ -739,7 +739,8 @@ class CAMB(BoltzmannBase):
                 self.log.debug(
                     "Computation of cosmological products failed. "
                     "Assigning 0 likelihood and going on. "
-                    f"The output of the CAMB error was {e}"
+                    "The output of the CAMB error was %s",
+                    e,
                 )
                 return False
             # Prepare derived parameters
