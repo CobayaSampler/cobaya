@@ -777,6 +777,9 @@ class MCMC(CovmatSampler):
         Checks the convergence of the sampling process, and, if requested,
         learns a new covariance matrix for the proposal distribution from the covariance
         of the last samples.
+
+        This method assumes that it will only be called when a checkpoint is reached for
+        all chains.
         """
         # Compute Rminus1 of means
         self.been_waiting = 0
@@ -1005,28 +1008,27 @@ class MCMC(CovmatSampler):
             )
             # Do we want to learn a better proposal pdf?
             if self.learn_proposal and not self.converged:
-                good_Rminus1 = (
-                    self.learn_proposal_Rminus1_max
-                    > self.Rminus1_last
-                    > self.learn_proposal_Rminus1_min
-                )
-                if not good_Rminus1:
+                if self.Rminus1_last > self.learn_proposal_Rminus1_max:
                     self.mpi_info(
                         "Convergence less than requested for updates: "
                         "waiting until the next convergence check."
                     )
-                    return
-                mean_of_covs = mpi.share(mean_of_covs)
-                try:
-                    self.proposer.set_covariance(mean_of_covs)  # is already tempered
-                    self.mpi_info(" - Updated covariance matrix of proposal pdf.")
-                    self.mpi_debug("%r", mean_of_covs)
-                except Exception:
-                    self.mpi_debug(
-                        "Updating covariance matrix failed unexpectedly. "
-                        "waiting until next covmat learning attempt."
+                elif self.Rminus1_last < self.learn_proposal_Rminus1_min:
+                    self.mpi_info(
+                        "Convergence too high: proposal covmat will not be updated."
                     )
-        # Save checkpoint info
+                else:
+                    mean_of_covs = mpi.share(mean_of_covs)
+                    try:
+                        self.proposer.set_covariance(mean_of_covs)  # is already tempered
+                        self.mpi_info(" - Updated covariance matrix of proposal pdf.")
+                        self.mpi_debug("%r", mean_of_covs)
+                    except Exception:
+                        self.mpi_debug(
+                            "Updating covariance matrix failed unexpectedly. "
+                            "waiting until next covmat learning attempt."
+                        )
+        # Save checkpoint info, regardless of the result of the checkpoint tests
         self.write_checkpoint()
 
     def do_output(self, date_time):
@@ -1256,7 +1258,7 @@ def plot_progress(
             progress.index = np.arange(1, len(progress) + 1)
         except Exception as excpt:
             raise ValueError(
-                f"Cannot load progress file {progress!r}: {excpt!s}"
+                f"Cannot load progress file {progress!r}: {str(excpt)}"
             ) from excpt
     elif hasattr(type(progress), "__iter__"):
         # Assume is a list of progress'es
