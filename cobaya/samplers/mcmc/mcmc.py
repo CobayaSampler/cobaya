@@ -1015,7 +1015,8 @@ class MCMC(CovmatSampler):
                     )
                 elif self.Rminus1_last < self.learn_proposal_Rminus1_min:
                     self.mpi_info(
-                        "Convergence too high: proposal covmat will not be updated."
+                        "Convergence better then better than `learn_proposal_Rminus1_min`"
+                        f"={self.learn_proposal_Rminus1_min}: covmat will not be updated."
                     )
                 else:
                     mean_of_covs = mpi.share(mean_of_covs)
