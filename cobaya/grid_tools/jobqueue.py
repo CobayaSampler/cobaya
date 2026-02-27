@@ -51,7 +51,7 @@ def addArguments(parser, combinedJobs=False):
         "--job-template", help="template file for the job submission script"
     )
     parser.add_argument(
-        "--program", help="actual program to run (default: %s)" % default_program
+        "--program", help=f"actual program to run (default: {default_program})"
     )
     parser.add_argument("--queue", help="name of queue to submit to")
     parser.add_argument("--jobclass", help="any class name of the job")
@@ -99,10 +99,9 @@ class JobSettings:
         self.jobName = jobName
         grid_engine = "PBS"
         for engine, options in grid_engine_defaults.items():
-            if "qsub" in options:
-                if shutil.which(options["qsub"]) is not None:
-                    grid_engine = engine
-                    break
+            if "qsub" in options and shutil.which(options["qsub"]) is not None:
+                grid_engine = engine
+                break
         else:
             if shutil.which("qstat") is not None:
                 try:
@@ -129,7 +128,7 @@ class JobSettings:
             with open(self.job_template, encoding="utf-8-sig") as f:
                 template = f.read()
         except OSError:
-            raise ValueError("Job template '%s' not found." % self.job_template)
+            raise ValueError(f"Job template '{self.job_template}' not found.")
         try:
             cores = multiprocessing.cpu_count()
             if cores > 64:
@@ -199,9 +198,8 @@ class JobSettings:
         if grid_engine == "SLURM" or "sbatch" in qsub_lower:
             if "--parsable" not in self.qsub:
                 self.qsub += " --parsable"
-        elif grid_engine == "OGS":
-            if "-terse" not in self.qsub:
-                self.qsub += " -terse"
+        elif grid_engine == "OGS" and "-terse" not in self.qsub:
+            self.qsub += " -terse"
         self.qdel = get_defaulted(
             "qdel", engine_default(grid_engine, "qdel"), template=template, **kwargs
         )
@@ -214,9 +212,9 @@ class JobIndex:
     """
 
     def __init__(self):
-        self.jobSettings = dict()
-        self.jobNames = dict()
-        self.rootNames = dict()
+        self.jobSettings = {}
+        self.jobNames = {}
+        self.rootNames = {}
         self.jobSequence = []
 
     def addJob(self, j):
@@ -410,7 +408,7 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
     script_dir = os.path.join(base_path, script_folder)
     if not os.path.exists(script_dir):
         os.makedirs(script_dir)
-    vals = dict()
+    vals = {}
     vals["JOBNAME"] = job_name
     vals["OMP"] = j.omp
     vals["MEM_MB"] = j.mem_per_node
@@ -497,7 +495,7 @@ def queue_job_details(batchPath=None, running=True, queued=True, warnNotBatch=Tr
             # e.g. Sun Grid Engine/OGS
             qstat = "qstat"
         running_txt = " r "
-    res_str = subprocess.check_output("%s -u $USER" % qstat, shell=True).decode().strip()
+    res_str = subprocess.check_output(f"{qstat} -u $USER", shell=True).decode().strip()
     res = res_str.split("\n")
     names = []
     job_names = []
@@ -548,8 +546,7 @@ def replace_placeholders(txt, vals):
     """
     Replaces placeholders ``vals`` (dict) in a template ``txt``.
     """
-    txt = txt.replace("\r", "").format(**vals)
-    return txt
+    return txt.replace("\r", "").format(**vals)
 
 
 def extract_value(txt, name):

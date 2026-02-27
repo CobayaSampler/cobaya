@@ -130,7 +130,7 @@ class InstallableLikelihood(Likelihood):
         if repo := opts.get("github_repository"):
             from cobaya.install import download_github_release
 
-            log.info("Downloading %s data..." % repo)
+            log.info(f"Downloading {repo} data...")
             return download_github_release(
                 os.path.join(path, "data"),
                 repo,

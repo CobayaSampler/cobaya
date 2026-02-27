@@ -558,7 +558,7 @@ class classy(BoltzmannBase):
         if getattr(self, "z_for_matter_power", None) is None:
             self.z_for_matter_power = np.empty(0)
         self.z_for_matter_power = np.flip(combine_1d(z, self.z_for_matter_power))
-        self.extra_args["z_pk"] = " ".join(["%g" % zi for zi in self.z_for_matter_power])
+        self.extra_args["z_pk"] = " ".join([f"{zi:g}" for zi in self.z_for_matter_power])
 
     def set_collector_with_z_pool(
         self,
@@ -701,7 +701,7 @@ class classy(BoltzmannBase):
                 state[product] = method(
                     *self.collectors[product].args, **self.collectors[product].kwargs
                 )
-            elif isinstance(arg_array, Sequence) or isinstance(arg_array, np.ndarray):
+            elif isinstance(arg_array, (Sequence, np.ndarray)):
                 arg_array = np.array(arg_array)
                 if len(arg_array.shape) == 1:
                     # if more than one vectorised arg, assume all vectorised in parallel
@@ -919,9 +919,7 @@ class classy(BoltzmannBase):
 
     @classmethod
     def is_compatible(cls):
-        if platform.system() == "Windows":
-            return False
-        return True
+        return platform.system() != "Windows"
 
     @classmethod
     def is_installed(cls, reload=False, **kwargs):

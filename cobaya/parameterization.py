@@ -201,9 +201,7 @@ class Parameterization(HasLogger):
         for p in chain(self._sampled, self._derived):
             if not is_valid_variable_name(p):
                 is_in = p in self._sampled
-                eg_in = (
-                    "  p_prime:\n    prior: ...\n  %s: 'lambda p_prime: p_prime'\n" % p
-                )
+                eg_in = f"  p_prime:\n    prior: ...\n  {p}: 'lambda p_prime: p_prime'\n"
                 eg_out = f"  p_prime: 'lambda {p}: {p}'\n"
                 raise LoggedError(
                     self.log,
@@ -457,20 +455,20 @@ class Parameterization(HasLogger):
             msg_text = (
                 "Incorrect parameters! "
                 + (
-                    "\n   Duplicated entries (using their aliases): %r" % list(duplicated)
+                    f"\n   Duplicated entries (using their aliases): {list(duplicated)!r}"
                     if duplicated
                     else ""
                 )
-                + ("\n   Not known: %r" % list(unknown) if unknown else "")
+                + (f"\n   Not known: {list(unknown)!r}" if unknown else "")
                 + (
-                    "\n   Cannot be fixed: %r " % list(input_)
+                    f"\n   Cannot be fixed: {list(input_)!r} "
                     + "--> instead, fix sampled parameters that depend on them!"
                     if input_
                     else ""
                 )
                 + (
-                    "\n   Cannot be fixed because are derived parameters: %r "
-                    % list(derived)
+                    "\n   Cannot be fixed because are derived parameters:"
+                    f" {list(derived)!r} "
                     if derived
                     else ""
                 )

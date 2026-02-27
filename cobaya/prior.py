@@ -740,12 +740,10 @@ class Prior(HasLogger):
             # Apparently faster to sum list than generator (for short enough lists)
             logps = self._uniform_logp + (
                 sum(
-                    [
-                        logpdf(xi)
-                        for logpdf, xi in zip(
-                            self._non_uniform_logpdf, x[self._non_uniform_indices]
-                        )
-                    ]
+                    logpdf(xi)
+                    for logpdf, xi in zip(
+                        self._non_uniform_logpdf, x[self._non_uniform_indices]
+                    )
                 )
                 if len(self._non_uniform_indices)
                 else 0

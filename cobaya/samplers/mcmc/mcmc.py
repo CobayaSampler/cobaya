@@ -446,8 +446,7 @@ class MCMC(CovmatSampler):
             log_differences[i] = np.log(np.min(speeds[: i + 1])) - np.log(
                 np.min(speeds[i + 1 :])
             )
-        i_max = np.argmin(log_differences)
-        return i_max
+        return np.argmin(log_differences)
 
     def run(self):
         """
@@ -830,7 +829,7 @@ class MCMC(CovmatSampler):
             )
             if self.oversample_thin > 1:
                 weights_multi_str = (
-                    " = 1/avg(%r)" % acceptance_rates.tolist()
+                    f" = 1/avg({acceptance_rates.tolist()!r})"
                     if acceptance_rates is not None
                     else ""
                 )
@@ -841,7 +840,7 @@ class MCMC(CovmatSampler):
                 )
             else:
                 accpt_multi_str = (
-                    " = avg([%s])" % ", ".join("%.4f" % x for x in acceptance_rates)
+                    " = avg([{}])".format(", ".join(f"{x:.4f}" for x in acceptance_rates))
                     if acceptance_rates is not None
                     else ""
                 )
@@ -891,7 +890,7 @@ class MCMC(CovmatSampler):
                     self.log.debug(" - Condition number = %g", condition_number)
                     self.log.debug(" - Eigenvalues = %r", eigvals)
                     accpt_multi_str = (
-                        " = sum(%r)" % Ns.astype(int).tolist()
+                        f" = sum({Ns.astype(int).tolist()!r})"
                         if more_than_one_process()
                         else ""
                     )
@@ -979,7 +978,7 @@ class MCMC(CovmatSampler):
                     Rminus1_cl = np.max(Rminus1_cl)
                     self.progress.at[self.i_learn, "Rminus1_cl"] = Rminus1_cl
                     accpt_multi_str = (
-                        " = sum(%r)" % Ns.astype(int).tolist()
+                        f" = sum({Ns.astype(int).tolist()!r})"
                         if more_than_one_process()
                         else ""
                     )
@@ -1032,7 +1031,7 @@ class MCMC(CovmatSampler):
     def do_output(self, date_time):
         """Writes/updates the output products of the chain."""
         self.collection.out_update()
-        msg = "Progress @ %s : " % date_time.strftime("%Y-%m-%d %H:%M:%S")
+        msg = "Progress @ {} : ".format(date_time.strftime("%Y-%m-%d %H:%M:%S"))
         msg += "%d steps taken" % self.n_steps_raw
         if self.burn_in_left and self.burn_in:  # NB: burn_in_left = 1 even if no burn_in
             msg += " -- still burning in, %d accepted steps left." % self.burn_in_left
@@ -1049,21 +1048,16 @@ class MCMC(CovmatSampler):
             )
             checkpoint_info = {
                 "sampler": {
-                    self.get_name(): dict(
-                        [
-                            ("converged", self.converged),
-                            ("Rminus1_last", self.Rminus1_last),
-                            (
-                                "burn_in",
-                                (
-                                    self.burn_in.value  # initial: repeat burn-in if not finished
-                                    if not self.n() and self.burn_in_left
-                                    else 0
-                                ),
-                            ),  # to avoid overweighting last point of prev. run
-                            ("mpi_size", get_mpi_size()),
-                        ]
-                    )
+                    self.get_name(): {
+                        "converged": self.converged,
+                        "Rminus1_last": self.Rminus1_last,
+                        "burn_in": (
+                            self.burn_in.value  # initial: repeat burn-in if not finished
+                            if not self.n() and self.burn_in_left
+                            else 0
+                        ),  # to avoid overweighting last point of prev. run
+                        "mpi_size": get_mpi_size(),
+                    }
                 }
             }
             yaml_dump_file(checkpoint_filename, checkpoint_info, error_if_exists=False)
@@ -1211,7 +1205,7 @@ class MCMC(CovmatSampler):
         drag_string = r" using the fast-dragging procedure described in \cite{Neal:2005}"
         if info is None:
             # Unknown case (no info passed)
-            string = " [(if drag: True)%s]" % drag_string
+            string = f" [(if drag: True){drag_string}]"
         else:
             string = drag_string if info.get("drag", cls.get_defaults()["drag"]) else ""
         return (
@@ -1244,7 +1238,7 @@ def plot_progress(
     if ax is None:
         import matplotlib.pyplot as plt
 
-        fig, ax = plt.subplots(nrows=2, sharex=True, **figure_kwargs)
+        _fig, ax = plt.subplots(nrows=2, sharex=True, **figure_kwargs)
     if isinstance(progress, DataFrame):
         pass  # go on to plotting
     elif isinstance(progress, str):
@@ -1264,7 +1258,7 @@ def plot_progress(
             plot_progress(p, ax=ax, index=i + 1)
         return ax
     else:
-        raise ValueError("Cannot understand progress argument: %r" % progress)
+        raise ValueError(f"Cannot understand progress argument: {progress!r}")
     # Plot!
     tag_pre = "" if index is None else "%d : " % index
     p = ax[0].semilogy(progress.N, progress.Rminus1, "o-", label=tag_pre + "means")

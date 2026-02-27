@@ -495,7 +495,7 @@ class polychord(Sampler):
             out_evidences = {"logZ": self.logZ, "logZstd": self.logZstd}
             if self.clusters is not None:
                 out_evidences["clusters"] = {}
-                for i in sorted(list(self.clusters)):
+                for i in sorted(self.clusters):
                     out_evidences["clusters"][i] = {
                         "logZ": self.clusters[i]["logZ"],
                         "logZstd": self.clusters[i]["logZstd"],
@@ -556,9 +556,8 @@ class polychord(Sampler):
         if not combined and not to_getdist:
             return collection  # None for MPI ranks > 0
         # In all remaining cases, we return the same for all ranks
-        if to_getdist:
-            if is_main_process():
-                collection = collection.to_getdist()
+        if to_getdist and is_main_process():
+            collection = collection.to_getdist()
         return share_mpi(collection)
 
     def samples_clusters(
@@ -702,9 +701,7 @@ class polychord(Sampler):
     def is_compatible(cls):
         import platform
 
-        if platform.system() == "Windows":
-            return False
-        return True
+        return platform.system() != "Windows"
 
     @classmethod
     def is_installed(cls, reload=False, **kwargs):

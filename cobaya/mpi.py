@@ -261,7 +261,7 @@ def from_root(func):
         else:
             result = share_mpi()
             if result is None:
-                raise OtherProcessError("Root errored in %s" % func.__name__)
+                raise OtherProcessError(f"Root errored in {func.__name__}")
             return result[0]
 
     return wrapper
@@ -284,7 +284,7 @@ def set_from_root(attributes):
             else:
                 values = share_mpi()
                 if values is None:
-                    raise OtherProcessError("Root errored in %s" % method.__name__)
+                    raise OtherProcessError(f"Root errored in {method.__name__}")
                 for name, var in zip(atts, values[1:]):
                     setattr(self, name, var)
                 result = values[0]
@@ -296,7 +296,7 @@ def set_from_root(attributes):
 
 
 def sync_errors(func):
-    err = "Another process raised an error in %s" % func.__name__
+    err = f"Another process raised an error in {func.__name__}"
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

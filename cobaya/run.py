@@ -81,7 +81,7 @@ def run(
         logger_setup(info.get("debug"))
         logger_run = get_logger(run.__name__)
         try:
-            which_sampler = list(info["sampler"])[0]
+            which_sampler = next(iter(info["sampler"]))
             if info.get("minimize"):  # type: ignore
                 # Preserve options if "minimize" was already the sampler
                 if which_sampler.lower() != "minimize":
@@ -111,14 +111,13 @@ def run(
         ) as out:
             # 2. Update the input info with the defaults for each component
             updated_info = update_info(info)
-            if is_debug(logger_run):
+            if is_debug(logger_run) and not out and mpi.is_main_process():
                 # Dump only if not doing output
                 # (otherwise, the user can check the .updated file)
-                if not out and mpi.is_main_process():
-                    logger_run.info(
-                        "Input info updated with defaults (dumped to YAML):\n%s",
-                        yaml_dump(sort_cosmetic(updated_info)),
-                    )
+                logger_run.info(
+                    "Input info updated with defaults (dumped to YAML):\n%s",
+                    yaml_dump(sort_cosmetic(updated_info)),
+                )
             # 3. If output requested, check compatibility if existing one, and dump.
             # 3.1 First: model only
             out.check_and_dump_info(
@@ -233,7 +232,7 @@ def run_script(args=None):
         **trueNone_kwargs,
     )
     parser.add_argument(
-        "--%s" % "test", help="Initialize model and sampler, and exit.", **trueNone_kwargs
+        "--test", help="Initialize model and sampler, and exit.", **trueNone_kwargs
     )
     parser.add_argument(
         "-M",
