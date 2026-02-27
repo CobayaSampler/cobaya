@@ -12,7 +12,6 @@ import os
 import platform
 import re
 import sys
-import warnings
 from abc import ABC, abstractmethod
 from ast import parse
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -852,22 +851,13 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
     """
     Simple wrapper for fuzzy search of strings within a list.
     """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        # Suppress message about optional dependency
-        from fuzzywuzzy import process as fuzzy_process
-    try:
-        return next(
-            zip(
-                *(
-                    fuzzy_process.extractBests(
-                        input_string, choices, score_cutoff=score_cutoff
-                    )
-                )
-            )
-        )[:n]
-    except IndexError:
-        return []
+    from rapidfuzz import process as fuzzy_process
+
+    matches = fuzzy_process.extract(
+        input_string, choices, score_cutoff=score_cutoff, limit=n
+    )
+
+    return [match[0] for match in matches]
 
 
 def similar_internal_class_names(name, kind=None):

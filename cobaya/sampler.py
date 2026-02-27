@@ -87,12 +87,12 @@ def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):
 
 
 def check_sane_info_sampler(info_sampler: SamplersDict) -> None:
-    if not isinstance(info_sampler, dict):
+    if not info_sampler:
+        raise LoggedError(__name__, "No sampler given!")
+    if not isinstance(info_sampler, Mapping):
         raise LoggedError(
             __name__, "The sampler block must be a dictionary 'sampler: {options}'."
         )
-    if not info_sampler:
-        raise LoggedError(__name__, "No sampler given!")
     if len(info_sampler) > 1:
         raise LoggedError(__name__, "Only one sampler currently supported at a time.")
 
