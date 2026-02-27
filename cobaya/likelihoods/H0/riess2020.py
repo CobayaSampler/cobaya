@@ -5,5 +5,3 @@ class riess2020(H0):
     r"""
     Local $H_0$ measurement from  \cite{Riess:2020fzl}.
     """
-
-    pass

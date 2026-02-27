@@ -77,9 +77,8 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                     mean, std = (float(v.strip()) for v in value.split())
                     if not names.parWithName(param).isDerived:
                         info["prior"][param + "_prior"] = (
-                            "lambda {}: stats.norm.logpdf({}, loc={:g}, scale={:g})".format(
-                                param, param, mean, std
-                            )
+                            f"lambda {param}: stats.norm.logpdf({param}, "
+                            "loc={mean:g}, scale={std:g})"
                         )
 
             if key.startswith("linear_combination["):
@@ -108,7 +107,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
         info_like: LikesDict = {}
         info["likelihood"] = info_like
         with open(root + ".likelihoods") as f:
-            for line in f.readlines():
+            for line in f:
                 if line.strip():
                     like = line.split()[2]
                     info_like[like] = None

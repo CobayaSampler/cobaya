@@ -7,5 +7,3 @@ class JLA_lite(SN):
     \cite{Betoule:2014frx}, based on observations obtained by the SDSS-II and SNLS
     collaborations.
     """
-
-    pass

@@ -26,8 +26,8 @@ from typing import Any, TypeVar
 
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
 from packaging import version
+from scipy import stats
 
 from cobaya.conventions import (
     dump_sort_cosmetic,
@@ -153,8 +153,6 @@ class VersionCheckError(ValueError):
     Exception to be raised when the installed version of a component (or its requisites)
     is older than a reference one.
     """
-
-    pass  # necessary or it won't print the given error message!
 
 
 def check_module_version(module: Any, min_version):
@@ -633,7 +631,7 @@ def get_scipy_1d_pdf(
     Raises
     ------
     ValueError
-        If the given arguments cannot produce a scipy dist.
+        If a consistent scipy.stats dist cannot be initialized with the given arguments."
     """
     if not definition:
         raise ValueError(
@@ -658,7 +656,8 @@ def get_scipy_1d_pdf(
     dist = kwargs.pop("dist", "uniform")
     if not isinstance(dist, str):
         raise ValueError(f"If present 'dist' must be a string. Got {type(dist)}.")
-    if "min" in kwargs or "max" in kwargs:
+    minmax_used = "min" in kwargs or "max" in kwargs
+    if minmax_used:
         if dist == "truncnorm":
             if "a" in kwargs or "b" in kwargs:
                 raise ValueError(
@@ -702,13 +701,20 @@ def get_scipy_1d_pdf(
         ) from attr_excpt
     # Generate and return the frozen distribution
     try:
-        return pdf_dist(**kwargs)
+        frozen_pdf_dist = pdf_dist(**kwargs)
     except TypeError as tp_excpt:
         raise ValueError(
             f"Error when initializing scipy.stats.{dist}: <<{tp_excpt}>>. "
             "This probably means that the distribution {dist} "
             "does not recognize the parameter mentioned in the 'scipy' error above."
         ) from tp_excpt
+    if minmax_used and np.any(np.isinf(frozen_pdf_dist.support())):
+        raise ValueError(
+            f"Error when initializing scipy.stats.{dist}: 'min'|'max' keywords were used "
+            "for an unbounded distribution, which is not allowed. Use 'loc' and 'scale' "
+            "keywords instead."
+        )
+    return frozen_pdf_dist
 
 
 def _fast_norm_logpdf(norm_dist):

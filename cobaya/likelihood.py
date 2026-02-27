@@ -112,7 +112,7 @@ class Likelihood(Theory, LikelihoodInterface):
         state['logp']; this may be more convenient if you also need to also calculate
         other quantities.
         """
-        return None
+        return
 
     def marginal(self, directions=None, params_values=None):
         """

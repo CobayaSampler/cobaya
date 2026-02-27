@@ -353,7 +353,7 @@ class ProcessState:
     def __init__(
         self,
         name="error",
-        time_out_seconds: float | int = default_error_timeout_seconds,
+        time_out_seconds: float = default_error_timeout_seconds,
         sleep_interval=0.01,
         timeout_abort_proc: Callable = abort_if_mpi,
     ):

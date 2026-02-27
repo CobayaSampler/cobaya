@@ -363,24 +363,28 @@ class polychord(Sampler):
     def dump_paramnames(self, prefix):
         labels = self.model.parameterization.labels()
         with open(prefix + ".paramnames", "w", encoding="utf-8-sig") as f_paramnames:
-            for p in self.model.parameterization.sampled_params():
-                f_paramnames.write("{}\t{}\n".format(p, labels.get(p, "")))
-            for p in self.model.parameterization.derived_params():
-                f_paramnames.write("{}*\t{}\n".format(p, labels.get(p, "")))
-            for p in self.model.prior:
-                f_paramnames.write(
-                    "{}*\t{}\n".format(
-                        "logprior" + derived_par_name_separator + p,
-                        r"\log\pi_\mathrm{" + p.replace("_", r"\ ") + r"}",
-                    )
+            f_paramnames.writelines(
+                "{}\t{}\n".format(p, labels.get(p, ""))
+                for p in self.model.parameterization.sampled_params()
+            )
+            f_paramnames.writelines(
+                "{}*\t{}\n".format(p, labels.get(p, ""))
+                for p in self.model.parameterization.derived_params()
+            )
+            f_paramnames.writelines(
+                "{}*\t{}\n".format(
+                    "logprior" + derived_par_name_separator + p,
+                    r"\log\pi_\mathrm{" + p.replace("_", r"\ ") + r"}",
                 )
-            for p in self.model.likelihood:
-                f_paramnames.write(
-                    "{}*\t{}\n".format(
-                        "loglike" + derived_par_name_separator + p,
-                        r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}",
-                    )
+                for p in self.model.prior
+            )
+            f_paramnames.writelines(
+                "{}*\t{}\n".format(
+                    "loglike" + derived_par_name_separator + p,
+                    r"\log\mathcal{L}_\mathrm{" + p.replace("_", r"\ ") + r"}",
                 )
+                for p in self.model.likelihood
+            )
 
     def save_sample(self, fname, name):
         with warnings.catch_warnings():  # in case of empty file
@@ -467,7 +471,7 @@ class polychord(Sampler):
         pre = "log(Z"
         active = "(Still active)"
         with open(self.raw_prefix + ".stats", encoding="utf-8-sig") as statsfile:
-            lines = [line for line in statsfile.readlines() if line.startswith(pre)]
+            lines = [line for line in statsfile if line.startswith(pre)]
         for line in lines:
             logZ, logZstd = (
                 float(n.replace(active, "")) for n in line.split("=")[-1].split("+/-")
@@ -579,7 +583,7 @@ class polychord(Sampler):
             return None
         if not is_main_process():
             return None
-        clusters: dict[int, Union[SampleCollection, "MCSamples", None]] = {}
+        clusters: dict[int, SampleCollection | MCSamples | None] = {}
         for i, c in self.clusters.items():
             if to_getdist:
                 try:

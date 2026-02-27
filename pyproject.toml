@@ -86,7 +86,7 @@ Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"
 [tool.ruff.lint]
 ignore = ["E731"]
 extend-select = ["I"]
-preview = true
+preview = false
 
 [tool.ruff.format]
 quote-style = "double"

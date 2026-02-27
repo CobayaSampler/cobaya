@@ -90,9 +90,7 @@ class PlanckPlikLite(DataSetLikelihood):
                 <= bins_for_L_range[1]
             ]
             print(
-                "Actual L range: {} - {}".format(
-                    self.blmin[use_bins[0]], self.blmax[use_bins[-1]]
-                )
+                f"Actual L range: {self.blmin[use_bins[0]]} - {self.blmax[use_bins[-1]]}"
             )
 
         self.used = np.zeros(3, dtype=bool)

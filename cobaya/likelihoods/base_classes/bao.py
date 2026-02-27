@@ -144,10 +144,8 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    "Couldn't find measurements file '{}' in folder '{}'. ".format(
-                        self.measurements_file, data_file_path
-                    )
-                    + "Check your paths.",
+                    f"Couldn't find measurements file '{self.measurements_file}' "
+                    "in folder '{data_file_path}'. " + "Check your paths.",
                 )
         elif self.grid_file:
             pass
@@ -174,8 +172,7 @@ class BAO(InstallableLikelihood):
                 self.data.columns = ["z", "value", "observable"]
             prefix = "bao_"
             self.data["observable"] = [
-                (c[len(prefix) :] if c.startswith(prefix) else c)
-                for c in self.data["observable"]
+                (c.removeprefix(prefix)) for c in self.data["observable"]
             ]
 
         # Probability distribution
@@ -213,9 +210,7 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    "Couldn't find grid file '{}' in folder '{}'. ".format(
-                        self.grid_file, data_file_path
-                    )
+                    f"Couldn't find grid file '{self.grid_file}' in folder '{data_file_path}'. "
                     + "Check your paths.",
                 )
             if self.redshift is None:
@@ -315,9 +310,7 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    "Couldn't find (inv)cov file '{}' in folder '{}'. ".format(
-                        self.cov_file or self.invcov_file, data_file_path
-                    )
+                    f"Couldn't find (inv)cov file '{self.cov_file or self.invcov_file}' in folder '{data_file_path}'. "
                     + "Check your paths.",
                 )
             self.logpdf = lambda _x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(

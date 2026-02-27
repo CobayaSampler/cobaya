@@ -174,8 +174,7 @@ class BatchArgs:
                     "initialized with cobaya-grid-create" % args.batchPath
                 )
             if self.doplots:
-                import getdist.plots as plots
-                from getdist import paramnames
+                from getdist import paramnames, plots
 
                 if args.paramList is not None:
                     args.paramList = paramnames.ParamNames(args.paramList)

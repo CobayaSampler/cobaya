@@ -622,9 +622,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     } - ignore:
         myprint(
             myname
-            + ": different blocks or options: {!r} (old) vs {!r} (new)".format(
-                set(info_old).difference(ignore), set(info_new).difference(ignore)
-            )
+            + f": different blocks or options: {set(info_old).difference(ignore)!r} (old) vs {set(info_new).difference(ignore)!r} (new)"
         )
         return False
     for block_name in info_old:
@@ -644,9 +642,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         if f(block1) != f(block2):
             myprint(
                 myname
-                + ": different [{}] or different order of them: {!r} vs {!r}".format(
-                    block_name, list(block1), list(block2)
-                )
+                + f": different [{block_name}] or different order of them: {list(block1)!r} vs {list(block2)!r}"
             )
             return False
         # 2. Gather general options to be ignored

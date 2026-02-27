@@ -432,20 +432,17 @@ class CobayaComponent(HasLogger, HasDefaults):
 
     def close(self, *args):
         """Finalizes the class, if something needs to be cleaned up."""
-        pass
 
     def set_instance_defaults(self):
         """
         Can use this to define any default instance attributes before setting to the
         input dictionary (from inputs or defaults)
         """
-        pass
 
     def initialize(self):
         """
         Initializes the class (called from __init__, before other initializations).
         """
-        pass
 
     def get_version(self) -> None | str | InfoDict:
         """
@@ -600,8 +597,6 @@ class ComponentNotFoundError(LoggedError):
     Exception to be raised when a component class name could not be identified
     (in order to distinguish that case from any other error occurring at import time).
     """
-
-    pass  # necessary or it won't print the given error message!
 
 
 def get_component_class(
@@ -836,8 +831,6 @@ class ComponentNotInstalledError(LoggedError):
     Exception to be raised manually at component initialization or install check if some
     external dependency of the component is missing.
     """
-
-    pass  # necessary or it won't print the given error message!
 
 
 def _bare_load_external_module(

@@ -468,8 +468,10 @@ class CMBlikes(DataSetLikelihood):
 
             with open(froot + "_lensing_fiducial_correction", "w", encoding="utf-8") as f:
                 f.write("#%4s %12s \n" % ("bin", "PP"))
-                for b in range(self.nbins):
-                    f.write("%5u %12.5e\n" % (b + 1, float(self.fid_correction[b])))
+                f.writelines(
+                    "%5u %12.5e\n" % (b + 1, float(self.fid_correction[b]))
+                    for b in range(self.nbins)
+                )
 
     def diag_sigma(self):
         return np.sqrt(np.diag(self.full_cov))
@@ -713,11 +715,11 @@ class BinWindows:
             with open(
                 froot + stem + "_window/window%u.dat" % (b + 1), "w", encoding="utf-8"
             ) as f:
-                for L in np.arange(self.lmin[b], self.lmax[b] + 1):
-                    f.write(
-                        ("%5u " + "%10e" * len(self.cols_in) + "\n")
-                        % (L, self.binning_matrix[:, b, L])
-                    )
+                f.writelines(
+                    ("%5u " + "%10e" * len(self.cols_in) + "\n")
+                    % (L, self.binning_matrix[:, b, L])
+                    for L in np.arange(self.lmin[b], self.lmax[b] + 1)
+                )
 
 
 def last_top_comment(fname):

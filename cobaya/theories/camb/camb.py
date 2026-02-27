@@ -1036,7 +1036,7 @@ class CAMB(BoltzmannBase):
             dict(stop_at_error=self.stop_at_error),
             timing=self.timer,
         )
-        setattr(self._camb_transfers, "requires", self._transfer_requires)
+        self._camb_transfers.requires = self._transfer_requires
         return {"camb.transfers": self._camb_transfers}
 
     def get_speed(self):
