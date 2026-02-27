@@ -100,7 +100,7 @@ class bicep_keck_2018(CMBlikes):
         self.bandpasses = []
         for i, used in enumerate(self.used_map_order):
             self.bandpasses += [
-                self.read_bandpass(ini.relativeFileName("bandpass[%s]" % used))
+                self.read_bandpass(ini.relativeFileName(f"bandpass[{used}]"))
             ]
 
         self.fpivot_dust_decorr = [

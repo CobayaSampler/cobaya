@@ -163,14 +163,13 @@ def grid_tables(args=None):
     def param_result_table(jobItem, deltaChisqJobItem=None, _referenceDataJobItem=None):
         if deltaChisqJobItem is not None and deltaChisqJobItem.name == jobItem.name:
             deltaChisqJobItem = None
-        if _referenceDataJobItem is not None:
-            if (
-                args.changes_from_paramtag is None
-                and _referenceDataJobItem.normed_data == jobItem.normed_data
-                or args.changes_from_paramtag is not None
-                and _referenceDataJobItem.name == jobItem.name
-            ):
-                _referenceDataJobItem = None
+        if _referenceDataJobItem is not None and (
+            args.changes_from_paramtag is None
+            and _referenceDataJobItem.normed_data == jobItem.normed_data
+            or args.changes_from_paramtag is not None
+            and _referenceDataJobItem.name == jobItem.name
+        ):
+            _referenceDataJobItem = None
 
         table_lines = []
         caption = []
@@ -245,7 +244,7 @@ def grid_tables(args=None):
                         "  "
                         + tex_escape_text(val.name)
                         + ": "
-                        + ("%.2f" % val.chisq)
+                        + (f"{val.chisq:.2f}")
                         + " "
                     )
                     if compChiSq is not None:
@@ -278,9 +277,8 @@ def grid_tables(args=None):
             paramList=args.paramList,
         ).lines
 
-    if args.changes_replacing is not None:
-        if args.data is not None:
-            args.data += args.changes_replacing
+    if args.changes_replacing is not None and args.data is not None:
+        args.data += args.changes_replacing
 
     items = opts.sortedParamtagDict(chainExist=not args.bestfitonly)
 
@@ -393,9 +391,9 @@ def grid_tables(args=None):
                 referenceDataJobItem = None
                 if args.changes_from_datatag is not None:
                     for job_item in theseItems:
-                        if (
-                            job_item.normed_data == args.changes_from_datatag
-                            or job_item.datatag == args.changes_from_datatag
+                        if args.changes_from_datatag in (
+                            job_item.normed_data,
+                            job_item.datatag,
                         ):
                             referenceDataJobItem = copy.deepcopy(job_item)
                             referenceDataJobItem.loadJobItemResults(
@@ -642,8 +640,8 @@ def grid_param_compare(args=None):
     if args.latex_filename is not None:
         if not args.latex_filename.endswith(".tex"):
             args.latex_filename += ".tex"
-        (outdir, outname) = os.path.split(args.latex_filename)
-        os.makedirs(os.path.dirname(outdir), exist_ok=True)
+        if outdir := os.path.dirname(args.latex_filename):
+            os.makedirs(outdir, exist_ok=True)
         types.TextFile(lines).write(args.latex_filename)
 
 

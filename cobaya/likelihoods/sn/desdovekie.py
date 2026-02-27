@@ -41,9 +41,9 @@ class DESDovekie(PantheonPlus):
         self._read_data_file(data_file)
         self.covs = {}
         for name in ["mag"]:
-            self.log.debug("Reading inverse covmat for: %s " % name)
+            self.log.debug(f"Reading inverse covmat for: {name} ")
             self.invcov = self._read_inv_covmat(
-                os.path.join(self.path, ini.string("%s_covmat_file" % name))
+                os.path.join(self.path, ini.string(f"{name}_covmat_file"))
             )
         self.alphabeta_covmat = False
         self.configure()

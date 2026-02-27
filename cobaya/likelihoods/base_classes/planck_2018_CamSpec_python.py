@@ -193,7 +193,9 @@ class Planck2018CamSpecPython(DataSetLikelihood):
 
         cache_file = self.dataset_filename.replace(
             ".dataset",
-            "_covinv_%s.npy" % hashlib.md5(str(ini.params).encode("utf8")).hexdigest(),
+            "_covinv_{}.npy".format(
+                hashlib.md5(str(ini.params).encode("utf8")).hexdigest()
+            ),
         )
         if not use_cache:
             self.covinv = np.linalg.inv(self.cov)

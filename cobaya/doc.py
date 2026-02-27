@@ -71,7 +71,7 @@ def doc_script(args=None):
         msg = "Available components: (some may need external code/data)"
         print(msg + "\n" + "-" * len(msg))
         for kind in kinds:
-            print("%s:" % kind)
+            print(f"{kind}:")
             print(
                 _indent + ("\n" + _indent).join(get_available_internal_class_names(kind))
             )
@@ -82,7 +82,7 @@ def doc_script(args=None):
             k for k, sub in subfolders.items() if arguments.component == sub
         )
     if arguments.component.lower() in kinds:
-        print("%s:" % arguments.component.lower())
+        print(f"{arguments.component.lower()}:")
         print(
             _indent
             + ("\n" + _indent).join(
@@ -145,8 +145,8 @@ def doc_script(args=None):
         if "!defaults" in to_print:
             print(
                 "# This file contains defaults. "
-                "To populate them, use the flag --%s (or -%s)."
-                % (expand_flag, expand_flag[expand_flag_ishort])
+                f"To populate them, use the flag --{expand_flag} "
+                f"(or -{expand_flag[expand_flag_ishort]})."
             )
     return 0
 

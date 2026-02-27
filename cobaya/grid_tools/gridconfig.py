@@ -220,7 +220,7 @@ def makeGrid(
             model_info = {"params": {}}
             for par in job_item.param_set:
                 if par not in params:
-                    raise ValueError("params[%s] must be defined." % par)
+                    raise ValueError(f"params[{par}] must be defined.")
                 model_info["params"][par] = params[par]
             extra = dict(param_extra, **job_item.param_extra_opts)
             if opts := extra.get(job_item.paramtag):
@@ -258,10 +258,9 @@ def makeGrid(
         info = infos[job_item.paramtag][job_item.data_set.tag]
         # Covariance matrices
         # We try to find them now, instead of at run time, to check if correctly selected
-        try:
-            sampler = list(info["sampler"])[0]
-        except KeyError:
-            raise ValueError("No sampler has been chosen: %s" % job_item.name)
+        if not (sampler_block := info.get("sampler")):
+            raise ValueError(f"No sampler has been chosen: {job_item.name}")
+        sampler = next(iter(sampler_block))
         if sampler == "mcmc" and (
             cov_dir
             or cov_dir is None
@@ -342,10 +341,10 @@ def makeGrid(
 
     if not interactive:
         return batch
-    print("Done... to run do: cobaya-grid-run %s" % batchPath)
-    print("....... for best fits: cobaya-grid-run %s --minimize" % batchPath)
-    print("For importance sampled: cobaya-grid-run %s --importance" % batchPath)
+    print(f"Done... to run do: cobaya-grid-run {batchPath}")
+    print(f"....... for best fits: cobaya-grid-run {batchPath} --minimize")
+    print(f"For importance sampled: cobaya-grid-run {batchPath} --importance")
     print(
         "for best-fit for importance sampled: "
-        "cobaya-grid-run %s --importance_minimize" % batchPath
+        f"cobaya-grid-run {batchPath} --importance_minimize"
     )

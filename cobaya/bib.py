@@ -143,7 +143,7 @@ def pretty_repr_bib(descs, bibs):
     )
     for kind in sorted_kinds:
         for component, bib in bibs[kind].items():
-            txt += "\n### %s " % component + "########################" + "\n\n"
+            txt += f"\n### {component} " + "########################" + "\n\n"
             txt += bib
     return txt.lstrip().rstrip() + "\n"
 

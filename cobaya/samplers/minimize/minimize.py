@@ -361,9 +361,9 @@ class Minimize(Minimizer, CovmatSampler):
                         self.log.error("Finished unsuccessfully.")
                 if success:
                     self.log.info("Run %d/%d converged.", i + 1, len(self.initial_points))
-            except Exception as excpt:
+            except Exception:
                 self.log.error("Minimizer '%s' raised an unexpected error:", self.method)
-                raise excpt
+                raise
             results += [result]
             successes += [success]
         self.process_results(
@@ -511,9 +511,9 @@ class Minimize(Minimizer, CovmatSampler):
         """Creates the multi-line string containing the minimum in GetDist format."""
         lines = []
         if weight is not None:
-            lines.append("  weight    = %s" % weight)
+            lines.append(f"  weight    = {weight}")
         if minuslogpost is not None:
-            lines.append(" -log(Like) = %s" % minuslogpost)
+            lines.append(f" -log(Like) = {minuslogpost}")
             lines.append("  chi-sq    = %s" % (2 * minuslogpost))
         lines.append("")
         labels = self.model.parameterization.labels()
@@ -548,7 +548,7 @@ class Minimize(Minimizer, CovmatSampler):
         if hasattr(params, "chi2_names"):
             labels.update(
                 {
-                    p: r"\chi^2_{\rm %s}" % (undo_chi2_name(p).replace("_", r"\ "))
+                    p: r"\chi^2_{{\rm {}}}".format(undo_chi2_name(p).replace("_", r"\ "))
                     for p in params.chi2_names
                 }
             )
@@ -593,14 +593,13 @@ class Minimize(Minimizer, CovmatSampler):
         Performs the necessary checks on existing files if resuming or forcing
         (including deleting some output files when forcing).
         """
-        if output.is_resuming():
-            if mpi.is_main_process():
-                raise LoggedError(
-                    output.log,
-                    "Minimizer does not support resuming. "
-                    "If you want to start over, force "
-                    "('-f', '--force', 'force: True')",
-                )
+        if output.is_resuming() and mpi.is_main_process():
+            raise LoggedError(
+                output.log,
+                "Minimizer does not support resuming. "
+                "If you want to start over, force "
+                "('-f', '--force', 'force: True')",
+            )
         super().check_force_resume(output, info=info)
 
     @classmethod

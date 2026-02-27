@@ -78,19 +78,19 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                     if not names.parWithName(param).isDerived:
                         info["prior"][param + "_prior"] = (
                             f"lambda {param}: stats.norm.logpdf({param}, "
-                            "loc={mean:g}, scale={std:g})"
+                            f"loc={mean:g}, scale={std:g})"
                         )
 
             if key.startswith("linear_combination["):
                 param = key.replace("linear_combination[", "")[:-1]
-                prior = inputs.params.get("prior[%s]" % param, None)
+                prior = inputs.params.get(f"prior[{param}]", None)
                 if prior:
                     weights = inputs.params.get(
-                        "linear_combination_weights[%s]" % param, None
+                        f"linear_combination_weights[{param}]", None
                     )
                     if not weights:
                         raise ValueError(
-                            "linear_combination[%s] prior found but not weights" % param
+                            f"linear_combination[{param}] prior found but not weights"
                         )
                     weights = [float(w.strip()) for w in weights.split()]
                     inputs = value.split()

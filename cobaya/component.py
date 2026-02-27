@@ -1,6 +1,5 @@
 import inspect
 import os
-import sys
 import time
 from collections.abc import Mapping
 from importlib import import_module, resources
@@ -223,13 +222,10 @@ class HasDefaults:
             if os.path.split(str(file_name))[0]:
                 raise ValueError(f"{file_name} must be a bare file name, without path.")
             # NB: resources.read_text is considered deprecated from 3.9, and will fail
-            if sys.version_info < (3, 9):
-                return resources.read_text(package, file_name)
             with (resources.files(package) / file_name).open(
                 "r", encoding="utf-8-sig", errors="strict"
             ) as fp:
-                text_content = fp.read()
-            return text_content
+                return fp.read()
         except Exception:
             return None
 
@@ -293,9 +289,8 @@ class HasDefaults:
             log = get_logger(cls.get_qualified_class_name())
             raise LoggedError(
                 log,
-                "class_options (in %s) should now be replaced by "
-                "public attributes defined directly in the class"
-                % cls.get_qualified_class_name(),
+                f"class_options (in {cls.get_qualified_class_name()}) should now be "
+                "replaced by public attributes defined directly in the class",
             )
         yaml_text = cls.get_associated_file_content(".yaml")
         options = cls.get_class_options(input_options=input_options)
@@ -471,8 +466,8 @@ class CobayaComponent(HasLogger, HasDefaults):
 
         if annotations.get(name) is bool and value and isinstance(value, str):
             raise AttributeError(
-                "Class '%s' parameter '%s' should be True "
-                "or False, got '%s'" % (self, name, value)
+                f"Class '{self}' parameter '{name}' should be True "
+                f"or False, got '{value}'"
             )
 
     def validate_attributes(self, annotations: dict):
@@ -698,9 +693,8 @@ def get_component_class(
 
         Returns the original class if no error occurred.
         """
-        if kind is not None:
-            if not issubclass(cls, get_base_classes()[kind]):
-                raise TypeError(f"Class '{name}' is not a standard class of type {kind}.")
+        if kind is not None and not issubclass(cls, get_base_classes()[kind]):
+            raise TypeError(f"Class '{name}' is not a standard class of type {kind}.")
         return cls
 
     def check_if_ComponentNotFoundError_and_raise(

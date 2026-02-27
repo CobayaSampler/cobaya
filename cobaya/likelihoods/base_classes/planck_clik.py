@@ -280,7 +280,7 @@ _clipy_install_failed = False
 
 
 def get_data_path(name):
-    return common_path + "_%s" % get_release(name)
+    return common_path + f"_{get_release(name)}"
 
 
 def get_release(name):

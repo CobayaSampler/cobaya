@@ -19,8 +19,8 @@ _covmats_file = "covmat_%s.pkl"
 log = get_logger(__name__)
 
 covmat_folders = [
-    "{%s}/data/planck_supp_data_and_covmats/covmats/" % packages_path_input,
-    "{%s}/data/bicep_keck_2018/BK18_cosmomc/planck_covmats/" % packages_path_input,
+    f"{{{packages_path_input}}}/data/planck_supp_data_and_covmats/covmats/",
+    f"{{{packages_path_input}}}/data/bicep_keck_2018/BK18_cosmomc/planck_covmats/",
 ]
 
 
@@ -164,7 +164,7 @@ def get_best_covmat_ext(
     Returns the same dict as `get_best_covmat`, except for the covariance matrix itself.
     """
     if not (covmats_database := get_covmat_database(covmat_dirs, cached=cached)):
-        log.warning("No covariance matrices found at %s" % covmat_dirs)
+        log.warning(f"No covariance matrices found at {covmat_dirs}")
         return None
 
     if job_item:

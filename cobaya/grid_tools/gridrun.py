@@ -84,7 +84,7 @@ def grid_run(args=None):
         action="store_true",
         help="only run if parent chain is not still running",
     )
-    (batch, args) = Opts.parseForBatch(args)
+    _, args = Opts.parseForBatch(args)
 
     if args.not_queued:
         assert not args.noqueue, "Cannot use --noqueue and --not_queued"
@@ -152,46 +152,50 @@ def grid_run(args=None):
     for jobItem in Opts.filteredBatchItems(wantSubItems=args.subitems):
         if (
             (
-                not args.notexist
-                or isMinimize
-                and not jobItem.chainMinimumExists()
-                or not isMinimize
-                and not jobItem.chainExists()
+                (
+                    not args.notexist
+                    or isMinimize
+                    and not jobItem.chainMinimumExists()
+                    or not isMinimize
+                    and not jobItem.chainExists()
+                )
+                and (not args.minimize_failed or not jobItem.chainMinimumConverged())
+                and (
+                    isMinimize
+                    or args.notall is None
+                    or not jobItem.allChainExists(args.notall)
+                )
             )
-            and (not args.minimize_failed or not jobItem.chainMinimumConverged())
+            and (not isMinimize or getattr(jobItem, "want_minimize", True))
             and (
-                isMinimize
-                or args.notall is None
-                or not jobItem.allChainExists(args.notall)
-            )
-        ) and (not isMinimize or getattr(jobItem, "want_minimize", True)):
-            if (
                 not args.parent_converge
                 or not jobItem.isImportanceJob
                 or jobItem.parent.hasConvergeBetterThan(args.parent_converge)
-            ):
-                if args.converge == 0 or not jobItem.hasConvergeBetterThan(
-                    args.converge, returnNotExist=True
-                ):
-                    if (
-                        args.checkpoint_run is None
-                        or jobItem.wantCheckpointContinue(args.checkpoint_run)
-                        and jobItem.notRunning()
-                    ):
-                        if (
-                            not jobItem.isImportanceJob
-                            or isMinimize
-                            or (
-                                args.importance_ready
-                                and jobItem.parent.chainFinished()
-                                or not args.importance_ready
-                                and jobItem.parent.chainExists()
-                            )
-                            and (not args.importance_changed or jobItem.parentChanged())
-                            and (not args.parent_stopped or jobItem.parent.notRunning())
-                        ):
-                            if not args.not_queued or notQueued(jobItem.name):
-                                submitJob(jobItem.yaml_file(variant))
+            )
+            and (
+                args.converge == 0
+                or not jobItem.hasConvergeBetterThan(args.converge, returnNotExist=True)
+            )
+            and (
+                args.checkpoint_run is None
+                or jobItem.wantCheckpointContinue(args.checkpoint_run)
+                and jobItem.notRunning()
+            )
+            and (
+                not jobItem.isImportanceJob
+                or isMinimize
+                or (
+                    args.importance_ready
+                    and jobItem.parent.chainFinished()
+                    or not args.importance_ready
+                    and jobItem.parent.chainExists()
+                )
+                and (not args.importance_changed or jobItem.parentChanged())
+                and (not args.parent_stopped or jobItem.parent.notRunning())
+            )
+            and (not args.not_queued or notQueued(jobItem.name))
+        ):
+            submitJob(jobItem.yaml_file(variant))
 
     if args.noqueue:
         if args.noqueue > 1:
