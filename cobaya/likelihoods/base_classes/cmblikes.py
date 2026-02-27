@@ -60,7 +60,7 @@ class CMBlikes(DataSetLikelihood):
             try:
                 i = S.index(self.map_separator)
             except ValueError:
-                raise LoggedError(self.log, "invalid spectrum name %s" % S)
+                raise LoggedError(self.log, f"invalid spectrum name {S}")
             return self.map_names.index(S[0:i]), self.map_names.index(S[i + 1 :])
 
     def PairStringToUsedMapIndices(self, used_index, S):
@@ -266,7 +266,7 @@ class CMBlikes(DataSetLikelihood):
                 if map_used in self.map_names:
                     self.use_map[self.map_names.index(map_used)] = True
                 else:
-                    raise LoggedError(self.log, "maps_use item not found - %s" % map_used)
+                    raise LoggedError(self.log, f"maps_use item not found - {map_used}")
         else:
             self.use_map = [
                 use_theory_field[self.map_fields[i]] for i in range(len(self.map_names))
@@ -285,7 +285,7 @@ class CMBlikes(DataSetLikelihood):
                 if map_used in self.map_names:
                     self.require_map[self.map_names.index(map_used)] = True
                 else:
-                    raise LoggedError(self.log, "required item not found %s" % map_used)
+                    raise LoggedError(self.log, f"required item not found {map_used}")
         self.required_theory_field = [False for _ in self.field_names]
         for i in range(len(self.map_names)):
             if self.require_map[i]:
@@ -487,7 +487,7 @@ class CMBlikes(DataSetLikelihood):
             Cl_theo = self.provider.get_Cl(ell_factor=True, units=units)
             Cl = Cl_theo.get(column.lower())
         except KeyError:
-            raise LoggedError(self.log, "'%s' spectrum has not been computed." % column)
+            raise LoggedError(self.log, f"'{column}' spectrum has not been computed.")
         import matplotlib.pyplot as plt
 
         lbin = self.full_bandpowers[:, self.full_bandpower_headers.index("L_av")]
@@ -576,14 +576,15 @@ class CMBlikes(DataSetLikelihood):
         with open(filename, "w", encoding="utf-8") as f:
             cols = []
             for i in range(self.nmaps_required):
-                for j in range(i + 1):
-                    cols.append(self.Cl_i_j_name(self.map_names, cls[i, j].map_ij))
+                cols.extend(
+                    self.Cl_i_j_name(self.map_names, cls[i, j].map_ij)
+                    for j in range(i + 1)
+                )
             f.write("#    L" + ("%17s " * len(cols)) % tuple(cols) + "\n")
             for b in range(self.pcl_lmin, self.pcl_lmax + 1):
                 c = [b]
                 for i in range(self.nmaps_required):
-                    for j in range(i + 1):
-                        c.append(cls[i, j].CL[b - self.pcl_lmin])
+                    c.extend(cls[i, j].CL[b - self.pcl_lmin] for j in range(i + 1))
                 f.write(("%I5 " + "%17.8e " * len(cols)) % tuple(c))
 
     @staticmethod
@@ -862,7 +863,7 @@ def make_forecast_cmb_dataset(
         raise ValueError("Must use CMB or lensing C_L")
     noise_file = output_root + "_Noise.dat"
     with open(os.path.join(output_dir, noise_file), "w") as f:
-        f.write("#L %s\n" % noise_cols)
+        f.write(f"#L {noise_cols}\n")
 
         for ell in range(lmin, lmax + 1):
             noises = []
@@ -878,7 +879,7 @@ def make_forecast_cmb_dataset(
                 noises += [noise_cl, ENoiseFac * noise_cl, ENoiseFac * noise_cl]
             if use_lensing:
                 noises += [lens_recon_noise[ell]]
-            f.write("%d " % ell + " ".join("%E" % elem for elem in noises) + "\n")
+            f.write("%d " % ell + " ".join(f"{elem:E}" for elem in noises) + "\n")
 
     dataset["fullsky_exact_fksy"] = fsky
     dataset["dataset_format"] = "CMBLike2"

@@ -204,11 +204,11 @@ class Parameterization(HasLogger):
                 is_input_func = p in self._input_funcs
                 if is_in or is_input_func:
                     eg = (
-                        f"  p_prime:\n"
-                        f"    prior: ...\n"
+                        "  p_prime:\n"
+                        "    prior: ...\n"
                         f"  {p}:\n"
-                        f"    value: 'lambda p_prime: p_prime'\n"
-                        f"    derived: False\n"
+                        "    value: 'lambda p_prime: p_prime'\n"
+                        "    derived: False\n"
                     )
                     if is_in:
                         msg = (
@@ -470,20 +470,20 @@ class Parameterization(HasLogger):
             msg_text = (
                 "Incorrect parameters! "
                 + (
-                    "\n   Duplicated entries (using their aliases): %r" % list(duplicated)
+                    f"\n   Duplicated entries (using their aliases): {list(duplicated)!r}"
                     if duplicated
                     else ""
                 )
-                + ("\n   Not known: %r" % list(unknown) if unknown else "")
+                + (f"\n   Not known: {list(unknown)!r}" if unknown else "")
                 + (
-                    "\n   Cannot be fixed: %r " % list(input_)
+                    f"\n   Cannot be fixed: {list(input_)!r} "
                     + "--> instead, fix sampled parameters that depend on them!"
                     if input_
                     else ""
                 )
                 + (
-                    "\n   Cannot be fixed because are derived parameters: %r "
-                    % list(derived)
+                    "\n   Cannot be fixed because are derived parameters:"
+                    f" {list(derived)!r} "
                     if derived
                     else ""
                 )

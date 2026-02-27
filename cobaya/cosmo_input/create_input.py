@@ -14,12 +14,11 @@ def translate(p, info=None, dictionary=None):
     if not (info if isinstance(info, Mapping) else {}).get("drop", False):
         p = dictionary.get(p, p)
     # Try to modify lambda parameters too!
-    if isinstance(info, str):
-        if info.startswith("lambda"):
-            arguments = "".join(info.split(":")[0].split()[1:]).split(",")
-            arguments_t = [translate(pi, dictionary=dictionary)[0] for pi in arguments]
-            for pi, pit in zip(arguments, arguments_t):
-                info = info.replace(pi, pit)
+    if isinstance(info, str) and info.startswith("lambda"):
+        arguments = "".join(info.split(":")[0].split()[1:]).split(",")
+        arguments_t = [translate(pi, dictionary=dictionary)[0] for pi in arguments]
+        for pi, pit in zip(arguments, arguments_t):
+            info = info.replace(pi, pit)
     if (
         isinstance(info, MutableMapping)
         and "derived" in info
@@ -77,8 +76,8 @@ def create_input(**kwargs) -> InputDict:
             info["theory"] = {theory_requested: info["theory"][theory_requested]}
         except KeyError:
             return (
-                "There is no preset for\n'%s'" % (info.get("desc", field))
-                + "with theory code '%s'." % theory_requested
+                "There is no preset for\n'{}'".format(info.get("desc", field))
+                + f"with theory code '{theory_requested}'."
                 + (
                     "\n--> " + error_msg
                     if error_msg
@@ -104,7 +103,7 @@ def create_input(**kwargs) -> InputDict:
     # Prepare sampler info
     info_sampler = deepcopy(input_database.sampler.get(kwargs.get("sampler") or "", {}))
     if info_sampler:
-        sampler_name = list(info_sampler["sampler"])[0]
+        sampler_name = next(iter(info_sampler["sampler"]))
         info_sampler["sampler"][sampler_name] = (
             info_sampler["sampler"][sampler_name] or {}
         )

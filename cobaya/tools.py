@@ -12,7 +12,6 @@ import os
 import platform
 import re
 import sys
-import warnings
 from abc import ABC, abstractmethod
 from ast import parse
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -164,8 +163,7 @@ def check_module_version(module: Any, min_version):
         module.__version__
     ) < version.parse(min_version):
         raise VersionCheckError(
-            "Module %s at %s is version %s but the minimum required version is %s."
-            % (
+            "Module {} at {} is version {} but the minimum required version is {}.".format(
                 module.__name__,
                 os.path.dirname(module.__file__),
                 getattr(module, "__version__", "(non-given)"),
@@ -244,7 +242,12 @@ def get_compiled_import_path(source_path):
 
 
 def import_all_classes(
-    path, pkg: str, subclass_of: type, hidden=False, helpers=False, stem: str = None
+    path,
+    pkg: str,
+    subclass_of: type,
+    hidden=False,
+    helpers=False,
+    stem: str | None = None,
 ):
     import pkgutil
 
@@ -295,7 +298,7 @@ def get_available_internal_classes(kind, hidden=False, stem=None):
 
     path = os.path.join(os.path.dirname(__file__), subfolders[kind])
     return import_all_classes(
-        path, "cobaya.%s" % subfolders[kind], CobayaComponent, hidden, stem=stem
+        path, f"cobaya.{subfolders[kind]}", CobayaComponent, hidden, stem=stem
     )
 
 
@@ -326,8 +329,8 @@ def replace_optimizations(function_string: str) -> str:
     number = r"[+-]?(\d+([.]\d*)?(e[+-]?\d+)?|[.]\d+(e[+-]?\d+)?)"
     regex = (
         r"stats\.norm\.logpdf\((?P<arg>[^,\)]+),"
-        r"\s*loc\s*=\s*(?P<loc>%s)\s*,"
-        r"\s*scale\s*=\s*(?P<scale>%s)\s*\)" % (number, number)
+        rf"\s*loc\s*=\s*(?P<loc>{number})\s*,"
+        rf"\s*scale\s*=\s*(?P<scale>{number})\s*\)"
     )
     p = re.compile(regex)
     match = p.search(function_string)
@@ -368,7 +371,7 @@ def get_external_function(string_or_function, name=None):
             raise LoggedError(
                 log,
                 "Failed to load external function%s: '%r'",
-                " '%s'" % name if name else "",
+                f" '{name}'" if name else "",
                 e,
             )
     else:
@@ -377,7 +380,7 @@ def get_external_function(string_or_function, name=None):
         raise LoggedError(
             log,
             "The external function provided "
-            + ("for '%s' " % name if name else "")
+            + (f"for '{name}' " if name else "")
             + "is not an actual function. Got: '%r'",
             function,
         )
@@ -566,7 +569,7 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
         if 0 < skip < 1:
             # turn into #lines (need to know total line number)
             n = sum(1 for _ in inp)
-            skip = int(round(skip * n)) + 1  # match getdist
+            skip = round(skip * n) + 1  # match getdist
             inp.seek(0)
         data = pd.read_csv(
             inp,
@@ -602,7 +605,7 @@ def prepare_comment(comment):
 
 def is_valid_variable_name(name):
     try:
-        parse("%s=None" % name)
+        parse(f"{name}=None")
         return True
     except SyntaxError:
         return False
@@ -805,7 +808,7 @@ def are_different_params_lists(list_A, list_B, name_A="A", name_B="B"):
     for n, lst in zip(names, [list_A_copy, list_B_copy]):
         [lst.pop(i) for i in sorted([lst.index(x) for x in set(lst)])[::-1]]
         if lst:
-            result["duplicate_%s" % n] = list(set(lst))
+            result[f"duplicate_{n}"] = list(set(lst))
     sets = {"A": set(list_A), "B": set(list_B)}
     for n1, n2 in [["A", "B"], ["B", "A"]]:
         missing = sets[n1].difference(sets[n2])
@@ -856,22 +859,13 @@ def fuzzy_match(input_string, choices, n=3, score_cutoff=50):
     """
     Simple wrapper for fuzzy search of strings within a list.
     """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        # Suppress message about optional dependency
-        from fuzzywuzzy import process as fuzzy_process
-    try:
-        return list(
-            zip(
-                *(
-                    fuzzy_process.extractBests(
-                        input_string, choices, score_cutoff=score_cutoff
-                    )
-                )
-            )
-        )[0][:n]
-    except IndexError:
-        return []
+    from rapidfuzz import process as fuzzy_process
+
+    matches = fuzzy_process.extract(
+        input_string, choices, score_cutoff=score_cutoff, limit=n
+    )
+
+    return [match[0] for match in matches]
 
 
 def similar_internal_class_names(name, kind=None):
@@ -1204,7 +1198,7 @@ def resolve_packages_path(infos=None):
         if p
     }
     if len(paths) == 1:
-        return list(paths)[0]
+        return next(iter(paths))
     elif len(paths) > 1:
         raise LoggedError(
             log,
@@ -1221,7 +1215,7 @@ def sort_cosmetic(info):
     Returns a sorted version of the given info dict, re-ordered as {dump_sort_cosmetic!r},
     and finally the rest of the blocks/options.
     """
-    sorted_info = dict()
+    sorted_info = {}
     for k in dump_sort_cosmetic:
         if k in info:
             sorted_info[k] = info[k]

@@ -64,7 +64,7 @@ class BoltzmannBase(Theory):
                 vars_pairs,
                 name,
             )
-        if isinstance(list(vars_pairs)[0], str):
+        if isinstance(next(iter(vars_pairs)), str):
             vars_pairs = [vars_pairs]
         pairs = set()
         for pair in vars_pairs:
@@ -165,7 +165,7 @@ class BoltzmannBase(Theory):
         # e.g. take maximum of all values of a requested precision parameter
         for k, v in requirements.items():
             # Products and other computations
-            if k == "Cl" or k == "lensed_scal_Cl" or k == "unlensed_Cl":
+            if k in {"Cl", "lensed_scal_Cl", "unlensed_Cl"}:
                 current = self._must_provide.get(k, {})
                 v = {cl.lower(): v[cl] for cl in v}  # to lowercase
                 self._must_provide[k] = {
@@ -515,7 +515,8 @@ class BoltzmannBase(Theory):
         elif extrapolating:
             raise LoggedError(
                 self.log,
-                "Cannot do log extrapolation with zero-crossing pk for %s, %s" % var_pair,
+                "Cannot do log extrapolation with zero-crossing pk for "
+                f"{var_pair[0]}, {var_pair[1]}",
             )
         result = PowerSpectrumInterpolator(
             z,
@@ -557,7 +558,9 @@ class BoltzmannBase(Theory):
                     "Getting non-linear matter power but 'nonlinear' "
                     "not specified in requirements",
                 )
-            raise LoggedError(self.log, "Matter power %s, %s not computed" % var_pair)
+            raise LoggedError(
+                self.log, "Matter power {}, {} not computed".format(*var_pair)
+            )
 
     def get_sigma_R(self, var_pair=("delta_tot", "delta_tot")):
         r"""
@@ -578,7 +581,7 @@ class BoltzmannBase(Theory):
         try:
             return self.current_state[("sigma_R",) + tuple(sorted(var_pair))]
         except KeyError:
-            raise LoggedError(self.log, "sigmaR %s not computed" % var_pair)
+            raise LoggedError(self.log, f"sigmaR {var_pair} not computed")
 
     @abstract
     def get_source_Cl(self):

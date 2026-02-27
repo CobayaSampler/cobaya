@@ -433,7 +433,7 @@ class CAMB(BoltzmannBase):
 
         for k, v in self._must_provide.items():
             # Products and other computations
-            if k == "Cl" or k == "lensed_scal_Cl":
+            if k in {"Cl", "lensed_scal_Cl"}:
                 self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
@@ -739,7 +739,8 @@ class CAMB(BoltzmannBase):
                 self.log.debug(
                     "Computation of cosmological products failed. "
                     "Assigning 0 likelihood and going on. "
-                    "The output of the CAMB error was %s" % e
+                    "The output of the CAMB error was %s",
+                    e,
                 )
                 return False
             # Prepare derived parameters
@@ -871,7 +872,7 @@ class CAMB(BoltzmannBase):
                 "No source Cl's were computed. "
                 "Are you sure that you have requested some source?",
             )
-        cls_dict: dict = dict()
+        cls_dict: dict = {}
         for term, cl in cls.items():
             term_tuple = tuple(
                 (lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
@@ -880,7 +881,7 @@ class CAMB(BoltzmannBase):
                 for _ in term.split("x")
             )
             cls_dict[term_tuple] = cl
-        cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
+        cls_dict["ell"] = np.arange(cls[next(iter(cls))].shape[0])
         return cls_dict
 
     def get_CAMBdata(self):
@@ -977,7 +978,7 @@ class CAMB(BoltzmannBase):
                     self.log.debug("Setting sources: %r", self.sources)
                     sources = self.camb.sources
                     source_windows = []
-                    for source, window in source_dict.items():
+                    for window in source_dict.values():
                         function = window.pop("function", None)
                         if function == "spline":
                             source_windows.append(sources.SplinedSourceWindow(**window))
@@ -1021,7 +1022,7 @@ class CAMB(BoltzmannBase):
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
                 self.log,
-                "Some of the parameters passed to CAMB were not recognized: %s" % str(e),
+                f"Some of the parameters passed to CAMB were not recognized: {e!s}",
             )
         return False
 
@@ -1033,7 +1034,7 @@ class CAMB(BoltzmannBase):
         self._camb_transfers = CambTransfers(
             self,
             "camb.transfers",
-            dict(stop_at_error=self.stop_at_error),
+            {"stop_at_error": self.stop_at_error},
             timing=self.timer,
         )
         self._camb_transfers.requires = self._transfer_requires
@@ -1128,8 +1129,8 @@ class CAMB(BoltzmannBase):
             if not gcc_check:
                 cause = (
                     " Possible cause: it looks like `gcc` does not have the correct "
-                    "version number (CAMB requires %s); and `ifort` is also "
-                    "probably not available." % cls._camb_min_gcc_version
+                    f"version number (CAMB requires {cls._camb_min_gcc_version}); and "
+                    "`ifort` is also probably not available."
                 )
             else:
                 cause = ""
@@ -1220,7 +1221,7 @@ class CambTransfers(HelperTheory):
                 self.log.debug(
                     "Computation of cosmological products failed. "
                     "Assigning 0 likelihood and going on. "
-                    "The output of the CAMB error was %s" % e
+                    f"The output of the CAMB error was {e}"
                 )
                 return False
 

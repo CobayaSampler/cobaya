@@ -485,7 +485,7 @@ def _skip_helper(name, skip_keywords, skip_keywords_env, logger):
     try:
         this_skip_keyword = next(s for s in skip_keywords if s.lower() in name.lower())
         env_msg = (
-            " in env var %r" % install_skip_env
+            f" in env var {install_skip_env!r}"
             if this_skip_keyword in skip_keywords_env
             else ""
         )
@@ -733,11 +733,11 @@ def install_script(args=None):
         default=None,
         help="Desired path where to install external packages. "
         "Optional if one has been set globally or as an env variable"
-        " (run with '--show_%s' to check)." % packages_path_arg_posix,
+        f" (run with '--show_{packages_path_arg_posix}' to check).",
     )
     output_show_packages_path = resolve_packages_path()
     if output_show_packages_path and os.environ.get(packages_path_env):
-        output_show_packages_path += " (from env variable %r)" % packages_path_env
+        output_show_packages_path += f" (from env variable {packages_path_env!r})"
     elif output_show_packages_path:
         output_show_packages_path += " (from config file)"
     else:
@@ -756,7 +756,7 @@ def install_script(args=None):
         help="Force re-installation of apparently installed packages.",
     )
     parser.add_argument(
-        "--%s" % "test",
+        "--{}".format("test"),
         action="store_true",
         default=False,
         help="Just check whether components are installed.",

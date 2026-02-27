@@ -20,9 +20,9 @@ class PantheonPlus(SN):
         self._read_data_file(data_file)
         self.covs = {}
         for name in ["mag"]:
-            self.log.debug("Reading covmat for: %s " % name)
+            self.log.debug(f"Reading covmat for: {name} ")
             self.covs[name] = self._read_covmat(
-                os.path.join(self.path, ini.string("%s_covmat_file" % name))
+                os.path.join(self.path, ini.string(f"{name}_covmat_file"))
             )
         self.alphabeta_covmat = False
         self.configure()
@@ -42,7 +42,7 @@ class PantheonPlus(SN):
         self.pre_vars = 0.0  # diagonal component
 
     def _read_cols(self, data_file, file_cols, sep=None):
-        self.log.debug("Reading %s" % data_file)
+        self.log.debug(f"Reading {data_file}")
         with open(data_file) as f:
             lines = f.readlines()
             line = lines[0]
@@ -60,7 +60,7 @@ class PantheonPlus(SN):
                     tmp = getattr(self, col)
                     tmp[ix] = np.asarray(val, dtype=tmp.dtype)
         self.nsn = ix + 1
-        self.log.debug("Number of SN read: %s " % self.nsn)
+        self.log.debug(f"Number of SN read: {self.nsn} ")
 
     def _read_data_file(self, data_file):
         file_cols = ["m_b_corr", "zhd", "zhel"]

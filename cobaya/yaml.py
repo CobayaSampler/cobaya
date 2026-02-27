@@ -92,8 +92,8 @@ def _construct_defaults(loader, node):
             )
         except StopIteration:
             raise InputSyntaxError(
-                "Mentioned non-existent defaults file '%s', "
-                "searched for in folder '%s'." % (dfile, folder)
+                f"Mentioned non-existent defaults file '{dfile}', "
+                f"searched for in folder '{folder}'."
             )
         this_loaded_defaults = yaml_load_file(dfilename)
         loaded_defaults = recursive_update(loaded_defaults, this_loaded_defaults)
@@ -170,9 +170,7 @@ def yaml_load(text_stream, file_name=None) -> InfoDict:
                     [""] + lines[max(line - 1 - context, 0) : line - 1]
                 )
             ) + "\n"
-            errorline = (
-                signal + sep + lines[line - 1] + signal_right + "column %s" % column
-            )
+            errorline = signal + sep + lines[line - 1] + signal_right + f"column {column}"
             post = (
                 ("\n" + " " * len(signal) + sep).join(
                     [""] + lines[line + 1 - 1 : min(line + 1 + context - 1, len(lines))]
@@ -275,7 +273,7 @@ def yaml_dump(info: Mapping[str, Any], stream=None, **kwds):
 
 def yaml_dump_file(file_name: str, data, comment=None, error_if_exists=True):
     if error_if_exists and os.path.isfile(file_name):
-        raise OSError("File exists: '%s'" % file_name)
+        raise OSError(f"File exists: '{file_name}'")
     with open(file_name, "w+", encoding="utf-8") as f:
         if comment:
             f.write(prepare_comment(comment))

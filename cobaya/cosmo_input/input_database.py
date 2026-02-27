@@ -358,7 +358,7 @@ matter: InfoDict = {
             },
             "omegach2": {
                 "value": "lambda omegam, omegab, mnu, H0: (omegam-omegab)*(H0/100)**2"
-                "-(mnu*(%g/3)**0.75)/%g" % (N_eff_std, nu_mass_fac),
+                f"-(mnu*({N_eff_std:g}/3)**0.75)/{nu_mass_fac:g}",
                 "latex": "\\Omega_\\mathrm{c} h^2",
             },
         },
@@ -737,7 +737,7 @@ for name, m in like_cmb.items():
     if not m:
         continue
     if "params" not in m:
-        m["params"] = dict()
+        m["params"] = {}
     m["params"].update(derived_params)
     if "cmbmarged" in name.lower():
         m["params"].pop("A")
@@ -917,159 +917,109 @@ planck_base_model = {
 }
 default_sampler = {"sampler": "MCMC dragging"}
 
-preset: InfoDict = dict(
-    [
-        (none, {"desc": "(No preset chosen)"}),
-        # Pure CMB #######################################################
-        (
-            "planck_NPIPE_CamSpec_camb",
-            {
-                "desc": "Planck NPIPE CamSpec with CAMB (all native Python)",
-                "theory": "camb",
-                "like_cmb": "planck_NPIPE_CamSpec",
-            },
-        ),
-        (
-            "planck_NPIPE_CamSpec_classy",
-            {
-                "desc": "Planck NPIPE CamSpec with CLASS (all native Python)",
-                "theory": "classy",
-                "like_cmb": "planck_NPIPE_CamSpec",
-            },
-        ),
-        (
-            "planck_NPIPE_Hillipop_camb",
-            {
-                "desc": "Planck NPIPE Hillipop+Lollipop with CAMB (all native Python)",
-                "theory": "camb",
-                "like_cmb": "planck_NPIPE_Hillipop",
-            },
-        ),
-        (
-            "planck_NPIPE_Hillipop_classy",
-            {
-                "desc": "Planck NPIPE Hillipop+Lollipop with CLASS (all native Python)",
-                "theory": "classy",
-                "like_cmb": "planck_NPIPE_Hillipop",
-            },
-        ),
-        (
-            "planck_2018_camb",
-            {
-                "desc": "Planck 2018 with CAMB",
-                "theory": "camb",
-                "like_cmb": "planck_2018",
-            },
-        ),
-        (
-            "planck_2018_classy",
-            {
-                "desc": "Planck 2018 with CLASS",
-                "theory": "classy",
-                "like_cmb": "planck_2018",
-            },
-        ),
-        (
-            "planck_2018_bicep_camb",
-            {
-                "desc": "Planck 2018 + BK18 (with tensor modes) with CAMB",
-                "theory": "camb",
-                "primordial": "SFSR_t",
-                "like_cmb": "planck_2018_bk18",
-            },
-        ),
-        (
-            "planck_2018_bicep_classy",
-            {
-                "desc": "Planck 2018 + BK18 (with tensor modes) with CLASS",
-                "theory": "classy",
-                "primordial": "SFSR_t",
-                "like_cmb": "planck_2018_bk18",
-            },
-        ),
-        # CMB+BAO ######################################################
-        (
-            "planck_2018_BAO_camb",
-            {
-                "desc": "Planck 2018 + BAO with CAMB",
-                "theory": "camb",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_2018",
-            },
-        ),
-        (
-            "planck_2018_BAO_classy",
-            {
-                "desc": "Planck 2018 + BAO with CLASS",
-                "theory": "classy",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_2018",
-            },
-        ),
-        (
-            "planck_BAO_latest_camb",
-            {
-                "desc": "Planck 2018 + eBOSS 16 BAO with CAMB",
-                "theory": "camb",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_latest",
-            },
-        ),
-        (
-            "planck_BAO_latest_classy",
-            {
-                "desc": "Planck 2018 + eBOSS 16 BAO with CLASS",
-                "theory": "classy",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_latest",
-            },
-        ),
-        # CMB+BAO+SN ###################################################
-        (
-            "planck_2018_BAO_SN_camb",
-            {
-                "desc": "Planck 2018 + BAO + SN with CAMB",
-                "theory": "camb",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_latest",
-                "like_sn": "Pantheon",
-            },
-        ),
-        (
-            "planck_2018_BAO_SN_classy",
-            {
-                "desc": "Planck 2018 + BAO + SN with CLASS",
-                "theory": "classy",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_latest",
-                "like_sn": "Pantheon",
-            },
-        ),
-        # CMB+DES+BAO+SN ###################################################
-        (
-            "planck_2018_DES_BAO_SN_camb",
-            {
-                "desc": "Planck 2018 + DESjoint + BAO + SN with CAMB",
-                "theory": "camb",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_latest",
-                "like_des": "des_y1_joint",
-                "like_sn": "Pantheon",
-            },
-        ),
-        (
-            "planck_2018_DES_BAO_SN_classy",
-            {
-                "desc": "Planck 2018 + DESjoint + BAO + SN with CLASS",
-                "theory": "classy",
-                "like_cmb": "planck_2018",
-                "like_bao": "BAO_planck_latest",
-                "like_des": "des_y1_joint",
-                "like_sn": "Pantheon",
-            },
-        ),
-    ]
-)
+preset: InfoDict = {
+    none: {"desc": "(No preset chosen)"},
+    # Pure CMB #######################################################
+    "planck_NPIPE_CamSpec_camb": {
+        "desc": "Planck NPIPE CamSpec with CAMB (all native Python)",
+        "theory": "camb",
+        "like_cmb": "planck_NPIPE_CamSpec",
+    },
+    "planck_NPIPE_CamSpec_classy": {
+        "desc": "Planck NPIPE CamSpec with CLASS (all native Python)",
+        "theory": "classy",
+        "like_cmb": "planck_NPIPE_CamSpec",
+    },
+    "planck_NPIPE_Hillipop_camb": {
+        "desc": "Planck NPIPE Hillipop+Lollipop with CAMB (all native Python)",
+        "theory": "camb",
+        "like_cmb": "planck_NPIPE_Hillipop",
+    },
+    "planck_NPIPE_Hillipop_classy": {
+        "desc": "Planck NPIPE Hillipop+Lollipop with CLASS (all native Python)",
+        "theory": "classy",
+        "like_cmb": "planck_NPIPE_Hillipop",
+    },
+    "planck_2018_camb": {
+        "desc": "Planck 2018 with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+    },
+    "planck_2018_classy": {
+        "desc": "Planck 2018 with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+    },
+    "planck_2018_bicep_camb": {
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CAMB",
+        "theory": "camb",
+        "primordial": "SFSR_t",
+        "like_cmb": "planck_2018_bk18",
+    },
+    "planck_2018_bicep_classy": {
+        "desc": "Planck 2018 + BK18 (with tensor modes) with CLASS",
+        "theory": "classy",
+        "primordial": "SFSR_t",
+        "like_cmb": "planck_2018_bk18",
+    },
+    # CMB+BAO ######################################################
+    "planck_2018_BAO_camb": {
+        "desc": "Planck 2018 + BAO with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_2018",
+    },
+    "planck_2018_BAO_classy": {
+        "desc": "Planck 2018 + BAO with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_2018",
+    },
+    "planck_BAO_latest_camb": {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest",
+    },
+    "planck_BAO_latest_classy": {
+        "desc": "Planck 2018 + eBOSS 16 BAO with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest",
+    },
+    # CMB+BAO+SN ###################################################
+    "planck_2018_BAO_SN_camb": {
+        "desc": "Planck 2018 + BAO + SN with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest",
+        "like_sn": "Pantheon",
+    },
+    "planck_2018_BAO_SN_classy": {
+        "desc": "Planck 2018 + BAO + SN with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest",
+        "like_sn": "Pantheon",
+    },
+    # CMB+DES+BAO+SN ###################################################
+    "planck_2018_DES_BAO_SN_camb": {
+        "desc": "Planck 2018 + DESjoint + BAO + SN with CAMB",
+        "theory": "camb",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest",
+        "like_des": "des_y1_joint",
+        "like_sn": "Pantheon",
+    },
+    "planck_2018_DES_BAO_SN_classy": {
+        "desc": "Planck 2018 + DESjoint + BAO + SN with CLASS",
+        "theory": "classy",
+        "like_cmb": "planck_2018",
+        "like_bao": "BAO_planck_latest",
+        "like_des": "des_y1_joint",
+        "like_sn": "Pantheon",
+    },
+}
 
 # Add planck baseline model
 for pre in preset.values():

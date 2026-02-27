@@ -169,9 +169,9 @@ class BatchArgs:
         if args.batchPath:
             self.batch = batchjob.readobject(args.batchPath)
             if self.batch is None:
-                raise Exception(
-                    "batchPath %s does not exist or is not "
-                    "initialized with cobaya-grid-create" % args.batchPath
+                raise ValueError(
+                    f"batchPath {args.batchPath} does not exist or is not "
+                    "initialized with cobaya-grid-create"
                 )
             if self.doplots:
                 from getdist import paramnames, plots
@@ -272,7 +272,7 @@ class BatchArgs:
                 yield jobItem
 
     def sortedParamtagDict(self, chainExist=True):
-        items = dict()
+        items = {}
         for jobItem in self.filteredBatchItems():
             if not chainExist or jobItem.chainExists():
                 if jobItem.paramtag not in items:

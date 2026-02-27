@@ -122,8 +122,7 @@ class LogPosterior:
                 raise ValueError(
                     "The given log-posterior is not equal to the "
                     "sum of given log-priors and log-likelihoods: "
-                    "%g != sum(%r) + sum(%r)"
-                    % (self.logpost, self.logpriors, self.loglikes)
+                    f"{self.logpost:g} != sum({self.logpriors!r}) + sum({self.loglikes!r})"
                 )
 
     def _logpost(self):
@@ -799,11 +798,11 @@ class Model(HasLogger):
                 if not deps.get(component):
                     dependence_order.append(component)
                     comps.remove(component)
-                    for p, dep in deps.items():
+                    for dep in deps.values():
                         dep.discard(component)
             if len(dependence_order) == _last:
                 raise LoggedError(
-                    self.log, "Circular dependency, cannot calculate %r" % comps
+                    self.log, f"Circular dependency, cannot calculate {comps!r}"
                 )
             _last = len(dependence_order)
         likes = list(self.likelihood.values())
@@ -1027,7 +1026,7 @@ class Model(HasLogger):
                 )
 
         self.mpi_debug("Components will be computed in the order:")
-        self.mpi_debug(" - %r" % list(self._component_order))
+        self.mpi_debug(f" - {list(self._component_order)!r}")
 
         def dependencies_of(_component):
             deps = set()
@@ -1111,7 +1110,7 @@ class Model(HasLogger):
         :return: dictionary giving list of requirements calculated by
                 each component name
         """
-        return {"%r" % c: v for c, v in self._must_provide.items() if v}
+        return {f"{c!r}": v for c, v in self._must_provide.items() if v}
 
     def _assign_params(
         self, info_likelihood, info_theory=None, dropped_theory_params=None
@@ -1181,9 +1180,8 @@ class Model(HasLogger):
                                 and not derived_param
                                 or isinstance(options, Mapping)
                                 and options.get("derived", False) is derived_param
-                            ):
-                                if p in assign:
-                                    assign[p] += [component]
+                            ) and p in assign:
+                                assign[p] += [component]
                     elif component.get_allow_agnostic():
                         agnostic_likes += [component]
                     if required_params:
@@ -1585,7 +1583,7 @@ class Model(HasLogger):
         self.mpi_info(
             "Setting measured speeds (per sec): %r",
             {
-                component: float("%.3g" % speed)
+                component: float(f"{speed:.3g}")
                 for component, speed in zip(self.components, measured_speeds)
             },
         )

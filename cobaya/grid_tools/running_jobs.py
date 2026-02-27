@@ -13,7 +13,7 @@ def running_jobs(args=None):
     group.add_argument("--queued", action="store_true")
     group.add_argument("--running", action="store_true")
 
-    (batch, args) = opts.parseForBatch(args)
+    batch, args = opts.parseForBatch(args)
 
     if batch:
         items = [jobItem for jobItem in opts.filteredBatchItems()]
@@ -30,14 +30,14 @@ def running_jobs(args=None):
     )
     for job_id, job_name, names, info in zip(ids, job_names, nameslist, infos):
         if batch_names.intersection(names) or items is None:
-            stats = dict()
+            stats = {}
             if items:
                 for name in names:
                     for jobItem in items:
                         if jobItem.name == name:
                             R = jobItem.convergeStat()[0]
                             if R:
-                                stats[name] = "%6.3f" % R
+                                stats[name] = f"{R:6.3f}"
                             break
             R = stats.get(job_name) or " " * 6
             print(info + " |", R, job_name)
