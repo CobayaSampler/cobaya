@@ -146,7 +146,7 @@ def doc_script(args=None):
             print(
                 "# This file contains defaults. "
                 f"To populate them, use the flag --{expand_flag} "
-                "(or -{expand_flag[expand_flag_ishort]})."
+                f"(or -{expand_flag[expand_flag_ishort]})."
             )
     return 0
 

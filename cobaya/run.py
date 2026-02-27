@@ -80,20 +80,21 @@ def run(
         )
         logger_setup(info.get("debug"))
         logger_run = get_logger(run.__name__)
-        try:
-            which_sampler = next(iter(info["sampler"]))
+        if samplers := info.get("sampler"):
+            which_sampler = next(iter(samplers))
             if info.get("minimize"):  # type: ignore
                 # Preserve options if "minimize" was already the sampler
                 if which_sampler.lower() != "minimize":
                     info["sampler"] = {"minimize": None}
                     which_sampler = "minimize"
-        except (KeyError, TypeError) as excpt:
+        else:
+            which_sampler = ""
             if not info.get("post"):
                 raise LoggedError(
                     logger_run,
                     "You need to specify a sampler using the 'sampler' key "
                     "as e.g. `sampler: {mcmc: None}.`",
-                ) from excpt
+                )
         if info.get("post"):
             if isinstance(output, str) or output is False:
                 info["post"]["output"] = output or None
