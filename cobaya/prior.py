@@ -61,14 +61,15 @@ The syntax for priors and ref's has the following fields:
 
 .. note::
 
-   For bound distributions (e.g. ``uniform``, ``beta``...), you can use the more
-   intuitive arguments ``min`` and ``max`` (default: 0 and 1 resp.) instead of ``loc`` and
-   ``scale`` (NB: unexpected behaviour for an unbounded pdf).
+   For bound distributions (e.g. ``uniform``, ``beta``...), you can use the more intuitive
+   arguments ``min`` and ``max`` (default: 0 and 1 resp.) instead of ``loc`` and
+   ``scale``.
 
-   When using
+   For the special case of the truncated normal
    `scipy.stats.truncnorm <https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.truncnorm.html>`_,
-   you can also use the more intuitive arguments ``min`` and ``max`` instead of ``a`` and ``b``
-   (the code will take care of properly set ``a`` and ``b`` defined in standard deviation unit).
+   ``min`` and ``max`` will be interpreted as absolute bounds as expected, and will be
+   translated internally to the scipy convention (for `truncnorm`, ``a`` and ``b`` defined
+   in standard deviation units).
 
 The order of the parameters is conserved in the table of samples, except that
 derived parameters are always moved to the end.
@@ -318,6 +319,12 @@ theory code (e.g. CAMB), you can use:
       like_omm:
         external: "lambda _self: stats.norm.logpdf(_self.provider.get_param('omegam'), loc=0.334, scale=0.018)"
         requires: omegam
+
+.. warning::
+
+   **Important:** This is not strictly equivalent to a prior in said derived parameter(s),
+   but equivalent instead to a joint prior on the parameters from which the derived
+   parameter is computed, **and** and the prior on the derived parameter.
 
 Periodic parameters
 -------------------
