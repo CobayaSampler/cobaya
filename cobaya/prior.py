@@ -319,6 +319,12 @@ theory code (e.g. CAMB), you can use:
         external: "lambda _self: stats.norm.logpdf(_self.provider.get_param('omegam'), loc=0.334, scale=0.018)"
         requires: omegam
 
+.. warning::
+
+   **Important:** This is not strictly equivalent to a prior in said derived parameter(s),
+   but equivalent instead to a joint prior on the parameters from which the derived
+   parameter is computed, **and** and the prior on the derived parameter.
+
 Periodic parameters
 -------------------
 
