@@ -144,8 +144,8 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    f"Couldn't find measurements file '{self.measurements_file}' "
-                    f"in folder '{data_file_path}'. Check your paths.",
+                    f"Couldn't find measurements file '{self.measurements_file}' in folder '{data_file_path}'. "
+                    + "Check your paths.",
                 )
         elif self.grid_file:
             pass

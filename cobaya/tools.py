@@ -153,6 +153,8 @@ class VersionCheckError(ValueError):
     is older than a reference one.
     """
 
+    # necessary or it won't print the given error message!
+
 
 def check_module_version(module: Any, min_version):
     """

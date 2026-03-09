@@ -641,8 +641,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         f = list if strict else set
         if f(block1) != f(block2):
             myprint(
-                myname + f": different [{block_name}] or different order of them: "
-                "{list(block1)!r} vs {list(block2)!r}"
+                myname
+                + f": different [{block_name}] or different order of them: {list(block1)!r} vs {list(block2)!r}"
             )
             return False
         # 2. Gather general options to be ignored

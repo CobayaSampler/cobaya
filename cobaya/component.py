@@ -593,6 +593,8 @@ class ComponentNotFoundError(LoggedError):
     (in order to distinguish that case from any other error occurring at import time).
     """
 
+    # necessary or it won't print the given error message!
+
 
 def get_component_class(
     name,
@@ -825,6 +827,8 @@ class ComponentNotInstalledError(LoggedError):
     Exception to be raised manually at component initialization or install check if some
     external dependency of the component is missing.
     """
+
+    # necessary or it won't print the given error message!
 
 
 def _bare_load_external_module(
