@@ -992,10 +992,12 @@ class Prior(HasLogger):
         - Mean of the 1d prior, as a fallback.
 
         For parameters where no finite center can be determined, their values are
-        sampled independently from the prior.
+        sampled independently from their reference pdf or the prior.
         """
         n = len(self.ref_pdf)
+        rng = random_state if random_state is not None else np.random
         center = np.empty(n)
+        sample_from_ref = {}
         i_sample_from_prior = []
         for i, ref_pdf in enumerate(self.ref_pdf):
             if isinstance(ref_pdf, numbers.Real):
@@ -1011,21 +1013,29 @@ class Prior(HasLogger):
                 else:
                     center[i] = ref_pdf
             else:
-                # ref_pdf is a distribution; use its mean
-                center[i] = ref_pdf.mean()
+                # ref_pdf is a distribution; use its mean if finite, else sample from it.
+                ref_mean = ref_pdf.mean()
+                if np.isfinite(ref_mean):
+                    center[i] = ref_mean
+                else:
+                    center[i] = 0  # placeholder, will be overwritten
+                    sample_from_ref[i] = ref_pdf
         tries = 0
         warn_if_tries = read_dnumber(warn_if_tries, self.d())
         ref_sample = np.empty(n)
         while tries < max_tries:
             tries += 1
-            perturbation = random_state.multivariate_normal(np.zeros(n), covmat)
+            perturbation = rng.multivariate_normal(np.zeros(n), covmat)
             ref_sample[:] = center + perturbation
+            for i, ref_pdf in sample_from_ref.items():
+                ref_sample[i] = ref_pdf.rvs(random_state=random_state)
             # For params without a finite center, sample from the prior independently
             if i_sample_from_prior:
                 prior_sample = self.sample(
                     ignore_external=True, random_state=random_state
                 )[0]
                 ref_sample[i_sample_from_prior] = prior_sample[i_sample_from_prior]
+            self.reduce_periodic(ref_sample, copy=False)
             if self.logp(ref_sample) > -np.inf:
                 return ref_sample
             if tries == warn_if_tries:
