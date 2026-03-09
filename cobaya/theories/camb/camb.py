@@ -332,13 +332,11 @@ class CAMB(BoltzmannBase):
             self.extra_args["non_linear_model"] = (
                 self.camb.nonlinear.ExternalNonLinearRatio
             )
-            self.nonlin_args, self.nonlin_params = {}, []
-        else:
-            nonlin = self.camb.CAMBparams.make_class_named(
-                self.extra_args.get("non_linear_model", self.camb.nonlinear.Halofit),
-                self.camb.nonlinear.NonLinearModel,
-            )
-            self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
+        nonlin = self.camb.CAMBparams.make_class_named(
+            self.extra_args.get("non_linear_model", self.camb.nonlinear.Halofit),
+            self.camb.nonlinear.NonLinearModel,
+        )
+        self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
 
         self.requires = str_to_list(getattr(self, "requires", []))
         self._transfer_requires = [
