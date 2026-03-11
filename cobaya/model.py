@@ -1311,10 +1311,10 @@ class Model(HasLogger):
                 elif set(assign_params) != set(current_assign):
                     raise LoggedError(
                         self.log,
-                        "exising %s %r do not match assigned parameters %r",
+                        "existing %s %r do not match assigned parameters %r",
                         option,
-                        assign_params,
                         current_assign,
+                        assign_params,
                     )
 
                 # Update infos! (helper theory parameters stored in yaml with host)

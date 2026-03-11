@@ -211,7 +211,7 @@ More complex functions must be saved into a separate file and imported on the fl
 
 With those changes, we would be able to run our Python script from the shell (with MPI, if desired) and have the chains saved where requested.
 
-Bu we could also have incorporated those text definitions into a ``yaml`` file, that we could call with ``cobaya-run``:
+But we could also have incorporated those text definitions into a ``yaml`` file, that we could call with ``cobaya-run``:
 
 .. code:: yaml
 

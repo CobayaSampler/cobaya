@@ -457,7 +457,7 @@ class CAMB(BoltzmannBase):
                 )
                 if "pp" in cls and self.extra_args.get("lens_potential_accuracy") is None:
                     self.extra_args["lens_potential_accuracy"] = 1
-                self.non_linear_sources = (
+                self.non_linear_sources = self.non_linear_sources or (
                     self.extra_args.get("lens_potential_accuracy", 1) >= 1
                 )
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
