@@ -21,7 +21,7 @@ test_info_common: InputDict = {
 
 def test_prior_inherit_nonegiven():
     updated_info, _ = run(test_info_common)
-    likname = list(test_info_common["likelihood"])[0]
+    likname = next(iter(test_info_common["likelihood"]))
     default_info = get_default_info(likname, "likelihood")
     assert updated_info["prior"] == default_info["prior"]
 
@@ -30,7 +30,7 @@ def test_prior_inherit_differentgiven():
     test_info = deepcopy(test_info_common)
     test_info["prior"] = {"third": "lambda a1: 1"}
     updated_info, _ = run(test_info)
-    likname = list(test_info_common["likelihood"])[0]
+    likname = next(iter(test_info_common["likelihood"]))
     default_info = get_default_info(likname, "likelihood")
     default_info["prior"].update(test_info["prior"])
     assert updated_info["prior"] == default_info["prior"]
@@ -38,7 +38,7 @@ def test_prior_inherit_differentgiven():
 
 def test_prior_inherit_samegiven():
     test_info = deepcopy(test_info_common)
-    likname = list(test_info_common["likelihood"])[0]
+    likname = next(iter(test_info_common["likelihood"]))
     default_info = get_default_info(likname, "likelihood")
     name, prior = deepcopy(default_info["prior"]).popitem()
     test_info["prior"] = {name: prior}
@@ -48,9 +48,9 @@ def test_prior_inherit_samegiven():
 
 def test_prior_inherit_samegiven_differentdefinition():
     test_info = deepcopy(test_info_common)
-    likname = list(test_info_common["likelihood"])[0]
+    likname = next(iter(test_info_common["likelihood"]))
     default_info = get_default_info(likname, "likelihood")
-    name, prior = deepcopy(default_info["prior"]).popitem()
+    name, _prior = deepcopy(default_info["prior"]).popitem()
     test_info["prior"] = {name: "this is not a prior"}
     with pytest.raises(LoggedError):
         run(test_info)
@@ -58,7 +58,7 @@ def test_prior_inherit_samegiven_differentdefinition():
 
 def test_inherit_label_and_bounds():
     test_info = deepcopy(test_info_common)
-    likname = list(test_info_common["likelihood"])[0]
+    likname = next(iter(test_info_common["likelihood"]))
     default_info_params = get_default_info(likname, "likelihood")["params"]
     test_info["params"] = deepcopy(default_info_params)
     test_info["params"]["a1"].pop("latex", None)
@@ -77,7 +77,7 @@ def test_run_file(tmpdir):
     root = os.path.join(tmpdir, "test")
     yaml_dump_file(input_file, dict(test_info_common, output=root))
     run_script([input_file, "--force"])
-    likname = list(test_info_common["likelihood"])[0]
+    likname = next(iter(test_info_common["likelihood"]))
     default_info = get_default_info(likname, "likelihood")
     updated_info = yaml_load_file(root + ".updated.yaml")
     assert updated_info["prior"] == default_info["prior"]

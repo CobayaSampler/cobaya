@@ -127,9 +127,9 @@ def _test_loglike(theories):
         info["theory"] = dict(th)
         model = get_model(info)
 
-        assert model.loglikes({})[0] == 8, "test loglike failed for %s" % th
+        assert model.loglikes({})[0] == 8, f"test loglike failed for {th}"
         assert model.loglikes({}, return_derived=False, cached=False) == 8, (
-            "non-derived loglike failed for %s" % th
+            f"non-derived loglike failed for {th}"
         )
 
 
@@ -264,7 +264,7 @@ def _test_loglike2(theories):
     for th in theories, theories[::-1]:
         info2["theory"] = dict(th)
         model = get_model(info2)
-        assert model.loglike()[0] == 20.0, "fail conditional dependency for %s" % th
+        assert model.loglike()[0] == 20.0, f"fail conditional dependency for {th}"
 
 
 def test_conditional_dependencies():

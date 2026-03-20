@@ -42,13 +42,11 @@ def target_pdf_prior(a, b):
 
 _range = {"min": -2, "max": 2}
 ref_pdf = {"dist": "norm", "loc": 0, "scale": 0.1}
-info_params: ParamsDict = dict(
-    [
-        ("a", {"prior": _range, "ref": ref_pdf, "proposal": sigma}),
-        ("b", {"prior": _range, "ref": ref_pdf, "proposal": sigma}),
-        ("a_plus_b", {"derived": lambda a, b: a + b}),
-    ]
-)
+info_params: ParamsDict = {
+    "a": {"prior": _range, "ref": ref_pdf, "proposal": sigma},
+    "b": {"prior": _range, "ref": ref_pdf, "proposal": sigma},
+    "a_plus_b": {"derived": lambda a, b: a + b},
+}
 
 info_sampler = {"mcmc": {"Rminus1_stop": 0.25, "Rminus1_cl_stop": 0.5, "seed": 1}}
 info_sampler_dummy = {"evaluate": {"N": 10}}
@@ -112,7 +110,7 @@ def test_post_prior(tmpdir, temperature):
             "add": {"prior": {"target": target_pdf_prior}},
         },
     }
-    if list(info["sampler"].keys())[0] == "mcmc":
+    if next(iter(info["sampler"].keys())) == "mcmc":
         if info["sampler"]["mcmc"] is None:
             info["sampler"]["mcmc"] = {}
         info["sampler"]["mcmc"]["temperature"] = temperature
@@ -131,7 +129,7 @@ def test_post_prior(tmpdir, temperature):
         target_mean_cobaya, target_cov_cobaya = mpi.share()
         target_mean_getdist, target_cov_getdist = mpi.share()
     for pass_chains in [False, True]:
-        _, post_products = post(
+        _, _post_products = post(
             info_post, sample=sampler.samples() if pass_chains else None
         )
         # Load with GetDist and compare
@@ -206,7 +204,7 @@ def test_post_likelihood():
                 }
             }
         )
-        info_post_out, products_post = post(info_out, sampler.samples())
+        _info_post_out, products_post = post(info_out, sampler.samples())
         mcsamples_post = products_post.samples(to_getdist=True)
 
         # Load with GetDist and compare

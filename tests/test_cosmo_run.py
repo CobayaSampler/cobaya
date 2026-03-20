@@ -239,7 +239,7 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
 
     # adding new theory derived
     info_post["add"]["theory"] = {"new_param_theory": BTheory}
-    output_info, post_results_derived = run(
+    _output_info, post_results_derived = run(
         updated_info, override={"post": info_post}, output=False
     )
     samp3 = post_results_derived.samples(to_getdist=True)
