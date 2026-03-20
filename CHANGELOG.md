@@ -1,3 +1,14 @@
+## 3.6.2 – 2026-xx-xx
+
+### General
+
+- New grid scripts optional parameter --musthave-params (#477; thanks @louisl3grand)
+- Fixed regression in grid script jobqueue (preventing correct job submissions; thanks @louisl3grand)
+
+### Cosmology
+
+- CAMB 1.6.6 support for use_non_linear_ratio: True to use external non-linear Theory model consistently
+
 ## 3.6.1 – 2026-01-30
 
 ### General

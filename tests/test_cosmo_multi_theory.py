@@ -7,7 +7,7 @@ import pytest
 from cobaya.likelihood import Likelihood, LikelihoodInterface
 from cobaya.model import get_model
 from cobaya.theory import Theory
-from cobaya.typing import InputDict, ParamDict, empty_dict
+from cobaya.typing import InputDict, ParamDict, ParamsDict, empty_dict
 
 from .common import process_packages_path
 from .conftest import install_test_wrapper
@@ -59,7 +59,7 @@ cmb_likelihood_info = {
     "requires": {"Hubble": {"z": [0.5]}, "CAMBdata": None},
 }
 
-camb_params = {
+camb_params: ParamsDict = {
     "ombh2": 0.022274,
     "omch2": 0.11913,
     "cosmomc_theta": 0.01040867,
@@ -109,9 +109,9 @@ def test_bbn_yhe(packages_path, skip_not_installed):
             for explicit_derived in [None, None, {"derived": True}]:
                 print(inf, order, explicit_derived)
                 model = get_model(inf)
-                loglike, derived = model.loglikes({})
+                _, derived = model.loglikes({})
                 vals = set([BBN.bbn.Y_He(camb_params["ombh2"])] + derived)
-                assert len(vals) == 1, "wrong Yhe value: %s" % vals
+                assert len(vals) == 1, f"wrong Yhe value: {vals}"
                 inf["params"]["YHe"] = explicit_derived
             inf["params"].pop("YHe")
             inf["theory"] = {p: v for p, v in reversed(list(inf["theory"].items()))}
@@ -148,7 +148,7 @@ class BBN_with_theory_errors(BBN, LikelihoodInterface):
     params = {
         "BBN_delta": {
             "prior": {"min": 0, "max": 1},
-            "ref": dict(dist="norm", loc=0, scale=1),
+            "ref": {"dist": "norm", "loc": 0, "scale": 1},
         }
     }
 
@@ -166,7 +166,7 @@ class BBN_with_theory_errors(BBN, LikelihoodInterface):
 
 
 info_error: InputDict = {
-    "likelihood": dict([("cmb", cmb_likelihood_info), ("BBN", BBN_likelihood)]),
+    "likelihood": {"cmb": cmb_likelihood_info, "BBN": BBN_likelihood},
     "theory": {"camb": {"requires": ["YHe", "ombh2"]}},
     "params": dict(YHe={"prior": {"min": 0, "max": 1}}, **camb_params),
     "debug": debug,
@@ -190,13 +190,12 @@ info_error2: InputDict = {
 
 def test_bbn_likelihood(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
-    install_test_wrapper(skip_not_installed, get_camb, packages_path)
-    from camb.bbn import BBN_table_interpolator
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
 
-    BBN_likelihood.bbn = BBN_table_interpolator(bbn_table)
+    BBN_likelihood.bbn = camb.bbn.BBN_table_interpolator(bbn_table)
     model = get_model(info_error, packages_path=packages_path)
     assert np.allclose(model.loglikes({"YHe": 0.246})[0], [0.246, -0.8696], rtol=1e-3), (
-        "Failed BBN likelihood with %s" % info_error
+        f"Failed BBN likelihood with {info_error}"
     )
 
     # second case, BBN likelihood has to be calculated before CAMB
@@ -295,12 +294,6 @@ class TrivialNonLinearRatio(Theory):
         ratio = ratio_amp * np.ones((len(z), len(k_h)))
         return {"k_h": k_h, "z": z, "ratio": ratio}
 
-    def calculate(self, state, want_derived=True, **params_values_dict):
-        pass
-
-    def get_can_support_params(self):
-        return []
-
 
 class NonLinearRatioLike(Likelihood):
     def get_requirements(self):
@@ -336,11 +329,10 @@ info_non_linear_ratio: InputDict = {
 
 def test_trivial_non_linear_ratio(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
-    install_test_wrapper(skip_not_installed, get_camb, packages_path)
-    import camb
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
 
     if not hasattr(camb.nonlinear, "ExternalNonLinearRatio"):
-        pytest.skip("CAMB does not yet have ExternalNonLinearRatio")
+        pytest.skip("CAMB < 1.6.6 does not have ExternalNonLinearRatio")
 
     info_non_linear_ratio["packages_path"] = packages_path
     model = get_model(info_non_linear_ratio)
