@@ -95,10 +95,9 @@ info2: InputDict = {
 
 def test_bbn_yhe(packages_path, skip_not_installed):
     packages_path = process_packages_path(packages_path)
-    install_test_wrapper(skip_not_installed, get_camb, packages_path)
-    from camb.bbn import BBN_table_interpolator
+    camb = install_test_wrapper(skip_not_installed, get_camb, packages_path)
 
-    BBN.bbn = BBN_table_interpolator(bbn_table)
+    BBN.bbn = camb.bbn.BBN_table_interpolator(bbn_table)
     BBN2.bbn = BBN.bbn
 
     info["params"]["check"] = {"derived": True}
