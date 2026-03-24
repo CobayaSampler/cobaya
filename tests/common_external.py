@@ -93,9 +93,8 @@ info_method_unnamed_kwargs = {
 def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
     rand = mpi.share(random())
     prefix = os.path.join(tmpdir, "%d" % round(1e8 * rand)) + os.sep
-    if mpi.is_main_process():
-        if os.path.exists(prefix):
-            shutil.rmtree(prefix)
+    if mpi.is_main_process() and os.path.exists(prefix):
+        shutil.rmtree(prefix)
     # build updated info
     info: InputDict = {
         "output": prefix,
@@ -168,7 +167,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
             assert np.allclose(
                 -2 * logps[lik],
                 products["sample"][get_chi2_name(lik)].to_numpy(dtype=np.float64),
-            ), "The value of the likelihood '%s' is not reproduced correctly." % lik
+            ), f"The value of the likelihood '{lik}' is not reproduced correctly."
     assert np.allclose(
         logprior_base + sum(logps[p] for p in info_logpdf),
         -products["sample"]["minuslogpost"].to_numpy(dtype=np.float64),
@@ -217,8 +216,9 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
                 info_likelihood[lik].pop(k, None)
                 updated_info["likelihood"][lik].pop(k)
         assert info_likelihood == updated_info["likelihood"], (
-            "The likelihood information has not been updated correctly\n %r vs %r"
-            % (info_likelihood, updated_info["likelihood"])
+            "The likelihood information has not been updated correctly\n {!r} vs {!r}".format(
+                info_likelihood, updated_info["likelihood"]
+            )
         )
     # Test updated info -- yaml
     # For now, only if ALL external pdfs are given as strings,
@@ -227,7 +227,7 @@ def body_of_test(info_logpdf, kind, tmpdir, derived=False, manual=False):
         updated_output_file = os.path.join(prefix, FileSuffix.updated + ".yaml")
         with open(updated_output_file, encoding="utf-8") as updated:
             updated_yaml = yaml_load(updated.read())
-        for k, v in stringy.items():
+        for k in stringy:
             to_test = updated_yaml[kind][k]
             if kind == "likelihood":
                 to_test = to_test["external"]

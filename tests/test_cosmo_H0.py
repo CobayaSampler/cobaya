@@ -33,7 +33,7 @@ def test_H0_docs(packages_path, skip_not_installed):
             os.path.dirname(__file__), "../docs/src_examples/H0/custom_likelihood.yaml"
         )
     )
-    like_name = list(like_info["likelihood"])[0]
+    like_name = next(iter(like_info["likelihood"]))
     like_info["likelihood"][like_name]["external"] = like_info["likelihood"][like_name][
         "external"
     ].replace("mu_H0", str(fiducial_H0))
@@ -68,7 +68,7 @@ def body_of_test(
         info["likelihood"] = {like_name: None}
     elif like_info:
         info["likelihood"] = like_info
-        like_name = list(like_info)[0]
+        like_name = next(iter(like_info))
     fiducial, fiducial_std, name = (
         (fiducial_Mb, fiducial_Mb_std, "Mb")
         if Mb
@@ -78,9 +78,9 @@ def body_of_test(
     updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
     # The default values for .get are for the _docs_ test
-    mean = updated_info["likelihood"][like_name].get("%s_mean" % name, fiducial)
-    std = updated_info["likelihood"][like_name].get("%s_std" % name, fiducial_std)
+    mean = updated_info["likelihood"][like_name].get(f"{name}_mean", fiducial)
+    std = updated_info["likelihood"][like_name].get(f"{name}_std", fiducial_std)
     reference_chi2 = (fiducial - mean) ** 2 / std**2
-    chi2_label = "chi2__" + list(info["likelihood"])[0]
+    chi2_label = "chi2__" + next(iter(info["likelihood"]))
     computed_chi2 = products["sample"][chi2_label].to_numpy(dtype=np.float64)[0]
     assert np.allclose(computed_chi2, reference_chi2)

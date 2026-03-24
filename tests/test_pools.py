@@ -27,7 +27,7 @@ def _get_rng():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_pool1d():
-    seed, rng = _get_rng()
+    _seed, rng = _get_rng()
     values = rng.random(n_pool)
     pool = Pool1D(values)
     test_values = rng.choice(values, n_test) + r_perturb * rng.random(n_test)
@@ -38,7 +38,7 @@ def test_pool1d():
 
 
 def test_pool1d_fail():
-    seed, rng = _get_rng()
+    _seed, rng = _get_rng()
     values = rng.random(1)
     pool = Pool1D(values)
     test_values = [2]  # out of range
@@ -48,7 +48,7 @@ def test_pool1d_fail():
 
 @flaky(max_runs=max_runs, min_passes=1)
 def test_pool2d(from_list=False):
-    seed, rng = _get_rng()
+    _seed, rng = _get_rng()
     if from_list:
         # num of combinations N needs to be ~= n_test
         # if list of length m (large): N = (m**2 - m) / 2 ~= m**2 / 2
@@ -72,7 +72,7 @@ def test_pool2d_from_list():
 
 
 def test_pool2d_fail():
-    seed, rng = _get_rng()
+    _seed, rng = _get_rng()
     values = rng.random(2)
     pool = Pool2D(values)
     test_values = [2, 2]  # out of range

@@ -98,7 +98,7 @@ def test_CAMBdata(packages_path, skip_not_installed):
     def test_likelihood(_self):
         return _self.provider.get_CAMBdata().tau0
 
-    test_likelihood_requires = {"CAMBdata": None, "Pk_grid": dict(k_max=2, z=[0, 2])}
+    test_likelihood_requires = {"CAMBdata": None, "Pk_grid": {"k_max": 2, "z": [0, 2]}}
 
     model = _get_model(
         packages_path,
@@ -116,7 +116,7 @@ def test_CAMB_transfer(packages_path, skip_not_installed):
     pars.set_matter_power(redshifts=[0, 2], kmax=2)
     pars.WantCls = False
     results = camb.get_results(pars)
-    k, z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
+    _k, _z, PK1 = results.get_nonlinear_matter_power_spectrum(hubble_units=False)
 
     def test_likelihood(_self):
         _, _, PK = _self.provider.get_Pk_grid()
@@ -124,7 +124,7 @@ def test_CAMB_transfer(packages_path, skip_not_installed):
         np.testing.assert_allclose(PK, PK1, rtol=1e-4)
         return 1
 
-    test_likelihood_requires = {"Pk_grid": dict(k_max=2, z=[0, 2])}
+    test_likelihood_requires = {"Pk_grid": {"k_max": 2, "z": [0, 2]}}
 
     model = _get_model(
         packages_path,
@@ -145,13 +145,13 @@ def test_CAMB_sigma_R(packages_path, skip_not_installed):
     sigma_R = results.get_sigmaR(R=R, hubble_units=False)[::-1, :]
 
     def test_likelihood(_self):
-        r_out, z_out, sigma_R_out = _self.provider.get_sigma_R()
+        _r_out, z_out, sigma_R_out = _self.provider.get_sigma_R()
         assert np.allclose(z_out, redshifts)
         np.testing.assert_allclose(sigma_R, sigma_R_out, rtol=1e-3)
         return 1
 
     test_likelihood_requires = {
-        "sigma_R": dict(z=[0, 2, 5], R=R),
+        "sigma_R": {"z": [0, 2, 5], "R": R},
         "Pk_grid": {"k_max": 1, "z": np.arange(0.2, 6, 1)},
     }
 
