@@ -43,8 +43,8 @@ def packages_path(request):
     if not cmd_packages_path:
         raise ValueError(
             "Could not determine packages installation path. "
-            "Either define it in the env variable %r, or pass it as an "
-            "argument with `--%s`" % (packages_path_env, packages_path_arg_posix)
+            f"Either define it in the env variable {packages_path_env!r}, or pass it as an "
+            f"argument with `--{packages_path_arg_posix}`"
         )
     return cmd_packages_path
 

@@ -40,21 +40,21 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
             exec(open(os.path.join(docs_src_folder, "3.py")).read(), globals_example)
         # Comparing text output for this cell -- only derived parameter values
         out_filename = "3.out"
-        derived_line_old, derived_line_new = map(
-            lambda lines: next(line for line in lines[::-1] if line),
-            [
+        derived_line_old, derived_line_new = (
+            next(line for line in lines[::-1] if line)
+            for lines in [
                 open(os.path.join(docs_src_folder, out_filename)).readlines(),
                 stream.getvalue().split("\n"),
-            ],
+            ]
         )
-        derived_params_old, derived_params_new = map(
-            lambda x: eval(x[x.find("{") :]), [derived_line_old, derived_line_new]
+        derived_params_old, derived_params_new = (
+            eval(x[x.find("{") :]) for x in [derived_line_old, derived_line_new]
         )
         oldvals = list(derived_params_old.values())
         newvals = [derived_params_new[v] for v in derived_params_old]
         assert np.allclose(oldvals, newvals), (
-            "Wrong derived parameters line:\nBEFORE: %s\nNOW:    %s"
-            % (derived_line_old, derived_line_new)
+            f"Wrong derived parameters line:\nBEFORE: {derived_line_old}\n"
+            "NOW:    {derived_line_new}"
         )
         # Not testing figures for now (not robust)
         # Instead, let's just check that no error is raised
@@ -64,7 +64,7 @@ def test_cosmo_docs_model_classy(packages_path, skip_not_installed):
                     open(os.path.join(docs_src_folder, filename)).read(), globals_example
                 )
             except Exception:
-                assert False, "File %s failed." % filename
+                assert False, f"File {filename} failed."
         #        if test_figs:
         #            # Compare plots
         #            pre = "cosmo_model_"
