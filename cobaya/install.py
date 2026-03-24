@@ -865,4 +865,5 @@ def install_script(args=None):
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
     install_script()
