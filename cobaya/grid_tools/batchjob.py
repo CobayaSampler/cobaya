@@ -57,14 +57,14 @@ def readobject(directory=None):
             with open(fname, "rb") as inp:
                 grid = pickle.load(inp)
         if not os.path.exists(grid.batchPath):
-            raise FileNotFoundError("Directory not found %s" % grid.batchPath)
-        return grid
+            raise FileNotFoundError(f"Directory not found {grid.batchPath}")
     except Exception as e:
         print("Error loading cached batch object: ", e)
         resetGrid(directory)
         if gridconfig.path_is_grid(directory):
             return gridconfig.makeGrid(directory, read_only=True, interactive=False)
         raise
+    return grid
 
 
 def saveobject(obj, filename):
@@ -146,7 +146,7 @@ class DataSet:
         return data
 
     def standardizeParams(self, params):
-        if isinstance(params, dict) or isinstance(params, str):
+        if isinstance(params, (dict, str)):
             params = [params]
         for i in range(len(params)):
             if isinstance(params[i], str) and yaml_ext not in params[i]:
@@ -297,7 +297,7 @@ class JobItem(PropertiesItem):
             if len(set(imp_run.names).intersection(self.data_set.names)) > 0:
                 print(
                     f"importance job duplicating parent data set: {self.name} "
-                    "with {imp_run.names}"
+                    f"with {imp_run.names}"
                 )
                 continue
             data = self.data_set.extendForImportance(imp_run.names, imp_run.inis)
@@ -575,7 +575,7 @@ class BatchJob(PropertiesItem):
             for data_set in group["datasets"]:
                 if isinstance(data_set, str):
                     if data_set not in dataset_infos:
-                        raise ValueError("Dataset name '%s' must be defined." % data_set)
+                        raise ValueError(f"Dataset name '{data_set}' must be defined.")
                     info = (dataset_infos.get(data_set) or {}).copy()
                     dataset = DataSet(info.pop("tags", data_set.split("_")), info)
                 else:
@@ -586,7 +586,7 @@ class BatchJob(PropertiesItem):
                         dataset.names if isinstance(dataset, DataSet) else dataset[0]
                     )
                 ) in data_used:
-                    raise ValueError("Duplicate dataset tags %s" % data_tags)
+                    raise ValueError(f"Duplicate dataset tags {data_tags}")
                 data_used.add(data_tags)
                 models_used = set()
                 for model in group["models"]:
@@ -599,7 +599,7 @@ class BatchJob(PropertiesItem):
                         ):
                             continue
                         if model not in model_infos:
-                            raise ValueError("Model '%s' must be defined." % model)
+                            raise ValueError(f"Model '{model}' must be defined.")
                         model_info = (model_infos[model] or {}).copy()
                         model = (
                             (model_info.pop("tags", []) or [])
@@ -611,7 +611,7 @@ class BatchJob(PropertiesItem):
                             "models must be model name strings or list of model names"
                         )
                     if frozenset(model) in models_used:
-                        raise ValueError("Duplicate model (parameter) tags %s" % model)
+                        raise ValueError(f"Duplicate model (parameter) tags {model}")
                     models_used.add(frozenset(model))
                     item = JobItem(
                         self.batchPath,
@@ -642,7 +642,7 @@ class BatchJob(PropertiesItem):
                 if self.has_normed_name(x.normed_name):
                     if messages:
                         print(
-                            "replacing importance sampling run with full run: %s" % x.name
+                            f"replacing importance sampling run with full run: {x.name}"
                         )
                     item.removeImportance(x)
         for item in list(self.items()):

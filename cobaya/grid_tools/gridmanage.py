@@ -66,7 +66,7 @@ def grid_converge(args=None):
         help="finds chains with big spread in the last update time",
     )
 
-    (batch, args) = opts.parseForBatch(args)
+    _, args = opts.parseForBatch(args)
 
     not_exist = []
     converge = []
@@ -97,9 +97,8 @@ def grid_converge(args=None):
                 args.converge == 0
                 or args.checkpoint
                 or not job_item.hasConvergeBetterThan(args.converge, returnNotExist=True)
-            ):
-                if not args.not_running or job_item.notRunning():
-                    converge.append(job_item)
+            ) and (not args.not_running or job_item.notRunning()):
+                converge.append(job_item)
 
         print("Checking batch (from last grid getdist output):")
         if not args.exist and len(not_exist) > 0:
@@ -171,7 +170,7 @@ def grid_getdist(args=None):
         "--exist", action="store_true", help="Silently skip all chains that don't exist"
     )
 
-    (batch, args) = opts.parseForBatch(args)
+    batch, args = opts.parseForBatch(args)
 
     ini_dir = batch.batchPath + "getdist" + os.sep
     os.makedirs(ini_dir, exist_ok=True)
@@ -236,13 +235,13 @@ def grid_list(args=None):
     opts.parser.add_argument("--exists", action="store_true", help="chain must exist")
     opts.parser.add_argument("--normed", action="store_true", help="Output normed names")
 
-    (batch, args) = opts.parseForBatch(args)
+    _, args = opts.parseForBatch(args)
     items = opts.sortedParamtagDict(chainExist=args.exists)
 
     for paramtag, parambatch in items:
         for jobItem in parambatch:
             if hasattr(jobItem, "group"):
-                tag = "(%s)" % jobItem.group
+                tag = f"({jobItem.group})"
             else:
                 tag = ""
             if args.normed:
@@ -271,7 +270,7 @@ def grid_cleanup(args=None):
     opts.parser.add_argument("--confirm", action="store_true")
     opts.parser.add_argument("--chainnum", default=None)
 
-    (batch, args) = opts.parseForBatch(args)
+    _, args = opts.parseForBatch(args)
 
     sizeMB = 0
 
@@ -314,7 +313,7 @@ def grid_cleanup(args=None):
                                     if args.confirm:
                                         os.remove(fname)
 
-    print("Total size: %.3g MB" % sizeMB)
+    print(f"Total size: {sizeMB:.3g} MB")
     if not args.confirm:
         print("Files not actually deleted: add --confirm to delete")
 
@@ -382,7 +381,7 @@ def grid_copy(args=None):
         help="make a zip file. Not needed if target_dir is a filename ending in .zip",
     )
 
-    (batch, args) = opts.parseForBatch(args)
+    batch, args = opts.parseForBatch(args)
 
     if args.target_dir.endswith(".zip"):
         args.zip = True
@@ -559,7 +558,7 @@ def grid_extract(args=None):
         help="XX YY XX2 YY2 replaces name XX with YY, XX2 with YY2 etc.",
     )
 
-    (batch, args) = opts.parseForBatch(args)
+    _, args = opts.parseForBatch(args)
 
     target_dir = os.path.abspath(args.target_dir) + os.sep
     if not os.path.exists(target_dir):

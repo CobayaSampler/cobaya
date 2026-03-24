@@ -30,11 +30,9 @@ class Planck2018CamSpec2021Python(Planck2018CamSpecPython):
         tilt[3] = data_params["n_143x217"]
 
         powerlaw_pivot = 1500
-        C_powerlaw = np.array(
+        return np.array(
             [amp[ii] * (self.ls / powerlaw_pivot) ** tilt[ii] for ii in range(4)]
         )
-
-        return C_powerlaw
 
     def get_foregrounds(self, data_params):
         use_fg_residual_model = data_params["use_fg_residual_model"]

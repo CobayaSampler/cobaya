@@ -32,8 +32,8 @@ class LoggedError(Exception):
             logger = get_logger(logger)
         if not isinstance(logger, logging.Logger):
             raise SyntaxError(
-                "The first argument of %s must be a logger "
-                "instance or name." % self.__class__.__name__
+                f"The first argument of {self.__class__.__name__} must be a logger "
+                "instance or name."
             )
         if args:
             # If the exception is going to be caught, we may not want to print the msg

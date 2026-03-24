@@ -449,28 +449,23 @@ class SampleCollection(BaseCollection):
                 len(values),
                 len(self.sampled_params),
             )
-        if derived is not None:
-            if len(derived) != len(self.derived_params):
-                raise LoggedError(
-                    self.log,
-                    "Got %d values for the derived parameters. Should be %d.",
-                    len(derived),
-                    len(self.derived_params),
-                )
+        if derived is not None and len(derived) != len(self.derived_params):
+            raise LoggedError(
+                self.log,
+                "Got %d values for the derived parameters. Should be %d.",
+                len(derived),
+                len(self.derived_params),
+            )
         if isinstance(logpost, LogPosterior):
             # If priors and likes passed, check consistency
-            if logpriors is not None:
-                if not np.allclose(logpriors, logpost.logpriors):
-                    raise LoggedError(
-                        self.log,
-                        "logpriors not consistent with LogPosterior object passed.",
-                    )
-            if loglikes is not None:
-                if not np.allclose(loglikes, logpost.loglikes):
-                    raise LoggedError(
-                        self.log,
-                        "loglikes not consistent with LogPosterior object passed.",
-                    )
+            if logpriors is not None and (
+                not np.allclose(logpriors, logpost.logpriors)
+                or not np.allclose(loglikes, logpost.loglikes)
+            ):
+                raise LoggedError(
+                    self.log,
+                    "logpriors not consistent with LogPosterior object passed.",
+                )
             if derived is not None:
                 # A simple np.allclose is not enough, because np.allclose([1], []) = True!
                 if len(derived) != len(logpost.derived) or not np.allclose(
@@ -1158,13 +1153,12 @@ class SampleCollection(BaseCollection):
             ]
         # No logging of warnings temporarily, so getdist won't complain unnecessarily
         with NoLogging():
-            mcsamples = MCSamples(
+            return MCSamples(
                 samples=self.data[names].to_numpy(dtype=np.float64)[first:last],
                 weights=weights,
                 loglikes=minuslogposts,
                 names=names,
             )
-        return mcsamples
 
     def to_getdist(
         self,

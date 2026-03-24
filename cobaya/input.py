@@ -340,7 +340,7 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
                     block,
                     block,
                 )
-            if isinstance(name, CobayaComponent) or isinstance(name, type):
+            if isinstance(name, (CobayaComponent, type)):
                 raise LoggedError(
                     logger,
                     (
@@ -414,10 +414,10 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
                     [
                         (
                             "'{}' (did you mean {}?)".format(
-                                o, "|".join(["'%s'" % _ for _ in a])
+                                o, "|".join([f"'{_}'" for _ in a])
                             )
                             if a
-                            else "'%s'" % o
+                            else f"'{o}'"
                         )
                         for o, a in alternatives.items()
                     ]
@@ -633,7 +633,7 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         # First, deal with root-level options (force, output, ...)
         if not isinstance(block1, dict):
             if block1 != block2:
-                myprint(myname + ": different option '%s'" % block_name)
+                myprint(myname + f": different option '{block_name}'")
                 return False
             continue
         # Now let's do components and params
@@ -641,8 +641,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
         f = list if strict else set
         if f(block1) != f(block2):
             myprint(
-                myname
-                + f": different [{block_name}] or different order of them: {list(block1)!r} vs {list(block2)!r}"
+                myname + f": different [{block_name}] or different order of them: "
+                "{list(block1)!r} vs {list(block2)!r}"
             )
             return False
         # 2. Gather general options to be ignored
@@ -666,33 +666,32 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
                     block2[param]["renames"] = set(block2[param].get("renames", []))
         # 3. Now check component/parameters one-by-one
         for k in block1:
-            if not strict:
+            if not strict and block_name in kinds:
                 # Add component-specific options to be ignored
-                if block_name in kinds:
-                    ignore_k_this = ignore_k.union({"python_path"})
-                    if "external" not in block1[k]:
-                        try:
-                            component_path = (
-                                block1[k].pop("python_path", None)
-                                if isinstance(block1[k], dict)
-                                else None
-                            )
-                            cls = get_component_class(
-                                k,
-                                kind=block_name,
-                                component_path=component_path,
-                                class_name=(block1[k] or {}).get("class"),
-                                logger=logger,
-                            )
-                            ignore_k_this.update(
-                                set(getattr(cls, "_at_resume_prefer_new", []))
-                            )
-                        except ImportError:
-                            pass
-                    # Pop ignored and kept options
-                    for j in ignore_k_this:
-                        block1[k].pop(j, None)
-                        block2[k].pop(j, None)
+                ignore_k_this = ignore_k.union({"python_path"})
+                if "external" not in block1[k]:
+                    try:
+                        component_path = (
+                            block1[k].pop("python_path", None)
+                            if isinstance(block1[k], dict)
+                            else None
+                        )
+                        cls = get_component_class(
+                            k,
+                            kind=block_name,
+                            component_path=component_path,
+                            class_name=(block1[k] or {}).get("class"),
+                            logger=logger,
+                        )
+                        ignore_k_this.update(
+                            set(getattr(cls, "_at_resume_prefer_new", []))
+                        )
+                    except ImportError:
+                        pass
+                # Pop ignored and kept options
+                for j in ignore_k_this:
+                    block1[k].pop(j, None)
+                    block2[k].pop(j, None)
             if not strict:
                 # For Mapping values, homogenize to None empty lists, sets, maps, etc.
                 # e.g. {value: {}} should be equal to {value: None}

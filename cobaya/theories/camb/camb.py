@@ -260,6 +260,7 @@ class CAMB(BoltzmannBase):
 
     file_base_name = "camb"
     external_primordial_pk: bool
+    use_non_linear_ratio: bool
     camb: Any
     ignore_obsolete: bool
 
@@ -327,11 +328,14 @@ class CAMB(BoltzmannBase):
                 power_spectrum.set_params
             )
 
+        if self.use_non_linear_ratio:
+            self.extra_args["non_linear_model"] = (
+                self.camb.nonlinear.ExternalNonLinearRatio
+            )
         nonlin = self.camb.CAMBparams.make_class_named(
             self.extra_args.get("non_linear_model", self.camb.nonlinear.Halofit),
             self.camb.nonlinear.NonLinearModel,
         )
-
         self.nonlin_args, self.nonlin_params = self._extract_params(nonlin.set_params)
 
         self.requires = str_to_list(getattr(self, "requires", []))
@@ -433,7 +437,7 @@ class CAMB(BoltzmannBase):
 
         for k, v in self._must_provide.items():
             # Products and other computations
-            if k == "Cl" or k == "lensed_scal_Cl":
+            if k in {"Cl", "lensed_scal_Cl"}:
                 self.set_cl_reqs(v)
                 cls = [a.lower() for a in v]
                 needs_lensing = set(cls).intersection({"pp", "pt", "pe", "tp", "ep"})
@@ -457,7 +461,7 @@ class CAMB(BoltzmannBase):
                 )
                 if "pp" in cls and self.extra_args.get("lens_potential_accuracy") is None:
                     self.extra_args["lens_potential_accuracy"] = 1
-                self.non_linear_sources = (
+                self.non_linear_sources = self.non_linear_sources or (
                     self.extra_args.get("lens_potential_accuracy", 1) >= 1
                 )
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
@@ -507,35 +511,41 @@ class CAMB(BoltzmannBase):
                 self.add_to_redshifts(redshifts)
                 var_pair = k[1:]
 
-                def get_sigmaR(results, **tmp):
-                    _indices = self._sigmaR_z_indices.get(var_pair)
-                    if _indices is None or list(_indices) == []:
-                        z_indices = []
-                        calc = np.array(
-                            results.Params.Transfer.PK_redshifts[
-                                : results.Params.Transfer.PK_num_redshifts
-                            ]
+                def make_get_sigmaR(redshifts, var_pair):
+                    def get_sigmaR(results, **tmp):
+                        _indices = self._sigmaR_z_indices.get(var_pair)
+                        if _indices is None or list(_indices) == []:
+                            z_indices = []
+                            calc = np.array(
+                                results.Params.Transfer.PK_redshifts[
+                                    : results.Params.Transfer.PK_num_redshifts
+                                ]
+                            )
+                            for z in redshifts:
+                                for i, zcalc in enumerate(calc):
+                                    if np.isclose(zcalc, z, rtol=1e-4):
+                                        z_indices += [i]
+                                        break
+                                else:
+                                    raise LoggedError(
+                                        self.log,
+                                        "sigma_R redshift not found in computed "
+                                        "P_K array %s",
+                                        z,
+                                    )
+                            _indices = np.array(z_indices, dtype=np.int32)
+                            self._sigmaR_z_indices[var_pair] = _indices
+                        R, z, sigma = results.get_sigmaR(
+                            hubble_units=False, return_R_z=True, z_indices=_indices, **tmp
                         )
-                        for z in redshifts:
-                            for i, zcalc in enumerate(calc):
-                                if np.isclose(zcalc, z, rtol=1e-4):
-                                    z_indices += [i]
-                                    break
-                            else:
-                                raise LoggedError(
-                                    self.log,
-                                    "sigma_R redshift not foundin computed P_K array %s",
-                                    z,
-                                )
-                        _indices = np.array(z_indices, dtype=np.int32)
-                        self._sigmaR_z_indices[var_pair] = _indices
-                    R, z, sigma = results.get_sigmaR(
-                        hubble_units=False, return_R_z=True, z_indices=_indices, **tmp
-                    )
-                    return z, R, sigma
+                        return z, R, sigma
+
+                    return get_sigmaR
 
                 kwargs.update(dict(zip(["var1", "var2"], var_pair)))
-                self.collectors[k] = Collector(method=get_sigmaR, kwargs=kwargs)
+                self.collectors[k] = Collector(
+                    method=make_get_sigmaR(redshifts, var_pair), kwargs=kwargs
+                )
                 self.needs_perts = True
             elif isinstance(k, tuple) and k[0] == "Pk_grid":
                 kwargs = v.copy()
@@ -627,6 +637,8 @@ class CAMB(BoltzmannBase):
                         "max_l_tensor", self.extra_args.get("lmax")
                     )
                 }
+        if self.use_non_linear_ratio and self.needs_perts:
+            must_provide["non_linear_ratio"] = {}
         return must_provide
 
     def add_to_redshifts(self, z):
@@ -701,13 +713,21 @@ class CAMB(BoltzmannBase):
                     args.update(self.initial_power_args)
                     results.Params.InitPower.set_params(**args)
                 if self.non_linear_sources or self.non_linear_pk:
-                    args = {
-                        self.translate_param(p): v
-                        for p, v in params_values_dict.items()
-                        if p in self.nonlin_params
-                    }
-                    args.update(self.nonlin_args)
-                    results.Params.NonLinearModel.set_params(**args)
+                    if self.use_non_linear_ratio:
+                        non_linear_ratio = self.provider.get_non_linear_ratio(results)
+                        results.Params.NonLinearModel.set_ratio(
+                            non_linear_ratio["k_h"],
+                            non_linear_ratio["z"],
+                            non_linear_ratio["ratio"],
+                        )
+                    else:
+                        args = {
+                            self.translate_param(p): v
+                            for p, v in params_values_dict.items()
+                            if p in self.nonlin_params
+                        }
+                        args.update(self.nonlin_args)
+                        results.Params.NonLinearModel.set_params(**args)
                 results.power_spectra_from_transfer()
                 if "sigma8" in params_values_dict:
                     sigma8 = results.get_sigma8_0()
@@ -739,7 +759,8 @@ class CAMB(BoltzmannBase):
                 self.log.debug(
                     "Computation of cosmological products failed. "
                     "Assigning 0 likelihood and going on. "
-                    "The output of the CAMB error was %s" % e
+                    "The output of the CAMB error was %s",
+                    e,
                 )
                 return False
             # Prepare derived parameters
@@ -871,7 +892,7 @@ class CAMB(BoltzmannBase):
                 "No source Cl's were computed. "
                 "Are you sure that you have requested some source?",
             )
-        cls_dict: dict = dict()
+        cls_dict: dict = {}
         for term, cl in cls.items():
             term_tuple = tuple(
                 (lambda x: x if x == "P" else list(self.sources)[int(x) - 1])(
@@ -880,7 +901,7 @@ class CAMB(BoltzmannBase):
                 for _ in term.split("x")
             )
             cls_dict[term_tuple] = cl
-        cls_dict["ell"] = np.arange(cls[list(cls)[0]].shape[0])
+        cls_dict["ell"] = np.arange(cls[next(iter(cls))].shape[0])
         return cls_dict
 
     def get_CAMBdata(self):
@@ -977,7 +998,7 @@ class CAMB(BoltzmannBase):
                     self.log.debug("Setting sources: %r", self.sources)
                     sources = self.camb.sources
                     source_windows = []
-                    for source, window in source_dict.items():
+                    for window in source_dict.values():
                         function = window.pop("function", None)
                         if function == "spline":
                             source_windows.append(sources.SplinedSourceWindow(**window))
@@ -1021,7 +1042,7 @@ class CAMB(BoltzmannBase):
         except self.camb.baseconfig.CAMBUnknownArgumentError as e:
             raise LoggedError(
                 self.log,
-                "Some of the parameters passed to CAMB were not recognized: %s" % str(e),
+                f"Some of the parameters passed to CAMB were not recognized: {e!s}",
             )
         return False
 
@@ -1033,7 +1054,7 @@ class CAMB(BoltzmannBase):
         self._camb_transfers = CambTransfers(
             self,
             "camb.transfers",
-            dict(stop_at_error=self.stop_at_error),
+            {"stop_at_error": self.stop_at_error},
             timing=self.timer,
         )
         self._camb_transfers.requires = self._transfer_requires
@@ -1128,8 +1149,8 @@ class CAMB(BoltzmannBase):
             if not gcc_check:
                 cause = (
                     " Possible cause: it looks like `gcc` does not have the correct "
-                    "version number (CAMB requires %s); and `ifort` is also "
-                    "probably not available." % cls._camb_min_gcc_version
+                    f"version number (CAMB requires {cls._camb_min_gcc_version}); and "
+                    "`ifort` is also probably not available."
                 )
             else:
                 cause = ""
@@ -1220,7 +1241,7 @@ class CambTransfers(HelperTheory):
                 self.log.debug(
                     "Computation of cosmological products failed. "
                     "Assigning 0 likelihood and going on. "
-                    "The output of the CAMB error was %s" % e
+                    f"The output of the CAMB error was {e}"
                 )
                 return False
 

@@ -144,7 +144,7 @@ class FileLock:
             "https://cobaya.readthedocs.io/en/latest/installation."
             "html#mpi-parallelization-optional-but-encouraged\n"
             + (
-                "Your current mpi4py config is:\n %s" % mpi4py.get_config()
+                f"Your current mpi4py config is:\n {mpi4py.get_config()}"
                 if mpi4py is not None
                 else "mpi4py is NOT currently installed."
             )

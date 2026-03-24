@@ -80,21 +80,19 @@ def get_sampler_name_and_class(info_sampler: SamplersDict, logger=None):
     Auxiliary function to retrieve the class of the required sampler.
     """
     check_sane_info_sampler(info_sampler)
-    name = list(info_sampler)[0]
+    name = next(iter(info_sampler))
     sampler_class = get_component_class(name, kind="sampler", logger=logger)
     assert issubclass(sampler_class, Sampler)
     return name, sampler_class
 
 
-def check_sane_info_sampler(info_sampler: SamplersDict):
+def check_sane_info_sampler(info_sampler: SamplersDict) -> None:
     if not info_sampler:
         raise LoggedError(__name__, "No sampler given!")
-    try:
-        list(info_sampler)[0]
-    except AttributeError as excpt:
+    if not isinstance(info_sampler, Mapping):
         raise LoggedError(
             __name__, "The sampler block must be a dictionary 'sampler: {options}'."
-        ) from excpt
+        )
     if len(info_sampler) > 1:
         raise LoggedError(__name__, "Only one sampler currently supported at a time.")
 
@@ -442,8 +440,7 @@ class Sampler(CobayaComponent):
                     raise LoggedError(
                         output.log,
                         "Delete the previous output manually, automatically "
-                        "('-%s', '--%s', '%s: True')"
-                        % ("force"[0], "force", "force")
+                        "('-f', '--force', 'force: True')"
                         + " or request resuming ('-{}', '--{}', '{}: True')".format(
                             "resume"[0], "resume", "resume"
                         ),
@@ -523,7 +520,7 @@ class CovmatSampler(Sampler):
         # If given, load and test the covariance matrix
         loaded_params: Sequence[str]
         if isinstance(self.covmat, str):
-            covmat_pre = "{%s}" % packages_path_input
+            covmat_pre = f"{{{packages_path_input}}}"
             if self.covmat.startswith(covmat_pre):
                 self.covmat = self.covmat.format(
                     **{packages_path_input: self.packages_path}
@@ -570,7 +567,7 @@ class CovmatSampler(Sampler):
         if self.covmat is not None:
             str_msg = "the `covmat_params` list"
             if isinstance(self.covmat, str):
-                str_msg = "the header of the covmat file %r" % self.covmat
+                str_msg = f"the header of the covmat file {self.covmat!r}"
             if len(loaded_params) != len(set(loaded_params)):
                 duplicated = list(
                     {p for p in loaded_params if list(loaded_params).count(p) > 1}

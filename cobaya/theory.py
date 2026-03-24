@@ -432,8 +432,8 @@ class TheoryCollection(ComponentCollection):
                 return super().__getattribute__(name)
             except AttributeError:
                 self.log.warning(
-                    "No attribute %s of TheoryCollection. Use model.provider "
-                    "if you want to access computed requests" % name
+                    f"No attribute {name} of TheoryCollection. Use model.provider "
+                    "if you want to access computed requests"
                 )
         return object.__getattribute__(self, name)
 

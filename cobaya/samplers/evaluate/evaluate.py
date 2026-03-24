@@ -70,7 +70,9 @@ class Evaluate(Sampler):
                 reference_point[p] = v
             self.log.info(
                 "Reference point:\n   "
-                + "\n   ".join(["%s = %g" % pv for pv in reference_point.items()])
+                + "\n   ".join(
+                    ["{} = {:g}".format(*pv) for pv in reference_point.items()]
+                )
             )
             self.log.info("Evaluating prior and likelihoods...")
             self.logposterior = self.model.logposterior(reference_point)

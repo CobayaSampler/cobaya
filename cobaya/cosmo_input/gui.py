@@ -68,7 +68,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Cobaya input generator for Cosmology")
-        self.setStyleSheet("* {font-size:%s;}" % font_size)
+        self.setStyleSheet(f"* {{font-size:{font_size};}}")
         # Menu bar for defaults
         self.menubar = QMenuBar()
         defaults_menu = self.menubar.addMenu(
@@ -102,7 +102,7 @@ class MainWindow(QWidget):
         self.options_scroll.setWidget(self.options)
         self.options_scroll.setWidgetResizable(True)
         self.layout_left.addWidget(self.options_scroll)
-        self.combos = dict()
+        self.combos = {}
         for group, fields in _combo_dict_text:
             group_box = QGroupBox(group)
             self.layout_options.addWidget(group_box)
@@ -269,8 +269,8 @@ class MainWindow(QWidget):
         if not packages_path:
             self.covmat_text.setText(
                 "\nIn order to find a covariance matrix, you need to define an external "
-                "packages installation path, e.g. via the env variable %r.\n"
-                % packages_path_env
+                "packages installation path, "
+                f"e.g. via the env variable {packages_path_env!r}.\n"
             )
         elif all(
             not os.path.isdir(d.format(**{packages_path_input: packages_path}))
@@ -278,7 +278,7 @@ class MainWindow(QWidget):
         ):
             self.covmat_text.setText(
                 "\nThe external cosmological packages appear not to be installed where "
-                "expected: %r\n" % packages_path
+                f"expected: {packages_path!r}\n"
             )
         else:
             covmat_data = get_best_covmat(info, packages_path=packages_path)
@@ -286,9 +286,9 @@ class MainWindow(QWidget):
             self.current_covmat = covmat_data["covmat"]
             _, corrmat = cov_to_std_and_corr(self.current_covmat)
             self.covmat_text.setText(
-                "\nCovariance file: %r\n\n"
+                "\nCovariance file: {!r}\n\n"
                 "NB: you do *not* need to save or copy this covariance matrix: "
-                "it will be selected automatically.\n" % covmat_data["name"]
+                "it will be selected automatically.\n".format(covmat_data["name"])
             )
             self.covmat_table.setRowCount(len(self.current_params_in_covmat))
             self.covmat_table.setColumnCount(len(self.current_params_in_covmat))
@@ -303,7 +303,7 @@ class MainWindow(QWidget):
             for i, pi in enumerate(self.current_params_in_covmat):
                 for j, pj in enumerate(self.current_params_in_covmat):
                     self.covmat_table.setItem(
-                        i, j, QTableWidgetItem("%g" % self.current_covmat[i, j])
+                        i, j, QTableWidgetItem(f"{self.current_covmat[i, j]:g}")
                     )
                     if i != j:
                         color = [256 * c for c in cmap_corr(corrmat[i, j] / 2 + 0.5)[:3]]
@@ -346,7 +346,7 @@ class MainWindow(QWidget):
             "bibliography": ".txt",
             "covmat": ".covmat",
         }[ftype]
-        fname, path = self.save_dialog.getSaveFileName(
+        fname, _path = self.save_dialog.getSaveFileName(
             self.save_dialog, "Save input file", fsuffix, ffilter, os.getcwd()
         )
         if not fname.endswith(fsuffix):

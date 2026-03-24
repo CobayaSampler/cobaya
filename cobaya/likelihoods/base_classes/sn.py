@@ -73,7 +73,7 @@ class SN(DataSetLikelihood):
         cols = None
         self.has_third_var = False
         data_file = os.path.normpath(os.path.join(self.path, ini.string("data_file")))
-        self.log.debug("Reading %s" % data_file)
+        self.log.debug(f"Reading {data_file}")
         supernovae = {}
         self.names = []
         ix = 0
@@ -137,7 +137,7 @@ class SN(DataSetLikelihood):
         self.colour_var = self.dcolor**2
         self.thirdvar_var = self.dthird_var**2
         self.nsn = ix
-        self.log.debug("Number of SN read: %s " % self.nsn)
+        self.log.debug("Number of SN read: %s", self.nsn)
         if self.twoscriptmfit and not self.has_third_var:
             raise LoggedError(
                 self.log, "twoscriptmfit was set but thirdvar information not present"
@@ -154,10 +154,10 @@ class SN(DataSetLikelihood):
         ]
         self.covs = {}
         for name in covmats:
-            if ini.bool("has_%s_covmat" % name):
-                self.log.debug("Reading covmat for: %s " % name)
+            if ini.bool(f"has_{name}_covmat"):
+                self.log.debug(f"Reading covmat for: {name} ")
                 self.covs[name] = self._read_covmat(
-                    os.path.join(self.path, ini.string("%s_covmat_file" % name))
+                    os.path.join(self.path, ini.string(f"{name}_covmat_file"))
                 )
         self.alphabeta_covmat = (
             len(self.covs.items()) > 1 or self.covs.get("mag", None) is None
@@ -209,7 +209,7 @@ class SN(DataSetLikelihood):
                             + beta_i * self.step_width_beta
                         )
                         _int_points += 1
-            self.log.debug("Marignalizing alpha, beta over %s points" % _int_points)
+            self.log.debug("Marignalizing alpha, beta over %s points", _int_points)
             self.marge_grid = np.empty(_int_points)
             self.int_points = _int_points
             self.alpha_grid = self.alpha_grid[:_int_points]

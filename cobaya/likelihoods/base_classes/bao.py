@@ -145,7 +145,7 @@ class BAO(InstallableLikelihood):
                 raise LoggedError(
                     self.log,
                     f"Couldn't find measurements file '{self.measurements_file}' "
-                    "in folder '{data_file_path}'. " + "Check your paths.",
+                    f"in folder '{data_file_path}'. Check your paths.",
                 )
         elif self.grid_file:
             pass
@@ -182,10 +182,8 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    "Couldn't find probability distribution file '%s' "
-                    "in folder '%s'. "
-                    % (self.prob_dist, data_file_path)
-                    + "Check your paths.",
+                    f"Couldn't find probability distribution file '{self.prob_dist}' "
+                    f"in folder '{data_file_path}'. " + "Check your paths.",
                 )
             try:
                 assert self.prob_dist_bounds
@@ -448,19 +446,16 @@ class BAO(InstallableLikelihood):
     def logp(self, **params_values):
         if self.use_grid_1d:
             x = self.theory_fun(self.redshift, self.observable_1)
-            chi2 = float(self.interpolator(x)[0])
-            return chi2
+            return float(self.interpolator(x)[0])
         elif self.use_grid_2d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
-            chi2 = self.interpolator(x, y)[0][0]
-            return chi2
+            return self.interpolator(x, y)[0][0]
         elif self.use_grid_3d:
             x = self.theory_fun(self.redshift, self.observable_1)
             y = self.theory_fun(self.redshift, self.observable_2)
             z = self.theory_fun(self.redshift, self.observable_3)
-            chi2 = self.interpolator3D(np.array([x, y, z])[:, 0])
-            return chi2
+            return self.interpolator3D(np.array([x, y, z])[:, 0])
         else:
             theory = np.array(
                 [

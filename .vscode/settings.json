@@ -44,7 +44,6 @@
     },
     "files.trimTrailingWhitespace": true,
     "files.trimFinalNewlines": true,
-    "github-actions.use-enterprise": true,
     // YAML settings for custom tags
     "yaml.customTags": [
         "!defaults sequence",
