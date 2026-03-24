@@ -1,7 +1,11 @@
+import os
+import sys
+
 from . import batchjob_args, jobqueue
 
 
 def running_jobs(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = batchjob_args.BatchArgs(
         "List details of running or queued jobs; gives job stats, "
         "then current R-1 and job/chain names",

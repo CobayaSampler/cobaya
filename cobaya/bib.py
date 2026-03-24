@@ -11,6 +11,7 @@ Inspired by a similar characteristic of
 
 import argparse
 import os
+import sys
 from inspect import cleandoc
 
 from cobaya.component import ComponentNotFoundError, get_component_class
@@ -186,4 +187,5 @@ def bib_script(args=None):
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
     bib_script()

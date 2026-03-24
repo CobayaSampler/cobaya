@@ -8,6 +8,7 @@
 
 import copy
 import os
+import sys
 
 from getdist import paramnames, types
 from getdist.mcsamples import loadMCSamples
@@ -17,6 +18,7 @@ from cobaya.tools import working_directory
 
 
 def grid_tables(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "Make pdf tables from latex generated from getdist outputs",
         importance=True,
@@ -518,6 +520,7 @@ def grid_tables(args=None):
 
 
 def grid_param_compare(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "Compare parameter constraints over set of models, producing"
         "latext column content for tables (but not full tables)"

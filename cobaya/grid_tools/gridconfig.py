@@ -10,6 +10,7 @@
 import argparse
 import importlib.util
 import os
+import sys
 from itertools import chain
 
 from getdist.inifile import IniFile
@@ -86,6 +87,7 @@ def path_is_grid(batchPath):
 
 
 def grid_create(args=None):
+    sys.path.insert(0, os.getcwd())
     warn_deprecation()
     args = get_args(args)
     args.interactive = True
