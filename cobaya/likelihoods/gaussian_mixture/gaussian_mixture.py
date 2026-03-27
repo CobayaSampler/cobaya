@@ -80,7 +80,8 @@ class GaussianMixture(Likelihood):
                     "The dimensionality is %d (guessed from given means and covmats) "
                     "but was passed %d parameters instead. "
                     + (
-                        "Maybe you forgot to specify the prefix by which to identify them?"
+                        "Maybe you forgot to specify the prefix by which to identify "
+                        + "them?"
                         if self.input_params_prefix
                         else ""
                     ),

@@ -975,7 +975,7 @@ class SampleCollection(BaseCollection):
                 ][first:last]
                 .to_numpy(dtype=np.float64)
                 .T,
-                ddof=0,  # does simple mean w/o bias factor; weights are used as probabilities
+                ddof=0,  # does simple mean w/o bias factor; weights used as probabilities
                 **{weight_type_kwarg: weights_cov},
             )
         )

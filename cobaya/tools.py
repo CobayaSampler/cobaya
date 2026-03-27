@@ -163,12 +163,9 @@ def check_module_version(module: Any, min_version):
         module.__version__
     ) < version.parse(min_version):
         raise VersionCheckError(
-            "Module {} at {} is version {} but the minimum required version is {}.".format(
-                module.__name__,
-                os.path.dirname(module.__file__),
-                getattr(module, "__version__", "(non-given)"),
-                min_version,
-            )
+            f"Module {module.__name__} at {os.path.dirname(module.__file__)} has version "
+            f"{getattr(module, '__version__', '(non-given)')} but the minimum required "
+            f"version is {min_version}."
         )
 
 
