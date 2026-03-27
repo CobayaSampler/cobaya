@@ -1,9 +1,14 @@
-## 3.6.2 – 2026-xx-xx
+## 3.6.2 – 2026-03-27
 
 ### General
 
 - New grid scripts optional parameter --musthave-params (#477; thanks @louisl3grand)
 - Fixed regression in grid script jobqueue (preventing correct job submissions; thanks @louisl3grand)
+- Fixed inconsistency between shell invocation as ``cobaya-COMMAND`` and ``python -m cobaya COMMAND``. Now the former also searched for components in the cwd (#486; thanks Ruchika for reporting).
+
+### MCMC
+
+- Fixed bug: checkpoint file was not being written when convergence check failed (#483; thanks @eatdust for reporting)
 
 ### Cosmology
 

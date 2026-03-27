@@ -29,6 +29,12 @@ To run this example, save the text above in a file called ``gaussian.yaml`` in a
 
    $ cobaya-run gaussian.yaml
 
+or alternatively (if shell scripts are not available or ambiguously defined):
+
+.. code:: bash
+
+   $ python -m cobaya gaussian.yaml
+
 .. note::
 
    **Cobaya** is MPI-aware. If you have installed ``mpi4py`` (see :ref:`this section <install_mpi>`), you can run
