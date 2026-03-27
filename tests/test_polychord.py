@@ -3,10 +3,10 @@ import warnings
 import numpy as np
 from flaky import flaky
 
+from cobaya.test_tools import install_test_wrapper
 from cobaya.run import run
 
 from .common_sampler import body_of_sampler_test, body_of_test_speeds
-from .conftest import install_test_wrapper
 
 
 @flaky(max_runs=3, min_passes=1)

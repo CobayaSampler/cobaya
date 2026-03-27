@@ -12,9 +12,8 @@ from cobaya.grid_tools import (
     grid_run,
     grid_tables,
 )
+from cobaya.test_tools import stdout_check
 from cobaya.yaml import yaml_load_file
-
-from .common import stdout_check
 
 
 def test_grid(tmpdir):

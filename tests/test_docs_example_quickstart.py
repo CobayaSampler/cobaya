@@ -11,10 +11,10 @@ from flaky import flaky
 
 from cobaya import mpi
 from cobaya.input import is_equal_info
+from cobaya.test_tools import stdout_redirector
 from cobaya.tools import KL_norm, working_directory
 from cobaya.yaml import yaml_load_file
 
-from .common import stdout_redirector
 from .common_sampler import KL_tolerance
 
 pytestmark = pytest.mark.mpi

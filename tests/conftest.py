@@ -5,28 +5,24 @@ import pytest
 
 import cobaya.typing
 from cobaya import mpi
-from cobaya.component import ComponentNotInstalledError
 
 # Paths ##################################################################################
-from cobaya.conventions import packages_path_arg_posix, packages_path_env, test_skip_env
+from cobaya.conventions import test_skip_env
 from cobaya.log import LoggedError
-from cobaya.tools import resolve_packages_path
+from cobaya.test_tools import packages_path, skip_not_installed
 
 cobaya.typing.enforce_type_checking = True
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--" + packages_path_arg_posix,
-        action="store",
-        default=resolve_packages_path(),
-        help="Path to folder of automatic installation of packages",
+    # These imports need to be in here!
+    from cobaya.test_tools import (
+        pytest_addoption_packages_path,
+        pytest_addoption_skip_not_installed,
     )
-    parser.addoption(
-        "--skip-not-installed",
-        action="store_true",
-        help="Skip tests for which dependencies of used components are not installed.",
-    )
+
+    pytest_addoption_packages_path(parser)
+    pytest_addoption_skip_not_installed(parser)
     parser.addoption(
         "--do-plots",
         action="store_true",
@@ -37,20 +33,7 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture
-def packages_path(request):
-    cmd_packages_path = request.config.getoption("--" + packages_path_arg_posix, None)
-    if not cmd_packages_path:
-        raise ValueError(
-            "Could not determine packages installation path. "
-            f"Either define it in the env variable {packages_path_env!r}, or pass it as an "
-            f"argument with `--{packages_path_arg_posix}`"
-        )
-    return cmd_packages_path
-
-
 # Skip certain keywords ##################################################################
-
 
 def pytest_collection_modifyitems(config, items):
     skip_keywords = os.environ.get(test_skip_env, "").replace(",", " ").split()
@@ -66,25 +49,7 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_not_mpi)
 
 
-# Skip not installed #####################################################################
-
-
-@pytest.fixture
-def skip_not_installed(request):
-    return request.config.getoption("--skip-not-installed")
-
-
-def install_test_wrapper(skip_not_installed, func, *args, **kwargs):
-    try:
-        return func(*args, **kwargs)
-    except ComponentNotInstalledError:
-        if skip_not_installed:
-            pytest.xfail("Missing dependencies.")
-        raise
-
-
 # Plots from tests #######################################################################
-
 
 @pytest.fixture
 def do_plots(request):

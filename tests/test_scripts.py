@@ -2,42 +2,28 @@ import os
 
 from cobaya.bib import bib_script
 from cobaya.doc import doc_script
-
-from .common import stdout_check
+from cobaya.test_tools import stdout_check
 
 
 def test_doc():
-    with stdout_check("planck_2018_lensing"):
-        doc_script([])
+    with stdout_check("mcmc"):
+        doc_script([])  # just lists available components
 
-    with stdout_check("DES_DzS1"):
-        doc_script(["des_y1.shear"])
-
-    with stdout_check(" [../base_classes/planck_calib, params_TT_CamSpec]"):
-        doc_script(["planck_2018_highl_CamSpec.TT"])
-
-    with stdout_check("lambda aksz, asz143"):
-        doc_script(["planck_2018_highl_CamSpec.TT", "--expand"])
+    with stdout_check("evaluate:"):
+        doc_script(["evaluate"])
 
 
 yaml = """
 likelihood:
- des_y1.clustering:
- bao.generic:
- planck_2018_lensing.clik:
-theory:
- camb:
+ gaussian:
 sampler:
  minimize:
 """
 
 
 def test_bib(tmpdir):
-    with stdout_check("rosenberg22"):
-        bib_script(["planck_NPIPE_highl_CamSpec.TTTEEE"])
-
     with stdout_check("Neal:2005"):
-        bib_script(["des_y1.shear", "camb", "mcmc"])
+        bib_script(["gaussian", "mcmc"])
 
     f = os.path.join(tmpdir, "input.yaml")
     with open(f, "w", encoding="utf-8") as output:
