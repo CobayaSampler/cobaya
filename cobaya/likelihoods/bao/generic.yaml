@@ -1,8 +1,0 @@
-measurements_file: /full/path/to/myBAO.dat
-cov_file: /full/path/to/myBAO.cov         # either this one,
-invcov_file: /full/path/to/myBAO_inv.cov  # or this one!
-# Fiducial sound horizon with which data have been stored
-rs_fid:  #  in Mpc
-# [Optional] Speed in evaluations/second
-# (will be measured automatically if not specified)
-speed: 2500
