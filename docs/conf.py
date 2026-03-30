@@ -123,6 +123,10 @@ def import_classes(name, currmodule):
 def class_name(
     self, cls: type, parts: int = 0, aliases: dict[str, str] | None = None
 ) -> str:
+    # Keep fully-qualified names for link resolution (parts=0), while preserving
+    # the shortened custom labels for displayed node names.
+    if parts == 0:
+        return old_names(self, cls, 0, aliases)
     if issubclass(cls, bases) and cls not in bases:
         name = cls.get_qualified_class_name()
         if name.startswith("_") or name.startswith(".") or name.startswith("likelihood."):
