@@ -106,6 +106,10 @@ from cobaya.tools import get_available_internal_classes
 
 inheritance_graph_attrs = dict(rankdir="LR", size='""')
 
+# SVG embeds hyperlinks inside the vector image so they survive CSS scaling on RTD.
+# PNG + image-map coordinates break as soon as the browser scales the image.
+graphviz_output_format = "svg"
+
 # change inheritance diagram to pull all internal component classes
 bases = (Likelihood, Theory, Sampler)
 
