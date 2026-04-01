@@ -23,8 +23,6 @@ from cobaya.tools import (
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file
 
-_known_omnibus_packages = ["cobaya_cosmo"]
-
 
 class Timer:
     def __init__(self):
@@ -138,7 +136,10 @@ class HasDefaults:
         package.subpackage.module.ClassName, etc.
         """
         qualified_names = cls.get_qualified_names()
-        if qualified_names[0].startswith("cobaya."):
+        if any(
+            qualified_names[0].startswith(package + ".")
+            for package in [cobaya_package] + cobaya._known_omnibus_packages
+        ):
             return qualified_names[2]
         else:
             # external
@@ -763,7 +764,7 @@ def get_component_class(
         else:
             internal_module_name = get_internal_class_component_name(module_name, kind)
             # No need to check kind if importing internal class
-            for package in [cobaya_package] + _known_omnibus_packages:
+            for package in [cobaya_package] + cobaya._known_omnibus_packages:
                 try:
                     found_class = return_class(internal_module_name, package=package)
                     logger.debug(f"'{name}' was imported from {package}.")

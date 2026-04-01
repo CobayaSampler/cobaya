@@ -29,6 +29,7 @@ from packaging import version
 from scipy import stats
 
 from cobaya.conventions import (
+    cobaya_package,
     dump_sort_cosmetic,
     kinds,
     packages_path_arg,
@@ -286,33 +287,56 @@ def import_all_classes(
     return result
 
 
-def get_available_internal_classes(kind, hidden=False, stem=None):
+def get_available_internal_classes(kind, hidden=False, stem=None, package=None):
     """
     Gets all class names of a given kind.
+
+    Raises `ImportError` if called with a non-installed package.
     """
 
     from cobaya.component import CobayaComponent
 
-    path = os.path.join(os.path.dirname(__file__), subfolders[kind])
+    if package in [None, cobaya_package]:
+        root_file = __file__
+    else:
+        try:
+            root_file = import_module(package).__file__
+        except ModuleNotFoundError:
+            raise ImportError(f"Package {package} is not installed.")
+    path = os.path.join(os.path.dirname(root_file), subfolders[kind])
     return import_all_classes(
-        path, f"cobaya.{subfolders[kind]}", CobayaComponent, hidden, stem=stem
+        path,
+        f"{package}.{subfolders[kind]}",
+        CobayaComponent,
+        hidden,
+        stem=stem,
     )
 
 
-def get_all_available_internal_classes(hidden=False, stem=None):
-    return set(chain(*(get_available_internal_classes(k, hidden, stem) for k in kinds)))
+def get_all_available_internal_classes(hidden=False, stem=None, package=None):
+    return set(
+        chain(
+            *(
+                get_available_internal_classes(k, hidden, stem, package=package)
+                for k in kinds
+            )
+        )
+    )
 
 
 def get_available_internal_class_names(
-    kind=None, hidden=False, stem=None
+    kind=None,
+    hidden=False,
+    stem=None,
+    package=None,
 ) -> Iterable[str]:
     return sorted(
         {
             cls.get_qualified_class_name()
             for cls in (
-                get_available_internal_classes(kind, hidden, stem)
+                get_available_internal_classes(kind, hidden, stem, package=package)
                 if kind
-                else get_all_available_internal_classes(hidden, stem)
+                else get_all_available_internal_classes(hidden, stem, package=package)
             )
         }
     )
@@ -405,9 +429,7 @@ def recursive_update(base: _Dict | None, update: _Dict, copied=True) -> _Dict:
     Modified for yaml input, where None and {} are almost equivalent
     """
     updated: dict = (
-        deepcopy_where_possible(base)
-        if copied and base  # type: ignore
-        else base or {}
+        deepcopy_where_possible(base) if copied and base else base or {}  # type: ignore
     )
     for update_key, update_value in (update or {}).items():
         if isinstance(update_value, Mapping):
@@ -493,7 +515,10 @@ class NumberWithUnits:
                     self.unit_value = cast(n_with_unit[: -len(unit)])
             else:
                 raise LoggedError(
-                    log, "string '%r' does not have expected unit %s.", n_with_unit, unit
+                    log,
+                    "string '%r' does not have expected unit %s.",
+                    n_with_unit,
+                    unit,
                 )
         else:
             self.unit = None

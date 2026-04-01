@@ -14,3 +14,5 @@ from cobaya.run import run as run
 from cobaya.theory import Theory as Theory
 from cobaya.typing import InputDict as InputDict
 from cobaya.typing import PostDict as PostDict
+
+_known_omnibus_packages = ["cobaya_cosmo"]

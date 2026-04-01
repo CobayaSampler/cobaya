@@ -9,11 +9,13 @@
 import argparse
 import os
 import sys
+from importlib import import_module
 from inspect import cleandoc
 from pprint import pformat
 
+from cobaya import _known_omnibus_packages
 from cobaya.component import ComponentNotFoundError, get_component_class
-from cobaya.conventions import kinds, subfolders
+from cobaya.conventions import cobaya_package, kinds, subfolders
 from cobaya.input import get_default_info
 from cobaya.log import NoLogging, get_logger, logger_setup
 from cobaya.tools import (
@@ -70,13 +72,26 @@ def doc_script(args=None):
     arguments = parser.parse_args(args)
     # Nothing passed: list all
     if not arguments.component:
-        msg = "Available components: (some may need external code/data)"
-        print(msg + "\n" + "-" * len(msg))
-        for kind in kinds:
-            print(f"{kind}:")
-            print(
-                _indent + ("\n" + _indent).join(get_available_internal_class_names(kind))
+        for package in [cobaya_package] + _known_omnibus_packages:
+            try:
+                import_module(package)
+            except ModuleNotFoundError:
+                continue
+            header = (
+                f"Available components in {package}: (some may need external code/data)"
             )
+            header = header + "\n" + "-" * len(header) + "\n"
+            body = ""
+            for kind in kinds:
+                body += f"{kind}:\n"
+                body += (
+                    _indent
+                    + ("\n" + _indent).join(
+                        get_available_internal_class_names(kind, package=package)
+                    )
+                    + "\n"
+                )
+            print(header + body)
         return 0
     # A kind passed (plural or singular): list all of that kind
     if arguments.component.lower() in subfolders.values():
