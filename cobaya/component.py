@@ -714,7 +714,13 @@ def get_component_class(
         did_not_find_this_module_in_particular = any(
             str(_excpt).rstrip("'").endswith(module) for module in name.split(".")
         )
-        if is_module_not_found and did_not_find_this_module_in_particular:
+        # or maybe the given `kind` does not exist in an omnibus package
+        omnibus_does_not_have_kind = False
+        if kind is not None:
+            omnibus_does_not_have_kind = str(_excpt).rstrip("s'").endswith(kind)
+        if is_module_not_found and (
+            did_not_find_this_module_in_particular or omnibus_does_not_have_kind
+        ):
             raise ComponentNotFoundError(logger, not_found_msg, level=level)
         logger.error(f"There was a problem when importing '{name}':")
         raise _excpt
