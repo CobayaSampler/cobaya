@@ -23,6 +23,8 @@ from cobaya.tools import (
 from cobaya.typing import Any, InfoDict, InfoDictIn, empty_dict, validate_type
 from cobaya.yaml import yaml_dump, yaml_load, yaml_load_file
 
+_known_omnibus_packages = ["cobaya_cosmo"]
+
 
 class Timer:
     def __init__(self):
@@ -754,23 +756,22 @@ def get_component_class(
             # If we get here, the class was not found for any kind
         else:
             internal_module_name = get_internal_class_component_name(module_name, kind)
-            try:
-                # No need to check kind
-                return return_class(internal_module_name, package=cobaya_package)
-            except Exception as excpt:
+            # No need to check kind if importing internal class
+            for package in [cobaya_package] + _known_omnibus_packages:
                 try:
-                    check_if_ComponentNotFoundError_and_raise(
-                        excpt,
-                        not_found_msg=_not_found_msg[:-1]
-                        + (
-                            " as internal, trying external."
-                            if allow_external
-                            else " as internal component."
-                        ),
-                    )
-                except ComponentNotFoundError:
-                    pass  # do not raise it yet. try external (if allowed)
+                    found_class = return_class(internal_module_name, package=package)
+                    logger.debug(f"'{name}' was imported from {package}.")
+                    return found_class
+                except Exception as excpt:
+                    try:
+                        check_if_ComponentNotFoundError_and_raise(
+                            excpt,
+                            not_found_msg=_not_found_msg[:-1] + f" from {package}.",
+                        )
+                    except ComponentNotFoundError:
+                        pass  # do not raise it yet. try external (if allowed)
     if allow_external:
+        logger.debug("Trying importing as external class.")
         try:
             # Now looking in the current folder only (component_path case handled above)
             return check_kind_and_return(
