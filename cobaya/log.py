@@ -331,10 +331,11 @@ class HasLogger:
     def mpi_debug(self, msg, *args, **kwargs):
         self.log.debug(msg, *args, **kwargs)
 
+    def float_dict(self, dic: dict):
+        """Convert numpy2 np.float64 to float, so print cleanly in log output"""
+        return ({k: float(v) if isinstance(v, np.number) else v for k, v in dic.items()},)
+
     def param_dict_debug(self, msg, dic: dict):
         """Removes numpy2 np.float64 for consistent output"""
         if self.log.getEffectiveLevel() <= logging.DEBUG:
-            self.log.debug(
-                msg,
-                {k: float(v) if isinstance(v, np.number) else v for k, v in dic.items()},
-            )
+            self.log.debug(msg, self.float_dict(dic))
