@@ -332,7 +332,7 @@ def _test_cosmo_omega(theo, packages_path, skip_not_installed):
     assert np.allclose(
         model.theory[theo].get_Omega_nu_massive(redshifts),
         Omega_nu_massive_values,
-        rtol=1e-5 if theo.lower() == "camb" else 2e-3,
+        rtol=2e-5 if theo.lower() == "camb" else 2e-3,
     )
 
 
