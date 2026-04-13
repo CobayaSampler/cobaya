@@ -234,7 +234,7 @@ class Minimize(Minimizer, CovmatSampler):
                     num_starts,
                 )
             self.log.info(
-                self.log.float_dict(
+                self.float_dict(
                     dict(zip(self.model.parameterization.sampled_params(), initial_point))
                 )
             )

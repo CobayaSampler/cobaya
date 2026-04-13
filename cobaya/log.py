@@ -333,7 +333,7 @@ class HasLogger:
 
     def float_dict(self, dic: dict):
         """Convert numpy2 np.float64 to float, so print cleanly in log output"""
-        return ({k: float(v) if isinstance(v, np.number) else v for k, v in dic.items()},)
+        return {k: float(v) if isinstance(v, np.number) else v for k, v in dic.items()}
 
     def param_dict_debug(self, msg, dic: dict):
         """Removes numpy2 np.float64 for consistent output"""
