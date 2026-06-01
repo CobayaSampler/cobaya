@@ -235,6 +235,7 @@ class MCMC(CovmatSampler):
                 override_covmat=dispersion_covmat,
             )
         self.current_point.add(initial_point, results)
+        self.initial_point = initial_point
         self.log.info("Initial point: %s", self.current_point)
         sync_processes()
         # If resuming but no existing chains, assume failed run and ignore blocking
