@@ -2,11 +2,13 @@
 
 import argparse
 import os
+import sys
 
 from . import jobqueue
 
 
 def run_single(args=None):
+    sys.path.insert(0, os.getcwd())
     parser = argparse.ArgumentParser(
         prog="cobaya-run-job", description="Submit a single job to queue"
     )

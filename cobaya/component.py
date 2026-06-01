@@ -207,7 +207,8 @@ class HasDefaults:
         inside a zipped package and thus not directly accessible.
 
         Returns:
-            The content of the file as a string, if it exists and can be read. None otherwise.
+            The content of the file as a string, if it exists and can be read.
+            None otherwise.
         """
 
         return cls.get_text_file_content((file_root or cls.get_file_base_name()) + ext)

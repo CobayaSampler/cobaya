@@ -7,6 +7,8 @@
 """
 
 import argparse
+import os
+import sys
 from inspect import cleandoc
 from pprint import pformat
 
@@ -152,4 +154,5 @@ def doc_script(args=None):
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
     doc_script()

@@ -7,6 +7,7 @@
 """
 
 import os
+import sys
 
 from cobaya import mpi
 from cobaya.conventions import (
@@ -266,4 +267,5 @@ def run_script(args=None):
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
     run_script()

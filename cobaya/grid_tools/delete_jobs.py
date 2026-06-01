@@ -1,10 +1,13 @@
+import os
 import shutil
 import subprocess
+import sys
 
 from . import batchjob_args, jobqueue
 
 
 def delete_jobs(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = batchjob_args.BatchArgs(
         "Delete running or queued jobs", importance=True, batchPathOptional=True
     )

@@ -30,9 +30,9 @@ def test_cosmo_docs_basic():
             with open(file_path, "w") as docs_file:
                 docs_file.write(info_yaml_new)
             flag = False
-            print("OLD:\n%s" % info_yaml_docs)
+            print(f"OLD:\n{info_yaml_docs}")
             print("----------------------------------------")
-            print("NEW:\n%s" % info_yaml_new)
+            print(f"NEW:\n{info_yaml_new}")
             sys.stdout.flush()
     assert flag, (
         "Differences in example input file. "

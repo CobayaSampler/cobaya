@@ -53,7 +53,7 @@ def test_CAMB_sigma8_input(skip_not_installed):
     model_as = _get_model({**cosmology_params, "As": As_from_sigma8}, skip_not_installed)
     model_as.loglike({})
 
-    k, z, pk_as = model_as.provider.get_Pk_grid()
+    _k, _z, pk_as = model_as.provider.get_Pk_grid()
 
     assert np.isclose(sigma8, model_as.provider.get_param("sigma8"))
     assert np.allclose(pk_s8, pk_as)

@@ -10,6 +10,7 @@ import fnmatch
 import os
 import shutil
 import subprocess
+import sys
 import time
 import zipfile
 from datetime import datetime, timedelta
@@ -33,6 +34,7 @@ def run_and_wait(processes, commands=None, procs=1):
 
 
 def grid_converge(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "Find chains which have failed or not converged, and show "
         "Gelman-Rubin R-1 values for each run. Note need more than one "
@@ -110,6 +112,7 @@ def grid_converge(args=None):
 
 
 def grid_getdist(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "Run getdist over the grid of models. "
         "Use e.g. burn_remove=0.3 to remove 30% of the chain as burn in.",
@@ -221,6 +224,7 @@ def grid_getdist(args=None):
 
 
 def grid_list(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "List items in a grid",
         "cobaya-grid-list",
@@ -247,6 +251,7 @@ def grid_list(args=None):
 
 
 def grid_cleanup(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "Delete failed chains, files etc. Nothing is actually delete"
         "until you add --confirm, so you can check what you are doing first",
@@ -314,6 +319,7 @@ def grid_cleanup(args=None):
 
 
 def grid_copy(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "copy or zip chains and optionally other files",
         "cobaya-grid-copy",
@@ -531,6 +537,7 @@ def grid_copy(args=None):
 
 
 def grid_extract(args=None):
+    sys.path.insert(0, os.getcwd())
     opts = BatchArgs(
         "copy all files of a given type from all getdist output directories in the grid",
         "cobaya-grid-extract",

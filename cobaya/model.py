@@ -120,9 +120,9 @@ class LogPosterior:
         elif self.logpriors is not None and self.loglikes is not None:
             if not self._logpost_is_consistent():
                 raise ValueError(
-                    "The given log-posterior is not equal to the "
-                    "sum of given log-priors and log-likelihoods: "
-                    f"{self.logpost:g} != sum({self.logpriors!r}) + sum({self.loglikes!r})"
+                    "The given log-posterior is not equal to the sum of given log-priors "
+                    f"and log-likelihoods: {self.logpost:g} != sum({self.logpriors!r}) + "
+                    f"sum({self.loglikes!r})"
                 )
 
     def _logpost(self):
@@ -1317,10 +1317,10 @@ class Model(HasLogger):
                 elif set(assign_params) != set(current_assign):
                     raise LoggedError(
                         self.log,
-                        "exising %s %r do not match assigned parameters %r",
+                        "existing %s %r do not match assigned parameters %r",
                         option,
-                        assign_params,
                         current_assign,
+                        assign_params,
                     )
 
                 # Update infos! (helper theory parameters stored in yaml with host)

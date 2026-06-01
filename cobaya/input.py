@@ -622,7 +622,8 @@ def is_equal_info(info_old, info_new, strict=True, print_not_log=False, ignore_b
     } - ignore:
         myprint(
             myname
-            + f": different blocks or options: {set(info_old).difference(ignore)!r} (old) vs {set(info_new).difference(ignore)!r} (new)"
+            + f": different blocks or options: {set(info_old).difference(ignore)!r} (old)"
+            + f" vs {set(info_new).difference(ignore)!r} (new)"
         )
         return False
     for block_name in info_old:

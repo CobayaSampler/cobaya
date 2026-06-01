@@ -5,6 +5,7 @@ Allows calling `cobaya-[command]` as `python -m cobaya [command]`.
 `python -m cobaya input.yaml`.
 """
 
+import os
 import sys
 from importlib import import_module, metadata
 
@@ -45,4 +46,5 @@ def run_command():
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.getcwd())
     run_command()

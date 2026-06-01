@@ -43,4 +43,4 @@ def stdout_check(*strs, match=True):
         sys.stdout = old_stdout
     output = stream.getvalue()
     for s in strs:
-        assert match == (s in output), "Output should contain '%s'" % s
+        assert match == (s in output), f"Output should contain '{s}'"

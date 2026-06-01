@@ -18,7 +18,7 @@ jobs:
       - name: Check if tests should run
         id: check
         if: github.event_name == 'push'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -53,12 +53,12 @@ jobs:
             os: ubuntu-latest
             pydist: "ANACONDA"
             cobaya_skip: polychord
-          - name: "Latest Python 3.13"
+          - name: "Latest Python 3.14"
             os: ubuntu-latest
-            python-version: "3.13"
+            python-version: "3.14"
             mpi: openmpi
             cobaya_skip: polychord
-          - name: "OS X Python 3.10 (with classy)"
+          - name: "OS X Python 3.10"
             os: macos-latest
             python-version: "3.10"
             mpi: openmpi
@@ -93,7 +93,6 @@ jobs:
         if: matrix.pydist == 'ANACONDA'
         uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-activate-base: false
           activate-environment: tests-environment
           environment-file: tests-environment.yml
 

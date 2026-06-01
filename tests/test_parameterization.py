@@ -88,7 +88,7 @@ info = {
 
 
 def test_parameterization():
-    updated_info, sampler = run(info)
+    _updated_info, sampler = run(info)
     products = sampler.products()
     sample = products["sample"]
     gdsample = products["sample"].to_getdist()

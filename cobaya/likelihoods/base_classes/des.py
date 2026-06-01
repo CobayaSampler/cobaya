@@ -830,7 +830,8 @@ def convert_txt(filename, root, outdir, ranges=None):  # pragma: no cover
                 pairs.append((b1, b2))
         for x, y in pairs:
             out_ranges += [
-                f"{tp} {x} {y} {ranges[tp][x - 1][y - 1][0]} {ranges[tp][x - 1][y - 1][1]}"
+                f"{tp} {x} {y} {ranges[tp][x - 1][y - 1][0]} "
+                f"{ranges[tp][x - 1][y - 1][1]}"
             ]
         # drop theta value, as assuming shared to all data
         dat = np.asarray(

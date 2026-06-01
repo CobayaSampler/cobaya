@@ -133,7 +133,7 @@ def test_mcmc_drag_results(temperature):
     info: InputDict = yaml_load(yaml_drag)  # type: ignore
     info["likelihood"] = {"g1": {"external": GaussLike}, "g2": {"external": GaussLike2}}
     info["sampler"]["mcmc"]["temperature"] = temperature
-    updated_info, sampler = run(info)
+    _updated_info, sampler = run(info)
     gdsample = sampler.samples(combined=True, skip_samples=0.2, to_getdist=True)
     if temperature != 1:
         gdsample.cool(temperature)
@@ -181,7 +181,7 @@ def test_mcmc_sync():
         max_samples = 600
     # simulate asynchronous ending sampling loop
     info["sampler"]["mcmc"] = {"max_samples": max_samples, "seed": 1}
-    updated_info, sampler = run(info, stop_at_error=True)
+    _updated_info, sampler = run(info, stop_at_error=True)
     assert len(sampler.products()["sample"]) == max_samples
 
     logger.info("Test error synchronization")

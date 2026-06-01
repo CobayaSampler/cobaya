@@ -208,8 +208,8 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    f"Couldn't find grid file '{self.grid_file}' in folder '{data_file_path}'. "
-                    + "Check your paths.",
+                    f"Couldn't find grid file '{self.grid_file}' in folder "
+                    f"'{data_file_path}'. Check your paths.",
                 )
             if self.redshift is None:
                 raise LoggedError(
@@ -308,8 +308,8 @@ class BAO(InstallableLikelihood):
             except OSError:
                 raise LoggedError(
                     self.log,
-                    f"Couldn't find (inv)cov file '{self.cov_file or self.invcov_file}' in folder '{data_file_path}'. "
-                    + "Check your paths.",
+                    f"Couldn't find (inv)cov file '{self.cov_file or self.invcov_file}' "
+                    f"in folder '{data_file_path}'. Check your paths.",
                 )
             self.logpdf = lambda _x: (lambda x_: -0.5 * x_.dot(self.invcov).dot(x_))(
                 _x - self.data["value"].values

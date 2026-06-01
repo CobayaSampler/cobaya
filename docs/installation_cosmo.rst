@@ -8,7 +8,7 @@ To keep it light, maintainable and easily extensible, **cobaya** does not includ
 Installing a basic set of codes and likelihoods
 -----------------------------------------------
 
-To install a basic set of cosmology requisites (CAMB, CLASS, Planck, BAO, SN), in a ``/path/to/packages`` folders of your choice:
+To install a basic set of cosmology requisites (CAMB, CLASS, Planck, BAO, SN), in a ``/path/to/packages`` folder of your choice:
 
 .. code:: bash
 

@@ -9,6 +9,7 @@
 import hashlib
 import os
 import shlex
+import sys
 
 from cobaya.grid_tools import batchjob_args, jobqueue
 from cobaya.grid_tools.gridmanage import run_and_wait
@@ -16,6 +17,7 @@ from cobaya.tools import warn_deprecation
 
 
 def grid_run(args=None):
+    sys.path.insert(0, os.getcwd())
     warn_deprecation()
     Opts = batchjob_args.BatchArgs(
         prog="cobaya-grid-run",

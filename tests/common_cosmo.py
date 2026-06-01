@@ -30,7 +30,7 @@ def body_of_test(
     skip_not_installed=False,
 ):
     # Create base info
-    theo = list(info_theory)[0]
+    theo = next(iter(info_theory))
     # In Class, theta_s is exact, but different from the approximate one cosmomc_theta
     # used by Planck, so we take H0 instead
     planck_base_model_prime = deepcopy(planck_base_model)
@@ -93,7 +93,7 @@ def body_of_test(
         ):
             not_passed += [(p, rel, derived[p], best_fit_derived[p][0])]
     if not_tested:
-        print("Derived parameters not tested because not implemented: %r" % not_tested)
+        print(f"Derived parameters not tested because not implemented: {not_tested!r}")
     assert not not_passed, (
-        "Some derived parameters were off. Fractions of test tolerance: %r" % not_passed
+        f"Some derived parameters were off. Fractions of test tolerance: {not_passed!r}"
     )

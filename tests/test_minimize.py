@@ -105,5 +105,5 @@ def test_run_minimize(tmpdir):
     # No need to use skip_not_installed: uses default method, which should be requisite
     run(info, force=True)
     min_info: InputDict = dict(info, sampler={"minimize": None})
-    output_info, sampler = run(min_info, force=True)
+    _output_info, sampler = run(min_info, force=True)
     assert abs(sampler.products()["minimum"]["b"] - mean[1]) < 0.01

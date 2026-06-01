@@ -100,17 +100,16 @@ def body_of_sampler_test(
         print("Original covmat of the gaussian mode:")
         print(info["likelihood"]["gaussian_mixture"]["covs"])
     info["sampler"] = info_sampler
-    sampler_name = list(info_sampler)[0]
+    sampler_name = next(iter(info_sampler))
     if random_state is not None:
         info_sampler[sampler_name]["seed"] = random_state.integers(0, 2**31)
-    if sampler_name == "mcmc":
-        if "covmat" in info_sampler["mcmc"]:
-            info["sampler"]["mcmc"]["covmat_params"] = list(info["params"])[:dimension]
+    if sampler_name == "mcmc" and "covmat" in info_sampler["mcmc"]:
+        info["sampler"]["mcmc"]["covmat_params"] = list(info["params"])[:dimension]
     info["debug"] = False
     info["output"] = os.path.join(tmpdir, "out_chain")
     if packages_path:
         info["packages_path"] = process_packages_path(packages_path)
-    updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
+    _updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     if sampler_name == "mcmc":
         ignore_rows = 0.5
     else:
@@ -275,7 +274,7 @@ def body_of_test_speeds(
         },
         "sampler": info_sampler,
     }
-    sampler_name = list(info_sampler)[0]
+    sampler_name = next(iter(info_sampler))
     info_sampler[sampler_name]["seed"] = random_state.integers(0, 2**31)
     if manual_blocking:
         over0, over1 = speed0, speed1
@@ -295,9 +294,9 @@ def body_of_test_speeds(
         # Force mixing of blocks:
         info_sampler["covmat_params"] = list(info["params"])
         info_sampler["covmat"] = 1 / 10000 * np.eye(len(info["params"]))
-        i_0th, i_1st = map(
-            lambda x: info_sampler["covmat_params"].index(x),
-            [prefix + "0", prefix + "%d" % dim0],
+        i_0th, i_1st = (
+            info_sampler["covmat_params"].index(x)
+            for x in [prefix + "0", prefix + "%d" % dim0]
         )
         info_sampler["covmat"][i_0th, i_1st] = 1 / 100000
         info_sampler["covmat"][i_1st, i_0th] = 1 / 100000
@@ -307,7 +306,7 @@ def body_of_test_speeds(
         info_sampler["max_ndead"] = n_cycles_all_params * (dim0 + dim1)
     else:
         assert False, "Unknown sampler for this test."
-    updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
+    _updated_info, sampler = install_test_wrapper(skip_not_installed, run, info)
     products = sampler.products()
 
     # TEST: same (steps block i / speed i / dim i) (steps block 1 = evals[1] - evals[0])
@@ -353,9 +352,8 @@ def body_of_test_speeds(
         if not np.allclose([chi2_0_chain, chi2_1_chain], [chi2_0_good, chi2_1_good]):
             raise ValueError(
                 "Likelihoods not reproduced correctly. "
-                "Chain has %r but should be %r. "
-                % ([chi2_0_chain, chi2_1_chain], [chi2_0_good, chi2_1_good])
-                + "Full chain point: %r" % products["sample"][i]
+                f"Chain has {[chi2_0_chain, chi2_1_chain]!r} but should be {[chi2_0_good, chi2_1_good]!r}. "
+                + "Full chain point: {!r}".format(products["sample"][i])
             )
         derived_chain = products["sample"][["sum_like0", "sum_like1"]].to_numpy(
             dtype=np.float64
@@ -369,7 +367,6 @@ def body_of_test_speeds(
         if not np.allclose(derived_chain, derived_good):
             raise ValueError(
                 "Derived params not reproduced correctly. "
-                "Chain has %r but should be %r. "
-                % (derived_chain, derived_good)
-                + "Full chain point:\n%r" % products["sample"][i]
+                f"Chain has {derived_chain!r} but should be {derived_good!r}. "
+                + "Full chain point:\n{!r}".format(products["sample"][i])
             )
