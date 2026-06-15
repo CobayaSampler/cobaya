@@ -57,10 +57,15 @@ _version_filename = "version.dat"
 
 
 def do_package_install(
-    component: str, package_install: InfoDict | str, full_code_path: str, logger
+    component: str,
+    package_install: InfoDict | str,
+    full_code_path: str | None = None,
+    logger=None,
 ):
     # attempt to install package if package_install download info is present
     # similar to InstallableLikelihood install_options (could be refactored)
+    if logger is None:
+        logger = get_logger(component)
     component_root = component.split(".")[0]
     directory = package_install.get("directory")
     min_version = package_install.get("min_version")
