@@ -606,7 +606,6 @@ base_precision: InfoDict = {
 
 # Precision for CMB analises
 cmb_precision = deepcopy(base_precision)
-cmb_precision["camb"].update({"lens_potential_accuracy": 1})
 cmb_precision["classy"].update({"non linear": "hmcode"})
 
 # Precision for combined CMB + LSS analyses (used for LSS-only too)

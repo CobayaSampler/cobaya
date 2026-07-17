@@ -42,8 +42,8 @@ nuisance_params = {
 chi2_planck_NPIPE = {
     "planck_2018_lowl.TT": 24.81,
     "planck_2018_lowl.EE": 395.72,
-    "planck_NPIPE_highl_CamSpec.TTTEEE": 11341.17,
-    "planckpr4lensing": 13.76,
+    "planck_NPIPE_highl_CamSpec.TTTEEE": 11337.34,
+    "planckpr4lensing": 13.66,
     "tolerance": 0.10,
 }
 

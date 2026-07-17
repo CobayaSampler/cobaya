@@ -37,6 +37,8 @@ planck_2018_precision["camb"].update(
     {
         "halofit_version": "mead2016",
         "bbn_predictor": "PArthENoPE_880.2_standard.dat",
+        "lens_potential_accuracy": 1,
+        "recfast_approx_model": "planck",
     }
 )
 planck_2018_precision["classy"].update(
