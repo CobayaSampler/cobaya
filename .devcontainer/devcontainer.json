@@ -1,0 +1,95 @@
+{
+  // Cobaya dev container: reproduces the CI test workflow locally with a
+  // persistent volume for the (large) downloaded cobaya packages/data.
+  "name": "Cobaya",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      // Override to use a different Python (e.g. "3.12-bookworm", "3.13-bookworm").
+      "VARIANT": "3.14-bookworm"
+    }
+  },
+  "remoteUser": "vscode",
+  // Environment mirrors .github/workflows/tests.yml so local runs match CI.
+  "containerEnv": {
+    // Where cobaya-install downloads code/data. Backed by the named volume below.
+    "COBAYA_PACKAGES_PATH": "/home/vscode/cobaya/packages",
+    // Skip the multi-GB Planck likelihoods (and polychord) during install, as CI does.
+    "COBAYA_INSTALL_SKIP": "planck_2018_highl_plik,CamSpec2021,2018_highl_CamSpec,unbinned,keck,polychord",
+    // Set to 0 before a rebuild to skip the cosmo data install step (volume persists).
+    "COBAYA_DEVCONTAINER_INSTALL_DATA": "1",
+
+    // --- OpenMPI, tuned for single-node use inside a container ---
+    // A devcontainer only ever runs MPI on one node, so keep OpenMPI entirely
+    // local and never let it probe/await other network interfaces. This is the
+    // robust fix for `mpiexec` hangs under Docker: OpenMPI's TCP wire-up can
+    // block trying to reach an interface/IP that isn't routable in the
+    // container. Pin the runtime (oob) and byte-transport (btl) TCP to loopback.
+    "OMPI_MCA_oob_tcp_if_include": "lo",
+    "OMPI_MCA_btl_tcp_if_include": "lo",
+    // Same-node messaging goes through shared memory ("vader"); disable its
+    // Cross-Memory-Attach fast path, which needs CAP_SYS_PTRACE that Docker
+    // drops by default (otherwise: "Read -1 ... errno 14" warnings / stalls).
+    "OMPI_MCA_btl_vader_single_copy_mechanism": "none",
+    // Allow launching more ranks than there are cores without an explicit
+    // --oversubscribe (the MPI tests routinely do; see AGENTS.md).
+    "OMPI_MCA_rmaps_base_oversubscribe": "true"
+  },
+  // Persistent named volume: cobaya packages/data survive container rebuilds,
+  // so the heavy download/compile only happens once. Codex state lives in its
+  // own persistent volume, while auth reuses the host's login files.
+  "mounts": [
+    "source=cobaya-packages,target=/home/vscode/cobaya/packages,type=volume",
+    "source=cobaya-codex,target=/home/vscode/.codex,type=volume",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.codex/auth.json,target=/home/vscode/.codex/auth.json,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/home/vscode/.claude,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude.json,target=/home/vscode/.claude.json,type=bind"
+  ],
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "redhat.vscode-yaml",
+        "anthropic.claude-code",
+        "openai.chatgpt"
+      ],
+      // Complements the repo's .vscode/settings.json (ruff-on-save, rulers, YAML tags)
+      // so editing/formatting inside the container matches the host. Both
+      // paths below must be the devcontainer-local venv (see Dockerfile),
+      // NOT ${workspaceFolder}/.venv: that folder is the host's own venv
+      // (bind-mounted in), and if left to auto-detect, VS Code's Python /
+      // Ruff environment discovery finds it and tries to run the host's
+      // (e.g. Windows) interpreter layout inside Linux, which fails.
+      "settings": {
+        "claudeCode.allowDangerouslySkipPermissions": true,
+        "claudeCode.initialPermissionMode": "bypassPermissions",
+        "chat.permissions.default": "autoApprove",
+        "chat.tools.global.autoApprove": true,
+        "chat.tools.terminal.enableAutoApprove": true,
+        "chat.agent.sandbox.enabled": "off",
+        "chat.agent.networkFilter": false,
+        "github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions": true,
+        "python.defaultInterpreterPath": "/home/vscode/.local/share/cobaya-devcontainer/.venv/bin/python3",
+        "ruff.interpreter": [
+          "/home/vscode/.local/share/cobaya-devcontainer/.venv/bin/python3"
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": [
+          "tests"
+        ],
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true
+        },
+        "files.eol": "\n"
+      }
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh"
+}
