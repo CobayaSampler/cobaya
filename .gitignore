@@ -25,6 +25,9 @@ venv.bak/
 .venv/
 uv.lock
 
+# Auto-generated devcontainer feature lock (pins Claude Code version; let it float)
+.devcontainer/devcontainer-lock.json
+
 
 # Documentation
 docs/_*
