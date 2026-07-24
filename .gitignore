@@ -49,6 +49,7 @@ coverage.xml
 my*
 scratch/
 *docker*
+!/.devcontainer/Dockerfile
 
 # IDE-specific
 .idea/
