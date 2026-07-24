@@ -22,8 +22,8 @@ from cobaya.tools import VersionCheckError, are_different_params_lists
 pla_url_prefix = r"https://pla.esac.esa.int/pla-sl/data-action?COSMOLOGY.COSMOLOGY_OID="
 
 # Clipy installation
-clipy_repo_name = "benabed/clipy"
-clipy_repo_min_version = "0.15"
+clipy_repo_name = "CobayaSampler/clipy"
+clipy_repo_min_version = "0.16"
 
 last_version_supp_data_and_covmats = "v2.1"
 
@@ -421,7 +421,7 @@ def install_clipy(path, logger=None, no_progress_bars=False):
     success = download_github_release(
         path,
         clipy_repo_name,
-        "clipy_" + clipy_repo_min_version,  # TODO: check if "clipy_" still in release
+        "v" + clipy_repo_min_version,  # releases are tagged vX.Y since v0.16
         no_progress_bars=no_progress_bars,
         logger=logger,
     )

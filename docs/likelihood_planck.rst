@@ -56,9 +56,9 @@ The nuisance parameters and their default priors can be obtained as explained in
 Customization of ``clik``-based likelihoods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Likelihoods based on the official ``clik`` code (``planck_2018_lowl.[TT|EE]_clik``, ``planck_2018_highl_plik.[TT|TE|EE|TTTEEE]][_unbinned|_lite]``, ``planck_2018_highl_plik.[TT|TTTEEE]``, ``planck_2018_lensing.clik``) now use the pure-Python  `clipy implementation <https://github.com/benabed/clipy>`_.
+Likelihoods based on the official ``clik`` code (``planck_2018_lowl.[TT|EE]_clik``, ``planck_2018_highl_plik.[TT|TE|EE|TTTEEE]][_unbinned|_lite]``, ``planck_2018_highl_plik.[TT|TTTEEE]``, ``planck_2018_lensing.clik``) now use the pure-Python  `clipy implementation <https://github.com/CobayaSampler/clipy>`_.
 
-These likelihoods can now take commands at initialization for cropping, notching or spectra from individual frequency maps. The syntax can be found in the ``README`` section of the `Github repo <https://github.com/benabed/clipy>`__.
+These likelihoods can now take commands at initialization for cropping, notching or spectra from individual frequency maps. The syntax can be found in the ``README`` section of the `Github repo <https://github.com/CobayaSampler/clipy>`__.
 
 To use any of this commands in Cobaya, simply pass a single one or a list of them, e.g.:
 
@@ -78,7 +78,7 @@ of this section.
 Manual installation of the Planck 2018 likelihoods
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you would like to install the Python-native ``clipy`` implementation by hand (e.g. with the purpose of modifying it), you can simply clone its `Github repo <https://github.com/benabed/clipy>`__ anywhere and install this local copy with ``pip install .``. Alternatively, you can automatically install the last release with ``pip install clipy-like`` (NB: ``pip install clipy`` installs a completely different package!). In both cases, make sure that you can ``import clipy`` from anywhere.
+If you would like to install the Python-native ``clipy`` implementation by hand (e.g. with the purpose of modifying it), you can simply clone its `Github repo <https://github.com/CobayaSampler/clipy>`__ anywhere and install this local copy with ``pip install .``. Alternatively, you can automatically install the last release with ``pip install clipy-like`` (NB: ``pip install clipy`` installs a completely different package!). In both cases, make sure that you can ``import clipy`` from anywhere.
 
 Now, download the required likelihood files from the `Planck Legacy Archive <https://pla.esac.esa.int/pla/#cosmology>`_. For instance, if you want to reproduce the baseline Planck 2018 results, download the file ``COM_Likelihood_Data-baseline_R3.00.tar.gz`` and decompress it under e.g. ``/your/path/to/planck_2018``.
 
