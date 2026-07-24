@@ -44,6 +44,7 @@
     },
     "files.trimTrailingWhitespace": true,
     "files.trimFinalNewlines": true,
+    "files.eol": "\n",
     // YAML settings for custom tags
     "yaml.customTags": [
         "!defaults sequence",

@@ -554,5 +554,5 @@ chi2_sdss_dr12_consensus_final = {
 chi2_sixdf_2011_bao = {"bao.sixdf_2011_bao": 0.088, "tolerance": 0.02}
 chi2_sdss_dr7_mgs = {"bao.sdss_dr7_mgs": 0.92689, "tolerance": 0.02}
 chi2_DESI_y1_bao = {"bao.desi_2024_bao_all": 21.37, "tolerance": 0.02}
-chi2_DESI_dr2_bao = {"bao.desi_dr2": 30.51, "tolerance": 0.02}
+chi2_DESI_dr2_bao = {"bao.desi_dr2": 30.48, "tolerance": 0.02}
 chi2_DESI_dr2_elg2 = {"bao.desi_dr2.desi_bao_elg2": 2.24, "tolerance": 0.01}

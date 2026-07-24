@@ -256,7 +256,7 @@ class CAMB(BoltzmannBase):
     _camb_repo_name = "cmbant/CAMB"
     _camb_repo_version = os.environ.get("CAMB_REPO_VERSION", "master")
     _camb_min_gcc_version = "6.4"
-    _min_camb_version = "1.5.0"
+    _min_camb_version = "2.0.0"
 
     file_base_name = "camb"
     external_primordial_pk: bool
@@ -459,10 +459,9 @@ class CAMB(BoltzmannBase):
                         "raw_cl": False,
                     },
                 )
-                if "pp" in cls and self.extra_args.get("lens_potential_accuracy") is None:
-                    self.extra_args["lens_potential_accuracy"] = 1
+
                 self.non_linear_sources = self.non_linear_sources or (
-                    self.extra_args.get("lens_potential_accuracy", 1) >= 1
+                    self.extra_args.get("lens_potential_accuracy") != 0
                 )
                 if set(cls).intersection({"pt", "pe", "tp", "ep"}):
                     self._needs_lensing_cross = True

@@ -33,7 +33,7 @@ List of external packages
     * `GitHub repo <https://github.com/Lbalkenhol/candl>`_ including tutorials demonstrating the interface with Cobaya.
     * `Documentation <https://candl.readthedocs.io>`_
     * `Official SPT data <https://github.com/SouthPoleTelescope/spt_candl_data/>`_ with tutorials and example run ``.yaml`` files.
-    * `clipy (Planck) <https://github.com/benabed/clipy>`_
+    * `clipy (Planck) <https://github.com/CobayaSampler/clipy>`_
     * `Other candl data sets <https://github.com/Lbalkenhol/candl_data>`_
  * `ACTPol DR4 <https://github.com/ACTCollaboration/pyactlike>`_
  * `ACT DR6 Lensing <https://github.com/ACTCollaboration/act_dr6_lenslike>`_
