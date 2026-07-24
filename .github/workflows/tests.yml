@@ -58,9 +58,9 @@ jobs:
             python-version: "3.14"
             mpi: openmpi
             cobaya_skip: polychord
-          - name: "OS X Python 3.10"
+          - name: "OS X Python 3.11"
             os: macos-latest
-            python-version: "3.10"
+            python-version: "3.11"
             mpi: openmpi
             cobaya_skip: polychord
           - name: "Windows Python 3.12"

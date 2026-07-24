@@ -20,13 +20,12 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Astronomy",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14"
 ]
-requires-python = ">=3.10.0"
+requires-python = ">=3.11.0"
 dependencies = [
     "numpy>=1.17.0", "scipy>=1.5", "pandas>=1.0.1",
     "PyYAML>=5.1", "requests>=2.18", "py-bobyqa>=1.4",
@@ -84,7 +83,7 @@ Tracker = "https://github.com/CobayaSampler/cobaya/issues"
 Licensing = "https://github.com/CobayaSampler/cobaya/blob/master/LICENCE.txt"
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "B021", "LOG015", "PLC0206", "PLW1508", "RUF010"]
 ignore = ["E731"]
 extend-select = ["I"]
 preview = false
@@ -97,4 +96,4 @@ line-ending = "auto"
 
 [tool.ruff]
 line-length = 90
-target-version = "py310"
+target-version = "py311"

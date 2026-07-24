@@ -9,7 +9,9 @@ except (ImportError, SystemError):
     # SystemError caused usually by incompatible numpy version
 
     numba = None
-    logging.debug("Numba not available, install it for better performance.")
+    logging.getLogger(__name__).debug(
+        "Numba not available, install it for better performance."
+    )
 
     from scipy.stats import special_ortho_group
 

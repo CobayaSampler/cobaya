@@ -15,11 +15,11 @@ repos:
     rev: v3.21.2
     hooks:
       - id: pyupgrade
-        args: [--py310-plus]
+        args: [--py311-plus]
         files: '^(cobaya|tests)/.*\.py$'
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.2
+    rev: v0.16.0
     hooks:
       - id: ruff-check
         args: [--fix, --exit-non-zero-on-fix]

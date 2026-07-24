@@ -1364,10 +1364,10 @@ class Model(HasLogger):
         except ValueError:
             # No speeds defined <-- empty sequence passed to min
             min_speed = 1
-        for comp in speeds:
-            speeds[comp] = max(speeds[comp], min_speed)
+        for comp, speed in speeds.items():
+            speed = max(speed, min_speed)
             # For now, overhead is constant re # params and very small
-            speeds[comp] = (speeds[comp] ** -1 + self.overhead) ** -1
+            speeds[comp] = (speed**-1 + self.overhead) ** -1
         # Compute "footprint"
         # i.e. likelihoods (and theory) that we must recompute when each parameter changes
         footprints = np.zeros((len(self.sampled_dependence), len(speeds)), dtype=int)
