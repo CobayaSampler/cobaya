@@ -1,3 +1,12 @@
+## 3.x
+
+### General
+- Added devcontainer config and corresponding AGENTS.md
+
+### Cosmology
+- CAMB support updated to v2.x
+
+
 ## 3.6.2 – 2026-03-27
 
 ### General

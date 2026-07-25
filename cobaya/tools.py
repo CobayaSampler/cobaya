@@ -1174,17 +1174,6 @@ def write_packages_path_in_config_file(packages_path):
 
 
 def resolve_packages_path(infos=None):
-    f"""
-    Gets the external packages' installation path given some infos.
-    If more than one occurrence of the external packages path in the infos,
-    raises an error.
-
-    If there is no external packages' path defined in the given infos,
-    defaults to the env variable `{packages_path_env}`, and in its absence to that stored
-    in the config file.
-
-    If no path at all could be found, returns `None`.
-    """
     if not infos:
         infos = []
     elif isinstance(infos, Mapping):
@@ -1207,17 +1196,32 @@ def resolve_packages_path(infos=None):
     return os.environ.get(packages_path_env) or load_packages_path_from_config_file()
 
 
+resolve_packages_path.__doc__ = f"""
+Gets the external packages' installation path given some infos.
+If more than one occurrence of the external packages path in the infos,
+raises an error.
+
+If there is no external packages' path defined in the given infos,
+defaults to the env variable `{packages_path_env}`, and in its absence to that stored
+in the config file.
+
+If no path at all could be found, returns `None`.
+"""
+
+
 def sort_cosmetic(info):
-    f"""
-    Returns a sorted version of the given info dict, re-ordered as {dump_sort_cosmetic!r},
-    and finally the rest of the blocks/options.
-    """
     sorted_info = {}
     for k in dump_sort_cosmetic:
         if k in info:
             sorted_info[k] = info[k]
     sorted_info.update({k: v for k, v in info.items() if k not in sorted_info})
     return sorted_info
+
+
+sort_cosmetic.__doc__ = f"""
+Returns a sorted version of the given info dict, re-ordered as {dump_sort_cosmetic!r},
+and finally the rest of the blocks/options.
+"""
 
 
 def combine_1d(new_list, old_list=None):
