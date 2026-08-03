@@ -304,7 +304,8 @@ class Model(HasLogger):
         self._updated_info = recursive_update(
             self._updated_info, self.get_versions(add_version_field=True)
         )
-        # Overhead per likelihood evaluation, approximately ind from # input params
+        # Overhead per likelihood evaluation, approximately independent of the number of
+        # input parameters.
         # Evaluation of non-uniform priors will add some overhead per parameter.
         self.overhead = overhead_time
 
@@ -428,7 +429,7 @@ class Model(HasLogger):
         If ``cached=False`` (default: True), it ignores previously computed results that
         could be reused.
         """
-        # Calculate required results and returns likelihoods
+        # Calculate required results and return likelihoods
         outpar_dict: ParamValuesDict = {}
         compute_success = True
         self.provider.set_current_input_params(input_params)
@@ -826,9 +827,9 @@ class Model(HasLogger):
                 self.input_params
             )
             if requirements_in_input_params and _component is not None:
-                # Save parameters dependence
+                # Save parameter dependencies
                 direct_param_dependence[_component].update(requirements_in_input_params)
-                # requirements that are sampled parameters automatically satisfied
+                # Requirements that are sampled parameters are automatically satisfied
                 return [
                     _req
                     for _req in _require
@@ -1061,7 +1062,7 @@ class Model(HasLogger):
                     "(neither directly nor indirectly)",
                     component,
                 )
-        # Store the input params and components on which each sampled params depends.
+        # Store the input params and components on which each sampled params depend.
         sampled_input_dependence = self.parameterization.sampled_input_dependence()
         sampled_dependence: dict[str, list[Theory]] = {
             p: [] for p in sampled_input_dependence
@@ -1368,8 +1369,8 @@ class Model(HasLogger):
             speed = max(speed, min_speed)
             # For now, overhead is constant re # params and very small
             speeds[comp] = (speed**-1 + self.overhead) ** -1
-        # Compute "footprint"
-        # i.e. likelihoods (and theory) that we must recompute when each parameter changes
+        # Compute "footprint" i.e. likelihoods (and theories)
+        # that we must recompute when each parameter changes
         footprints = np.zeros((len(self.sampled_dependence), len(speeds)), dtype=int)
         sampled_dependence_names = {
             k: [c.get_name() for c in v] for k, v in self.sampled_dependence.items()
@@ -1446,7 +1447,7 @@ class Model(HasLogger):
                     min_factor,
                 )
             # Finally, unfold `oversampling_factors` to have the right number of elements,
-            # taking into account that that of the fast blocks should be interpreted as a
+            # taking into account that the fast blocks should be interpreted as a
             # global one for all of them.
             # NB: the int() below forces the copy of the factors.
             #     Otherwise the yaml_representer prints references to a single object.

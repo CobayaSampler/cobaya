@@ -118,7 +118,7 @@ from cobaya.tools import read_dnumber, recursive_update
 evals_attr = {"scipy": "fun", "bobyqa": "f", "iminuit": "fun"}
 valid_methods = tuple(evals_attr)
 
-# Conventions conventions
+# Conventions
 getdist_ext_ignore_prior = {True: ".bestfit", False: ".minimum"}
 
 
@@ -577,7 +577,7 @@ class Minimize(Minimizer, CovmatSampler):
         Returns a list of tuples `(regexp, root)` of output files potentially produced.
         If `root` in the tuple is `None`, `output.folder` is used.
 
-        If `minimal=True`, returns regexp's for the files that should really not be there
+        If `minimal=True`, returns regular expressions for files that should not be there
         when we are not resuming.
         """
         ignore_prior = bool(info.get("ignore_prior", False))

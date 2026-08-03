@@ -109,7 +109,7 @@ class Likelihood(Theory, LikelihoodInterface):
         To get the derived parameters, pass a `_derived` keyword with an empty dictionary.
 
         Alternatively you can just implement calculate() and save the log likelihood into
-        state['logp']; this may be more convenient if you also need to also calculate
+        state['logp']; this may be more convenient if you also need to calculate
         other quantities.
         """
         return
@@ -213,7 +213,7 @@ class LikelihoodExternalFunction(Likelihood):
             if p not in ignore_args and (isinstance(val, numbers.Number) or val is None)
         ]
         self._args = set(chain(self._optional_args, self.params))
-        # If has unnamed kwargs, assume these are the ones declared in input_params
+        # If it has unnamed kwargs, assume these are the ones declared in input_params
         has_unnamed_kwargs = bool(argspec.varkw)
         if has_unnamed_kwargs:
             self._args.update(self.input_params)

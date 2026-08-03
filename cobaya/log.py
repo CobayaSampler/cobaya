@@ -131,7 +131,7 @@ def abstract(method):
 
     # If an @abstract method is called dynamically from another function,
     # you get a logged error that it's not implemented.
-    # An @abstract methods also will not be picked up by the dependency analyser, so
+    # An @abstract method also will not be picked up by the dependency analyser, so
     # a class with only an @abstract method implementation of X will not be assigned to
     # provide X. Descendants can of course override @abstract methods to implement them.
 

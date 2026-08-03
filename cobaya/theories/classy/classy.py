@@ -99,8 +99,8 @@ String-vector parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 At the time of writing, the CLASS Python interface takes some vector-like parameters
-as string in which different components are separater by a space. To be able to set priors
-or fixed values on each components, see `this trick
+as strings in which different components are separated by a space.
+To be able to set priors or fixed values on each component, see `this trick
 <https://github.com/CobayaSampler/cobaya/issues/110#issuecomment-652333489>`_, and don't
 forget the ``derived: False`` in the vector parameter (thanks to Lukas Hergt).
 

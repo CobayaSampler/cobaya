@@ -362,9 +362,9 @@ def is_installed_clipy(path=None, reload=False, logger=None):
         before testing. If not defined, a test for a global python installation will be
         performed instead (``default_global=True`` will be passed to the module loader).
     reload: bool
-        Whether to attemp to reload the ``clipy`` module before checking.
+        Whether to attempt to reload the ``clipy`` module before checking.
     logger: logging.Logger, optional
-        Initialized logger. If note passed, one named ``clipy`` will be created.
+        Initialized logger. If not passed, one named ``clipy`` will be created.
 
     Returns
     -------
@@ -398,7 +398,7 @@ def install_clipy(path, logger=None, no_progress_bars=False):
         Path where clipy will be downloaded into, to which ``clipy`` will be appended.
 
     logger: logging.Logger, optional
-        Initialized logger. If note passed, one named ``clipy`` will be created.
+        Initialized logger. If not passed, one named ``clipy`` will be created.
 
     no_progress_bars: bool
         Whether to show download/install progress bars.
