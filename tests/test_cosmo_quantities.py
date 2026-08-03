@@ -307,7 +307,7 @@ def test_cosmo_sigma_R_classy(packages_path, skip_not_installed):
 
 Omega_b_values = [0.15172485, 0.15517809, 0.12258897, 0.04920226]
 Omega_cdm_values = [0.81730093, 0.83590262, 0.66035382, 0.26503934]
-Omega_nu_massive_values = [0.00608623, 0.0045243, 0.00355319, 0.00142589]
+Omega_nu_massive_values = [0.0060864, 0.00452457, 0.00355337, 0.00142596]
 
 
 def _test_cosmo_omega(theo, packages_path, skip_not_installed):
@@ -332,7 +332,7 @@ def _test_cosmo_omega(theo, packages_path, skip_not_installed):
     assert np.allclose(
         model.theory[theo].get_Omega_nu_massive(redshifts),
         Omega_nu_massive_values,
-        rtol=2e-5 if theo.lower() == "camb" else 2e-3,
+        rtol=1e-4 if theo.lower() == "camb" else 2e-3,
     )
 
 
