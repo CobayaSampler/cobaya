@@ -296,8 +296,7 @@ class JobItem(PropertiesItem):
                 imp_run = ImportanceSetting(imp_run[0], imp_run[1])
             if len(set(imp_run.names).intersection(self.data_set.names)) > 0:
                 print(
-                    f"importance job duplicating parent data set: {self.name} "
-                    f"with {imp_run.names}"
+                    f"importance job duplicating parent data set: {self.name} with {imp_run.names}"
                 )
                 continue
             data = self.data_set.extendForImportance(imp_run.names, imp_run.inis)

@@ -15,6 +15,10 @@ covmat:
 covmat_params:
 # Overall scale of the proposal pdf (increase for longer steps)
 proposal_scale: 2.4
+# Whether to disperse initial chain starting points using the proposal covmat
+# (correlated multivariate normal draw) instead of independent per-parameter dispersion.
+# Only used when a covmat is specified.
+disperse_initial_with_covmat: True
 # Update output file(s) and print some info
 # every X seconds (if ends in 's') or X accepted samples (if just a number)
 output_every: 60s
@@ -68,13 +72,13 @@ blocking:
 # Callback function
 # -----------------
 callback_function:
-callback_every:  # default: every checkpoint
+callback_every: # default: every checkpoint
 # Seeding runs
 # ------------
 # NB: in parallel runs, only works until to the first proposer covmat update.
-seed:  # integer between 0 and 2**32 - 1
+seed: # integer between 0 and 2**32 - 1
 # DEPRECATED
 # ----------------
-check_every:  # now it is learn_every
+check_every: # now it is learn_every
 oversample: # now controlled by oversample_power > 0
-drag_limits:  # use oversample_power instead
+drag_limits: # use oversample_power instead
