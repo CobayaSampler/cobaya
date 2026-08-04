@@ -473,7 +473,7 @@ def submitJob(job_name, input_files, sequential=False, msg=False, **kwargs):
                     job_id = parse_job_id_from_output(res)
                     j.jobId = job_id
                     j.subTime = time.time()
-                    TextFile(scriptRoot + jobid_ext).write(job_id)
+                    TextFile(job_id).write(scriptRoot + jobid_ext)
                     addJobIndex(kwargs.get("batchPath"), j)
 
 
