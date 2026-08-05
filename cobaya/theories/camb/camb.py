@@ -9,7 +9,7 @@
    <br />
 
 This module imports and manages the CAMB cosmological code.
-It requires CAMB 1.5 or higher.
+It requires CAMB 2.0 or higher.
 
 .. note::
 
@@ -140,7 +140,7 @@ CAMB for you (which requires a fortran compiler). Just make sure that
 ``theory: camb:`` appears in one of the files passed as arguments to the installation
 script.
 
-This is not neccessary if you have a pip installed camb globally, however
+This is not necessary if you have globally pip-installed CAMB, however
 a source build potentially allows you to optimize it for your specific architecture.
 
 
@@ -556,7 +556,7 @@ class CAMB(BoltzmannBase):
                 # different likelihoods. Store results without Hubble units.
                 if kwargs.get("hubble_units", False) or kwargs.get("k_hunit", False):
                     raise LoggedError(
-                        self.log, "hubble_units and k_hunit must be Falsefor consistency"
+                        self.log, "hubble_units and k_hunit must be False for consistency"
                     )
                 kwargs["hubble_units"] = False
                 kwargs["k_hunit"] = False

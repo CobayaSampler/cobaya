@@ -127,7 +127,7 @@ class MCMC(CovmatSampler):
         if self.temperature is None:
             self.temperature = 1
         elif self.temperature < 1:
-            self.mpi_warning("Sampling temperatures <1 can lead to innacurate inference.")
+            self.mpi_warning("Sampling temperatures <1 can lead to inaccurate inference.")
         if is_main_process():
             if self.output.is_resuming() and (max(self.mpi_size or 0, 1) != mpi.size()):
                 raise LoggedError(
@@ -1253,10 +1253,10 @@ def plot_progress(
             progress.index = np.arange(1, len(progress) + 1)
         except Exception as excpt:
             raise ValueError(
-                f"Cannot load progress file {progress!r}: {str(excpt)}"
+                f"Cannot load progress file {progress!r}: {excpt!s}"
             ) from excpt
     elif hasattr(type(progress), "__iter__"):
-        # Assume is a list of progress'es
+        # Assume it is a list of progress reports
         for i, p in enumerate(progress):
             plot_progress(p, ax=ax, index=i + 1)
         return ax

@@ -604,7 +604,7 @@ base_precision: InfoDict = {
     "classy": {},
 }
 
-# Precision for CMB analises
+# Precision for CMB analyses
 cmb_precision = deepcopy(base_precision)
 cmb_precision["classy"].update({"non linear": "hmcode"})
 

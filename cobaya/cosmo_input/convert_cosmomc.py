@@ -113,7 +113,7 @@ def cosmomc_root_to_cobaya_info_dict(root: str, derived_to_input=()) -> InputDic
                     info_like[like] = None
     else:
         print(
-            'You need to mention in the likelihood block with with "name: None"'
+            'You need to mention in the likelihood block with "name: None"'
             "for each likelihood in the input chain"
         )
 

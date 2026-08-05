@@ -66,7 +66,7 @@ You can skip the ``--packages-path`` option if a ``packages_path`` field is alre
 
    If you would like to skip the installation of the dependencies of some components, you can use the ``--skip "word1 word2 [...]"`` argument, where ``word[X]`` are sub-strings of the names of the corresponding components (case-insensitive), e.g. ``camb`` or ``planck``.
 
-   If you would like to automatically skip installing external packages that are avaliable globally (e.g. if you can do ``import classy`` from anywhere) add ``--skip-global`` to the command above.
+   If you would like to automatically skip installing external packages that are available globally (e.g. if you can do ``import classy`` from anywhere) add ``--skip-global`` to the command above.
 
 ``cobaya-install`` will save the packages installation path used into a global configuration file, so that you do not need to specify it in future calls to ``cobaya-install``, ``cobaya-run``, etc. To show the current default install path, run ``cobaya-install --show-packages-path``.
 

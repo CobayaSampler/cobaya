@@ -90,7 +90,7 @@ def grid_tables(args=None):
         "--shift_sigma_subset",
         action="store_true",
         help="fractional shifts are relative to the sigma "
-        "for stricly subset data "
+        "for strictly subset data "
         "(sigma^2 = |sigma1^2-sigma2^2|, "
         "regularized to sigma/20)",
     )
@@ -109,7 +109,7 @@ def grid_tables(args=None):
         default=None,
         help="a semi-colon separated list of parameters marking "
         "the end of distinct parameter blocks "
-        "(e.g. physical vs nuisance parmeters, "
+        "(e.g. physical vs nuisance parameters, "
         "sampled vs derived)",
     )
     opts.parser.add_argument("--columns", type=int, nargs=1, default=3)

@@ -391,7 +391,7 @@ class Sampler(CobayaComponent):
         part of the tuple is ``None``, all files inside ``root`` will be considered as
         output files of the sampler.
 
-        If `minimal=True`, returns regexp's for the files that should really not be there
+        If `minimal=True`, returns regular expressions for files that should not be there
         when we are not resuming.
         """
         return []

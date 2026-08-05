@@ -21,7 +21,7 @@ T = TypeVar("T")
 default_error_timeout_seconds = 5
 
 # Vars to keep track of MPI parameters
-_mpi: Any = None if os.environ.get("COBAYA_NOMPI", False) else -1
+_mpi: Any = None if os.environ.get("COBAYA_NOMPI") else -1
 _mpi_size = -1
 _mpi_comm: Any = -1
 _mpi_rank: int | None = -1

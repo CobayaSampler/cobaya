@@ -323,7 +323,7 @@ class OutputReadOnly:
 
     def collection_regexp(self, name=None, extension=None):
         """
-        Returns a regexp for collections compatible with this output settings.
+        Returns a regex for collections compatible with these output settings.
 
         Use `name` for particular types of collections (default: any number).
         Pass `False` to mean there is nothing between the output prefix and the extension.

@@ -266,7 +266,7 @@ class Theory(CobayaComponent):
                     and (not want_derived or _state["derived"] is not None)
                 ):
                     state = _state
-                    self.log.debug("Re-using computed results")
+                    self.log.debug("Reusing computed results")
                     self._states.remove(_state)
                     break
         if not state:
