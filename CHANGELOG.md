@@ -233,7 +233,7 @@
 - Replaced default planck_2018_lowl.EE and planck_2018_low.TT with native versions, and using GitHub-hosted clik version.
 - Updated planck likelihoods to all load calibration parameter from same yaml
 - Removed clik version of planck 2018 CamSpec, defaults to native (avoids inconsistent calibration parameter naming)
-- GUI inclues latest NPIPE fully Python likelihood configuration
+- GUI includes latest NPIPE fully Python likelihood configuration
 
 ## 3.2.2 – 2022-11-03
 
@@ -436,7 +436,7 @@
 - Bugfixes when using `cobaya.sample.get_sampler()`
 - More informative error tracebacks; fixes #121 (thanks @msyriac)
 - Uniform priors can now be specified simply as `[<min>, <max>]`
-- Likelihoods can now be renamed and used mutiple times simultaneously; fixes #126 (thanks
+- Likelihoods can now be renamed and used multiple times simultaneously; fixes #126 (thanks
   @Pablo-Lemos)
 
 ### Bibliography tools
@@ -516,7 +516,7 @@
 - Results shared with all MPI processes.
 - `[prefix].updated.yaml` is now `[prefix].minimize.updated.yaml` (GetDist needs to know
   the original sampler).
-- Loads covmat correcly when starting from PolyChord sample.
+- Loads covmat correctly when starting from PolyChord sample.
 
 ### Collections
 

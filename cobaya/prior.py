@@ -905,17 +905,17 @@ class Prior(HasLogger):
         updated_ref_pdfs = []
         i_sample_from_prior = []
         for i, (param, ref_pdf) in enumerate(zip(self.params, self.ref_pdf)):
-            overriden_std = (override_std or {}).get(param)
+            overridden_std = (override_std or {}).get(param)
             if isinstance(ref_pdf, numbers.Real):
                 if np.isnan(ref_pdf):
                     updated_ref_pdfs.append(None)
                     i_sample_from_prior.append(i)
                 elif ignore_fixed:
-                    if overriden_std is None:
+                    if overridden_std is None:
                         updated_ref_pdfs.append(None)
                         i_sample_from_prior.append(i)
                     else:
-                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=overriden_std))
+                        updated_ref_pdfs.append(norm(loc=ref_pdf, scale=overridden_std))
                 else:  # actual number
                     updated_ref_pdfs.append(ref_pdf)
             else:  # pdf is an actual pdf

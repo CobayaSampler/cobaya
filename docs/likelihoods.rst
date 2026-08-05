@@ -75,7 +75,7 @@ For an application, check out :doc:`cosmo_external_likelihood`.
 
       def my_like(a0, a1):
           logp =  # some function of `(a0, a1)`
-          devived = {"sum_a": a0 + a1}
+          derived = {"sum_a": a0 + a1}
           return logp, derived
 
       info_like = {"my_likelihood": {

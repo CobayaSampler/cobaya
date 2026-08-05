@@ -105,7 +105,7 @@ def test_polychord_unphysical(packages_path, skip_not_installed):
     """
     Tests that the effect of unphysical regions is subtracted correctly.
 
-    To do that, it integrates a normalised 2D Guassian likelihood over a uniform prior in
+    To do that, it integrates a normalised 2D Gaussian likelihood over a uniform prior in
     the region (-bounds, +bound) x (-bound, bound), with a x>y cut.
 
     The correct evidence is int(pi*L) = 1/V int(L), which for a normalised prior, that is
