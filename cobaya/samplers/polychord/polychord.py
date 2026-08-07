@@ -37,7 +37,7 @@ from cobaya.yaml import yaml_dump_file
 
 # Avoid importing GetDist if not necessary
 if TYPE_CHECKING:
-    from getdist import MCSamples
+    from getdist import MCSamples  # type: ignore
 
 
 class polychord(Sampler):
