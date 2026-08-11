@@ -41,3 +41,16 @@ class desi_bao_qso(desi_dr2):
     r"""
     DESI BAO likelihood for QSO \cite{DESI:2025zgx}.
     """
+
+
+class desi_bao_lya_fs(desi_dr2):
+    r"""
+    DESI BAO + full-shape likelihood for Lyman-alpha \cite{DESI:2026lnd}.
+    """
+
+
+class desi_bao_all_lya_fs(desi_dr2):
+    r"""
+    DESI BAO for all tracers + full-shape likelihood for Lyman-alpha
+    \cite{DESI:2025zpo,DESI:2025zgx,DESI:2026lnd}.
+    """
