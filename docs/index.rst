@@ -32,6 +32,11 @@ Table of contents
    post
 
 .. toctree::
+   :caption: Extending Cobaya
+   :maxdepth: 1
+   omnibus_packages
+
+.. toctree::
    :caption: Cosmology!
    :maxdepth: 1
 
