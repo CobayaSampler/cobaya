@@ -50,7 +50,6 @@ try:
         QVBoxLayout,
         QWidget,
     )
-
 except ImportError:
     QWidget, Slot = object, (lambda: lambda *x: None)
 
@@ -430,7 +429,7 @@ def gui_script():
         # TODO: fix this long logger setup
         from cobaya.log import LoggedError, logger_setup
 
-        logger_setup(0, None)
+        logger_setup(debug=None)
         raise LoggedError(
             "cosmo_generator",
             "PySide is not installed! "

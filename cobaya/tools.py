@@ -24,9 +24,9 @@ from types import ModuleType
 from typing import Any, TypeVar
 
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 from packaging import version
-from scipy import stats
+from scipy import stats  # type: ignore
 
 from cobaya.conventions import (
     cobaya_package,
@@ -155,18 +155,29 @@ class VersionCheckError(ValueError):
     """
 
 
-def check_module_version(module: Any, min_version):
+def check_module_version(module: ModuleType, min_version):
     """
     Tries to get the module version and raises :class:`tools.VersionCheckError` if not
     found or older than the specified ``min_version``.
+
+    If the module is specified as a path (i.e. contains ``.``), upper levels will be tried
+    recursively until a version is found.
     """
-    if not hasattr(module, "__version__") or version.parse(
-        module.__version__
-    ) < version.parse(min_version):
+    module_name_levels = module.__name__.split(".")
+    module_version = None
+    for i_level in range(len(module_name_levels)):
+        module_level = sys.modules[".".join(module_name_levels[: -i_level or None])]
+        module_version = getattr(module_level, "__version__", None)
+        if module_version is not None:
+            break
+    if module_version is None or version.parse(module_version) < version.parse(
+        min_version
+    ):
+        dirname = os.path.dirname(module.__file__)  # type: ignore
         raise VersionCheckError(
-            f"Module {module.__name__} at {os.path.dirname(module.__file__)} has version "
-            f"{getattr(module, '__version__', '(non-given)')} but the minimum required "
-            f"version is {min_version}."
+            f"Module {module.__name__} at {dirname} has version "
+            f"{module_version or '(non-given)'} but the minimum required version is "
+            f"{min_version}."
         )
 
 
@@ -192,6 +203,15 @@ def load_module(
     This is a low-level function. You may want to use instead
     :func:`component.load_external_module`, which interacts with Cobaya's installation and
     logging systems.
+
+    Raises
+    ------
+    ModuleNotFoundError
+        If the module could not be found, or if ``check_path=True`` and a ``path`` were
+        passed, and a module was succesfully loaded but from a different path.
+
+    cobaya.tools.VersionCheckError
+        If ``min_version`` was passed and the version check test failed.
     """
     with PythonPath(path):
         # Force reload if requested.
@@ -205,6 +225,49 @@ def load_module(
     if min_version:
         check_module_version(module, str(min_version))
     return module
+
+
+def find_matching_class_in_module(module: Any, class_name: str, subclass_of=None):
+    """
+    Get the class definition that matches Camel- or uppercase ``class_name`` within
+    ``module``, optionally imposing that it is a subclass of ``subclass_of``.
+
+    Tries the value as-is of ``class_name`` first.
+
+    Raises ``NameError`` if no matching class found, and ``ValueError`` if more than one
+    found.
+    """
+    cls = getattr(module, class_name, None)
+    if cls is not None and inspect.isclass(cls):
+        return cls
+    result = []
+    valid_names = {class_name, class_name[:1] + class_name[1:].replace("_", "")}
+    for cls in classes_in_module(module, subclass_of=subclass_of):
+        if cls.__name__.lower() in valid_names:
+            result.append(cls)
+    if len(result) == 1:
+        return result[0]
+    if len(result) > 1:
+        raise ValueError(
+            f"Found more than one class in '{module}' matching '{class_name}': {result}."
+        )
+    raise NameError(
+        f"Could not find in module '{module}' any class matching '{class_name}'."
+    )
+
+
+def classes_in_module(m, subclass_of=None, allow_imported=False) -> set[type]:
+    """
+    Returns all classes in a module, optionally imposing that they are a subclass of
+    ``subclass_of``, and optionally including imported ones with ``allow_imported=True``
+    (default False).
+    """
+    return {
+        cls
+        for _, cls in inspect.getmembers(m, inspect.isclass)
+        if (not subclass_of or issubclass(cls, subclass_of))
+        and (allow_imported or cls.__module__ == m.__name__)
+    }
 
 
 def get_compiled_import_path(source_path):
@@ -293,10 +356,11 @@ def get_available_internal_classes(kind, hidden=False, stem=None, package=None):
 
     Raises `ImportError` if called with a non-installed package.
     """
-
     from cobaya.component import CobayaComponent
 
-    if package in [None, cobaya_package]:
+    if package is None:
+        package = cobaya_package
+    if package == cobaya_package:
         root_file = __file__
     else:
         try:
@@ -313,33 +377,24 @@ def get_available_internal_classes(kind, hidden=False, stem=None, package=None):
     )
 
 
-def get_all_available_internal_classes(hidden=False, stem=None, package=None):
-    return set(
-        chain(
-            *(
-                get_available_internal_classes(k, hidden, stem, package=package)
-                for k in kinds
-            )
-        )
-    )
-
-
 def get_available_internal_class_names(
     kind=None,
     hidden=False,
     stem=None,
     package=None,
 ) -> Iterable[str]:
-    return sorted(
-        {
-            cls.get_qualified_class_name()
-            for cls in (
-                get_available_internal_classes(kind, hidden, stem, package=package)
-                if kind
-                else get_all_available_internal_classes(hidden, stem, package=package)
-            )
-        }
-    )
+    """
+    Gets qualified names for all available internal classes.
+    """
+    if kind is not None:
+        classes = get_available_internal_classes(kind, hidden, stem, package=package)
+    else:
+        classes_tuple = (
+            get_available_internal_classes(k, hidden, stem, package=package)
+            for k in kinds
+        )
+        classes = set(chain(*classes_tuple))
+    return sorted({cls.get_qualified_class_name() for cls in classes})
 
 
 def replace_optimizations(function_string: str) -> str:
@@ -388,7 +443,7 @@ def get_external_function(string_or_function, name=None):
             string_or_function = replace_optimizations(string_or_function)
             with PythonPath(os.curdir, when="import_module" in string_or_function):
                 function = eval(string_or_function, scope)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             raise LoggedError(
                 log,
                 "Failed to load external function%s: '%r'",
@@ -603,17 +658,15 @@ def load_DataFrame(file_name, skip=0, root_file_name=None):
             skiprows=skip,
             index_col=False,
         )
-
-    if not data.empty:
-        # Check if the last row contains any NaNs
-        if data.iloc[-1].isna().any():
-            log.warning("Last row of %s is incomplete or contains NaNs", file_name)
-            # If the second-to-last row exists and doesn't contain NaNs,
-            # delete the last row assuming this was due to crash on write
-            if len(data) > 1 and not data.iloc[-2].isna().any():
-                data = data.iloc[:-1]
-                log.info(f"Saving {file_name} deleting last (in)complete line")
-                truncate_to_end_line(file_name)
+    # Check if the last row contains any NaNs
+    if not data.empty and data.iloc[-1].isna().any():
+        log.warning("Last row of %s is incomplete or contains NaNs", file_name)
+        # If the second-to-last row exists and doesn't contain NaNs,
+        # delete the last row assuming this was due to crash on write
+        if len(data) > 1 and not data.iloc[-2].isna().any():
+            data = data.iloc[:-1]
+            log.info(f"Saving {file_name} deleting last (in)complete line")
+            truncate_to_end_line(file_name)
     return data
 
 
@@ -680,7 +733,7 @@ def get_scipy_1d_pdf(
     # Get distribution from scipy
     dist = kwargs.pop("dist", "uniform")
     if not isinstance(dist, str):
-        raise ValueError(f"If present 'dist' must be a string. Got {type(dist)}.")
+        raise TypeError(f"If present, 'dist' must be a string. Got {type(dist)}.")
     minmax_used = "min" in kwargs or "max" in kwargs
     if minmax_used:
         if dist == "truncnorm":
@@ -955,7 +1008,7 @@ def deepcopy_where_possible(base: _R) -> _R:
             return base
         try:
             return deepcopy(base)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return base
 
 
@@ -1103,7 +1156,7 @@ def get_cache_path():
     try:
         if not os.path.exists(cache_path):
             os.makedirs(cache_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise LoggedError(
             log, "Could not create cache folder %r. Reason: %r", cache_path, str(e)
         )
@@ -1133,7 +1186,7 @@ def get_config_path():
             raise ValueError("Could not find system type.")
         if not os.path.exists(config_path):
             os.makedirs(config_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise LoggedError(
             log, "Could not get config folder %r. Reason: %r", config_path, str(e)
         )
@@ -1152,7 +1205,7 @@ def load_config_file():
             yaml_load_file(os.path.join(get_config_path(), packages_path_config_file))
             or {}
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         return {}
 
 
@@ -1173,7 +1226,7 @@ def write_config_file(config_info, append=True):
             info,
             error_if_exists=False,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.error(
             "Could not write the external packages' installation path into the "
             "config file. Reason: %r",

@@ -31,7 +31,7 @@ class LoggedError(Exception):
         if isinstance(logger, str):
             logger = get_logger(logger)
         if not isinstance(logger, logging.Logger):
-            raise SyntaxError(
+            raise TypeError(
                 f"The first argument of {self.__class__.__name__} must be a logger "
                 "instance or name."
             )
@@ -173,7 +173,7 @@ def exception_handler(exception_type, exception_instance, trace_back):
     _logger_name = "exception handler"
     log = logging.getLogger(_logger_name)
 
-    if exception_type == LoggedError:
+    if issubclass(exception_type, LoggedError):
         # make show error easily visible at end of log
         if mpi.more_than_one_process():
             log.error(str(exception_instance))

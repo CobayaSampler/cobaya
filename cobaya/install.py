@@ -23,6 +23,7 @@ import requests  # type: ignore
 import tqdm  # type: ignore
 from packaging import version
 
+from cobaya import _known_omnibus_packages
 from cobaya.component import ComponentNotFoundError, get_component_class
 from cobaya.conventions import (
     Extension,
@@ -35,7 +36,7 @@ from cobaya.conventions import (
     packages_path_env,
     packages_path_input,
 )
-from cobaya.input import get_used_components
+from cobaya.input import get_omnibus_external_info, get_used_components, merge_info
 from cobaya.log import LoggedError, NoLogging, get_logger, logger_setup
 from cobaya.mpi import set_mpi_disabled
 from cobaya.tools import (
@@ -57,21 +58,13 @@ _version_filename = "version.dat"
 
 
 def do_package_install(
-    component: str, package_install: InfoDict | str, full_code_path: str, logger
+    component: str, package_install: InfoDict, full_code_path: str, logger
 ):
     # attempt to install package if package_install download info is present
     # similar to InstallableLikelihood install_options (could be refactored)
     component_root = component.split(".")[0]
     directory = package_install.get("directory")
     min_version = package_install.get("min_version")
-    if package_install == "pip":
-        package_install = {"pip": None}
-    elif not isinstance(package_install, Mapping):
-        raise LoggedError(
-            logger,
-            "Invalid package_install: must be 'pip' or a "
-            "dictionary with download_url or github_repository",
-        )
     package = package_install.get("pip")
     if package is None:
         package = component_root
@@ -229,6 +222,10 @@ def install(*infos, **kwargs):
                     f"Component '{name_w_kind}' is a custom function. Nothing to do."
                 )
                 continue
+            # Let omnibus packages add class names and install information
+            ext_info = get_omnibus_external_info(component, kind=kind)
+            if ext_info is not None:
+                info = merge_info(info, ext_info)
             class_name = (info or {}).get("class")
             if class_name:
                 logger.info(f"Class to be installed for this component: {class_name}")
@@ -236,8 +233,15 @@ def install(*infos, **kwargs):
             package_install = info.get("package_install") or {}
             # If a class_name AND pip install were specified, make sure the class name is
             # used. Otherwise the pip package would be inferred from the alias.
-            if package_install == "pip":
-                package_install = {"pip": None}
+            if isinstance(package_install, str):
+                if package_install == "pip":
+                    package_install = {package_install: None}
+                else:
+                    raise LoggedError(
+                        logger,
+                        "Invalid package_install: must be 'pip' or a "
+                        "dictionary with download_url or github_repository",
+                    )
             if "pip" in package_install and package_install["pip"] is None:
                 package_install["pip"] = class_name
             min_version = package_install.get("min_version")
@@ -278,7 +282,7 @@ def install(*infos, **kwargs):
                             continue
                     else:
                         raise
-                except Exception:
+                except Exception:  # noqa: BLE001
                     raise
             except ComponentNotFoundError:
                 logger.error(
@@ -286,7 +290,7 @@ def install(*infos, **kwargs):
                 )
                 unknown_components += [name_w_kind]
                 continue
-            except Exception:
+            except Exception:  # noqa: BLE001
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 logger.error(f"An error occurred when loading '{name_w_kind}'. Skipping.")
                 failed_components += [name_w_kind]
@@ -373,7 +377,7 @@ def install(*infos, **kwargs):
             try:
                 install_this = getattr(imported_class, "install", None)
                 success = install_this(path=general_abspath, **install_args)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                 logger.error(
                     "An unknown error occurred. Delete the external packages "
@@ -408,7 +412,7 @@ def install(*infos, **kwargs):
                         **kwargs_install,
                         **kwargs_is_installed,
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     traceback.print_exception(*sys.exc_info(), file=sys.stdout)
                     successfully_installed = False
             if not successfully_installed:
@@ -542,7 +546,7 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
                     if lines[0].startswith("404") or "not found" in lines[0].lower():
                         raise ValueError("File not found (404)!")
             logger.info("Downloaded filename %s", filename)
-        except Exception as excpt:
+        except Exception as excpt:  # noqa: BLE001
             logger.error("Error downloading %s' to folder '%s': %s", url, tmp_path, excpt)
             return False
         logger.debug("Got: %s", filename)
@@ -567,7 +571,7 @@ def download_file(url, path, *, size=None, no_progress_bars=False, logger=None):
                     tar.extractall(path, **kwargs)
             logger.debug("Decompressed: %s", filename)
             return True
-        except Exception as excpt:
+        except Exception as excpt:  # noqa: BLE001
             logger.error("Error decompressing downloaded file! Corrupt file? [%s]", excpt)
             return False
 

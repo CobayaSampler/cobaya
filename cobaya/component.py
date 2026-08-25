@@ -4,6 +4,7 @@ import time
 from collections.abc import Mapping
 from importlib import import_module, resources
 from inspect import cleandoc
+from types import ModuleType
 from typing import get_type_hints
 
 from packaging import version
@@ -13,8 +14,8 @@ from cobaya.conventions import cobaya_package, kinds, reserved_attributes
 from cobaya.log import HasLogger, LoggedError, get_logger
 from cobaya.mpi import is_main_process
 from cobaya.tools import (
-    VersionCheckError,
     deepcopy_where_possible,
+    find_matching_class_in_module,
     get_base_classes,
     get_internal_class_component_name,
     load_module,
@@ -221,7 +222,10 @@ class HasDefaults:
         """
         Return the content of a file in the directory of the module, if it exists.
         """
-        package = inspect.getmodule(cls).__package__
+        module = inspect.getmodule(cls)
+        if module is None:
+            return None
+        package = module.__package__
         try:
             if os.path.split(str(file_name))[0]:
                 raise ValueError(f"{file_name} must be a bare file name, without path.")
@@ -230,7 +234,7 @@ class HasDefaults:
                 "r", encoding="utf-8-sig", errors="strict"
             ) as fp:
                 return fp.read()
-        except Exception:
+        except Exception:  # noqa:  BLE001
             return None
 
     @classmethod
@@ -601,48 +605,77 @@ class ComponentNotFoundError(LoggedError):
 def get_component_class(
     name,
     kind=None,
-    component_path=None,
     class_name=None,
-    allow_external=True,
+    component_path=None,
     allow_internal=True,
+    allow_external=True,
+    min_package_version=None,
     logger=None,
     not_found_level=None,
-    min_package_version=None,
 ):
     """
-    Retrieves the requested component class from its reference name. The name can be a
-    fully-qualified package.module.classname string, or an internal name of the particular
-    kind. If the last element of name is not a class, assume class has the same name and
-    is in that module.
+    Retrieves the requested component class from its reference name.
 
-    The name can be a fully-qualified package.module.classname string, or an internal name
-    of the particular kind. If the last element of name is not a class, assume class has
-    the same name and is in that module.
+    By default, it tries, in this order, to load from a given path (if specified), then
+    looks for an internal class with the given name (in Cobaya and installed omnibus
+    pacakges), and finally in a module in the current folder.
 
-    If ``class_name`` is passed, it will be looked up instead of the first argument.
+    Parameters
+    ----------
 
-    If the first argument is a class, it is simply returned.
+    name: str, object
+        A fully-qualified ``package.module.classname`` string, or an internal name of the
+        particular kind. If the last element of name is not a class, assumes the class has
+        the same name and is in that module. If passed a class definition, it is returned.
 
-    By default tries to load internal components first, then if that fails external ones.
-    ``component_path`` can be used to specify a specific external location, and in that
-    case the class is only looked-for there.
+    kind: str, optional
+        The particular kind of component to be retrieved: ``theory|likelihood|sampler``.
+        If not defined, it loops over all the possible ones.
 
-    If the class is not found, it raises :class:`component.ComponentNotFoundError`. If
-    this exception will be handled at a higher level, you may pass
-    `not_found_level='debug'` to prevent printing non-important messages at error-level
-    logging.
+    class_name: str, optional
+        If passed, it will be looked up instead of the first argument (unless the first
+        argument is already a class, not a string). This handles cases in which the
+        component name is different from the class that defines it.
 
-    Any other exception means that the component was found but could not be imported.
+    component_path: str, optional
+        It can be used to specify an external location, and in that case the class is
+        only looked-for there.
 
-    If ``allow_external=True`` (default), allows loading explicit name from anywhere on
-    path.
+    allow_internal: bool (default: True)
+        If ``True``, it will try to load internal components first.
 
-    If ``allow_internal=True`` (default), will first try to load internal components. In
-    this case, if ``kind=None`` (default), instead of ``theory|likelihood|sampler``, it
-    tries to guess it if the name is unique (slow!).
+    allow_external: bool (default: True)
+        if ``True``, it will attempt to load the class from anywhere on the path.
 
-    If allow_external=True, min_package_version can specify a minimum version of the
-    external package.
+    min_package_version: str, optional
+        It can be used to specify a minimum version of the component.
+
+    logger: logging.Logger
+        Logger to be used for debug messages.
+
+    not_found_level: str, optional
+        It can be used to define the level at which the error message due to not finding a
+        component class is logger (by default, if undefined, ``error`` level). It can e.g.
+        be set to ``debug`` if this exception will be handled at a higher level.
+
+    Returns
+    -------
+    CobayaComponent
+        The retrieved, uninstantiated class.
+
+    Raises
+    ------
+    component.ComponentNotFoundError
+        If no matching class could be found. The error message will clarify if the error
+        happened while loading the module (not found, or found but inconsistent with the
+        path provided), or while finding a matching class name within the loaded module.
+
+    tools.VersionCheckError
+        If ``min_package_version`` was passed and the version check test failed.
+
+    Exception
+        Any other exception, meaning that the component was found but could not be
+        imported.
     """
     if not isinstance(name, str):
         return name
@@ -654,41 +687,14 @@ def get_component_class(
             allow_external=allow_external,
             allow_internal=allow_internal,
             logger=logger,
+            not_found_level=not_found_level,
+            min_package_version=min_package_version,
         )
-    if "." in name:
-        module_name, class_name = name.rsplit(".", 1)
-    else:
-        module_name = name
-        class_name = None
     assert allow_internal or allow_external
     _not_found_msg = f"'{name}' could not be found."
     if not logger:
         logger = get_logger(__name__)
-
-    def get_matching_class_name(_module: Any, _class_name, none=False):
-        cls = getattr(_module, _class_name, None)
-        if cls is None and _class_name == _class_name.lower():
-            # where the _class_name may be a module name, find CamelCased class
-            cls = module_class_for_name(_module, _class_name)
-        if cls or none:
-            return cls
-        else:
-            return getattr(_module, _class_name)
-
-    def return_class(_module_name, **kwargs):
-        _module: Any = load_module(_module_name, path=component_path, **kwargs)
-        if not class_name and hasattr(_module, "get_cobaya_class"):
-            return _module.get_cobaya_class()
-        _class_name = class_name or module_name
-        if not (cls := get_matching_class_name(_module, _class_name, none=True)):
-            _module = load_module(
-                _module_name + "." + _class_name, path=component_path, **kwargs
-            )
-            cls = get_matching_class_name(_module, _class_name)
-        if not isinstance(cls, type):
-            return get_matching_class_name(cls, _class_name)
-        else:
-            return cls
+    lookup_kwargs = {"logger": logger, "min_version": min_package_version}
 
     def check_kind_and_return(cls):
         """
@@ -701,31 +707,6 @@ def get_component_class(
             raise TypeError(f"Class '{name}' is not a standard class of type {kind}.")
         return cls
 
-    def check_if_ComponentNotFoundError_and_raise(
-        _excpt, not_found_msg=_not_found_msg, logger=logger, level="debug"
-    ):
-        """
-        If the exception looks like the target class not being found, turns it into a
-        `ComponentNotFoundError`, so that it can be caught appropriately.
-        """
-        # Could not find this module in particular (ensuring that it does not mean one
-        # imported within it).
-        is_module_not_found = isinstance(_excpt, ModuleNotFoundError)
-        # the module to be imported may not be the last field in the name
-        did_not_find_this_module_in_particular = any(
-            str(_excpt).rstrip("'").endswith(module) for module in name.split(".")
-        )
-        # or maybe the given `kind` does not exist in an omnibus package
-        omnibus_does_not_have_kind = False
-        if kind is not None:
-            omnibus_does_not_have_kind = str(_excpt).rstrip("s'").endswith(kind)
-        if is_module_not_found and (
-            did_not_find_this_module_in_particular or omnibus_does_not_have_kind
-        ):
-            raise ComponentNotFoundError(logger, not_found_msg, level=level)
-        logger.error(f"There was a problem when importing '{name}':")
-        raise _excpt
-
     # Lookup logic:
     # 1. If `component_path` is specified, load the class from there or fail.
     # 2. Otherwise (if allow_internal), look for an internal class with the given name,
@@ -734,17 +715,15 @@ def get_component_class(
     #    look for an external class in a module *in the current folder* (otherwise handled
     #    already in step 1).
     if component_path:
+        logger.debug(f"Attempting loading '{name}' from {component_path}.")
         try:
             return check_kind_and_return(
-                return_class(module_name, min_version=min_package_version)
+                _bare_get_component_class(name, path=component_path, **lookup_kwargs)
             )
-        except VersionCheckError:
-            raise
-        except Exception as excpt:
-            check_if_ComponentNotFoundError_and_raise(
-                excpt,
-                not_found_msg=(_not_found_msg + f" Tried loading from {component_path}"),
-            )
+        except ComponentNotFoundError as excpt:
+            raise ComponentNotFoundError(
+                logger, f"{_not_found_msg} Tried loading from {component_path}"
+            ) from excpt
     if allow_internal:
         # If unknown type, loop recursive call with all possible types
         if kind is None:
@@ -762,71 +741,152 @@ def get_component_class(
                     pass  # do not raise it yet. check all kinds.
             # If we get here, the class was not found for any kind
         else:
-            internal_module_name = get_internal_class_component_name(module_name, kind)
+            internal_module_name = get_internal_class_component_name(name, kind)
             # No need to check kind if importing internal class
             for package in [cobaya_package] + cobaya._known_omnibus_packages:
+                logger.debug(
+                    f"Attempting loading {name} from package {package} as "
+                    f"'{internal_module_name}'."
+                )
                 try:
-                    found_class = return_class(internal_module_name, package=package)
-                    logger.debug(f"'{name}' was imported from {package}.")
+                    found_class = _bare_get_component_class(
+                        internal_module_name, package=package, **lookup_kwargs
+                    )
+                    logger.debug(f"'{name}' was successfully imported from {package}.")
                     return found_class
-                except Exception as excpt:
-                    try:
-                        check_if_ComponentNotFoundError_and_raise(
-                            excpt,
-                            not_found_msg=_not_found_msg[:-1] + f" from {package}.",
-                        )
-                    except ComponentNotFoundError:
-                        pass  # do not raise it yet. try external (if allowed)
+                except ComponentNotFoundError as excpt:
+                    # do not raise it yet. try external (if allowed) and give report below
+                    logger.debug(f"{_not_found_msg[:-1]} in package {package}: {excpt}")
+                except Exception as excpt:  # noqa: BE001
+                    logger.debug(
+                        f"Unexpected error when attempting to import '{name}' from "
+                        f"{package}: {excpt}"
+                    )
+                    raise
     if allow_external:
         logger.debug("Trying importing as external class.")
         try:
             # Now looking in the current folder only (component_path case handled above)
-            return check_kind_and_return(
-                return_class(module_name, min_version=min_package_version)
+            return check_kind_and_return(_bare_get_component_class(name, **lookup_kwargs))
+        except ComponentNotFoundError as excpt:
+            # do not raise it yet. wait to give a report below.
+            logger.debug(
+                f"{_not_found_msg[:-1]} as external component in the current path: "
+                f"{excpt}"
             )
-        except VersionCheckError:
-            raise
-        except Exception as excpt:
-            try:
-                check_if_ComponentNotFoundError_and_raise(
-                    excpt,
-                    not_found_msg=(
-                        _not_found_msg[:-1]
-                        + " as external component in the current path."
-                    ),
-                )
-            except ComponentNotFoundError:
-                pass  # do not raise it yet. Give a report below.
     # If we got here, didn't work. Give a report of what has been tried.
     tried = " and ".join(allow_internal * ["internal"] + allow_external * ["external"])
     add_msg = f" Tried loading {tried} classes. No component path was given."
     raise ComponentNotFoundError(logger, _not_found_msg + add_msg, level=not_found_level)
 
 
-def module_class_for_name(m, name):
-    """Get Camel- or uppercase class name matching name in module m."""
-    result = None
-    valid_names = {name, name[:1] + name[1:].replace("_", "")}
-    for cls in classes_in_module(m, subclass_of=CobayaComponent):
-        if cls.__name__.lower() in valid_names:
-            if result is not None:
-                raise ValueError(f"More than one class with same lowercase name {name}")
-            result = cls
-    return result
-
-
-def classes_in_module(m, subclass_of=None, allow_imported=False) -> set[type]:
+def _bare_get_component_class(
+    module_name: str, class_name: str | None = None, logger=None, **load_module_kwargs
+) -> CobayaComponent:
     """
-    Returns all classes in a module, optionally imposing that they are a subclass of
-    ``subclass_of``, and optionally including imported ones with ``allow_imported=True``
-    (default False).
+    Looks up a :class:`cobaya.component.CobayaComponent` class in module ``module_name``.
+
+    The name of the class to be retrieved can either be passed directly as ``class_name``,
+    or guessed from the module name: same name as the module, or its last field if a route
+    is given, e.g. ``experiment_data`` for ``module_name=.likelihoods.experiment_data``.
+    If guessed from the module name, some variations in capitalization are automatically
+    checked.
+
+    If a function called ``get_cobaya_class()`` can be imported from the module, it is
+    used to import the class.
+
+    .. warning::
+
+       This is an internal function with rigid parameters. You should call
+       :func:``cobaya.component.get_component_class`` instead.
+
+    Parameters
+    ----------
+    module_name: str
+        Name of the module from which the class will be retrieved.
+
+    class_name: str, optional
+        If given, a class with this name will be retrieved, instead of guessed as
+        explained above. (NB: the role of this argument is different from the similarly
+        named one in ``get_component_class``).
+
+    logger: logging.Logger
+        Logger to be used for debug messages.
+
+    **load_module_kwargs: dict
+        Dictionary of arguments for the :func:``cobaya.tools.load_module`` function.
+
+    Returns
+    -------
+    CobayaComponent
+        The retrieved, uninstantiated class.
+
+    Raises
+    ------
+    component.ComponentNotFoundError
+        If no matching class could be found. The error message will clarify if the error
+        happened while loading the module (not found, or found but inconsistent with the
+        path provided), or while finding a matching class name within the loaded module.
+
+    tools.VersionCheckError
+        If ``min_version`` was passed and the version check test failed.
     """
-    return {
-        cls
-        for _, cls in inspect.getmembers(m, inspect.isclass)
-        if (not subclass_of or issubclass(cls, subclass_of))
-        and (allow_imported or cls.__module__ == m.__name__)
-    }
+    if not logger:
+        logger = get_logger(__name__)
+    # We will try three conventions (order is important), assuming
+    # - [Internal Cobaya defs] class_name == None (no need to check), and module_name
+    #   refers to the folder where the definition is found inside a homonymous file; e.g.
+    #   `samplers.mcmc` should retrieve the `MCMC` class inside module
+    #   `sampler.mcmc.mcmc`. It is important to try this one *first*, because loading
+    #   module `samplers.mcmc` would return not the module where the class is, but one
+    #   level below.
+    # - Load as is.
+    # - If class_name == None, the last field is the class name.
+    module: ModuleType | None = None
+    try:
+        module_name_one_up = module_name + "." + module_name.split(".")[-1]
+        logger.debug(f"Attempting loading module '{module_name_one_up}'.")
+        module = load_module(module_name_one_up, **load_module_kwargs)
+    except ModuleNotFoundError as excpt_a:
+        excpt = excpt_a
+        try:
+            logger.debug(f"Attempting loading module '{module_name}'.")
+            module = load_module(module_name, **load_module_kwargs)
+        except ModuleNotFoundError as excpt_b:
+            excpt = excpt_b
+            if "." in module_name and class_name is None:
+                try:
+                    module_name_one_down = ".".join(module_name.split(".")[:-1])
+                    class_name = module_name.split(".")[-1]
+                    logger.debug(f"Attempting loading module '{module_name_one_down}'.")
+                    module = load_module(module_name_one_down, **load_module_kwargs)
+                except ModuleNotFoundError as excpt_c:
+                    excpt = excpt_c
+    if module is None:
+        msg = f"Could not import module {module_name}."
+        package = load_module_kwargs.get("package")
+        if package is not None:
+            msg = msg.rstrip(".") + f" from package {package}."
+        raise ComponentNotFoundError(logger, msg, level="debug") from excpt
+    logger.debug(f"Successfully loaded module {module}.")
+    if not class_name and hasattr(module, "get_cobaya_class"):
+        logger.debug(f"Calling 'get_cobaya_class' from module {module.__name__}.")
+        return module.get_cobaya_class()
+    # Determine/guess class name
+    class_name = class_name or module_name.split(".")[-1]
+    logger.debug(f"Looking for class matching '{class_name}' in '{module.__name__}'.")
+    try:
+        cls = find_matching_class_in_module(
+            module, class_name, subclass_of=CobayaComponent
+        )
+    except (NameError, ValueError) as excpt:
+        raise ComponentNotFoundError(
+            logger,
+            f"Error when looking for class matching '{class_name}' in {module.__name__}: "
+            f"{excpt}",
+            level="debug",
+        ) from excpt
+    return cls
 
 
 class ComponentNotInstalledError(LoggedError):

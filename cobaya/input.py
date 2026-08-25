@@ -6,6 +6,7 @@
 
 """
 
+import importlib
 import inspect
 import os
 import platform
@@ -16,8 +17,12 @@ from itertools import chain
 from typing import TypeVar
 
 import cobaya.typing
-from cobaya import mpi
-from cobaya.component import ComponentNotFoundError, get_component_class
+from cobaya import _known_omnibus_packages, mpi
+from cobaya.component import (
+    ComponentNotFoundError,
+    ComponentNotInstalledError,
+    get_component_class,
+)
 from cobaya.conventions import (
     Extension,
     FileSuffix,
@@ -62,7 +67,7 @@ def load_input_dict(info_or_yaml_or_file: InputDict | str | os.PathLike) -> Inpu
     elif isinstance(info_or_yaml_or_file, (dict, Mapping)):
         return deepcopy_where_possible(info_or_yaml_or_file)
     else:
-        raise ValueError(
+        raise TypeError(
             "The first argument must be a dictionary, file name or "
             "yaml string with the required input options."
         )
@@ -133,9 +138,8 @@ def load_input(input_file: str) -> InputDict:
     # contained? Ensure that output is sent where it should
     if "CONTAINED" in os.environ:
         for out in ("output", "debug"):
-            if isinstance(info.get(out), str):
-                if not info[out].startswith("/"):
-                    info[out] = os.path.join(products_path, info[out])
+            if isinstance(info.get(out), str) and not info[out].startswith("/"):
+                info[out] = os.path.join(products_path, info[out])
     return info
 
 
@@ -280,23 +284,78 @@ def get_default_info(
                 default_component_info, input_options=input_options
             )
     except ComponentNotFoundError:
-        raise
-    except Exception as e:
+        cls = None
+        # Maybe it is defined in an external components list in an omnibus package?
+        default_component_info = get_omnibus_external_info(
+            component_or_class, kind=kind, return_yaml=return_yaml
+        )
+        if default_component_info is None:  # not externally defined either
+            raise
+    except Exception as excpt:
         raise LoggedError(
             logger,
             "Failed to get defaults for component or class '%s' [%s]",
             component_or_class,
-            e,
+            excpt,
+        ) from excpt
+    # Recursive call in case the default info we just got contains a "class" field and
+    # possibly package_install instructions.
+    if class_name is None and default_component_info.get("class") is not None:
+        class_name = default_component_info["class"]
+        try:
+            cls = get_component_class(
+                class_name, kind, component_path, class_name, logger=logger
+            )
+        except ComponentNotFoundError:
+            if default_component_info.get("package_install") is not None:
+                raise ComponentNotInstalledError(
+                    logger,
+                    f"Class {class_name} of component {component_or_class} seems not to "
+                    "be installed. Run 'cobaya-install' on this input dict/file.",
+                )
+            raise
+        class_defaults = get_default_info(
+            cls,
+            kind=kind,
+            return_yaml=return_yaml,
+            yaml_expand_defaults=yaml_expand_defaults,
+            component_path=component_path,
+            input_options=input_options,
+            class_name=None,
+            return_undefined_annotations=False,
         )
+        default_component_info = merge_info(default_component_info, class_defaults)
     if return_undefined_annotations:
-        annotations = {
-            k: v
-            for k, v in cls.get_annotations().items()
-            if k not in default_component_info
-        }
+        if cls is not None:
+            annotations = {
+                k: v
+                for k, v in cls.get_annotations().items()
+                if k not in default_component_info
+            }
+        else:
+            annotations = {}
         return default_component_info, annotations
     else:
         return default_component_info
+
+
+def get_omnibus_external_info(name, kind=None, package=None, return_yaml=False):
+    """
+    Retrieves definitions for external components listed in omnibus packages, e.g. class
+    names and install information.
+    """
+    if package == None:
+        for this_package in _known_omnibus_packages:
+            return get_omnibus_external_info(
+                name, kind=kind, package=this_package, return_yaml=return_yaml
+            )
+    init_mod = importlib.import_module(package)
+    try:
+        return getattr(init_mod, "get_external_info", lambda *args, **kwargs: None)(
+            name, kind=kind, return_yaml=return_yaml
+        )
+    except ValueError:
+        return None
 
 
 def add_aggregated_chi2_params(param_info, all_types):
@@ -333,20 +392,16 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
             except TypeError:
                 raise LoggedError(
                     logger,
-                    (
-                        "Your input info is not well formatted at the '%s' block. "
-                        "It must be a dictionary {'%s_i':{options}, ...}. "
-                    ),
+                    "Your input info is not well formatted at the '%s' block. "
+                    "It must be a dictionary {'%s_i':{options}, ...}. ",
                     block,
                     block,
                 )
             if isinstance(name, (CobayaComponent, type)):
                 raise LoggedError(
                     logger,
-                    (
-                        "Instances and classes should be passed a "
-                        "dictionary entry of the form 'name: instance'"
-                    ),
+                    "Instances and classes should be passed a "
+                    "dictionary entry of the form 'name: instance'",
                 )
             if isinstance(input_block[name], CobayaComponent):
                 logger.warning("Support for input instances is experimental")
@@ -354,7 +409,6 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
                 input_block[name], dict
             ):
                 input_block[name] = {"external": input_block[name]}
-
             annotations = {}
             if ext := input_block[name].get("external"):
                 if isinstance(ext, type):
@@ -379,7 +433,7 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
                         input_options=input_block[name],
                         return_undefined_annotations=True,
                     )
-                except ComponentNotFoundError:
+                except (ComponentNotFoundError, ComponentNotInstalledError):
                     if strict:
                         raise
                     default_class_info, annotations = {}, {}
@@ -399,7 +453,6 @@ def update_info(info: _Dict, strict: bool = True, add_aggr_chi2: bool = True) ->
                 "aliases",
                 "package_install",
             }
-
             if options_not_recognized := set(input_block[name]).difference(
                 chain(reserved, updated[name], annotations)
             ):
