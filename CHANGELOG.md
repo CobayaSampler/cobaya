@@ -1,3 +1,9 @@
+## Unreleased
+
+### Cosmology
+
+- CLASS now keeps sampled input densities (``omega_b``, ``omega_cdm`` and Planck aliases) even when a likelihood also lists them in ``get_requirements()`` (#494)
+
 ## 3.6.2 – 2026-03-27
 
 ### General

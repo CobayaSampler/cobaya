@@ -896,9 +896,27 @@ class classy(BoltzmannBase):
         return names
 
     def get_can_support_params(self):
-        # non-exhaustive list of supported input parameters that will be assigned to
-        # classy if they are varied
-        return ["H0"]
+        # Input parameters that stay assigned to classy even when a
+        # likelihood also lists them in get_requirements(). The leftover
+        # agnostic path only sees unassigned names, so a sampled CLASS
+        # input claimed by a likelihood would otherwise never reach CLASS.
+        # CAMB avoids that because CambTransfers returns the full numerical
+        # parameter set from get_can_support_params.
+        supported = {
+            "H0",
+            "h",
+            "omega_b",
+            "omega_cdm",
+            "Omega_b",
+            "Omega_cdm",
+            "tau_reio",
+            "A_s",
+            "n_s",
+        }
+        for name, mapped in self.renames.items():
+            if mapped in supported:
+                supported.add(name)
+        return list(supported)
 
     def get_version(self):
         return getattr(self.classy_module, "__version__", None)
