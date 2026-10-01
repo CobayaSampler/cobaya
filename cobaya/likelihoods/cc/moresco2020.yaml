@@ -1,0 +1,22 @@
+# Cosmic chronometers H(z) measurements (BC03 models), with the full covariance matrix of
+# Moresco et al. (2020): https://ui.adsabs.harvard.edu/abs/2020ApJ...898...82M
+# Data files downloaded on installation from https://gitlab.com/mmoresco/CCcovariance
+# (commit 881413330a7f1e1e5203607d6964db49b4c6c461)
+
+# Path to the data files: leave null to use the packages path
+path: null
+# Measurements: z, H(z), uncorrelated error [km/s/Mpc]
+data_file: CCcovariance-881413330a7f1e1e5203607d6964db49b4c6c461/data/HzTable_MM_BC03.dat
+# Covariance matrix of the measurements [(km/s/Mpc)^2], used instead of the
+# errors in data_file if given
+covmat_file: null
+# Fractional systematic errors [%] per component, as a function of redshift
+systematics_file: CCcovariance-881413330a7f1e1e5203607d6964db49b4c6c461/data/data_MM20.dat
+# Systematic components included in the covariance matrix, fully correlated across
+# redshift (initial mass function and stellar population synthesis model).
+# The other columns of systematics_file are further components (see Moresco et al. 2020).
+# Set to [] to use only the uncorrelated errors, or if your own data already
+# include the systematics.
+systematics: [IMF, mod_ooo]
+# Speed in evaluations/second
+speed: 5000

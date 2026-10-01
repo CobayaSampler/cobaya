@@ -1,4 +1,5 @@
 from .bao import BAO as BAO
+from .cc import CC as CC
 from .cmblikes import CMBlikes as CMBlikes
 from .cmblikes import make_forecast_cmb_dataset as make_forecast_cmb_dataset
 from .DataSetLikelihood import DataSetLikelihood as DataSetLikelihood

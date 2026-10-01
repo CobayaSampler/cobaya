@@ -60,6 +60,7 @@ Table of contents
    likelihood_des
    likelihood_bao
    likelihood_sn
+   likelihood_cc
    likelihood_external
 
 .. toctree::

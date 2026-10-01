@@ -55,7 +55,7 @@ def create_input(**kwargs) -> InputDict:
         "bbn",
         "reionization",
     ]
-    kwargs_likes = ["like_cmb", "like_bao", "like_des", "like_sn", "like_H0"]
+    kwargs_likes = ["like_cmb", "like_bao", "like_des", "like_sn", "like_H0", "like_cc"]
     for k in kwargs_params + kwargs_likes:
         if k not in kwargs:
             infos[k] = {}
