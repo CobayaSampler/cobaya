@@ -879,7 +879,9 @@ class SampleCollection(BaseCollection):
             first = first or 0
             last = last or len(self)
             self._check_weights(weights, length=last - first)
-            weights /= max(weights)
+            # not in-place: do not modify the caller's array, and allow int weights
+            weights = np.asarray(weights, dtype=np.float64)
+            weights = weights / np.max(weights)
             return weights, np.allclose(np.round(weights), weights)  # type: ignore
         if self.is_tempered and not tempered:
             # For sure the weights are not integer in this case
