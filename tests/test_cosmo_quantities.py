@@ -419,3 +419,32 @@ def test_cosmo_weyl_pkz_camb(packages_path, skip_not_installed):
 
 def test_cosmo_weyl_pkz_classy(packages_path, skip_not_installed):
     _test_cosmo_weyl_pkz("classy", packages_path, skip_not_installed)
+
+
+# ell_factor of lensed and unlensed Cl's #################################################
+
+
+def _test_cosmo_cl_ell_factor(theo, packages_path, skip_not_installed):
+    reqs = {"Cl": {"tt": 500, "pp": 500}, "unlensed_Cl": {"tt": 500}}
+    model = _get_model_with_requirements_and_eval(
+        theo, reqs, packages_path, skip_not_installed
+    )
+    theory = model.theory[theo]
+    ells = np.arange(2, 501)
+    factor = ells * (ells + 1) / (2 * np.pi)
+    for get_cl in [theory.get_Cl, theory.get_unlensed_Cl]:
+        cls, cls_ell_factor = get_cl(), get_cl(ell_factor=True)
+        for spectrum in set(cls).difference(["ell", "bb"]):
+            power = {"pp": 2}.get(spectrum, 1.5 if "p" in spectrum else 1)
+            expected = factor**power * (2 * np.pi) ** (power - 1)
+            assert np.allclose(
+                cls_ell_factor[spectrum][ells], expected * cls[spectrum][ells]
+            ), f"Wrong ell_factor for {spectrum} ({get_cl.__name__})"
+
+
+def test_cosmo_cl_ell_factor_camb(packages_path, skip_not_installed):
+    _test_cosmo_cl_ell_factor("camb", packages_path, skip_not_installed)
+
+
+def test_cosmo_cl_ell_factor_classy(packages_path, skip_not_installed):
+    _test_cosmo_cl_ell_factor("classy", packages_path, skip_not_installed)

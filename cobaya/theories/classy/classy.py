@@ -832,9 +832,9 @@ class classy(BoltzmannBase):
             if ell_factor:
                 if "p" not in cl:
                     cls[cl][2:] *= ells_factor
-                elif cl == "pp" and lensed:
+                elif cl == "pp":
                     cls[cl][2:] *= ells_factor**2 * (2 * np.pi)
-                elif "p" in cl and lensed:
+                else:  # cross-spectra with the lensing potential
                     cls[cl][2:] *= ells_factor ** (3 / 2) * np.sqrt(2 * np.pi)
         return cls
 
