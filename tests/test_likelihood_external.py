@@ -12,6 +12,11 @@ For manual testing, and observing/plotting the density, pass ``manual=True`` to
 ``body of test``.
 """
 
+import numpy as np
+
+from cobaya.likelihood import Likelihood
+from cobaya.model import get_model
+
 from .common_external import (
     body_of_test,
     info_callable,
@@ -55,3 +60,26 @@ def test_likelihood_external_method_kwargs(tmpdir):
 
 def test_likelihood_external_method_unnamed_kwargs(tmpdir):
     body_of_test(info_method_unnamed_kwargs, "likelihood", tmpdir)
+
+
+def test_likelihood_zero_dim_array_logp():
+    # 0-d arrays (e.g. from numpy or jax) have __len__, but must be treated as scalars
+    class ArrayLike(Likelihood):
+        params = {"x": None}
+
+        def logp(self, **params_values):
+            return np.array(-0.5 * params_values["x"] ** 2)
+
+    prior = {"x": {"prior": {"min": -5, "max": 5}}}
+    derived_like = {
+        "external": lambda x: (np.array(-0.5 * x**2), {"y": 2 * x}),
+        "output_params": ["y"],
+    }
+    expected = -0.5 * 1.7**2 - np.log(10)
+    for like, params in [
+        (ArrayLike, prior),
+        (lambda x: np.array(-0.5 * x**2), prior),
+        (derived_like, dict(prior, y=None)),
+    ]:
+        model = get_model({"likelihood": {"like": like}, "params": params})
+        assert np.isclose(model.logpost({"x": 1.7}), expected)

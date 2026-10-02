@@ -57,7 +57,8 @@ class LikelihoodInterface:
         :return:  log likelihood from the current state as a scalar
         """
         value = self.current_state["logp"]
-        if hasattr(value, "__len__"):
+        # 0-d arrays (numpy, jax...) have __len__ but cannot be indexed
+        if hasattr(value, "__len__") and getattr(value, "ndim", None) != 0:
             value = value[0]
         return value
 
@@ -239,7 +240,8 @@ class LikelihoodExternalFunction(Likelihood):
             self.log.debug("External function failed at evaluation.")
             raise
         bad_return_msg = "Expected return value `(logp, {derived_params_dict})`."
-        if hasattr(return_value, "__len__"):
+        # 0-d arrays (numpy, jax...) have __len__ but are scalars
+        if hasattr(return_value, "__len__") and getattr(return_value, "ndim", None) != 0:
             logp = return_value[0]  # type: ignore
             if self.output_params:
                 try:
