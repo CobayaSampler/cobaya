@@ -107,6 +107,8 @@ class MCMC(CovmatSampler):
         self.converged = False
         self.mpi_size = None
         self.Rminus1_last = np.inf
+        # Accepted samples per chain (MPI rank order) at the last learn+convergence check
+        self.n_last_learn = None
 
     def initialize(self):
         """
@@ -266,6 +268,17 @@ class MCMC(CovmatSampler):
         self._msg_ready = "Ready to check convergence" + (
             " and learn a new proposal covmat" if self.learn_proposal else ""
         )
+        # When resuming, the READY state of chains that had already crossed a learning
+        # point (and were waiting for the rest) is lost. Recover it: this chain is ready
+        # if it crossed a multiple of learn_every since the last learn+convergence check.
+        self._ready_on_resume = False
+        if self.output.is_resuming() and more_than_one_process():
+            # (#chains is guaranteed unchanged; None if no check happened yet)
+            n_last_learn = int(self.n_last_learn[mpi.rank()]) if self.n_last_learn else 0
+            self._ready_on_resume = (
+                self.n() // self.learn_every.value
+                > n_last_learn // self.learn_every.value
+            )
         # Initial dummy checkpoint
         # (needed when 1st "learn point" not reached in prev. run)
         self.write_checkpoint()
@@ -467,6 +480,11 @@ class MCMC(CovmatSampler):
         last_n = self.n()
         state_check_every = 1
         with mpi.ProcessState(self) as state:
+            if self._ready_on_resume and state.set(mpi.State.READY):
+                self.log.info(
+                    "%s (resumed after learning point; waiting for the rest...)",
+                    self._msg_ready,
+                )
             while last_n < self.max_samples and not self.converged:
                 self.get_new_sample()
                 self.n_steps_raw += 1
@@ -821,6 +839,8 @@ class MCMC(CovmatSampler):
                 return
             acceptance_rates = None
         if is_main_process():
+            if more_than_one_process():
+                self.n_last_learn = Ns.astype(int).tolist()
             self.progress.at[self.i_learn, "N"] = sum(Ns)
             self.progress.at[self.i_learn, "timestamp"] = (
                 datetime.datetime.now().isoformat()
@@ -1054,6 +1074,7 @@ class MCMC(CovmatSampler):
                     self.get_name(): {
                         "converged": self.converged,
                         "Rminus1_last": self.Rminus1_last,
+                        "n_last_learn": self.n_last_learn,
                         "burn_in": (
                             self.burn_in.value  # initial: repeat burn-in if not finished
                             if not self.n() and self.burn_in_left
