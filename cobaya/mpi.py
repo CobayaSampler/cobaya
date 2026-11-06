@@ -70,7 +70,12 @@ def get_mpi():
                 except ImportError:
                     pass
                 else:
-                    _mpi.pickle.__init__(dill.dumps, dill.loads)
+                    try:  # check dill can pickle functions in this Python version
+                        dill.dumps(lambda: None)
+                    except Exception:
+                        pass
+                    else:
+                        _mpi.pickle.__init__(dill.dumps, dill.loads)
 
     return _mpi
 

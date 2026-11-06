@@ -6,6 +6,7 @@
 
 """
 
+import contextlib
 import datetime
 import importlib
 import os
@@ -668,9 +669,12 @@ class Output(HasLogger, OutputReadOnly):
                             f,
                             pickle.HIGHEST_PROTOCOL,
                         )
-                except pickle.PicklingError as e:
-                    os.remove(self.dump_file_updated)
-                    self.mpi_info("Options file cannot be pickled %s", e)
+                except (pickle.PicklingError, AttributeError, TypeError) as e:
+                    # (AttributeError: e.g. dill not supporting this Python version)
+                    # (may have been removed already by another MPI process)
+                    with contextlib.suppress(FileNotFoundError):
+                        os.remove(self.dump_file_updated)
+                    self.mpi_info("Options file cannot be pickled: %r", e)
 
     def load_collections(
         self,
