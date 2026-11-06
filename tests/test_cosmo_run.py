@@ -126,8 +126,16 @@ def test_cosmo_run_resume_post(tmpdir, skip_not_installed, packages_path=None):
         },
         allow_changes=True,
     )
+    # resume from the dill pickle of the updated info, if dill could write it
+    # (e.g. no dill support for functions in Python 3.15 yet)
+    dill_file = info["output"] + ".updated" + Extension.dill
+    if os.path.exists(dill_file):
+        resume_info = dill_file
+    else:
+        resume_info = deepcopy_where_possible(info)
+        resume_info["theory"]["camb"]["stop_at_error"] = False  # as in last resume
     updated_info, sampler_init = run(
-        info["output"] + ".updated" + Extension.dill,
+        resume_info,
         resume=True,
         override={"sampler": {"mcmc": {"Rminus1_stop": 0.05}}},
     )
