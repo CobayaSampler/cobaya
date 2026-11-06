@@ -538,6 +538,15 @@ class MCMC(CovmatSampler):
                     "Reached maximum number of accepted steps allowed (%s). Stopping.",
                     self.max_samples,
                 )
+            # If stopped while READY, the other chains may still reach the current
+            # learning point and run the (collective) convergence check: join it,
+            # unless any other chain ends first.
+            if more_than_one_process() and state.is_ready():
+                self.log.info("Waiting for the rest to reach the learning point...")
+                if state.wait_all_ready_or_any_ended():
+                    self.mpi_info("All chains are r%s", self._msg_ready[1:])
+                    self.check_convergence_and_learn_proposal()
+                    self.i_learn += 1
 
             # Write the last batch of samples ( < output_every (not in sec))
             self.collection.out_update()

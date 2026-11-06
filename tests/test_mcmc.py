@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import numpy as np
@@ -6,10 +7,11 @@ import pytest
 from flaky import flaky
 
 from cobaya import InputDict, Likelihood, mpi, run
+from cobaya.collection import SampleCollection
 from cobaya.log import LoggedError, NoLogging
 from cobaya.tools import KL_norm
 from cobaya.typing import type_checking
-from cobaya.yaml import yaml_load
+from cobaya.yaml import yaml_dump_file, yaml_load, yaml_load_file
 
 from .common_sampler import body_of_sampler_test, body_of_test_speeds
 
@@ -302,3 +304,83 @@ def _test_overhead_timing(dim=15):
     ps.sort_stats("cumtime")
     ps.print_stats(print_n_calls)
     print(s.getvalue())
+
+
+@pytest.mark.mpionly
+def test_mcmc_sync_learn_at_end(monkeypatch):
+    # A chain that stops (max_samples) just after becoming READY for a
+    # learn+convergence check must not leave the others hanging in the (collective)
+    # check when they catch up before it signals END.
+    info: InputDict = yaml_load(yaml)  # type: ignore
+    learn_every = 50
+    max_samples = 2 * learn_every if mpi.rank() == 1 else 4 * learn_every + 10
+
+    def like(a, b):
+        if mpi.rank() == 0:
+            time.sleep(0.002)  # make sure rank 1 gets to the last learn point first
+        return -0.5 * (a**2 + b**2)
+
+    info["likelihood"] = {"slow_on_rank_0": like}
+    info["sampler"]["mcmc"] = {
+        "max_samples": max_samples,
+        "learn_every": learn_every,
+        "burn_in": 0,
+        "Rminus1_stop": 1e-6,
+        "Rminus1_cl_stop": 1e-6,
+        "seed": 1,
+    }
+    if mpi.rank() == 1:
+        # Delay the END signal of rank 1, so that rank 0 catches up while rank 1 READY
+        out_update = SampleCollection.out_update
+
+        def delayed_out_update(self):
+            if len(self) >= max_samples:
+                time.sleep(3)
+            out_update(self)
+
+        monkeypatch.setattr(SampleCollection, "out_update", delayed_out_update)
+    _updated_info, sampler = run(info, stop_at_error=True)
+    assert len(sampler.products()["sample"]) == max_samples
+
+
+@pytest.mark.mpionly
+def test_mcmc_resume_learn_ready(tmpdir):
+    # Chains that were READY (waiting for the rest at a learning point) when the run
+    # was interrupted should be READY again on resume, so that the check happens
+    # when the rest reach that learning point.
+    info: InputDict = yaml_load(yaml)  # type: ignore
+    learn_every = 50
+    info["sampler"]["mcmc"] = {
+        "max_samples": 3 * learn_every - 10,
+        "learn_every": learn_every,
+        "burn_in": 0,
+        "Rminus1_stop": 1e-6,
+        "Rminus1_cl_stop": 1e-6,
+        "seed": 1,
+    }
+    info["output"] = os.path.join(tmpdir, "chain")
+    _updated_info, sampler = run(info, force=True)
+    # Simulate interruption with chain 1 READY past 2 * learn_every, chain 2 not yet
+    if mpi.is_main_process():
+        for i, n in enumerate([2 * learn_every + 7, 2 * learn_every - 3]):
+            chain_file = os.path.join(tmpdir, f"chain.{i + 1}.txt")
+            with open(chain_file, encoding="utf-8") as f:
+                lines = f.readlines()
+            with open(chain_file, "w", encoding="utf-8") as f:
+                f.writelines(lines[: 1 + n])  # header
+        checkpoint_file = sampler.checkpoint_filename()
+        checkpoint = yaml_load_file(checkpoint_file)
+        checkpoint["sampler"]["mcmc"].update(
+            {"converged": False, "n_last_learn": [learn_every + 2, learn_every + 1]}
+        )
+        yaml_dump_file(checkpoint_file, checkpoint, error_if_exists=False)
+    mpi.sync_processes()
+    _updated_info, sampler = run(info, resume=True)
+    if mpi.is_main_process():
+        n_last_learn = yaml_load_file(sampler.checkpoint_filename())["sampler"]["mcmc"][
+            "n_last_learn"
+        ]
+        # check done when chain 2 reached 2 * learn_every (without READY at resume,
+        # chain 1 would not be ready again until 3 * learn_every > max_samples)
+        assert n_last_learn[1] == 2 * learn_every
+        assert n_last_learn[0] >= 2 * learn_every + 7

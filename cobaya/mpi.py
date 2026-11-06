@@ -433,6 +433,20 @@ class ProcessState:
             self.states[:] = State.NONE
         return all_ready
 
+    def is_ready(self) -> bool:
+        """Whether this process is in READY state."""
+        return self.states[self._rank] == State.READY
+
+    def wait_all_ready_or_any_ended(self) -> bool:
+        """
+        Waits until either all processes are READY (returns True, resetting states to
+        NONE, as in :meth:`all_ready`), or until any has ENDED (returns False).
+        Raises an error if any process is in ERROR state.
+        """
+        while not (all_ready := self.all_ready()) and not any(self.states == State.END):
+            time.sleep(self.sleep_interval)
+        return all_ready
+
     def __enter__(self):
         if more_than_one_process():
             self.tag = share(self.tag)
